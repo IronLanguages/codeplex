@@ -20,13 +20,15 @@ using Microsoft.Linq.Expressions;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("use Expression.Rethrow instead")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static UnaryExpression Rethrow(SourceSpan span) {
-            return Expression.Throw(null, typeof(void), Expression.Annotate(span));
+            return Expression.Throw(null, typeof(void));
         }
 
         [Obsolete("use Expression.Throw instead")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static UnaryExpression Throw(Expression value, SourceSpan span) {
-            return Expression.Throw(value, typeof(void), Expression.Annotate(span));
+            return Expression.Throw(value, typeof(void));
         }
     }
 }

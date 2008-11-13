@@ -19,10 +19,10 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     /// <summary>
     /// Simple type which implements IDynamicObject to support getting/setting/deleting members
     /// at runtime.
@@ -164,10 +164,6 @@ namespace Microsoft.Scripting.Actions {
             PromoteClassWorker(oldClass, newClass);
         }
 
-        internal IList<string> GetMemberNames() {
-            return new ReadOnlyCollection<string>(_data.Class.Keys);
-        }
-
         #endregion
         
         #region IDynamicObject Members
@@ -186,6 +182,8 @@ namespace Microsoft.Scripting.Actions {
             }
 
             public override MetaObject BindGetMember(GetMemberBinder binder) {
+                ContractUtils.RequiresNotNull(binder, "binder");
+
                 ExpandoClass klass = Value.Class;
 
                 int index = klass.GetValueIndex(binder.Name, binder.IgnoreCase);
@@ -226,6 +224,9 @@ namespace Microsoft.Scripting.Actions {
             }
 
             public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+                ContractUtils.RequiresNotNull(binder, "binder");
+                ContractUtils.RequiresNotNull(value, "value");
+
                 ExpandoClass klass;
                 int index;
 
@@ -258,6 +259,8 @@ namespace Microsoft.Scripting.Actions {
             }
 
             public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
+                ContractUtils.RequiresNotNull(binder, "binder");
+
                 ExpandoClass klass;
                 int index;
 
@@ -285,19 +288,8 @@ namespace Microsoft.Scripting.Actions {
                 );
             }
 
-            [Obsolete("Use UnaryOperation or BinaryOperation")]
-            public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
-                if (binder.Operation == "GetMemberNames") {
-                    return new MetaObject(
-                        Expression.Call(
-                            typeof(RuntimeOps).GetMethod("ExpandoGetMemberNames"),
-                            GetLimitedSelf()
-                        ),
-                        GetRestrictions()
-                    );
-                }
-
-                return base.BindOperation(binder, args);
+            public override IEnumerable<string> GetDynamicMemberNames() {
+                return new ReadOnlyCollection<string>(Value._data.Class.Keys);
             }
 
             /// <summary>
@@ -436,45 +428,49 @@ namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
         [Obsolete("used by generated code", true)]
         public static object ExpandoGetValue(ExpandoObject expando, object indexClass, int index) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             return expando.GetValue((ExpandoClass)indexClass, index, false);
         }
 
         [Obsolete("used by generated code", true)]
         public static object ExpandoGetValueIgnoreCase(ExpandoObject expando, object indexClass, int index) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             return expando.GetValue((ExpandoClass)indexClass, index, true);
         }
 
         [Obsolete("used by generated code", true)]
         public static void ExpandoSetValue(ExpandoObject expando, object indexClass, int index, object value) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             expando.SetValue((ExpandoClass)indexClass, index, false, value);
         }
 
         [Obsolete("used by generated code", true)]
         public static void ExpandoSetValueIgnoreCase(ExpandoObject expando, object indexClass, int index, object value) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             expando.SetValue((ExpandoClass)indexClass, index, true, value);
         }
 
         [Obsolete("used by generated code", true)]
         public static bool ExpandoDeleteValue(ExpandoObject expando, object indexClass, int index) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             return expando.DeleteValue((ExpandoClass)indexClass, index, false);
         }
 
         [Obsolete("used by generated code", true)]
         public static bool ExpandoDeleteValueIgnoreCase(ExpandoObject expando, object indexClass, int index) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             return expando.DeleteValue((ExpandoClass)indexClass, index, true);
         }
 
         [Obsolete("used by generated code", true)]
         public static bool ExpandoCheckVersion(ExpandoObject expando, object version) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             return expando.Class == version;
         }
 
         public static void ExpandoPromoteClass(ExpandoObject expando, object oldClass, object newClass) {
+            ContractUtils.RequiresNotNull(expando, "expando");
             expando.PromoteClass((ExpandoClass)oldClass, (ExpandoClass)newClass);
-        }
-
-        public static IList<string> ExpandoGetMemberNames(ExpandoObject expando) {
-            return expando.GetMemberNames();
         }
     }
 }

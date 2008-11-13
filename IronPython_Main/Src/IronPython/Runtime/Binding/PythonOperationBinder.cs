@@ -15,8 +15,9 @@
 
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -35,6 +36,14 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject/*!*/ FallbackOperation(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+            // TODO: until we use the real GetIndex and SetIndex binders, we
+            // need to do this for COM interop
+            if (Operation == "GetItem") {
+                return target.BindGetIndex(new GetIndexAdapter(this), args);
+            }            
+            if (Operation == "SetItem") {
+                return target.BindSetIndex(new SetIndexAdapter(this), args);
+            }
             return PythonProtocol.Operation(this, ArrayUtils.Insert(target, args));
         }
 
@@ -73,6 +82,44 @@ namespace IronPython.Runtime.Binding {
                 BindingHelpers.CreateBinderStateExpression(),
                 Expression.Constant(Operation)
             );
+        }
+
+        #endregion
+
+        #region GetIndex/SetIndex adapters
+
+        // TODO: remove when Python uses the SetIndexBinder for real
+        class SetIndexAdapter : SetIndexBinder {
+            private readonly PythonOperationBinder _opBinder;
+
+            internal SetIndexAdapter(PythonOperationBinder opBinder) {
+                _opBinder = opBinder;
+            }
+
+            public override MetaObject FallbackSetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
+                return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, args));
+            }
+
+            public override object CacheIdentity {
+                get { return _opBinder; }
+            }
+        }
+
+        // TODO: remove when Python uses the GetIndexBinder for real
+        class GetIndexAdapter : GetIndexBinder {
+            private readonly PythonOperationBinder _opBinder;
+
+            internal GetIndexAdapter(PythonOperationBinder opBinder) {
+                _opBinder = opBinder;
+            }
+
+            public override MetaObject FallbackGetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
+                return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, args));
+            }
+
+            public override object CacheIdentity {
+                get { return _opBinder; }
+            }
         }
 
         #endregion

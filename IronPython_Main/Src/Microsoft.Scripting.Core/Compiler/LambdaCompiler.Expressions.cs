@@ -22,16 +22,14 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
-        [Flags]
         private enum ExpressionStart {
             None = 0,
-            DebugMarker = 1,
-            LabelBlock = 2
+            LabelBlock = 1
         }
 
         /// <summary>
@@ -62,7 +60,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Throw:
                     EmitThrow((UnaryExpression)node, EmitAs.Void);
                     break;
+                case ExpressionType.Constant:
                 case ExpressionType.Default:
+                case ExpressionType.Parameter:
                     // no-op
                     break;
                 default:
@@ -78,37 +78,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region DebugMarkers
 
         private ExpressionStart EmitExpressionStart(Expression node) {
-            ExpressionStart result = ExpressionStart.None;
             if (TryPushLabelBlock(node)) {
-                result = ExpressionStart.LabelBlock;
+                return ExpressionStart.LabelBlock;
             }
-
-            if (!_emitDebugSymbols) {
-                return result;
-            }
-
-            Annotations annotations = node.Annotations;
-            SourceSpan span;
-            SourceLocation header;
-
-            if (annotations.TryGet<SourceSpan>(out span)) {
-                // TODO: this is incorrect. Nodes should be annotated with the
-                // correct span, rather than with a Span and a Location
-                if (annotations.TryGet<SourceLocation>(out header)) {
-                    EmitPosition(span.Start, header);
-                } else {
-                    EmitPosition(span.Start, span.End);
-                }
-                return result | ExpressionStart.DebugMarker;
-            }
-            return result;
+            return ExpressionStart.None;
         }
 
         private void EmitExpressionEnd(ExpressionStart emitted) {
-            if ((emitted & ExpressionStart.DebugMarker) != 0) {
-                EmitSequencePointNone();
-            }
-            if ((emitted & ExpressionStart.LabelBlock) != 0) {
+            if (emitted == ExpressionStart.LabelBlock) {
                 PopLabelBlock(_labelBlock.Kind);
             }
         }
@@ -233,23 +210,23 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitMethodCallExpression(Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
 
-            EmitMethodCall(node.Object, node.Method, node.Arguments);
+            EmitMethodCall(node.Object, node.Method, node);
         }
 
         //CONFORMING
-        private void EmitMethodCall(Expression obj, MethodInfo method, ReadOnlyCollection<Expression> args) {
+        private void EmitMethodCall(Expression obj, MethodInfo method, IArgumentProvider methodCallExpr) {
             // Emit instance, if calling an instance method
             Type objectType = null;
             if (!method.IsStatic) {
                 EmitInstance(obj, objectType = obj.Type);
             }
 
-            EmitMethodCall(method, args, objectType);
+            EmitMethodCall(method, methodCallExpr, objectType);
         }
 
         //CONFORMING
         // assumes 'object' of non-static call is already on stack
-        private void EmitMethodCall(MethodInfo mi, ReadOnlyCollection<Expression> args, Type objectType) {
+        private void EmitMethodCall(MethodInfo mi, IArgumentProvider args, Type objectType) {
 
             // Emit arguments
             List<WriteBack> wb = EmitArguments(mi, args);
@@ -318,14 +295,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
 
         //CONFORMING
-        private List<WriteBack> EmitArguments(MethodBase method, IList<Expression> args) {
+        private List<WriteBack> EmitArguments(MethodBase method, IArgumentProvider args) {
             ParameterInfo[] pis = method.GetParametersCached();
-            Debug.Assert(args.Count == pis.Length);
+            Debug.Assert(args.ArgumentCount == pis.Length);
 
             var writeBacks = new List<WriteBack>();
             for (int i = 0, n = pis.Length; i < n; i++) {
                 ParameterInfo parameter = pis[i];
-                Expression argument = args[i];
+                Expression argument = args.GetArgument(i);
                 Type type = parameter.ParameterType;
 
                 if (type.IsByRef) {
@@ -370,7 +347,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             _boundConstants.EmitConstant(this, value, type);
         }
-
+        
         private void EmitDynamicExpression(Expression expr) {
             var node = (DynamicExpression)expr;
 
@@ -389,7 +366,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _scope.EmitSet(siteVar);
             _ilg.Emit(OpCodes.Ldfld, siteType.GetField("Target"));
 
-            List<WriteBack> wb = EmitArguments(invoke, node.Arguments.AddFirst(siteVar));
+            List<WriteBack> wb = EmitArguments(invoke, new ArgumentPrepender(siteVar, node));
             _ilg.EmitCall(invoke);
             EmitWriteBack(wb);
         }
@@ -399,7 +376,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             NewExpression node = (NewExpression)expr;
 
             if (node.Constructor != null) {
-                List<WriteBack> wb = EmitArguments(node.Constructor, node.Arguments);
+                List<WriteBack> wb = EmitArguments(node.Constructor, node);
                 _ilg.Emit(OpCodes.Newobj, node.Constructor);
                 EmitWriteBack(wb);
             } else {
@@ -652,10 +629,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Debug.Assert(_emitDebugSymbols);
 
             ISymbolDocumentWriter result;
-            if (!_symbolWriters.TryGetValue(document, out result)) {
+            if (!_tree.SymbolWriters.TryGetValue(document, out result)) {
                 var module = (ModuleBuilder)_typeBuilder.Module;
                 result = module.DefineDocument(document.FileName, document.Language, document.LanguageVendor, SymbolGuids.DocumentType_Text);
-                _symbolWriters.Add(document, result);
+                _tree.SymbolWriters.Add(document, result);
             }
 
             return result;
@@ -779,7 +756,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 if (keepOnStack || i < n - 1) {
                     _ilg.Emit(OpCodes.Dup);
                 }
-                EmitMethodCall(initializers[i].AddMethod, initializers[i].Arguments, objectType);
+                EmitMethodCall(initializers[i].AddMethod, initializers[i], objectType);
 
                 // Aome add methods, ArrayList.Add for example, return non-void
                 if (initializers[i].AddMethod.ReturnType != typeof(void)) {

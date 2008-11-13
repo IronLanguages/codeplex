@@ -120,21 +120,22 @@ namespace IronPython.Compiler.Ast {
                 //      else_body
                 //  }
                 result =
-                    Ast.BlockVoid(
-                        Ast.Assign(runElse, Ast.True()),
+                    Ast.Block(
+                        Ast.Assign(runElse, Ast.Constant(true)),
                         Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated, we could choose to do this only for nested exception handlers.
                         Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
                         AstUtils.Try(
-                            Ast.Annotate(Span, _header),
+                            ag.AddDebugInfo(Ast.Empty(), new SourceSpan(Span.Start, _header)),
                             body
-                        ).Catch(exception.Type, exception,
-                            Ast.Assign(runElse, Ast.False()),
+                        ).Catch(exception,
+                            Ast.Assign(runElse, Ast.Constant(false)),
                             @catch,
                             Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
                         ),
                         AstUtils.IfThen(runElse,
                             @else
-                        )
+                        ),
+                        Ast.Empty()
                     );
 
             } else if (@catch != null) {        // no "else" clause
@@ -145,16 +146,14 @@ namespace IronPython.Compiler.Ast {
                 //  }
                 //
                 result = AstUtils.Try(
-                        Ast.Annotate(Span, _header),
-                        Ast.BlockVoid(
-                            Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
-                            Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
-                            body
-                        )
-                    ).Catch(exception.Type, exception,
+                        ag.AddDebugInfo(Ast.Empty(), new SourceSpan(Span.Start, _header)),
+                        Ast.Assign(lineUpdated, ag.LineNumberUpdated),              // save existing line updated
+                        Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
+                        body
+                    ).Catch(exception,
                         @catch,
                         Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
-                    );                
+                    );
             } else {
                 result = body;
             }
@@ -196,8 +195,8 @@ namespace IronPython.Compiler.Ast {
                 //          line numbers.
                 body = AstUtils.Try(// we use a filter to know when we have an exception and when control leaves normally (via
                     // either a return or the body completing successfully).
-                    Ast.Annotate(Span, _header),
                     AstUtils.Try(
+                        ag.AddDebugInfo(Ast.Empty(), new SourceSpan(Span.Start, _header)),
                         Ast.Assign(noNestedException, Ast.Constant(true)),
                         body
                     ).Filter(
@@ -299,16 +298,17 @@ namespace IronPython.Compiler.Ast {
                         ist = AstUtils.IfCondition(
                             Ast.NotEqual(
                                 Ast.Assign(converted, test),
-                                Ast.Null()
+                                Ast.Constant(null)
                             ),
-                            Ast.BlockVoid(
+                            Ast.Block(
                                 tsh.Target.TransformSet(ag, SourceSpan.None, converted, Operators.None),
                                 GetTracebackHeader(
                                     new SourceSpan(tsh.Start, tsh.Header),
                                     ag,
                                     exception,
                                     ag.Transform(tsh.Body)
-                                )
+                                ),
+                                Ast.Empty()
                             )
                         );
                     } else {
@@ -323,7 +323,7 @@ namespace IronPython.Compiler.Ast {
                         ist = AstUtils.IfCondition(
                             Ast.NotEqual(
                                 test,
-                                Ast.Null()
+                                Ast.Constant(null)
                             ),
                             GetTracebackHeader(
                                 new SourceSpan(tsh.Start, tsh.Header),
@@ -379,7 +379,7 @@ namespace IronPython.Compiler.Ast {
             // Codegen becomes:
             //     extracted = PythonOps.SetCurrentException(exception)
             //      < dynamic exception analysis >
-            return Ast.BlockVoid(
+            return Ast.Block(
                 Ast.Assign(
                     extracted,
                     Ast.Call(
@@ -388,7 +388,8 @@ namespace IronPython.Compiler.Ast {
                         exception
                     )
                 ),
-                body
+                body,
+                Ast.Empty()
             );
         }
 
@@ -400,15 +401,18 @@ namespace IronPython.Compiler.Ast {
             // the line that the exception was thrown from.  We then need to build exc_info() so that
             // it's available.  Finally we clear the list of dynamic stack frames because they've all
             // been associated with this exception.
-            return AstUtils.Block(
-                span,
-                ag.GetLineNumberUpdateExpression(false),    // pass false so if we take another exception we'll add it to the frame list
-                Ast.Call(
-                    AstGenerator.GetHelperMethod("BuildExceptionInfo"),
-                    AstUtils.CodeContext(),
-                    exception
+            return ag.AddDebugInfo(
+                Ast.Block(
+                    ag.GetLineNumberUpdateExpression(false),    // pass false so if we take another exception we'll add it to the frame list
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("BuildExceptionInfo"),
+                        AstUtils.CodeContext(),
+                        exception
+                    ),
+                    body,
+                    Ast.Empty()
                 ),
-                body
+                span
             );
         }
 

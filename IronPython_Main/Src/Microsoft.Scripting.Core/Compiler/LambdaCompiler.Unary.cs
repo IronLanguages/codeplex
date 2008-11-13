@@ -130,7 +130,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                     case ExpressionType.UnaryPlus:
                     case ExpressionType.NegateChecked:
-                    case ExpressionType.Negate: {
+                    case ExpressionType.Negate:
+                    case ExpressionType.Increment:
+                    case ExpressionType.Decrement:
+                        {
                             Debug.Assert(operandType == resultType);
                             Label labIfNull = _ilg.DefineLabel();
                             Label labEnd = _ilg.DefineLabel();
@@ -199,6 +202,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         if (TypeUtils.IsNullableType(resultType)) {
                             _ilg.Emit(OpCodes.Unbox_Any, resultType);
                         }
+                        break;
+                    case ExpressionType.Increment:
+                        _ilg.Emit(OpCodes.Ldc_I4_1);
+                        _ilg.Emit(OpCodes.Add);
+                        break;
+                    case ExpressionType.Decrement:
+                        _ilg.Emit(OpCodes.Ldc_I4_1);
+                        _ilg.Emit(OpCodes.Sub);
                         break;
                     default:
                         throw Error.UnhandledUnary(op);

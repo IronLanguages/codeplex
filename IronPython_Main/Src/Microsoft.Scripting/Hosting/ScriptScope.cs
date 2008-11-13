@@ -20,7 +20,7 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -303,7 +303,7 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             // TODO: support for IgnoreCase in underlying ScriptScope APIs
-            public override MetaObject BindInvokeMemberl(InvokeMemberBinder action, MetaObject[] args) {
+            public override MetaObject BindInvokeMember(InvokeMemberBinder action, MetaObject[] args) {
                 var fallback = action.FallbackInvokeMember(this, args);
                 var result = Expression.Variable(typeof(object), "result");
 

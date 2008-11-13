@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Ast {
-    internal sealed class LambdaParameterRewriter : ExpressionTreeVisitor {
+    internal sealed class LambdaParameterRewriter : ExpressionVisitor {
         private readonly Dictionary<ParameterExpression, ParameterExpression> _map;
 
         internal LambdaParameterRewriter(Dictionary<ParameterExpression, ParameterExpression> map) {

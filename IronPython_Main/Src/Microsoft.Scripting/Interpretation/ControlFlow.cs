@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Interpretation {
     enum ControlFlowKind {
         NextStatement,
         Goto,
-        Return,
+        Yield,
         NextForYield
     };
 
@@ -40,10 +40,10 @@ namespace Microsoft.Scripting.Interpretation {
             Value = value;
         }
 
-        internal static ControlFlow Return(object value) {
+        internal static ControlFlow YieldReturn(object value) {
             Debug.Assert(!(value is ControlFlow));
 
-            return new ControlFlow(ControlFlowKind.Return, null, value);
+            return new ControlFlow(ControlFlowKind.Yield, null, value);
         }
 
         internal static ControlFlow Goto(LabelTarget label, object value) {
@@ -53,5 +53,6 @@ namespace Microsoft.Scripting.Interpretation {
         // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary allocation
         internal static readonly ControlFlow NextStatement = new ControlFlow(ControlFlowKind.NextStatement);
         internal static readonly ControlFlow NextForYield = new ControlFlow(ControlFlowKind.NextForYield);
+        internal static readonly ControlFlow YieldBreak = new ControlFlow(ControlFlowKind.Yield);
     }
 }

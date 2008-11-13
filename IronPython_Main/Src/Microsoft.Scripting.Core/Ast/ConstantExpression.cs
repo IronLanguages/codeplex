@@ -20,25 +20,24 @@ using Microsoft.Scripting;
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public class ConstantExpression : Expression {
-        internal static readonly ConstantExpression TrueLiteral = ConstantExpression.Make(null, true, typeof(bool));
-        internal static readonly ConstantExpression FalseLiteral = ConstantExpression.Make(null, false, typeof(bool));
-        internal static readonly ConstantExpression NullLiteral = ConstantExpression.Make(null, null, typeof(object));
-        internal static readonly ConstantExpression EmptyStringLiteral = ConstantExpression.Make(null, String.Empty, typeof(string));
+        internal static readonly ConstantExpression TrueLiteral = ConstantExpression.Make(true, typeof(bool));
+        internal static readonly ConstantExpression FalseLiteral = ConstantExpression.Make(false, typeof(bool));
+        internal static readonly ConstantExpression NullLiteral = ConstantExpression.Make(null, typeof(object));
+        internal static readonly ConstantExpression EmptyStringLiteral = ConstantExpression.Make(String.Empty, typeof(string));
         internal static readonly ConstantExpression[] IntCache = new ConstantExpression[100];
 
         // TODO: Constant<T> subclass that stores the unboxed value?
         private readonly object _value;
 
-        internal ConstantExpression(Annotations annotations, object value)
-            : base(annotations) {
+        internal ConstantExpression(object value) {
             _value = value;
         }
 
-        internal static ConstantExpression Make(Annotations annotations, object value, Type type) {
+        internal static ConstantExpression Make(object value, Type type) {
             if ((value == null && type == typeof(object)) || (value != null && value.GetType() == type)) {
-                return new ConstantExpression(annotations, value);
+                return new ConstantExpression(value);
             } else {
-                return new TypedConstantExpression(annotations, value, type);
+                return new TypedConstantExpression(value, type);
             }
         }
 
@@ -57,7 +56,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _value; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitConstant(this);
         }
     }
@@ -65,8 +64,8 @@ namespace Microsoft.Linq.Expressions {
     internal class TypedConstantExpression : ConstantExpression {
         private readonly Type _type;
 
-        internal TypedConstantExpression(Annotations annotations, object value, Type type)
-            : base(annotations, value) {
+        internal TypedConstantExpression(object value, Type type)
+            : base(value) {
             _type = type;
         }
 
@@ -76,31 +75,6 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        [Obsolete("use Constant(true) instead")]
-        public static ConstantExpression True() {
-            return Constant(true);
-        }
-
-        [Obsolete("use Constant(false) instead")]
-        public static ConstantExpression False() {
-            return Constant(false);
-        }
-
-        [Obsolete("use Constant(0) instead")]
-        public static ConstantExpression Zero() {
-            return Constant(0);
-        }
-
-        [Obsolete("use Constant(null) instead")]
-        public static ConstantExpression Null() {
-            return Constant(null);
-        }
-
-        [Obsolete("use Constant(null, type) instead")]
-        public static ConstantExpression Null(Type type) {
-            return Constant(null, type);
-        }
-
         public static ConstantExpression Constant(bool value) {
              return value ? ConstantExpression.TrueLiteral : ConstantExpression.FalseLiteral;
         }
@@ -122,7 +96,7 @@ namespace Microsoft.Linq.Expressions {
                         if (cacheIndex >= 0 && cacheIndex < ConstantExpression.IntCache.Length) {
                             ConstantExpression res;
                             if ((res = ConstantExpression.IntCache[cacheIndex]) == null) {
-                                ConstantExpression.IntCache[cacheIndex] = res = ConstantExpression.Make(null, x, typeof(int));
+                                ConstantExpression.IntCache[cacheIndex] = res = ConstantExpression.Make(x, typeof(int));
                             }
                             return res;
                         }
@@ -135,15 +109,11 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return ConstantExpression.Make(Annotations.Empty, value, value == null ? typeof(object) : value.GetType());
-        }
-
-        public static ConstantExpression Constant(object value, Type type) {
-            return Constant(value, type, Annotations.Empty);
+            return ConstantExpression.Make(value, value == null ? typeof(object) : value.GetType());
         }
 
         //CONFORMING
-        public static ConstantExpression Constant(object value, Type type, Annotations annotations) {
+        public static ConstantExpression Constant(object value, Type type) {
             ContractUtils.RequiresNotNull(type, "type");
             if (value == null && type.IsValueType && !TypeUtils.IsNullableType(type)) {
                 throw Error.ArgumentTypesMustMatch();
@@ -151,7 +121,7 @@ namespace Microsoft.Linq.Expressions {
             if (value != null && !TypeUtils.AreAssignable(type, value.GetType())) {
                 throw Error.ArgumentTypesMustMatch();
             }
-            return ConstantExpression.Make(annotations, value, type);
+            return ConstantExpression.Make(value, type);
         }
     }
 }

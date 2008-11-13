@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
@@ -65,62 +65,13 @@ namespace Microsoft.Scripting.ComInterop {
             return new ComInvokeBinder(
                 argInfo,
                 args,
-                Restrictions.GetTypeRestriction(callable, Value.GetType()).Merge(Restrictions.GetExpressionRestriction(methodRestriction)),
+                Restrictions.GetTypeRestriction(callable, Value.GetType()).Merge(
+                    Restrictions.GetExpressionRestriction(methodRestriction)
+                ),
                 methodDesc,
                 Expression.Property(dispCall, typeof(DispCallable).GetProperty("DispatchObject")),
                 _callable.ComMethodDesc
             ).Invoke();
-        }
-
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            switch (binder.Operation) {
-                case "CallSignatures":
-                case "Documentation":
-                    return Documentation(args);
-
-                case "IsCallable":
-                    return IsCallable(args);
-
-                // TODO: remove when Python switches over to GetIndexBinder
-                case "GetItem":
-                    if (_callable.ComMethodDesc.IsPropertyGet) {
-                        return BindComInvoke(new ArgumentInfo[0], args);
-                    }
-                    break;
-
-                // TODO: remove when Python switches over to SetIndexBinder
-                case "SetItem":
-                    if (_callable.ComMethodDesc.IsPropertyPut) {
-                        return BindComInvoke(new ArgumentInfo[0], args);
-                    }
-                    break;
-            }
-
-            return binder.FallbackOperation(this, args);
-        }
-
-        private MetaObject Documentation(MetaObject[] args) {
-            return new MetaObject(
-                // this.ComMethodDesc.Signature 
-                Expression.Property(
-                    Expression.Property(
-                        Helpers.Convert(Expression, typeof(DispCallable)),
-                        typeof(DispCallable).GetProperty("ComMethodDesc")
-                    ),
-                    typeof(ComMethodDesc).GetProperty("Signature")
-                ),
-                Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, Value.GetType()))
-            );
-        }
-
-        private MetaObject IsCallable(MetaObject[] args) {
-            return new MetaObject(
-                // DispCallable is always callable
-                Expression.Constant(true),
-                Restrictions.Combine(args).Merge(Restrictions.GetTypeRestriction(Expression, Value.GetType()))
-            );
         }
     }
 }

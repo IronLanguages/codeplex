@@ -34,7 +34,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -149,7 +149,6 @@
     <Compile Include="Actions\ExpandoClass.cs" />
     <Compile Include="Actions\GetIndexBinder.cs" />
     <Compile Include="Actions\CreateInstanceBinder.cs" />
-    <Compile Include="Actions\DeferMetaObject.cs" />
     <Compile Include="Actions\DeleteMemberBinder.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.cs" />
     <Compile Include="Actions\EmptyRuleSet.cs" />
@@ -158,7 +157,8 @@
     <Compile Include="Actions\InvokeBinder.cs" />
     <Compile Include="Actions\MetaObject.cs" />
     <Compile Include="Actions\MetaObjectBinder.cs" />
-    <Compile Include="Actions\OperationBinder.cs" />
+    <Compile Include="Actions\OperationOnIndexBinder.cs" />
+    <Compile Include="Actions\OperationOnMemberBinder.cs" />
     <Compile Include="Actions\ParameterMetaObject.cs" />
     <Compile Include="Actions\Restrictions.cs" />
     <Compile Include="Actions\RuleSet.cs" />
@@ -166,7 +166,10 @@
     <Compile Include="Actions\SetIndexBinder.cs" />
     <Compile Include="Actions\SetMemberBinder.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
-    <Compile Include="Actions\UnaryOperationBinder.cs" />
+    <Compile Include="Ast\IArgumentProvider.cs" />
+    <Compile Include="Ast\ListArgumentProvider.cs" />
+    <Compile Include="Compiler\ArgumentPrepender.cs" />
+    <Compile Include="Actions\UnaryOperationBinder.cs" />
     <Compile Include="Ast\ExpressionStringBuilder.cs" />
     <Compile Include="Compiler\BoundConstants.cs" />
     <Compile Include="Ast\DebugInfoExpression.cs" />
@@ -179,19 +182,20 @@
     <Compile Include="Compiler\RuntimeVariableList.cs" />
     <Compile Include="Com\BoolArgBuilder.cs" />
     <Compile Include="Com\ComBinderHelpers.cs" />
+    <Compile Include="Com\ComFallbackMetaObject.cs" />
     <Compile Include="Com\ConversionArgBuilder.cs" />
     <Compile Include="Com\CurrencyArgBuilder.cs" />
     <Compile Include="Com\DateTimeArgBuilder.cs" />
     <Compile Include="Com\ConvertibleArgBuilder.cs" />
     <Compile Include="Com\DispatchArgBuilder.cs" />
     <Compile Include="Com\ErrorArgBuilder.cs" />
+    <Compile Include="Com\IDispatchMetaObject.cs" />
     <Compile Include="Com\SplatCallSite.Generated.cs" />
     <Compile Include="Com\SplatCallSite.cs" />
     <Compile Include="Actions\TemplatedValue.cs" />
     <Compile Include="Actions\UpdateDelegates.Generated.cs" />
     <Compile Include="Actions\UpdateDelegates.cs" />
     <Compile Include="Ast\DynamicExpression.cs" />
-    <Compile Include="Ast\Annotations.cs" />
     <Compile Include="Ast\ArgumentInfo.cs" />
     <Compile Include="Actions\AutoRuleTemplate.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
@@ -221,7 +225,6 @@
     <Compile Include="Ast\NewArrayExpression.cs" />
     <Compile Include="Ast\NewExpression.cs" />
     <Compile Include="Ast\ParameterExpression.cs" />
-    <Compile Include="Ast\ReturnStatement.cs" />
     <Compile Include="Ast\SourceFileInformation.cs" />
     <Compile Include="Ast\SourceLocation.cs" />
     <Compile Include="Ast\SourceSpan.cs" />
@@ -234,7 +237,6 @@
     <Compile Include="Ast\UnaryExpression.cs" />
     <Compile Include="Com\ArgBuilder.cs" />
     <Compile Include="Com\BoundDispEvent.cs" />
-    <Compile Include="Com\ComClassMetaObject.cs" />
     <Compile Include="Com\ComDispIds.cs" />
     <Compile Include="Com\ComEventDesc.cs" />
     <Compile Include="Com\ComEventSink.cs" />
@@ -246,7 +248,6 @@
     <Compile Include="Com\ComMetaObject.cs" />
     <Compile Include="Com\ComMethodDesc.cs" />
     <Compile Include="Com\ComObject.cs" />
-    <Compile Include="Com\ComObjectWithTypeInfo.cs" />
     <Compile Include="Com\ComParamDesc.cs" />
     <Compile Include="Com\ComRuntimeHelpers.cs" />
     <Compile Include="Com\ComType.cs" />
@@ -254,25 +255,16 @@
     <Compile Include="Com\ComTypeDesc.cs" />
     <Compile Include="Com\ComTypeEnumDesc.cs" />
     <Compile Include="Com\ComTypeLibDesc.cs" />
-    <Compile Include="Com\ComTypeLibInfo.cs" />
     <Compile Include="Com\ComTypeLibMemberDesc.cs" />
     <Compile Include="Com\DispCallable.cs" />
     <Compile Include="Com\DispCallableMetaObject.cs" />
     <Compile Include="Com\ExcepInfo.cs" />
-    <Compile Include="Com\GenericComMetaObject.cs" />
-    <Compile Include="Com\GenericComObject.cs" />
     <Compile Include="Com\IDispatchComObject.cs" />
-    <Compile Include="Com\IDispatchMetaObject.cs" />
-    <Compile Include="Com\IDispatchObject.cs" />
     <Compile Include="Com\ComInvokeBinder.cs" />
     <Compile Include="Com\NullArgBuilder.cs" />
     <Compile Include="Com\ReturnBuilder.cs" />
     <Compile Include="Com\SimpleArgBuilder.cs" />
     <Compile Include="Com\StringArgBuilder.cs" />
-    <Compile Include="Com\TypeEnumMetaObject.cs" />
-    <Compile Include="Com\TypeInfoMetaObject.cs" />
-    <Compile Include="Com\TypeLibInfoMetaObject.cs" />
-    <Compile Include="Com\TypeLibMetaObject.cs" />
     <Compile Include="Com\UnknownArgBuilder.cs" />
     <Compile Include="Com\VarEnumSelector.cs" />
     <Compile Include="Com\Variant.cs" />
@@ -285,7 +277,7 @@
     <Compile Include="Compiler\CompilerScope.cs" />
     <Compile Include="Compiler\ConstantCheck.cs" />
     <Compile Include="Compiler\ExpressionQuoter.cs" />
-    <Compile Include="Ast\ExpressionTreeVisitor.cs" />
+    <Compile Include="Ast\ExpressionVisitor.cs" />
     <Compile Include="Ast\ExpressionWriter.cs" />
     <Compile Include="Compiler\HoistedLocals.cs" />
     <Compile Include="Compiler\KeyedQueue.cs" />
@@ -326,7 +318,6 @@
     <Compile Include="Utils\StrongBox.cs" />
     <Compile Include="Utils\SynchronizedDictionary.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
-    <Compile Include="DebugOptions.cs" />
     <Compile Include="Null.cs" />
     <Compile Include="Stubs.cs" />
   </ItemGroup>

@@ -23,8 +23,7 @@ namespace Microsoft.Scripting.Ast {
     public class UnboundExpression : Expression {
         private readonly SymbolId _name;
 
-        internal UnboundExpression(Annotations annotations, SymbolId name)
-            : base(annotations) {
+        internal UnboundExpression(SymbolId name) {
             _name = name;
         }
 
@@ -52,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }
@@ -62,11 +61,8 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Utils {
         public static UnboundExpression Read(SymbolId name) {
-            return Read(name, Annotations.Empty);
-        }
-        public static UnboundExpression Read(SymbolId name, Annotations annotations) {
             ContractUtils.Requires(!name.IsInvalid && !name.IsEmpty, "name", "Invalid or empty name is not allowed");
-            return new UnboundExpression(annotations, name);
+            return new UnboundExpression(name);
         }
     }
 }

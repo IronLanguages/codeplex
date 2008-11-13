@@ -15,6 +15,7 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using System.Threading;
@@ -216,7 +217,7 @@ namespace IronPython.Compiler.Ast {
 
             ag.DisableInterpreter = true;
             MSAst.Expression function = TransformToFunctionExpression(ag);
-            return AstUtils.Assign(_variable.Variable, function, Ast.Annotate(new SourceSpan(Start, Header)));
+            return ag.AddDebugInfo(AstUtils.Assign(_variable.Variable, function), new SourceSpan(Start, Header));
         }
 
         private static int _lambdaId;
@@ -231,7 +232,8 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Create AST generator to generate the body with
-            AstGenerator bodyGen = new AstGenerator(ag, MSAst.Expression.Annotate(SourceSpan.None), name, IsGenerator, false);
+            AstGenerator bodyGen = new AstGenerator(ag, name, IsGenerator, false);
+            bodyGen.DisableInterpreter = true;
 
             // Transform the parameters.
             // Populate the list of the parameter names and defaults.
@@ -270,11 +272,11 @@ namespace IronPython.Compiler.Ast {
             if (ag.DebugMode) {
                 // add beginning and ending break points for the function.
                 if (GetExpressionEnd(statements[statements.Count - 1]) != Body.End) {
-                    statements.Add(AstUtils.Empty(new SourceSpan(Body.End, Body.End)));
+                    statements.Add(ag.AddDebugInfo(Ast.Empty(), new SourceSpan(Body.End, Body.End)));
                 }
             }
 
-            MSAst.Expression body = Ast.BlockVoid(statements);
+            MSAst.Expression body = Ast.Block(new ReadOnlyCollection<MSAst.Expression>(statements.ToArray()));
 
             // If this function can modify sys.exc_info() (_canSetSysExcInfo), then it must restore the result on finish.
             // 
@@ -302,14 +304,15 @@ namespace IronPython.Compiler.Ast {
                 body = s;
             }
 
-            bodyGen.Block.Body = bodyGen.WrapScopeStatements(body);
+            body = bodyGen.WrapScopeStatements(body);
+            bodyGen.Block.Body = bodyGen.AddReturnTarget(body);
 
             FunctionAttributes flags = ComputeFlags(_parameters);
             bool needsWrapperMethod = flags != FunctionAttributes.None;
             if (_canSetSysExcInfo) {
                 flags |= FunctionAttributes.CanSetSysExcInfo;
             }
-            
+
             MSAst.Expression code;
             if (IsGenerator) {
                 code = bodyGen.Block.MakeGenerator(bodyGen.GeneratorLabel, GetGeneratorDelegateType(_parameters, needsWrapperMethod));
@@ -319,20 +322,25 @@ namespace IronPython.Compiler.Ast {
             }
 
             MSAst.Expression ret = Ast.Call(
-                typeof(PythonOps).GetMethod("MakeFunction"),                                    // method
-                AstUtils.CodeContext(),                                                              // 1. Emit CodeContext
-                Ast.Constant(name),                                                             // 2. FunctionName
-                code,                                                                           // 3. delegate
-                names.Count == 0 ?                                                              // 4. parameter names
-                    Ast.Constant(null, typeof(string[])) :
-                    (MSAst.Expression)Ast.NewArrayInit(typeof(string), names),
-                defaults.Count == 0 ?                                                           // 5. default values
-                    Ast.Constant(null, typeof(object[])) :
-                    (MSAst.Expression)Ast.NewArrayInit(typeof(object), defaults),                                   
-                Ast.Constant(flags),                                                            // 6. flags
-                Ast.Constant(ag.GetDocumentation(_body), typeof(string)),                       // 7. doc string or null
-                Ast.Constant(this.Start.Line),                                                  // 8. line number
-                Ast.Constant(_sourceUnit.Path, typeof(string))    // 9. filename
+                null,                                                                                   // instance
+                typeof(PythonOps).GetMethod("MakeFunction"),                                            // method
+                new ReadOnlyCollection<MSAst.Expression>(
+                    new [] {
+                        AstUtils.CodeContext(),                                                         // 1. Emit CodeContext
+                        Ast.Constant(name),                                                             // 2. FunctionName
+                        code,                                                                           // 3. delegate
+                        names.Count == 0 ?                                                              // 4. parameter names
+                            Ast.Constant(null, typeof(string[])) :
+                            (MSAst.Expression)Ast.NewArrayInit(typeof(string), names),
+                        defaults.Count == 0 ?                                                           // 5. default values
+                            Ast.Constant(null, typeof(object[])) :
+                            (MSAst.Expression)Ast.NewArrayInit(typeof(object), defaults),                                   
+                        Ast.Constant(flags),                                                            // 6. flags
+                        Ast.Constant(ag.GetDocumentation(_body), typeof(string)),                       // 7. doc string or null
+                        Ast.Constant(this.Start.Line),                                                  // 8. line number
+                        Ast.Constant(_sourceUnit.Path, typeof(string))                                  // 9. filename
+                    }
+                )
             );
 
             // add decorators
@@ -353,12 +361,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         private SourceLocation GetExpressionEnd(MSAst.Expression expression) {
-            SourceSpan span;
-            if (expression.Annotations.TryGet(out span)) {
-                return span.End;
-            } else {
-                return SourceLocation.None;
-            }
+            return SourceLocation.None;
         }
 
         private void TransformParameters(AstGenerator outer, AstGenerator inner, List<MSAst.Expression> defaults, List<MSAst.Expression> names) {

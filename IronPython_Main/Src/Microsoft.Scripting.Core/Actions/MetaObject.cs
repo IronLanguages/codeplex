@@ -13,12 +13,13 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using Microsoft.Linq.Expressions;
-using System.Reflection;
+using System.Collections.Generic;
 using Microsoft.Scripting.ComInterop;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using System.Reflection;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public class MetaObject {
         private readonly Expression _expression;
         private readonly Restrictions _restrictions;
@@ -79,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
         }
-        
+
         public Type LimitType {
             get {
                 return RuntimeType ?? Expression.Type;
@@ -89,11 +90,11 @@ namespace Microsoft.Scripting.Actions {
         public bool IsDynamicObject {
             get {
                 // We can skip _hasValue check as it implies _value == null
-                return _value is IDynamicObject 
+                return _value is IDynamicObject
 #if !SILVERLIGHT
-                    || ComInterop.ComMetaObject.IsComObject(_value)
+                    || ComInterop.ComObject.IsComObject(_value)
 #endif
-                ;
+;
             }
         }
 
@@ -139,8 +140,7 @@ namespace Microsoft.Scripting.Actions {
             return binder.FallbackDeleteIndex(this, args);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
-        public virtual MetaObject BindInvokeMemberl(InvokeMemberBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindInvokeMember(InvokeMemberBinder binder, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackInvokeMember(this, args);
         }
@@ -155,12 +155,6 @@ namespace Microsoft.Scripting.Actions {
             return binder.FallbackCreateInstance(this, args);
         }
 
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public virtual MetaObject BindOperation(OperationBinder binder, params MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackOperation(this, args);
-        }
-
         public virtual MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackUnaryOperation(this);
@@ -171,8 +165,37 @@ namespace Microsoft.Scripting.Actions {
             return binder.FallbackBinaryOperation(this, arg);
         }
 
-        public virtual string[] GetMemberNames() {
+        /// <summary>
+        /// Binds an operation a.b (op)= c
+        /// </summary>
+        /// <param name="binder">Binder implementing the language semantics.</param>
+        /// <param name="value">Meta Object representing the right-side argument.</param>
+        /// <returns>MetaObject representing the result of the binding.</returns>
+        public virtual MetaObject BindOperationOnMember(OperationOnMemberBinder binder, MetaObject value) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackOperationOnMember(this, value);
+        }
+
+        /// <summary>
+        /// Binds an operation a[i,j,k] (op)= c
+        /// </summary>
+        /// <param name="binder">Binder implementing the language semantics.</param>
+        /// <param name="args">MetaObjects representing the indexes and the right-hand value.</param>
+        /// <returns>MetaObject representing the result of the binding.</returns>
+        public virtual MetaObject BindOperationOnIndex(OperationOnIndexBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackOperationOnIndex(this, args);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public virtual IEnumerable<string> GetDynamicMemberNames() {
             return EmptyArray<string>.Instance;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
+        public virtual IEnumerable<KeyValuePair<string, object>> GetDynamicDataMembers() {
+            return EmptyArray<KeyValuePair<string, object>>.Instance;
         }
 
         // Internal helpers
@@ -206,7 +229,7 @@ namespace Microsoft.Scripting.Actions {
             if (ido != null) {
                 return ido.GetMetaObject(parameterExpression);
 #if !SILVERLIGHT
-            } else if (ComMetaObject.IsComObject(argValue)) {
+            } else if (ComObject.IsComObject(argValue)) {
                 return ComMetaObject.GetComMetaObject(parameterExpression, argValue);
 #endif
             } else {

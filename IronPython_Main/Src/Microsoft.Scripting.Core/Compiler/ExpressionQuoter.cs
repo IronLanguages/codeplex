@@ -40,7 +40,7 @@ namespace Microsoft.Runtime.CompilerServices {
         // as indexing expressions.
         //
         // The behavior of Quote is indended to be like C# and VB expression quoting
-        private sealed class ExpressionQuoter : ExpressionTreeVisitor {
+        private sealed class ExpressionQuoter : ExpressionVisitor {
             private readonly HoistedLocals _scope;
             private readonly object[] _locals;
 
@@ -64,7 +64,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 if (b == node.Body) {
                     return node;
                 }
-                return Expression.Lambda<T>(b, node.Name, node.Annotations, node.Parameters);
+                return Expression.Lambda<T>(b, node.Name, node.Parameters);
             }
 
             protected internal override Expression VisitBlock(BlockExpression node) {
@@ -74,13 +74,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 if (b == node.Expressions) {
                     return node;
                 }
-                if (node.Type == typeof(void)) {
-#pragma warning disable 618
-                    return Expression.BlockVoid(node.Annotations, node.Variables, b);
-#pragma warning restore 618
-                } else {
-                    return Expression.Block(node.Annotations, node.Variables, b);
-                }
+                return Expression.Block(node.Variables, b);
             }
 
             protected override CatchBlock VisitCatchBlock(CatchBlock node) {
@@ -91,7 +85,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 if (b == node.Body && f == node.Filter) {
                     return node;
                 }
-                return Expression.Catch(node.Test, node.Variable, b, f, node.Annotations);
+                return Expression.CreateCatchBlock(node.Test, node.Variable, b, f);
             }
 
             protected internal override Expression VisitRuntimeVariables(RuntimeVariablesExpression node) {
@@ -135,7 +129,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 if (box == null) {
                     return node;
                 }
-                return Expression.Field(Expression.Constant(box), "Value", node.Annotations);
+                return Expression.Field(Expression.Constant(box), "Value");
             }
 
             private IStrongBox GetBox(ParameterExpression variable) {

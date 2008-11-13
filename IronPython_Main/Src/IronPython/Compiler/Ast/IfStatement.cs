@@ -51,10 +51,12 @@ namespace IronPython.Compiler.Ast {
             while (i-- > 0) {
                 IfStatementTest ist = _tests[i];
 
-                result = AstUtils.Condition(
-                    ag.TransformAndDynamicConvert(ist.Test, typeof(bool)), 
-                    ag.Transform(ist.Body), 
-                    result, 
+                result = ag.AddDebugInfo(
+                    Ast.Condition(
+                        ag.TransformAndDynamicConvert(ist.Test, typeof(bool)), 
+                        ag.Transform(ist.Body), 
+                        result
+                    ),
                     new SourceSpan(ist.Start, ist.Header)
                 );
             }

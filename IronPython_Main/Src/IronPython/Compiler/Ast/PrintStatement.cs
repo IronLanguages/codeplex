@@ -47,20 +47,20 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression destination = ag.TransformAsObject(_dest);
 
             if (_expressions.Length == 0) {
+                MSAst.Expression result;
                 if (destination != null) {
-                    return AstUtils.Call(
+                    result = Ast.Call(
                         AstGenerator.GetHelperMethod("PrintNewlineWithDest"), 
-                        Span, 
-                        AstUtils.CodeContext(), 
+                        AstUtils.CodeContext(),
                         destination
                     );
                 } else {
-                    return AstUtils.Call(
+                    result = Ast.Call(
                         AstGenerator.GetHelperMethod("PrintNewline"), 
-                        Span, 
                         AstUtils.CodeContext()
                     );
                 }
+                return ag.AddDebugInfo(result, Span);
             } else {
                 // Create list for the individual statements
                 List<MSAst.Expression> statements = new List<MSAst.Expression>();
@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
                     MSAst.ParameterExpression temp = ag.GetTemporary("destination");
 
                     statements.Add(
-                        AstGenerator.MakeAssignment(temp, destination)
+                        ag.MakeAssignment(temp, destination)
                     );
 
                     destination = temp;
@@ -98,7 +98,8 @@ namespace IronPython.Compiler.Ast {
                     statements.Add(mce);
                 }
 
-                return AstUtils.Block(Span, statements.ToArray());
+                statements.Add(Ast.Empty());
+                return ag.AddDebugInfo(Ast.Block(statements.ToArray()), Span);
             }
         }
 

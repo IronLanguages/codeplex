@@ -16,15 +16,18 @@
 using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-    partial class MetaPythonObject : MetaObject {
+    partial class MetaPythonObject : OperationMetaObject {
         public MetaPythonObject(Expression/*!*/ expression, Restrictions/*!*/ restrictions)
             : base(expression, restrictions) {
         }
@@ -52,9 +55,9 @@ namespace IronPython.Runtime.Binding {
             return Ast.Call(
                 TypeInfo._PythonOps.SlotTryGetBoundValue,
                 Ast.Constant(binderState.Context),
-                Ast.ConvertHelper(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
-                Ast.ConvertHelper(instance, typeof(object)),
-                Ast.ConvertHelper(
+                AstUtils.Convert(Utils.WeakConstant(dts), typeof(PythonTypeSlot)),
+                AstUtils.Convert(instance, typeof(object)),
+                AstUtils.Convert(
                     pythonType,
                     typeof(PythonType)
                 ),
@@ -126,7 +129,7 @@ namespace IronPython.Runtime.Binding {
 
             return new MetaObject(
                 Ast.Call(
-                    typeof(BinderOps).GetMethod("GetDelegate"),
+                    typeof(PythonOps).GetMethod("GetDelegate"),
                     Ast.Constant(context),
                     arg.Expression,
                     Ast.Constant(toType)

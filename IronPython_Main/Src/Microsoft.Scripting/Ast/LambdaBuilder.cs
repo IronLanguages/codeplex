@@ -40,7 +40,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly List<ParameterExpression> _locals = new List<ParameterExpression>();
         private List<ParameterExpression> _params = new List<ParameterExpression>();
         private readonly List<KeyValuePair<ParameterExpression, bool>> _visibleVars = new List<KeyValuePair<ParameterExpression, bool>>();
-        private Annotations _annotations;
         private string _name;
         private Type _returnType;
         private ParameterExpression _paramsArray;
@@ -51,22 +50,9 @@ namespace Microsoft.Scripting.Ast {
         private bool _doNotAddContext;
         private bool _completed;
 
-        internal LambdaBuilder(Annotations annotations, string name, Type returnType) {
-            _annotations = annotations;
+        internal LambdaBuilder(string name, Type returnType) {
             _name = name;
             _returnType = returnType;
-        }
-
-        /// <summary>
-        /// Annotations for the lambda being built
-        /// </summary>
-        public Annotations Annotations {
-            get {
-                return _annotations;
-            }
-            set {
-                _annotations = value;
-            }
         }
 
         /// <summary>
@@ -322,10 +308,9 @@ namespace Microsoft.Scripting.Ast {
 
             LambdaExpression lambda = Expression.Lambda(
                 lambdaType,
-                MakeBody(),
+                AddDefaultReturn(MakeBody()),
                 _name,
-                _annotations,
-                _params
+                new ReadOnlyCollection<ParameterExpression>(_params.ToArray())
             );
 
             // The builder is now completed
@@ -345,9 +330,8 @@ namespace Microsoft.Scripting.Ast {
 
             LambdaExpression lambda = Expression.Lambda(
                 GetLambdaType(_returnType, _params),
-                MakeBody(), 
+                AddDefaultReturn(MakeBody()), 
                 _name,
-                _annotations, 
                 _params
             );
 
@@ -372,7 +356,6 @@ namespace Microsoft.Scripting.Ast {
                 label,
                 MakeBody(),
                 _name, 
-                _annotations, 
                 _params
             );
 
@@ -442,7 +425,7 @@ namespace Microsoft.Scripting.Ast {
                 if (_params[i].Type != delegateParams[i].ParameterType) {
                     ParameterExpression newParameter = Expression.Parameter(delegateParams[i].ParameterType, delegateParams[i].Name);
                     ParameterExpression mappedParameter = _params[i];
-                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name);
 
                     newParams.Add(newParameter);
                     backingVars.Add(backingVariable);
@@ -472,7 +455,7 @@ namespace Microsoft.Scripting.Ast {
                 //unwarap delegate paramarray into variables and map parameters to the variables
                 for (int i = 0; i < unwrap; i++) {
                     ParameterExpression mappedParameter = _params[copy + i];
-                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name);
 
                     backingVars.Add(backingVariable);
                     paramMapping.Add(mappedParameter, backingVariable);
@@ -493,7 +476,7 @@ namespace Microsoft.Scripting.Ast {
                 //lambda's paramarray should get elements from the delegate paramarray after skipping those that we unwrapped.
                 if (lambdaHasParamarray) {
                     ParameterExpression mappedParameter = _paramsArray;
-                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name, mappedParameter.Annotations);
+                    ParameterExpression backingVariable = Expression.Variable(mappedParameter.Type, mappedParameter.Name);
 
                     backingVars.Add(backingVariable);
                     paramMapping.Add(mappedParameter, backingVariable);
@@ -595,6 +578,15 @@ namespace Microsoft.Scripting.Ast {
             if (_locals != null && _locals.Count > 0) {
                 body = Expression.Block(new ReadOnlyCollection<ParameterExpression>(_locals.ToArray()), body);
             }
+
+            return body;
+        }
+
+        // Add a default return value if needed
+        private Expression AddDefaultReturn(Expression body) {
+            if (body.Type == typeof(void) && _returnType != typeof(void)) {
+                body = Expression.Block(body, Expression.Default(_returnType));
+            }
             return body;
         }
 
@@ -635,8 +627,9 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="span">SourceSpan for the lambda being built.</param>
         /// <returns>New instance of the </returns>
         [Obsolete("use a Lambda overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static LambdaBuilder Lambda(Type returnType, string name, SourceSpan span) {
-            return Lambda(returnType, name, Expression.Annotate(span));
+            return Lambda(returnType, name);
         }
 
         /// <summary>
@@ -646,11 +639,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="name">Name for the lambda being built.</param>
         /// <returns>new LambdaBuilder instance</returns>
         public static LambdaBuilder Lambda(Type returnType, string name) {
-            return Lambda(returnType, name, Annotations.Empty);
-        }
-
-        public static LambdaBuilder Lambda(Type returnType, string name, Annotations annotations) {
-            return new LambdaBuilder(annotations, name, returnType);
+            return new LambdaBuilder(name, returnType);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace IronPython.Compiler.Ast {
                 ag.AddError("'continue' not supported inside 'finally' clause", Span);
                 return null;
             } else if (ag.InLoop) {
-                return AstUtils.Continue(ag.ContinueLabel, Span);
+                return ag.AddDebugInfo(MSAst.Expression.Continue(ag.ContinueLabel), Span);
             } else {
                 ag.AddError("'continue' not properly in loop", Span);
                 return null;

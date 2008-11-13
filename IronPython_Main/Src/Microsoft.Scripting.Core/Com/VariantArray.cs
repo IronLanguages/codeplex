@@ -26,60 +26,24 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    // TODO: make these types internal
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
-    [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]
-    public struct VariantArray1 {
-        [Obsolete("do not use", true)]
+    internal struct VariantArray1 {
         public Variant Element0;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
-    [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]
-    public struct VariantArray2 {
-        [Obsolete("do not use", true)]
-        public Variant Element0;
-        [Obsolete("do not use", true)]
-        public Variant Element1;
+    internal struct VariantArray2 {
+        public Variant Element0, Element1;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
-    [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]
-    public struct VariantArray4 {
-        [Obsolete("do not use", true)]
-        public Variant Element0;
-        [Obsolete("do not use", true)]
-        public Variant Element1;
-        [Obsolete("do not use", true)]
-        public Variant Element2;
-        [Obsolete("do not use", true)]
-        public Variant Element3;
+    internal struct VariantArray4 {
+        public Variant Element0, Element1, Element2, Element3;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
-    [CLSCompliant(false)]
     [StructLayout(LayoutKind.Sequential)]
-    public struct VariantArray8 {
-        [Obsolete("do not use", true)]
-        public Variant Element0;
-        [Obsolete("do not use", true)]
-        public Variant Element1;
-        [Obsolete("do not use", true)]
-        public Variant Element2;
-        [Obsolete("do not use", true)]
-        public Variant Element3;
-        [Obsolete("do not use", true)]
-        public Variant Element4;
-        [Obsolete("do not use", true)]
-        public Variant Element5;
-        [Obsolete("do not use", true)]
-        public Variant Element6;
-        [Obsolete("do not use", true)]
-        public Variant Element7;
+    internal struct VariantArray8 {
+        public Variant Element0, Element1, Element2, Element3, Element4, Element5, Element6, Element7;
     }
 
     //
@@ -126,9 +90,9 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        // TODO: generate internal type with internal members
+        // TODO: generate internal members
         private static Type CreateCustomType(int size) {
-            var attrs = TypeAttributes.Public | TypeAttributes.SequentialLayout;
+            var attrs = TypeAttributes.NotPublic | TypeAttributes.SequentialLayout;
             AssemblyGen asm = Snippets.Shared.GetAssembly(false, false);
             TypeBuilder type = asm.DefineType("VariantArray" + size, typeof(ValueType), attrs, true);
             for (int i = 0; i < size; i++) {

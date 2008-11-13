@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Ast {
     /// scopes encountered have their variables promoted to the generator's
     /// closure, so they survive yields.
     /// </summary>
-    internal sealed class GeneratorRewriter : ExpressionTreeVisitor {
+    internal sealed class GeneratorRewriter : ExpressionVisitor {
         // These two constants are used internally. They should not conflict
         // with valid yield states.
         private const int GotoRouterYielding = 0;
@@ -129,12 +129,11 @@ namespace Microsoft.Scripting.Ast {
         private YieldMarker GetYieldMarker(YieldExpression node) {
             YieldMarker result = new YieldMarker(_yields.Count + 1);
             _yields.Add(result);
-            YieldAnnotation debugCookie;
-            if (node.Annotations.TryGet(out debugCookie)) {
+            if (node.YieldMarker != -1) {
                 if (_debugCookies == null) {
                     _debugCookies = new List<int>();
                 }
-                _debugCookies.Insert(result.State, debugCookie.YieldMarker);
+                _debugCookies.Insert(result.State, node.YieldMarker);
             }
             return result;
         }
@@ -194,7 +193,7 @@ namespace Microsoft.Scripting.Ast {
 
             // No yields, just return
             if (startYields == _yields.Count) {
-                return Expression.MakeTry(@try, @finally, fault, node.Annotations, handlers);
+                return Expression.MakeTry(@try, @finally, fault, handlers);
             }
 
             if (fault != null && finallyYields != catchYields) {
@@ -239,13 +238,13 @@ namespace Microsoft.Scripting.Ast {
                     // implementation will need to be different
                     var deferredVar = Expression.Variable(c.Test, null);
                     temps.Add(deferredVar);
-                    handlers[i] = Expression.Catch(c.Test, deferredVar, Expression.Empty(), c.Filter);
+                    handlers[i] = Expression.Catch(deferredVar, Expression.Empty(), c.Filter);
 
                     var catchBody = c.Body;
                     if (c.Variable != null) {
-                        catchBody = Expression.Block(c.Annotations, Expression.Assign(c.Variable, deferredVar), catchBody);
+                        catchBody = Expression.Block(Expression.Assign(c.Variable, deferredVar), catchBody);
                     } else {
-                        catchBody = Expression.Block(c.Annotations, catchBody);
+                        catchBody = Expression.Block(catchBody);
                     }
 
                     block.Add(
@@ -257,7 +256,7 @@ namespace Microsoft.Scripting.Ast {
                     );
                 }
 
-                block[1] = Expression.MakeTry(@try, null, null, null, new ReadOnlyCollection<CatchBlock>(handlers));
+                block[1] = Expression.MakeTry(@try, null, null, new ReadOnlyCollection<CatchBlock>(handlers));
                 @try = Expression.Block(temps, block);
                 handlers = new CatchBlock[0]; // so we don't reuse these
             }
@@ -278,7 +277,7 @@ namespace Microsoft.Scripting.Ast {
                 // We need to add a catch(Exception), so if we have catches,
                 // wrap them in a try
                 if (handlers.Count > 0) {
-                    @try = Expression.MakeTry(@try, null, null, null, handlers);
+                    @try = Expression.MakeTry(@try, null, null, handlers);
                     handlers = new CatchBlock[0];
                 }
 
@@ -310,7 +309,7 @@ namespace Microsoft.Scripting.Ast {
                             ),
                             Expression.Label(finallyReturn)
                         ),
-                        Expression.Catch(exception.Type, exception, Expression.Empty())
+                        Expression.Catch(exception, Expression.Empty())
                     ),
                     Expression.Condition(
                         Expression.Equal(_gotoRouter, Expression.Constant(GotoRouterYielding)),
@@ -331,10 +330,10 @@ namespace Microsoft.Scripting.Ast {
 
             // Make the outer try, if needed
             if (handlers.Count > 0 || @finally != null || fault != null) {
-                @try = Expression.MakeTry(@try, @finally, fault, null, handlers);
+                @try = Expression.MakeTry(@try, @finally, fault, handlers);
             }
 
-            return Expression.Block(node.Annotations, Expression.Label(tryStart), @try);
+            return Expression.Block(Expression.Label(tryStart), @try);
         }
 
         // Skip the finally block if we are yielding, but not if we're doing a
@@ -378,11 +377,6 @@ namespace Microsoft.Scripting.Ast {
             return Visit(node.ReduceExtensions());
         }
 
-        // TODO: this can go away when ReturnStatement goes away
-        protected override Expression VisitReturn(ReturnStatement node) {
-            throw new InvalidOperationException("Cannot return value from generator using ReturnStatement, use YieldExpression instead");
-        }
-
         private Expression VisitYield(YieldExpression node) {
             if (node.Target != _generator.Label) {
                 throw new InvalidOperationException("yield and generator must have the same LabelTarget object");
@@ -398,7 +392,7 @@ namespace Microsoft.Scripting.Ast {
                     block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterYielding)));
                 }
                 block.Add(Expression.Goto(_returnLabels.Peek()));
-                return Expression.Block(node.Annotations, block);
+                return Expression.Block(block);
             }
 
             // Yield return
@@ -412,7 +406,7 @@ namespace Microsoft.Scripting.Ast {
             block.Add(Expression.Label(marker.Label));
             block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterNone)));
             block.Add(Expression.Empty());
-            return Expression.Block(node.Annotations, block);
+            return Expression.Block(block);
         }
 
         protected override Expression VisitBlock(BlockExpression node) {
@@ -422,23 +416,16 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Block(node.Annotations, node.Variables, b);
+                return Expression.Block(node.Variables, b);
             }
 
             // save the variables for later
             // (they'll be hoisted outside of the lambda)
             _vars.AddRange(node.Variables);
 
-            //Return a new block expression with the rewritten body except for that
-            //all the variables are removed. The type of the result block is the same
-            //as the input block.
-            if (node.Type == typeof(void)) {
-#pragma warning disable 618
-                return Expression.BlockVoid(node.Annotations, null, b);
-#pragma warning restore 618
-            } else {
-                return Expression.Block(node.Annotations, null, b);
-            }
+            // Return a new block expression with the rewritten body except for that
+            // all the variables are removed.
+            return Expression.Block(null, b);
         }
 
         protected override Expression VisitLambda<T>(Expression<T> node) {
@@ -456,7 +443,7 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Assign(left, right, node.Annotations);
+                return Expression.Assign(left, right);
             }
 
             var block = new List<Expression>();
@@ -471,7 +458,7 @@ namespace Microsoft.Scripting.Ast {
                         var member = (MemberExpression)node.Left;
                         Expression e = Visit(member.Expression);
                         block.Add(ToTemp(ref e));
-                        left = Expression.MakeMemberAccess(e, member.Member, member.Annotations);
+                        left = Expression.MakeMemberAccess(e, member.Member);
                         break;
                     case ExpressionType.Index:
                         var index = (IndexExpression)node.Left;
@@ -482,7 +469,7 @@ namespace Microsoft.Scripting.Ast {
                         }
                         block.Add(ToTemp(ref o));
                         block.Add(ToTemp(ref a));
-                        left = Expression.MakeIndex(o, index.Indexer, index.Annotations, a);
+                        left = Expression.MakeIndex(o, index.Indexer, a);
                         break;
                     case ExpressionType.Parameter:
                         // no action needed
@@ -504,8 +491,8 @@ namespace Microsoft.Scripting.Ast {
                 block.Add(ToTemp(ref right));
             }
 
-            block.Add(Expression.Assign(left, right, null));
-            return Expression.Block(node.Annotations, block);
+            block.Add(Expression.Assign(left, right));
+            return Expression.Block(block);
         }
 
         protected override Expression VisitDynamic(DynamicExpression node) {
@@ -515,12 +502,11 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.MakeDynamic(node.DelegateType, node.Binder, node.Annotations, a);
+                return Expression.MakeDynamic(node.DelegateType, node.Binder, a);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref a),
-                Expression.MakeDynamic(node.DelegateType, node.Binder, null, a)
+                Expression.MakeDynamic(node.DelegateType, node.Binder, a)
             );
         }
 
@@ -532,13 +518,12 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.MakeIndex(o, node.Indexer, node.Annotations, a);
+                return Expression.MakeIndex(o, node.Indexer, a);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref o),
                 ToTemp(ref a),
-                Expression.MakeIndex(o, node.Indexer, null, a)
+                Expression.MakeIndex(o, node.Indexer, a)
             );
         }
 
@@ -550,13 +535,12 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Invoke(e, node.Annotations, a);
+                return Expression.Invoke(e, a);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref e),
                 ToTemp(ref a),
-                Expression.Invoke(e, null, a)
+                Expression.Invoke(e, a)
             );
         }
 
@@ -568,20 +552,18 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Call(o, node.Method, node.Annotations, a);
+                return Expression.Call(o, node.Method, a);
             }
             if (o == null) {
                 return Expression.Block(
-                    node.Annotations,
                     ToTemp(ref a),
-                    Expression.Call(null, node.Method, null, a)
+                    Expression.Call(null, node.Method, a)
                 );
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref o),
                 ToTemp(ref a),
-                Expression.Call(o, node.Method, null, a)
+                Expression.Call(o, node.Method, a)
             );
         }
 
@@ -593,15 +575,14 @@ namespace Microsoft.Scripting.Ast {
             }
             if (yields == _yields.Count) {
                 return (node.Members != null)
-                    ? Expression.New(node.Constructor, a, node.Annotations, node.Members)
-                    : Expression.New(node.Constructor, node.Annotations, a);
+                    ? Expression.New(node.Constructor, a, node.Members)
+                    : Expression.New(node.Constructor, a);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref a),
                 (node.Members != null)
-                    ? Expression.New(node.Constructor, a, null, node.Members)
-                    : Expression.New(node.Constructor, null, a)
+                    ? Expression.New(node.Constructor, a, node.Members)
+                    : Expression.New(node.Constructor, a)
             );
         }
 
@@ -613,15 +594,14 @@ namespace Microsoft.Scripting.Ast {
             }
             if (yields == _yields.Count) {
                 return (node.NodeType == ExpressionType.NewArrayInit)
-                    ? Expression.NewArrayInit(node.Type.GetElementType(), node.Annotations, e)
-                    : Expression.NewArrayBounds(node.Type.GetElementType(), node.Annotations, e);
+                    ? Expression.NewArrayInit(node.Type.GetElementType(), e)
+                    : Expression.NewArrayBounds(node.Type.GetElementType(), e);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref e),
                 (node.NodeType == ExpressionType.NewArrayInit)
-                    ? Expression.NewArrayInit(node.Type.GetElementType(), null, e)
-                    : Expression.NewArrayBounds(node.Type.GetElementType(), null, e)
+                    ? Expression.NewArrayInit(node.Type.GetElementType(), e)
+                    : Expression.NewArrayBounds(node.Type.GetElementType(), e)
             );
         }
 
@@ -632,18 +612,22 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.MakeMemberAccess(e, node.Member, node.Annotations);
+                return Expression.MakeMemberAccess(e, node.Member);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref e),
-                Expression.MakeMemberAccess(e, node.Member, null)
+                Expression.MakeMemberAccess(e, node.Member)
             );
         }
 
         protected override Expression VisitBinary(BinaryExpression node) {
             if (node.NodeType == ExpressionType.Assign) {
                 return VisitAssign(node);
+            }
+            // For OpAssign nodes: if has a yield, we need to do the generator
+            // transformation on the reduced value.
+            if (node.CanReduce) {
+                return Visit(node.Reduce());
             }
 
             int yields = _yields.Count;
@@ -653,13 +637,13 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, node.Method, node.Conversion, node.Annotations);
+                return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, node.Method, node.Conversion);
             }
+
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref left),
                 ToTemp(ref right),
-                Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, node.Method, node.Conversion, null)
+                Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, node.Method, node.Conversion)
             );
         }
 
@@ -670,28 +654,32 @@ namespace Microsoft.Scripting.Ast {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.TypeIs(e, node.TypeOperand, node.Annotations);
+                return Expression.TypeIs(e, node.TypeOperand);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref e),
-                Expression.TypeIs(e, node.TypeOperand, null)
+                Expression.TypeIs(e, node.TypeOperand)
             );
         }
 
         protected override Expression VisitUnary(UnaryExpression node) {
+            // For OpAssign nodes: if has a yield, we need to do the generator
+            // transformation on the reduced value.
+            if (node.CanReduce) {
+                return Visit(node.Reduce());
+            }
+
             int yields = _yields.Count;
             Expression o = Visit(node.Operand);
             if (o == node.Operand) {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, node.Annotations);
+                return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method);
             }
             return Expression.Block(
-                node.Annotations,
                 ToTemp(ref o),
-                Expression.MakeUnary(node.NodeType, o, node.Type, node.Method, null)
+                Expression.MakeUnary(node.NodeType, o, node.Type, node.Method)
             );
         }
 

@@ -121,8 +121,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [Obsolete("use a NotEqual overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static BinaryExpression NotEqual(Expression left, Expression right, SourceSpan span) {
-            return Expression.NotEqual(left, right, Expression.Annotate(span));
+            return Expression.NotEqual(left, right);
         }
     }
 }

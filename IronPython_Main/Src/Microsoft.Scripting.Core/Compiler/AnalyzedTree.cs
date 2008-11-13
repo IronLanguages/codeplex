@@ -15,12 +15,24 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.SymbolStore;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     internal sealed class AnalyzedTree {
         internal readonly Dictionary<Expression, CompilerScope> Scopes = new Dictionary<Expression, CompilerScope>();
         internal readonly Dictionary<LambdaExpression, BoundConstants> Constants = new Dictionary<LambdaExpression, BoundConstants>();
+
+        // Lazy initialized because many trees will not need it
+        private Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter> _symbolWriters;
+        internal Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter> SymbolWriters {
+            get {
+                if (_symbolWriters == null) {
+                    _symbolWriters = new Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter>();
+                }
+                return _symbolWriters;
+            }
+        }
 
         // Created by VariableBinder
         internal AnalyzedTree() {

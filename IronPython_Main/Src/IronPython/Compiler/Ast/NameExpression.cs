@@ -90,7 +90,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             SourceSpan aspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
-            return AstUtils.Block(aspan, assignment);
+            return ag.AddDebugInfoAndVoid(assignment, aspan);
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
@@ -103,18 +103,19 @@ namespace IronPython.Compiler.Ast {
                         typeof(GC).GetMethod("KeepAlive"),
                         variable
                     ),
-                    AstUtils.Delete(variable, Span)
+                    ag.AddDebugInfo(AstUtils.Delete(variable), Span)
                 );
                     
                 if (!_assigned) {
-                    del = Ast.BlockVoid(
+                    del = Ast.Block(
                         Transform(ag, variable.Type),
-                        del
+                        del,
+                        Ast.Empty()
                     );
                 }
                 return del;
             } else {
-                return AstUtils.Delete(_name, Span);
+                return ag.AddDebugInfo(AstUtils.Delete(_name), Span);
             }
         }
 

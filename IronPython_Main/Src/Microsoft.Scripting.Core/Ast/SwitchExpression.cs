@@ -26,8 +26,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly ReadOnlyCollection<SwitchCase> _cases;
         private readonly LabelTarget _label;
 
-        internal SwitchExpression(Expression testValue, LabelTarget label, Annotations annotations, ReadOnlyCollection<SwitchCase> cases)
-            : base(annotations) {
+        internal SwitchExpression(Expression testValue, LabelTarget label, ReadOnlyCollection<SwitchCase> cases) {
             Assert.NotNullItems(cases);
 
             _label = label;
@@ -55,7 +54,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _label; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitSwitch(this);
         }
     }
@@ -65,15 +64,12 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     public partial class Expression {
         public static SwitchExpression Switch(Expression value, params SwitchCase[] cases) {
-            return Switch(value, null, null, (IEnumerable<SwitchCase>)cases);
+            return Switch(value, null, (IEnumerable<SwitchCase>)cases);
         }
         public static SwitchExpression Switch(Expression value, LabelTarget label, params SwitchCase[] cases) {
-            return Switch(value, label, null, (IEnumerable<SwitchCase>)cases);
+            return Switch(value, label, (IEnumerable<SwitchCase>)cases);
         }
-        public static SwitchExpression Switch(Expression value, LabelTarget label, Annotations annotations, params SwitchCase[] cases) {
-            return Switch(value, label, annotations, (IEnumerable<SwitchCase>)cases);
-        }
-        public static SwitchExpression Switch(Expression value, LabelTarget label, Annotations annotations, IEnumerable<SwitchCase> cases) {
+        public static SwitchExpression Switch(Expression value, LabelTarget label, IEnumerable<SwitchCase> cases) {
             RequiresCanRead(value, "value");
             ContractUtils.Requires(value.Type == typeof(int), "value", Strings.ValueMustBeInt);
             ContractUtils.RequiresNotNull(cases, "cases");
@@ -99,7 +95,7 @@ namespace Microsoft.Linq.Expressions {
 
             ContractUtils.Requires(UniqueCaseValues(caseList, min, max), "cases", Strings.CaseValuesMustBeUnique);
 
-            return new SwitchExpression(value, label, annotations, caseList);
+            return new SwitchExpression(value, label, caseList);
         }
 
         // Below his threshold we'll use brute force N^2 algorithm

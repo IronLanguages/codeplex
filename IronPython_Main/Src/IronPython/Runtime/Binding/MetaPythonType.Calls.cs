@@ -17,10 +17,11 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
@@ -42,7 +43,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
@@ -111,7 +112,7 @@ namespace IronPython.Runtime.Binding {
             ValidationInfo valInfo = MakeVersionCheck();
 
             MetaObject self = new RestrictedMetaObject(
-                Ast.ConvertHelper(Expression, LimitType),
+                AstUtils.Convert(Expression, LimitType),
                 Restrictions.GetTypeRestriction(Expression, LimitType),
                 Value
             );
@@ -143,7 +144,7 @@ namespace IronPython.Runtime.Binding {
             MetaObject initCall = initAdapter.MakeInitCall(
                 state.Binder,
                 new RestrictedMetaObject(
-                    Ast.ConvertHelper(allocatedInst, Value.UnderlyingSystemType),
+                    AstUtils.Convert(allocatedInst, Value.UnderlyingSystemType),
                     createExpr.Restrictions
                 )
             );
@@ -193,7 +194,7 @@ namespace IronPython.Runtime.Binding {
                 body.Add(allocatedInst);
                 res = Ast.Block(body);
             }
-            res = Ast.Scope(res, allocatedInst);
+            res = Ast.Block(new ParameterExpression[] { allocatedInst }, res);
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 call,
@@ -321,8 +322,8 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("PythonTypeGetMember"),
                         CodeContext,
-                        Ast.ConvertHelper(Arguments.Self.Expression, typeof(PythonType)),
-                        Ast.Null(),
+                        AstUtils.Convert(Arguments.Self.Expression, typeof(PythonType)),
+                        Ast.Constant(null),
                         AstUtils.Constant(Symbols.NewInst)
                     )
                 );
@@ -499,7 +500,6 @@ namespace IronPython.Runtime.Binding {
                             Arguments.Signature
                         ),
                         typeof(object),
-                        null,
                         args
                     ),
                     Arguments.Self.Restrictions.Merge(createExpr.Restrictions)
@@ -521,7 +521,7 @@ namespace IronPython.Runtime.Binding {
                     CodeContext,
                     Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
                     Ast.Convert(AstUtils.WeakConstant(_slot), typeof(PythonTypeSlot)),
-                    Ast.ConvertHelper(createExpr.Expression, typeof(object))
+                    AstUtils.Convert(createExpr.Expression, typeof(object))
                 );
 
                 return MakeDefaultInit(binder, createExpr, init);
@@ -574,7 +574,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(PythonOps).GetMethod("GetMixedMember"),
                     CodeContext,
                     Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
-                    Ast.ConvertHelper(createExpr.Expression, typeof(object)),
+                    AstUtils.Convert(createExpr.Expression, typeof(object)),
                     AstUtils.Constant(Symbols.Init)
                 );
 
@@ -637,7 +637,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("InitializeForFinalization"),
                 Ast.Constant(BinderState.GetBinderState(action).Context),
-                Ast.ConvertHelper(variable, typeof(object))
+                AstUtils.Convert(variable, typeof(object))
             );
         }
 

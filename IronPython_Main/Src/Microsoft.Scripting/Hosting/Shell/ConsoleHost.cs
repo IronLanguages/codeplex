@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -22,24 +23,27 @@ using Microsoft.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
-using System.Collections.Generic;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting.Shell {
-
+    /// <summary>
+    /// Core functionality to implement an interactive console. This should be derived for concrete implementations
+    /// </summary>
     public abstract class ConsoleHost {
         private int _exitCode;
         private ConsoleHostOptionsParser _optionsParser;
         private ScriptRuntime _runtime;
         private ScriptEngine _engine;
-        private OptionsParser _languageOptionsParser;
+        internal OptionsParser _languageOptionsParser;
 
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
 
-        public ScriptEngine Engine { get { return _engine; } }
-        public ScriptRuntime Runtime { get { return _runtime; } }
+        public ScriptEngine Engine { get { return _engine; } protected set { _engine = value; } }
+        public ScriptRuntime Runtime { get { return _runtime; } protected set { _runtime = value; } }
+        protected int ExitCode { get { return _exitCode; } set { _exitCode = value; } }
+        protected ConsoleHostOptionsParser ConsoleHostOptionsParser { get { return _optionsParser; } set { _optionsParser = value; } }
 
         protected ConsoleHost() {
         }
@@ -147,7 +151,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// To be called from entry point.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public int Run(string[] args) {
+        public virtual int Run(string[] args) {
 
             var runtimeSetup = CreateRuntimeSetup();
             var options = new ConsoleHostOptions();
@@ -178,7 +182,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             // inserts search paths for all languages (/paths option):
             InsertSearchPaths(runtimeSetup.Options, Options.SourceUnitSearchPaths);
-            
+
             _languageOptionsParser = CreateOptionsParser();
 
             try {
@@ -370,6 +374,10 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     try {
                         exitCode = commandLine.Run(Engine, console, consoleOptions);
                     } catch (Exception e) {
+                        if (CommandLine.IsFatalException(e)) {
+                            // Some exceptions are too dangerous to try to catch
+                            throw;
+                        }
                         UnhandledException(Engine, e);
                         exitCode = 1;
                     }
@@ -406,3 +414,4 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
     }
 }
+

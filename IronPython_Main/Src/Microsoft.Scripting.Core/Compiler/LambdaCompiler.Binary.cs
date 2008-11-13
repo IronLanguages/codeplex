@@ -22,11 +22,6 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
-        //CONFORMING
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
-        private static void EmitOpAssignBinaryExpression(Expression expr) {
-            throw Error.OpAssignmentNotReduced();
-        }
 
         //CONFORMING
         private void EmitBinaryExpression(Expression expr) {

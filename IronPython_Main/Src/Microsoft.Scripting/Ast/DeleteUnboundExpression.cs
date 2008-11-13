@@ -24,8 +24,7 @@ namespace Microsoft.Scripting.Ast {
     public class DeleteUnboundExpression : Expression {
         private readonly SymbolId _name;
 
-        internal DeleteUnboundExpression(Annotations annotations, SymbolId name)
-            : base(annotations) {
+        internal DeleteUnboundExpression(SymbolId name) {
             _name = name;
         }
 
@@ -48,7 +47,6 @@ namespace Microsoft.Scripting.Ast {
         public override Expression Reduce() {
             return Expression.Call(
                 typeof(ExpressionHelpers).GetMethod("RemoveName"),
-                Annotations,
                 new [] {
                     Utils.CodeContext(),
                     AstUtils.Constant(_name)
@@ -56,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }
@@ -64,13 +62,14 @@ namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         public static DeleteUnboundExpression Delete(SymbolId name) {
             ContractUtils.Requires(!name.IsInvalid && !name.IsEmpty, "name");
-            return new DeleteUnboundExpression(null, name);
+            return new DeleteUnboundExpression(name);
         }
 
         [Obsolete("use Delete overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static DeleteUnboundExpression Delete(SymbolId name, SourceSpan span) {
             ContractUtils.Requires(!name.IsInvalid && !name.IsEmpty, "name");
-            return new DeleteUnboundExpression(Expression.Annotate(span), name);
+            return new DeleteUnboundExpression(name);
         }
     }
 

@@ -20,22 +20,16 @@ namespace Microsoft.Linq.Expressions {
     // TODO: probably should not have Annotations, since it's part of TryExpression
     // They can either go there on on the body
     public sealed class CatchBlock {
-        private readonly Annotations _annotations;
         private readonly Type _test;
         private readonly ParameterExpression _var;
         private readonly Expression _body;
         private readonly Expression _filter;
 
-        internal CatchBlock(Annotations annotations, Type test, ParameterExpression target, Expression body, Expression filter) {
+        internal CatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter) {
             _test = test;
-            _var = target;
+            _var = variable;
             _body = body;
-            _annotations = annotations;
             _filter = filter;
-        }
-
-        public Annotations Annotations {
-            get { return _annotations; }
         }
 
         public ParameterExpression Variable {
@@ -59,28 +53,34 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         public static CatchBlock Catch(Type type, Expression body) {
-            return Catch(type, null, body, null, Annotations.Empty);
+            return CreateCatchBlock(type, null, body, null);
         }
 
-        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body) {
-            return Catch(type, target, body, null, Annotations.Empty);
+        public static CatchBlock Catch(ParameterExpression variable, Expression body) {
+            ContractUtils.RequiresNotNull(variable, "variable");
+            return CreateCatchBlock(variable.Type, variable, body, null);
         }
 
-        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body, Expression filter) {
-            return Catch(type, target, body, filter, Annotations.Empty);
+        public static CatchBlock Catch(Type type, Expression body, Expression filter) {
+            return CreateCatchBlock(type, null, body, filter);
         }
 
-        public static CatchBlock Catch(Type type, ParameterExpression target, Expression body, Expression filter, Annotations annotations) {
+        public static CatchBlock Catch(ParameterExpression variable, Expression body, Expression filter) {
+            ContractUtils.RequiresNotNull(variable, "variable");
+            return CreateCatchBlock(variable.Type, variable, body, filter);
+        }
+
+        public static CatchBlock CreateCatchBlock(Type type, ParameterExpression variable, Expression body, Expression filter) {
             ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(target == null || TypeUtils.AreReferenceAssignable(target.Type, type), "target");
-            Expression.RequireVariableNotByRef(target, "target");
+            ContractUtils.Requires(variable == null || variable.Type.Equals(type), "variable");
+            Expression.RequireVariableNotByRef(variable, "variable");
             RequiresCanRead(body, "body");
             if (filter != null) {
                 RequiresCanRead(filter, "filter");
                 ContractUtils.Requires(filter.Type == typeof(bool), Strings.ArgumentMustBeBoolean);
             }
 
-            return new CatchBlock(annotations, type, target, body, filter);
+            return new CatchBlock(type, variable, body, filter);
         }
     }
 }

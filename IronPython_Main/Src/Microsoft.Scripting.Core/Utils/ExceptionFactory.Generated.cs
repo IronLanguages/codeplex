@@ -1220,8 +1220,15 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// A string like  "The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types."
         /// </summary>
-        internal static string LogicalOperatorMustHaveConsistentTypes(object p0, object p1) {
+        internal static string UserDefinedOpMustHaveConsistentTypes(object p0, object p1) {
             return FormatString("The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types.", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "The user-defined operator method '{1}' for operator '{0}' must return the same type as its parameter or a derived type."
+        /// </summary>
+        internal static string UserDefinedOpMustHaveValidReturnType(object p0, object p1) {
+            return FormatString("The user-defined operator method '{1}' for operator '{0}' must return the same type as its parameter or a derived type.", p0, p1);
         }
 
         /// <summary>
@@ -2425,8 +2432,15 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// ArgumentException with message like "The user-defined operator method '{1}' for operator '{0}' must have identical parameter and return types."
         /// </summary>
-        internal static Exception LogicalOperatorMustHaveConsistentTypes(object p0, object p1) {
-            return new ArgumentException(Strings.LogicalOperatorMustHaveConsistentTypes(p0, p1));
+        internal static Exception UserDefinedOpMustHaveConsistentTypes(object p0, object p1) {
+            return new ArgumentException(Strings.UserDefinedOpMustHaveConsistentTypes(p0, p1));
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "The user-defined operator method '{1}' for operator '{0}' must return the same type as its parameter or a derived type."
+        /// </summary>
+        internal static Exception UserDefinedOpMustHaveValidReturnType(object p0, object p1) {
+            return new ArgumentException(Strings.UserDefinedOpMustHaveValidReturnType(p0, p1));
         }
 
         /// <summary>

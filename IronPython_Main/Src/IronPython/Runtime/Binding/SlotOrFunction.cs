@@ -18,9 +18,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
@@ -144,32 +145,30 @@ namespace IronPython.Runtime.Binding {
                 }
                 return new SlotOrFunction(
                     new MetaObject(
-                        Ast.Scope(
-                            Ast.Block(
-                                MetaPythonObject.MakeTryGetTypeMember(
-                                    state,
-                                    slot,
-                                    tmp,
-                                    types[0].Expression,
-                                    Ast.Call(
-                                        typeof(DynamicHelpers).GetMethod("GetPythonType"),
-                                        types[0].Expression
-                                    )
-                                ),
-                                Ast.Dynamic(
-                                    new PythonInvokeBinder(
-                                        state,
-                                        new CallSignature(args.Length)
-                                    ),
-                                    typeof(object),
-                                    ArrayUtils.Insert<Expression>(
-                                        Ast.Constant(state.Context),
-                                        tmp,
-                                        args
-                                    )
+                        Ast.Block(
+                            new ParameterExpression[] { tmp },
+                            MetaPythonObject.MakeTryGetTypeMember(
+                                state,
+                                slot,
+                                tmp,
+                                types[0].Expression,
+                                Ast.Call(
+                                    typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                                    types[0].Expression
                                 )
                             ),
-                            tmp
+                            Ast.Dynamic(
+                                new PythonInvokeBinder(
+                                    state,
+                                    new CallSignature(args.Length)
+                                ),
+                                typeof(object),
+                                ArrayUtils.Insert<Expression>(
+                                    Ast.Constant(state.Context),
+                                    tmp,
+                                    args
+                                )
+                            )
                         ),
                         Restrictions.Combine(types).Merge(Restrictions.GetTypeRestriction(types[0].Expression, types[0].LimitType))
                     )

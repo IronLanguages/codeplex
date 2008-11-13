@@ -20,6 +20,8 @@ using System.Runtime.Remoting;
 using System.Security.Permissions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Binders;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -74,6 +76,13 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public object Call(object obj, params object[] parameters) {
             return _ops.Invoke(obj, parameters);
+        }
+
+        /// <summary>
+        /// Invokes a member on the provided object with the given parameters and returns the result.
+        /// </summary>
+        public object InvokeMember(object obj, string memberName, params object[] parameters) {
+            return _ops.InvokeMember(obj, memberName, parameters);
         }
 
         public object Create(object obj, params object[] parameters) {
@@ -248,6 +257,36 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public bool TryExplicitConvertTo(object obj, Type type, out object result) {
             return _ops.TryExplicitConvertTo(obj, type, out result);
+        }
+
+
+        /// <summary>
+        /// Performs a generic unary operation on the specified target and returns the result.
+        /// </summary>
+        public object DoOperation(ExpressionType operation, object target) {
+            return _ops.DoOperation<object, object>(operation, target);
+        }
+
+        /// <summary>
+        /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
+        /// </summary>
+        public TResult DoOperation<TTarget, TResult>(ExpressionType operation, TTarget target) {
+            return _ops.DoOperation<TTarget, TResult>(operation, target);
+        }
+
+        /// <summary>
+        /// Performs the generic binary operation on the specified targets and returns the result.
+        /// </summary>
+        public object DoOperation(ExpressionType operation, object target, object other) {
+            return _ops.DoOperation<object, object, object>(operation, target, other);
+        }
+
+        /// <summary>
+        /// Peforms the generic binary operation on the specified strongly typed targets and returns
+        /// the strongly typed result.
+        /// </summary>
+        public TResult DoOperation<TTarget, TOther, TResult>(ExpressionType operation, TTarget target, TOther other) {
+            return _ops.DoOperation<TTarget, TOther, TResult>(operation, target, other);
         }
 
         /// <summary>
@@ -426,8 +465,15 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Returns a list of strings which contain the known members of the object.
         /// </summary>
-        public IList<string> GetMemberNames(object obj) {
+        public IList<string> OldGetMemberNames(object obj) {
             return _ops.DoOperation<object, IList<string>>(StandardOperators.MemberNames, obj);
+        }
+
+        /// <summary>
+        /// Returns a list of strings which contain the known members of the object.
+        /// </summary>
+        public IList<string> GetMemberNames(object obj) {
+            return _ops.GetMemberNames(obj);
         }
 
         /// <summary>
@@ -444,9 +490,9 @@ namespace Microsoft.Scripting.Hosting {
             return _ops.DoOperation<object, IList<string>>(StandardOperators.CallSignatures, obj);
         }
 
-#pragma warning restore 618
-
         #endregion
+
+#pragma warning restore 618
 
         #region Remote APIs
 
@@ -794,7 +840,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a list of strings which contain the known members of the remote object.
         /// </summary>
         public IList<string> GetMemberNames(ObjectHandle obj) {
-            return GetMemberNames(GetLocalObject(obj));
+            return OldGetMemberNames(GetLocalObject(obj));
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ using System; using Microsoft;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     internal sealed class EmptyRuleSet<T> : RuleSet<T> where T : class {
         internal static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
         internal static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);

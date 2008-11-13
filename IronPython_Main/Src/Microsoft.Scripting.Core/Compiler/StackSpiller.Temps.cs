@@ -210,7 +210,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return _expressions[index];
                 }
             }
-            internal ReadOnlyCollection<Expression> this[int first, int last] {
+            internal Expression[] this[int first, int last] {
                 get {
                     EnsureDone();
                     if (last < 0) {
@@ -222,12 +222,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     if (count == _expressions.Length) {
                         Debug.Assert(first == 0);
                         // if the entire array is requested just return it so we don't make a new array
-                        return new ReadOnlyCollection<Expression>(_expressions);
+                        return _expressions;
                     }
 
                     Expression[] clone = new Expression[count];
                     Array.Copy(_expressions, first, clone, 0, count);
-                    return new ReadOnlyCollection<Expression>(clone);
+                    return clone;
                 }
             }
         }

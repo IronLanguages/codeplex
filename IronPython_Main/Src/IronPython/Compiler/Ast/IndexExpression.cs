@@ -108,26 +108,26 @@ namespace IronPython.Compiler.Ast {
                 );                
             }
             
-            return AstUtils.Block(
-                Span,
+            return ag.AddDebugInfoAndVoid(
                 Binders.Operation(
                     ag.BinderState,
                     typeof(object),
                     SetOperatorString,
                     ArrayUtils.RemoveFirst(GetActionArgumentsForSet(ag, right))
-                )
+                ),
+                Span
             );
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return AstUtils.Block(
-                Span, 
+            return ag.AddDebugInfoAndVoid(
                 Binders.Operation(
                     ag.BinderState,
                     typeof(object),
                     DeleteOperatorString,
                     ArrayUtils.RemoveFirst(GetActionArgumentsForGetOrDelete(ag))
-                )
+                ),
+                Span
             );
         }
 

@@ -24,11 +24,10 @@ using VarEnum = System.Runtime.InteropServices.VarEnum;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    // TODO: Can it be made internal?
     /// <summary>
     /// The parameter description of a method defined in a type library
     /// </summary>
-    public class ComParamDesc {
+    internal sealed class ComParamDesc {
         # region private fields
 
         private readonly bool _isOut; // is an output parameter?

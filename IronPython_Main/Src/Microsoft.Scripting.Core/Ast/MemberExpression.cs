@@ -14,7 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
@@ -37,19 +37,18 @@ namespace Microsoft.Linq.Expressions {
         }
 
         // param order: factories args in order, then other args
-        internal MemberExpression(Expression expression, Annotations annotations)
-            : base(annotations) {
+        internal MemberExpression(Expression expression) {
 
             _expression = expression;
         }
 
-        internal static MemberExpression Make(Expression expression, MemberInfo member, Annotations annotations) {
+        internal static MemberExpression Make(Expression expression, MemberInfo member) {
             if (member.MemberType == MemberTypes.Field) {
                 FieldInfo fi = (FieldInfo)member;
-                return new FieldExpression(expression, fi, annotations);
+                return new FieldExpression(expression, fi);
             } else {
                 PropertyInfo pi = (PropertyInfo)member;
-                return new PropertyExpression(expression, pi, annotations);
+                return new PropertyExpression(expression, pi);
             }            
         }
 
@@ -61,7 +60,7 @@ namespace Microsoft.Linq.Expressions {
             throw new NotImplementedException();
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitMemberAccess(this);
         }
     }
@@ -69,8 +68,8 @@ namespace Microsoft.Linq.Expressions {
     internal class FieldExpression : MemberExpression {
         private readonly FieldInfo _field;
 
-        public FieldExpression(Expression expression, FieldInfo member, Annotations annotations)
-            : base(expression, annotations) {
+        public FieldExpression(Expression expression, FieldInfo member)
+            : base(expression) {
             _field = member;
         }
 
@@ -85,8 +84,8 @@ namespace Microsoft.Linq.Expressions {
 
     internal class PropertyExpression : MemberExpression {
         private readonly PropertyInfo _property;
-        public PropertyExpression(Expression expression, PropertyInfo member, Annotations annotations)
-            : base(expression, annotations) {
+        public PropertyExpression(Expression expression, PropertyInfo member)
+            : base(expression) {
             _property = member;
         }
 
@@ -109,12 +108,6 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
         public static MemberExpression Field(Expression expression, FieldInfo field) {
-            return Field(expression, field, null);
-        }
-
-        //CONFORMING
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
-        public static MemberExpression Field(Expression expression, FieldInfo field, Annotations annotations) {
             ContractUtils.RequiresNotNull(field, "field");
 
             if (field.IsStatic) {
@@ -125,16 +118,11 @@ namespace Microsoft.Linq.Expressions {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
                 }
             }
-            return MemberExpression.Make(expression, field, annotations);
+            return MemberExpression.Make(expression, field);
         }
 
         //CONFORMING
         public static MemberExpression Field(Expression expression, string fieldName) {
-            return Field(expression, fieldName, null);
-        }
-
-        //CONFORMING
-        public static MemberExpression Field(Expression expression, string fieldName, Annotations annotations) {
             RequiresCanRead(expression, "expression");
 
             // bind to public names first
@@ -145,7 +133,7 @@ namespace Microsoft.Linq.Expressions {
             if (fi == null) {
                 throw Error.FieldNotDefinedForType(fieldName, expression.Type);
             }
-            return Expression.Field(expression, fi, annotations);
+            return Expression.Field(expression, fi);
         }
 
 
@@ -195,14 +183,9 @@ namespace Microsoft.Linq.Expressions {
             return Property(expression, pi);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
-        public static MemberExpression Property(Expression expression, PropertyInfo property) {
-            return Property(expression, property, Annotations.Empty);
-        }
-
         //CONFORMING
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1719:ParameterNamesShouldNotMatchMemberNames")]
-        public static MemberExpression Property(Expression expression, PropertyInfo property, Annotations annotations) {
+        public static MemberExpression Property(Expression expression, PropertyInfo property) {
             ContractUtils.RequiresNotNull(property, "property");
 
             MethodInfo mi = property.GetGetMethod(true) ?? property.GetSetMethod(true);
@@ -219,7 +202,7 @@ namespace Microsoft.Linq.Expressions {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);
                 }
             }
-            return MemberExpression.Make(expression, property, annotations);
+            return MemberExpression.Make(expression, property);
         }
         //CONFORMING
         public static MemberExpression Property(Expression expression, MethodInfo propertyAccessor) {
@@ -284,19 +267,15 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member) {
-            return MakeMemberAccess(expression, member, null);
-        }
-
-        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member, Annotations annotations) {
             ContractUtils.RequiresNotNull(member, "member");
 
             FieldInfo fi = member as FieldInfo;
             if (fi != null) {
-                return Expression.Field(expression, fi, annotations);
+                return Expression.Field(expression, fi);
             }
             PropertyInfo pi = member as PropertyInfo;
             if (pi != null) {
-                return Expression.Property(expression, pi, annotations);
+                return Expression.Property(expression, pi);
             }
             throw Error.MemberNotFieldOrProperty(member);
         }

@@ -38,13 +38,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private AssemblyGen _debugAssembly;
         private AssemblyGen _unsafeDebugAssembly;
 
-        // once an option is used no changes to the options are allowed any more:
-        private bool _optionsFrozen;
-
         // TODO: options should be internal
-        private string _snippetsDirectory;
-        private string _snippetsFileName;
-        private bool _saveSnippets;
+        private string _snippetsDirectory = null;
+        private bool _saveSnippets = false;
+
+        internal bool SaveSnippets {
+            get { return _saveSnippets; }
+        }
 
         /// <summary>
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
@@ -54,16 +54,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         internal AssemblyGen GetAssembly(bool emitSymbols, bool isUnsafe) {
-            // reload options, the may have changed
-            if (!_optionsFrozen) {
-                _saveSnippets = DebugOptions.SaveSnippets;
-                _snippetsDirectory = DebugOptions.SnippetsDirectory;
-                _snippetsFileName = DebugOptions.SnippetsFileName;
-                _optionsFrozen = true;
-            }
-
             // If snippets are not to be saved, we can merge unsafe and safe IL.
-
             if (isUnsafe && _saveSnippets) {
                 return (emitSymbols) ?
                     GetOrCreateAssembly(emitSymbols, isUnsafe, ref _unsafeDebugAssembly) :
@@ -92,7 +83,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 dir = null;
             }
 
-            string name = (_snippetsFileName ?? "Snippets") + nameSuffix;
+            string name = "Snippets" + nameSuffix;
 
             return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols, isUnsafe);
         }
@@ -116,6 +107,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return Path.Combine(dir, filename);
         }
 
+#if MICROSOFT_SCRIPTING_CORE
+        // NOTE: this method is called through reflection from Microsoft.Scripting
+        internal static void SetSaveAssemblies(string directory) {
+            Shared.ConfigureSaveAssemblies(directory);
+        }
+
+        private void ConfigureSaveAssemblies(string directory) {
+            _saveSnippets = true;
+            _snippetsDirectory = directory;
+        }
+        
         // NOTE: this method is called through reflection from Microsoft.Scripting
         internal static string[] SaveAssemblies() {
             return Shared.DumpAssemblies();
@@ -156,11 +158,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             _unsafeDebugAssembly = null;
 
-            _optionsFrozen = false;
-
             return assemlyLocations.ToArray();
         }
-
+#endif
         internal DynamicILGen CreateDynamicMethod(string methodName, Type returnType, Type[] parameterTypes,
             bool isDebuggable) {
 
@@ -168,7 +168,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             ContractUtils.RequiresNotNull(returnType, "returnType");
             ContractUtils.RequiresNotNullItems(parameterTypes, "parameterTypes");
 
-            if (DebugOptions.SaveSnippets) {
+            if (_saveSnippets) {
                 AssemblyGen assembly = GetAssembly(isDebuggable, false);
                 TypeBuilder tb = assembly.DefinePublicType(methodName, typeof(object), false);
                 MethodBuilder mb = tb.DefineMethod(methodName, TypeUtils.PublicStatic, returnType, parameterTypes);

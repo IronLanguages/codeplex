@@ -20,8 +20,8 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
-    public static partial class DynamicSiteHelpers {
+namespace Microsoft.Scripting.Binders {
+    internal static partial class DynamicSiteHelpers {
 
         private static readonly Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
 

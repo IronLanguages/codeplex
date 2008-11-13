@@ -22,56 +22,10 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
-        /// <summary>
-        /// Creates a list of expressions whose value is the value of the last expression.
-        /// </summary>
-        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
-        public static BlockExpression Block(SourceSpan span, IEnumerable<Expression> expressions) {
-            return Expression.BlockVoid(Expression.Annotate(span), expressions);
-        }
-
-        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
-        public static BlockExpression Block(SourceSpan span, params Expression[] expressions) {
-            return Expression.BlockVoid(Expression.Annotate(span), (IList<Expression>)expressions);
-        }
-
-        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
-        public static BlockExpression Block(SourceSpan span, Expression arg0) {
-            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
-        }
-
-        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
-        public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1) {
-            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1 }));
-        }
-
-        [Obsolete("use Expression.Block instead (make sure the last argument type is Void)")]
-        public static BlockExpression Block(SourceSpan span, Expression arg0, Expression arg1, Expression arg2) {
-            return Expression.BlockVoid(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0, arg1, arg2 }));
-        }
-
-        /// <summary>
-        /// Creates a list of expressions whose value is the value of the last expression.
-        /// </summary>
-        [Obsolete("use Expression.Block instead")]
-        public static BlockExpression Comma(SourceSpan span, IEnumerable<Expression> expressions) {
-            return Expression.Block(Expression.Annotate(span), expressions);
-        }
-
-        [Obsolete("use Expression.Block instead")]
-        public static BlockExpression Comma(SourceSpan span, params Expression[] expressions) {
-            return Expression.Block(Expression.Annotate(span), (IList<Expression>)expressions);
-        }
-
-        [Obsolete("use Expression.Block instead")]
-        public static BlockExpression Comma(SourceSpan span, Expression arg0) {
-            return Expression.Block(Expression.Annotate(span), new ReadOnlyCollection<Expression>(new[] { arg0 }));
-        }
 
         // Helper to add a variable to a block
         internal static Expression AddScopedVariable(Expression body, ParameterExpression variable, Expression variableInit) {
             List<ParameterExpression> vars = new List<ParameterExpression>();
-            Annotations annotations = Annotations.Empty;
             List<Expression> newBody = new List<Expression>();
 
             var exprs = new ReadOnlyCollection<Expression>(new [] { body });
@@ -81,7 +35,6 @@ namespace Microsoft.Scripting.Ast {
             while (exprs.Count == 1 && exprs[0].NodeType == ExpressionType.Block && parent.Type == exprs[0].Type) {
                 BlockExpression scope = (BlockExpression)(exprs[0]);
                 vars.AddRange(scope.Variables);
-                annotations = scope.Annotations;
                 parent = scope;
                 exprs = scope.Expressions;
             }
@@ -90,7 +43,6 @@ namespace Microsoft.Scripting.Ast {
             newBody.AddRange(exprs);
             vars.Add(variable);
             return Expression.Block(
-                annotations,
                 vars,
                 newBody.ToArray()
             );

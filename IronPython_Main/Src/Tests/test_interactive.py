@@ -100,6 +100,7 @@ def test_interactive_mode():
     inputScript = testpath.test_inputs_dir + "\\raise.py"
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
     AreEqual(ipi.Start(), True)
+    ipi.ReadError()
     ipi.EnsureInteractive()
     AreEqual("1", ipi.ExecuteLine("x"))
     ipi.End()
@@ -107,8 +108,8 @@ def test_interactive_mode():
     inputScript = testpath.test_inputs_dir + "\\syntaxError.py"
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
     AreEqual(ipi.Start(), True)
-    ipi.EnsureInteractive()
-    Assert(ipi.ExecuteLine("x", True).find("NameError") != -1)
+    # ipi.EnsureInteractive()
+    AssertContains(ipi.ExecuteLine("x", True), "NameError")
     ipi.End()
     
     inputScript = testpath.test_inputs_dir + "\\exit.py"
@@ -499,14 +500,14 @@ def test_globals8961():
     res = set(eval(response))
     AreEqual(res, set(['__builtins__', '__name__', '__doc__', 'a']))
     response = ipi.ExecuteLine("print globals().values()")
-    l = eval(response.replace("<module '__builtin__' (built-in)", '"builtin"'))
+    l = eval(response.replace("<module '__builtin__' (built-in)>", '"builtin"'))
     res = set(l)
     AreEqual(len(l), 4)
     AreEqual(res, set(['builtin', '__main__', None]))
     
     ipi.ExecuteLine("b = None")
     response = ipi.ExecuteLine("print globals().values()")
-    l = eval(response.replace("<module '__builtin__' (built-in)", '"builtin"'))
+    l = eval(response.replace("<module '__builtin__' (built-in)>", '"builtin"'))
     res = set(l)
     AreEqual(len(l), 5)
     AreEqual(res, set(['builtin', '__main__', None]))
@@ -662,7 +663,7 @@ def test_ipy_dash_m_negative():
         AreEqual(exit, -1)
 
     # Modules within packages should not work
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m iptest.assert_util")
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m testpkg1.mod1")
     res, output, err, exit = ipi.StartAndRunToCompletion()
     AreEqual(res, True) # run should have worked
     AreEqual(exit, 1)   # should have returned 0
@@ -673,12 +674,12 @@ def test_ipy_dash_m_negative():
 def test_ipy_dash_m_pkgs(): 
     # Python packages work
     import nt
-    Assert("iptest" in [x.lower() for x in nt.listdir(nt.getcwd())], nt.getcwd())
+    Assert("testpkg1" in [x.lower() for x in nt.listdir(nt.getcwd())], nt.getcwd())
     
     old_ipy_path = get_environ_variable("IRONPYTHONPATH")
     try:
         nt.environ["IRONPYTHONPATH"] = nt.getcwd()
-        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m iptest")
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m testpkg1")
         res, output, err, exit = ipi.StartAndRunToCompletion()
         AreEqual(res, True) # run should have worked
         AreEqual(exit, 0)   # should have returned 0
@@ -779,7 +780,7 @@ def test_excepthook():
     ipi.ExecuteLine("")
     response = ipi.ExecuteLine("sys.excepthook = f")
     response = ipi.ExecuteLine("raise Exception", True)
-    Assert(response.startswith("foo (<type 'exceptions.Exception', Exception(), <traceback object at"))
+    AssertContains(response, "foo (<type 'exceptions.Exception'>, Exception(), <traceback object at")
 
 def test_sta_sleep_Warning():
     ipi = IronPythonInstance(executable, exec_prefix, '-c "from System.Threading import Thread;Thread.Sleep(100)"')    
@@ -794,5 +795,104 @@ def test_newline():
     Assert('\r\r\n' not in output)
     Assert('\r\n' in output)
     
+#############################################################################
+# Remote console tests
+
+from System.Diagnostics import Process
+
+def get_process_ids(ipi):
+    ipi.EnsureInteractiveRemote()
+    ipi.proc.Refresh()
+    consoleProcessId = ipi.proc.Id
+    ipi.ExecuteLine("import System")
+    remoteRuntimeProcessId = ipi.ExecuteLineRemote("System.Diagnostics.Process.GetCurrentProcess().Id")
+    Assert(remoteRuntimeProcessId.isdigit(), "remoteRuntimeProcessId is '%s'" % remoteRuntimeProcessId)
+    return consoleProcessId, int(remoteRuntimeProcessId)
+
+def start_remote_console():
+    inputScript = testpath.test_inputs_dir + "\\RemoteConsole.py"
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
+    AreEqual(ipi.Start(), True)
+    return ipi
+
+# Basic check that the remote console actually uses two processes
+def test_remote_console_processes():
+    # First check that a simple local console uses a single process
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)    
+    consoleProcessId, remoteRuntimeProcessId = get_process_ids(ipi)
+    AreEqual(consoleProcessId, remoteRuntimeProcessId)
+    ipi.End()
+        
+    # Now use the remote console
+    ipi = start_remote_console()
+    consoleProcessId, remoteRuntimeProcessId = get_process_ids(ipi)
+    AreNotEqual(consoleProcessId, remoteRuntimeProcessId)
+    ipi.End()
+
+# The remote runtime should terminate when the console terminates
+def test_remote_runtime_normal_exit():
+    ipi = start_remote_console()
+    consoleProcessId, remoteRuntimeProcessId = get_process_ids(ipi)
+    runtimeProcess = Process.GetProcessById(remoteRuntimeProcessId)
+    Assert(not runtimeProcess.HasExited)
+    ipi.End()
+    runtimeProcess.WaitForExit() # The test is that this wait succeeds
+    
+# Stress the input-output streams
+def test_remote_io():
+    ipi = start_remote_console()
+    for i in xrange(100):
+        AreEqual(ipi.ExecuteLineRemote("2+2"), "4")
+    ipi.End()
+    
+# Kill the remote runtime and ensure that another process starts up again
+def test_remote_server_restart():
+    ipi = start_remote_console()
+    consoleProcessId, remoteRuntimeProcessId = get_process_ids(ipi)
+    runtimeProcess = Process.GetProcessById(remoteRuntimeProcessId)
+    AreNotEqual(runtimeProcess, consoleProcessId)
+    
+    runtimeProcess.Kill()
+    runtimeProcess.WaitForExit()
+    # The Process.Exited event is fired asynchronously, and might take sometime to fire. 
+    # Hence, we need to block for a known marker
+    ipi.EatToMarker("Remote runtime exited")
+
+    # Since the ThreadAbortException is deferred, it actually shows up after pressing Enter
+    restartMessage = ipi.ExecuteLine("", True)
+    AssertContains(restartMessage, "Press Enter")
+    ipi.ReadError()
+    
+    consoleProcessId2, remoteRuntimeProcessId2 = get_process_ids(ipi)
+    AreEqual(consoleProcessId, consoleProcessId2)
+    # This is technically not a 100% correct as there is a small chance the the process id might get reused
+    AreNotEqual(remoteRuntimeProcessId, remoteRuntimeProcessId2)
+    ipi.End()
+
+# Check that an exception can be remoted back over the reverse channel
+# Note that exceptions are not written to stdout by the remote process
+def test_remote_console_exception():
+    ipi = start_remote_console()
+    zeroDivisionErrorOutput = ipi.ExecuteLine("1/0", True)
+    AssertContains(zeroDivisionErrorOutput, "ZeroDivisionError")
+    ipi.End()
+
+def test_remote_abort_command():
+    ipi = start_remote_console()
+    ipi.ExecuteLine("import System")
+    
+    ipi.ExecutePartialLine  ("def Hang():")
+    ipi.ExecutePartialLine  ("    print 'ABORT ME!!!' # This string token should trigger an abort...")
+    ipi.ExecutePartialLine  ("    infinite = System.Threading.Timeout.Infinite")
+    ipi.ExecutePartialLine  ("    System.Threading.Thread.CurrentThread.Join(infinite)")
+    ipi.ExecuteLine         ("")
+
+    result = ipi.ExecuteLine("Hang()", True)
+    AssertContains(result, "KeyboardInterrupt")
+
+    ipi.End()
+
 #------------------------------------------------------------------------------
+
 run_test(__name__)

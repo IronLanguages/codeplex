@@ -49,11 +49,14 @@ namespace IronPython.Compiler.Ast {
                     );
                 }
 
-                return AstUtils.YieldBreak(ag.GeneratorLabel, Ast.Annotate(Span));
+                return ag.AddDebugInfo(AstUtils.YieldBreak(ag.GeneratorLabel), Span);
             }
 
-            return AstUtils.Return(
-                ag.TransformOrConstantNull(_expression, typeof(object)), 
+            return ag.AddDebugInfo(
+                Ast.Return(
+                    ag.ReturnLabel,
+                    ag.TransformOrConstantNull(_expression, typeof(object))
+                ),
                 Span
             );
         }

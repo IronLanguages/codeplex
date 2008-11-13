@@ -84,56 +84,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             ReferenceLabel(node.Target).EmitJump();           
         }
 
-        private void EmitReturn() {
-            bool canReturn = true;
-            for (LabelBlockInfo j = _labelBlock; j != null; j = j.Parent) {
-                switch (j.Kind) {
-                    case LabelBlockKind.Finally:
-                        throw Error.ControlCannotLeaveFinally();
-                    case LabelBlockKind.Filter:
-                        throw Error.ControlCannotLeaveFilterTest();
-                    case LabelBlockKind.Try:
-                    case LabelBlockKind.Catch:
-                        canReturn = false;
-                        break;
-                }
-            }
-
-            if (canReturn) {
-                _ilg.Emit(OpCodes.Ret);
-                return;
-            }
-
-            // We can't return directly, so store the return value into a local
-            // and then jump to the end of the method
-            EnsureReturnBlock();
-            if (_returnBlock.Value != null) {
-                _ilg.Emit(OpCodes.Stloc, _returnBlock.Value);
-            }
-
-            _ilg.Emit(OpCodes.Leave, _returnBlock.Label);
-        }
-                
-        private void EmitReturn(Expression expr) {
-            if (expr == null) {
-                Debug.Assert(_method.GetReturnType() == typeof(void));
-            } else {
-                Type result = _method.GetReturnType();
-                Debug.Assert(result.IsAssignableFrom(expr.Type));
-                EmitExpression(expr);
-                if (!TypeUtils.AreReferenceAssignable(result, expr.Type)) {
-                    _ilg.EmitConvertToType(expr.Type, result, false/*unchecked*/);
-                }
-            }
-            EmitReturn();
-        }
-
-        private void EnsureReturnBlock() {
-            if (_returnBlock == null) {
-                _returnBlock = new LabelInfo(_ilg, new LabelTarget(_method.GetReturnType(), null), false);
-            }
-        }
-
         private bool TryPushLabelBlock(Expression node) {
             // Anything that is "statement-like" -- e.g. has no associated
             // stack state can be jumped into, with the exception of try-blocks
@@ -172,7 +122,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Switch:
                 case ExpressionType.Loop:
                 case ExpressionType.Goto:
-                case ExpressionType.ReturnStatement:
                     PushLabelBlock(LabelBlockKind.Block);
                     return true;
             }
@@ -198,14 +147,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         continue;
                     case ExpressionType.Block:
                         // Look in the last expression of a block
-                        var exprs = ((BlockExpression)lambdaBody).Expressions;
-
-                        // TODO: shouldn't allow creating empty blocks
-                        if (exprs.Count == 0) {
-                            return;
-                        }
-
-                        lambdaBody = exprs[exprs.Count - 1];
+                        var body = (BlockExpression)lambdaBody;                        
+                        lambdaBody = body.GetExpression(body.ExpressionCount - 1);
                         continue;
                 }
             }

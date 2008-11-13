@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     /// <summary>
     /// Provides a simple class that can be inherited from to create an object with dynamic behavior
     /// at runtime.  Subclasses can override the various binder methods (GetMember, SetMember, Call, etc...)
@@ -108,13 +108,52 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// When overridden in a derived class provides the non-Meta implementation of performing
-        /// the operation.
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing a binary operation.
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public virtual object Operation(OperationBinder binder, params object[] args) {
+        public virtual object BinaryOperation(BinaryOperationBinder binder, object arg) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing a unary operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object UnaryOperation(UnaryOperationBinder binder) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing a get index operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object GetIndex(InvokeMemberBinder binder, params object[] args) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing a set index operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object SetIndex(InvokeMemberBinder binder, params object[] args) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing a delete index operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object DeleteIndex(InvokeMemberBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -160,12 +199,12 @@ namespace Microsoft.Scripting.Actions {
                 return base.BindConvert(binder);
             }
 
-            public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
+            public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
                 if (IsOverridden("Call")) {
                     return CallMethodNAry(binder, args, "Call");
                 }
 
-                return base.BindInvokeMemberl(binder, args);
+                return base.BindInvokeMember(binder, args);
             }
 
             public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
@@ -184,13 +223,44 @@ namespace Microsoft.Scripting.Actions {
                 return base.BindInvoke(binder, args);
             }
 
-            [Obsolete]
-            public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
-                if (IsOverridden("Operation")) {
-                    return CallMethodNAry(binder, args, "Operation");
+            public override MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
+                if (IsOverridden("BinaryOperation")) {
+                    return CallMethodBinary(binder, arg, "BinaryOperation");
                 }
 
-                return base.BindOperation(binder, args);
+                return base.BindBinaryOperation(binder, arg);
+            }
+
+            public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
+                if (IsOverridden("UnaryOperation")) {
+                    return CallMethodUnary(binder, "UnaryOperation");
+                }
+
+                return base.BindUnaryOperation(binder);
+            }
+
+            public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+                if (IsOverridden("GetIndex")) {
+                    return CallMethodNAry(binder, args, "GetIndex");
+                }
+
+                return base.BindGetIndex(binder, args);
+            }
+
+            public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+                if (IsOverridden("SetIndex")) {
+                    return CallMethodNAry(binder, args, "SetIndex");
+                }
+
+                return base.BindSetIndex(binder, args);
+            }
+
+            public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+                if (IsOverridden("DeleteIndex")) {
+                    return CallMethodNAry(binder, args, "DeleteIndex");
+                }
+
+                return base.BindDeleteIndex(binder, args);
             }
 
             /// <summary>
@@ -212,7 +282,7 @@ namespace Microsoft.Scripting.Actions {
             /// Helper method for generating a MetaObject which calls a specific method declared on
             /// Dynamic w/ one additional parameter.
             /// </summary>
-            private MetaObject CallMethodBinary(SetMemberBinder binder, MetaObject arg, string name) {
+            private MetaObject CallMethodBinary(MetaObjectBinder binder, MetaObject arg, string name) {
                 return new MetaObject(
                     Expression.Call(
                         GetLimitedSelf(),

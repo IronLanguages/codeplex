@@ -77,13 +77,13 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // Five statements in the result...
-            MSAst.Expression[] statements = new MSAst.Expression[5];
+            MSAst.Expression[] statements = new MSAst.Expression[6];
 
             //******************************************************************
             // 1. mgr = (EXPR)
             //******************************************************************
             MSAst.ParameterExpression manager = ag.GetTemporary("with_manager");
-            statements[0] = AstGenerator.MakeAssignment(
+            statements[0] = ag.MakeAssignment(
                 manager,
                 ag.Transform(_contextManager),
                 new SourceSpan(Start, _header)
@@ -93,7 +93,7 @@ namespace IronPython.Compiler.Ast {
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
             MSAst.ParameterExpression exit = ag.GetTemporary("with_exit");
-            statements[1] = AstGenerator.MakeAssignment(
+            statements[1] = ag.MakeAssignment(
                 exit,
                 Binders.Get(
                     ag.BinderState,
@@ -107,7 +107,7 @@ namespace IronPython.Compiler.Ast {
             // 3. value = mgr.__enter__()
             //******************************************************************
             MSAst.ParameterExpression value = ag.GetTemporary("with_value");
-            statements[2] = AstGenerator.MakeAssignment(
+            statements[2] = ag.MakeAssignment(
                 value,
                 Binders.Invoke(
                     ag.BinderState,
@@ -126,9 +126,9 @@ namespace IronPython.Compiler.Ast {
             // 4. exc = True
             //******************************************************************
             MSAst.ParameterExpression exc = ag.GetTemporary("with_exc", typeof(bool));
-            statements[3] = AstGenerator.MakeAssignment(
+            statements[3] = ag.MakeAssignment(
                 exc,
-                Ast.True()
+                Ast.Constant(true)
             );
 
             //******************************************************************
@@ -154,27 +154,29 @@ namespace IronPython.Compiler.Ast {
             statements[4] =
                 // try:
                 AstUtils.Try(// try statement body
-                    Ast.Annotate(Span, _header),
                     _var != null ?
-                        AstUtils.Block(
-                            _body.Span,
+                        ag.AddDebugInfo(
+                            Ast.Block(
                 // VAR = value
-                            _var.TransformSet(ag, SourceSpan.None, value, Operators.None),
+                                _var.TransformSet(ag, SourceSpan.None, value, Operators.None),
                 // BLOCK
-                            ag.Transform(_body)
+                                ag.Transform(_body),
+                                Ast.Empty()
+                            ),
+                            _body.Span
                         ) :
                 // BLOCK
                         ag.Transform(_body) // except:, // try statement location
-                ).Catch(typeof(Exception), exception,
-                    Ast.BlockVoid(
+                ).Catch(exception,
+                    Ast.Block(
                 // Python specific exception handling code
                         Ast.Call(
                             AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
                         ),
                 // exc = False
-                        AstGenerator.MakeAssignment(
+                        ag.MakeAssignment(
                             exc,
-                            Ast.False()
+                            Ast.Constant(false)
                         ),
                 //  if not exit(*sys.exc_info()):
                 //      raise
@@ -191,7 +193,8 @@ namespace IronPython.Compiler.Ast {
                                 )
                             ),
                             Ast.Rethrow()
-                        )
+                        ),
+                        Ast.Empty()
                     )
                 // finally:
                 ).Finally(
@@ -199,25 +202,29 @@ namespace IronPython.Compiler.Ast {
                 //      exit(None, None, None)
                     AstUtils.IfThen(
                         exc,
-                        Ast.Dynamic(
-                            new PythonInvokeBinder(
-                                ag.BinderState,
-                                new CallSignature(3)        // signature doesn't include function
+                        ag.AddDebugInfo(
+                            Ast.Dynamic(
+                                new PythonInvokeBinder(
+                                    ag.BinderState,
+                                    new CallSignature(3)        // signature doesn't include function
+                                ),
+                                typeof(object),
+                                new MSAst.Expression[] {
+                                    AstUtils.CodeContext(),
+                                    exit,
+                                    Ast.Constant(null),
+                                    Ast.Constant(null),
+                                    Ast.Constant(null)
+                                }
                             ),
-                            typeof(object),
-                            MSAst.Expression.Annotate(_contextManager.Span),
-                            new MSAst.Expression[] {
-                                AstUtils.CodeContext(),
-                                exit,
-                                Ast.Null(),
-                                Ast.Null(),
-                                Ast.Null()
-                            }
+                            _contextManager.Span
                         )
                     )
                 );
+            statements[4] = ag.AddDebugInfo(statements[4], Span);
 
-            return AstUtils.Block(_body.Span, statements);
+            statements[5] = Ast.Empty();
+            return ag.AddDebugInfo(Ast.Block(statements), _body.Span);
         }
 
         private MSAst.Expression MakeExitCall(AstGenerator ag, MSAst.ParameterExpression exit, MSAst.Expression exception) {

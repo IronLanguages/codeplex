@@ -48,8 +48,7 @@ namespace Microsoft.Scripting.Generation {
             return AstUtils.Convert(
                 Expression.Assign(
                     MapToExpression(lvalue),
-                    AstUtils.Convert(Visit(node.Value), typeof(object)),
-                    node.Annotations
+                    AstUtils.Convert(Visit(node.Value), typeof(object))
                 ),
                 node.Type
             );
@@ -65,8 +64,7 @@ namespace Microsoft.Scripting.Generation {
 
             result = Expression.Property(
                 MakeWrapper(variable),
-                typeof(ModuleGlobalWrapper).GetProperty("CurrentValue"),
-                variable.Annotations
+                typeof(ModuleGlobalWrapper).GetProperty("CurrentValue")
             );
 
             return _mapToExpression[variable] = result;

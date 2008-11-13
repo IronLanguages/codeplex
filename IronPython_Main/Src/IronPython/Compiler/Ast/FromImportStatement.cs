@@ -67,12 +67,14 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {            
             if (_names == _star) {
                 // from a[.b] import *
-                return AstUtils.Call(
-                    AstGenerator.GetHelperMethod("ImportStar"), 
-                    Span, 
-                    AstUtils.CodeContext(), 
-                    Ast.Constant(_root.MakeString()), 
-                    Ast.Constant(GetLevel())
+                return ag.AddDebugInfo(
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("ImportStar"), 
+                        AstUtils.CodeContext(), 
+                        Ast.Constant(_root.MakeString()), 
+                        Ast.Constant(GetLevel())
+                    ),
+                    Span
                 );
             } else {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
@@ -88,36 +90,41 @@ namespace IronPython.Compiler.Ast {
 
                 // module = PythonOps.ImportWithNames(<context>, _root, make_array(_names))
                 statements.Add(
-                    AstUtils.Assign(
-                        module, 
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod("ImportWithNames"),
-                            AstUtils.CodeContext(),
-                            Ast.Constant(_root.MakeString()),
-                            Ast.NewArrayInit(typeof(string), names),
-                            Ast.Constant(GetLevel())
-                        ), 
-                        Ast.Annotate(_root.Span)
+                    ag.AddDebugInfo(
+                        AstUtils.Assign(
+                            module, 
+                            Ast.Call(
+                                AstGenerator.GetHelperMethod("ImportWithNames"),
+                                AstUtils.CodeContext(),
+                                Ast.Constant(_root.MakeString()),
+                                Ast.NewArrayInit(typeof(string), names),
+                                Ast.Constant(GetLevel())
+                            )
+                        ),
+                        _root.Span
                     )
                 );
 
                 // now load all the names being imported and assign the variables
                 for (int i = 0; i < names.Length; i++) {
                     statements.Add(
-                        AstUtils.Assign(
-                            _variables[i].Variable, 
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("ImportFrom"),
-                                AstUtils.CodeContext(),
-                                module,
-                                names[i]
-                            ), 
-                            Ast.Annotate(Span)
+                        ag.AddDebugInfo(
+                            AstUtils.Assign(
+                                _variables[i].Variable, 
+                                Ast.Call(
+                                    AstGenerator.GetHelperMethod("ImportFrom"),
+                                    AstUtils.CodeContext(),
+                                    module,
+                                    names[i]
+                                )
+                            ),
+                            Span
                         )
                     );
                 }
 
-                return AstUtils.Block(Span, statements.ToArray());
+                statements.Add(Ast.Empty());
+                return ag.AddDebugInfo(Ast.Block(statements.ToArray()), Span);
             }
         }
 

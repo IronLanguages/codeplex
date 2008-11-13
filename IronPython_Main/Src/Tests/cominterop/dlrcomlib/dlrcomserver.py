@@ -66,6 +66,7 @@ def test_errorInfo():
         # AreEqual("Test error message" in str(e), True)
         AreEqual("Test error message", e.Message)
 
+@disabled("COM dispatch mode doesn't support documentation")
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.Python.CreateRuntime().GetEngine('py').Operations
@@ -74,6 +75,7 @@ def test_documentation():
     else:
         AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
 
+@disabled('CodePlex bug 19282')
 def test_method_equality():
     AreEqual(com_obj.SumArgs, com_obj.SumArgs)
     Assert(com_obj.SumArgs != com_obj.IntArguments)

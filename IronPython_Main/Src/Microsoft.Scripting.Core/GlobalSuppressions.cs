@@ -8,6 +8,6 @@
 // "In Project Suppression File". 
 // You do not need to add suppressions to this file manually. 
 
-// TODO: probably most of our types in Microsoft.Scripting.Actions will end up in
+// TODO: probably most of our types in Microsoft.Scripting.Binders will end up in
 // Microsoft.Scripting
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting")]

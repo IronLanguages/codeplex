@@ -1282,7 +1282,7 @@ namespace IronPython.Runtime {
             try {
                 return PythonOps.PowerMod(context, x, y, z);
             } catch (DivideByZeroException) {
-                throw PythonOps.ValueError("3rd adgument cannot be 0");
+                throw PythonOps.ValueError("3rd argument cannot be 0");
             }
         }
 

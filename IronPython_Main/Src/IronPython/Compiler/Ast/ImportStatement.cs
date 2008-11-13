@@ -53,22 +53,25 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < _names.Length; i++) {
                 statements.Add(
                     // _references[i] = PythonOps.Import(<code context>, _names[i])
-                    AstUtils.Assign(
-                        _variables[i].Variable, 
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod(                           // helper
-                                _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
-                            ),
-                            AstUtils.CodeContext(),                                      // 1st arg - code context
-                            Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
-                            Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
-                        ), 
-                        Ast.Annotate(_names[i].Span)
+                    ag.AddDebugInfo(
+                        AstUtils.Assign(
+                            _variables[i].Variable, 
+                            Ast.Call(
+                                AstGenerator.GetHelperMethod(                           // helper
+                                    _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
+                                ),
+                                AstUtils.CodeContext(),                                 // 1st arg - code context
+                                Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
+                                Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
+                            )
+                        ),
+                        _names[i].Span
                     )
                 );
             }
 
-            return AstUtils.Block(Span, statements.ToArray());
+            statements.Add(Ast.Empty());
+            return ag.AddDebugInfo(Ast.Block(statements.ToArray()), Span);
         }
 
         public override void Walk(PythonWalker walker) {

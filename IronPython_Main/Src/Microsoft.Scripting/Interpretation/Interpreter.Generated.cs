@@ -78,33 +78,40 @@ namespace Microsoft.Scripting.Interpretation {
                  case ExpressionType.Assign: return InterpretAssignBinaryExpression(state, expr);
                  case ExpressionType.Block: return InterpretBlockExpression(state, expr);
                  case ExpressionType.DebugInfo: return InterpretDebugInfoExpression(state, expr);
+                 case ExpressionType.Decrement: return InterpretUnaryExpression(state, expr);
                  case ExpressionType.Dynamic: return InterpretDynamicExpression(state, expr);
                  case ExpressionType.Default: return InterpretEmptyExpression(state, expr);
                  case ExpressionType.Extension: return InterpretExtensionExpression(state, expr);
                  case ExpressionType.Goto: return InterpretGotoExpression(state, expr);
+                 case ExpressionType.Increment: return InterpretUnaryExpression(state, expr);
                  case ExpressionType.Index: return InterpretIndexExpression(state, expr);
                  case ExpressionType.Label: return InterpretLabelExpression(state, expr);
                  case ExpressionType.RuntimeVariables: return InterpretRuntimeVariablesExpression(state, expr);
                  case ExpressionType.Loop: return InterpretLoopExpression(state, expr);
-                 case ExpressionType.ReturnStatement: return InterpretReturnStatement(state, expr);
                  case ExpressionType.Switch: return InterpretSwitchExpression(state, expr);
                  case ExpressionType.Throw: return InterpretThrowUnaryExpression(state, expr);
                  case ExpressionType.Try: return InterpretTryExpression(state, expr);
                  case ExpressionType.Unbox: return InterpretUnboxUnaryExpression(state, expr);
-                 case ExpressionType.AddAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.AndAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.DivideAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.ExclusiveOrAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.LeftShiftAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.ModuloAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.MultiplyAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.OrAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.PowerAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.RightShiftAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.SubtractAssign: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.AddAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.MultiplyAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
-                 case ExpressionType.SubtractAssignChecked: return InterpretOpAssignBinaryExpression(state, expr);
+                case ExpressionType.AddAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.RightShiftAssign:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.PreIncrementAssign:
+                case ExpressionType.PreDecrementAssign:
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.PostDecrementAssign:
+                case ExpressionType.TypeEqual:
+                    return InterpretReducibleExpression(state, expr);
 
                 // *** END GENERATED CODE ***
 

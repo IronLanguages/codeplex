@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public sealed class Restrictions {
         private class Restriction {
             internal enum RestrictionKind {
@@ -210,33 +210,7 @@ namespace Microsoft.Scripting.Actions {
         /// Creates one type identity test 
         /// </summary>
         private static Expression CreateTypeRestriction(Expression expression, Type rt) {
-            Type ct = expression.Type;
-
-            if (ct == rt) {
-                if (ct.IsValueType) {
-                    // No test necessary for value types
-                    return null;
-                }
-                if (ct.IsSealed) {
-                    // Sealed type is easy, just check for null
-                    return Expression.NotEqual(expression, Expression.Constant(null));
-                }
-            }
-
-            if (rt == typeof(Null)) {
-                return Expression.Equal(expression, Expression.Constant(null, expression.Type));
-            }
-
-            return Expression.AndAlso(
-                Expression.NotEqual(expression, Expression.Constant(null)),
-                Expression.Equal(
-                    Expression.Call(
-                        Helpers.Convert(expression, typeof(object)),
-                        typeof(object).GetMethod("GetType")
-                    ),
-                    Expression.Constant(rt)
-                )
-            );
+            return Expression.TypeEqual(expression, rt);
         }
 
         private static Expression CreateInstanceRestriction(Expression expression, object value) {

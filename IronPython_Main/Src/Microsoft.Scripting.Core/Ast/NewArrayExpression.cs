@@ -24,17 +24,16 @@ namespace Microsoft.Linq.Expressions {
         private readonly ReadOnlyCollection<Expression> _expressions;
         private readonly Type _type;
 
-        internal NewArrayExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(annotations) {
+        internal NewArrayExpression(Type type, ReadOnlyCollection<Expression> expressions) {
             _expressions = expressions;
             _type = type;
         }
 
-        internal static NewArrayExpression Make(Annotations annotations, ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions) {
+        internal static NewArrayExpression Make(ExpressionType nodeType, Type type, ReadOnlyCollection<Expression> expressions) {
             if (nodeType == ExpressionType.NewArrayInit) {
-                return new NewArrayInitExpression(annotations, type, expressions);
+                return new NewArrayInitExpression(type, expressions);
             } else {
-                return new NewArrayBoundsExpression(annotations, type, expressions);
+                return new NewArrayBoundsExpression(type, expressions);
             }
         }
 
@@ -46,14 +45,14 @@ namespace Microsoft.Linq.Expressions {
             get { return _expressions; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitNewArray(this);
         }
     }
 
     internal sealed class NewArrayInitExpression : NewArrayExpression {
-        internal NewArrayInitExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(annotations, type, expressions) {
+        internal NewArrayInitExpression(Type type, ReadOnlyCollection<Expression> expressions)
+            : base(type, expressions) {
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -62,8 +61,8 @@ namespace Microsoft.Linq.Expressions {
     }
 
     internal sealed class NewArrayBoundsExpression : NewArrayExpression {
-        internal NewArrayBoundsExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> expressions)
-            : base(annotations, type, expressions) {
+        internal NewArrayBoundsExpression(Type type, ReadOnlyCollection<Expression> expressions)
+            : base(type, expressions) {
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -85,11 +84,7 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) {
-            return NewArrayInit(type, Annotations.Empty, (IEnumerable<Expression>)initializers);
-        }
-
-        public static NewArrayExpression NewArrayInit(Type type, Annotations annotations, params Expression[] initializers) {
-            return NewArrayInit(type, annotations, (IEnumerable<Expression>)initializers);
+            return NewArrayInit(type, (IEnumerable<Expression>)initializers);
         }
 
         /// <summary>
@@ -98,11 +93,6 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) {
-            return NewArrayInit(type, Annotations.Empty, initializers);
-        }
-
-        //CONFORMING
-        public static NewArrayExpression NewArrayInit(Type type, Annotations annotations, IEnumerable<Expression> initializers) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(initializers, "initializers");
             if (type.Equals(typeof(void))) {
@@ -137,7 +127,7 @@ namespace Microsoft.Linq.Expressions {
                 initializerList = new ReadOnlyCollection<Expression>(newList);
             }
 
-            return NewArrayExpression.Make(annotations, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
+            return NewArrayExpression.Make(ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
         }
 
         #endregion
@@ -149,11 +139,8 @@ namespace Microsoft.Linq.Expressions {
             return NewArrayBounds(type, (IEnumerable<Expression>)bounds);
         }
 
-        public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) {
-            return NewArrayBounds(type, Annotations.Empty, bounds);
-        }
         //CONFORMING
-        public static NewArrayExpression NewArrayBounds(Type type, Annotations annotations, IEnumerable<Expression> bounds) {
+        public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(bounds, "bounds");
 
@@ -174,52 +161,10 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return NewArrayExpression.Make(annotations, ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
+            return NewArrayExpression.Make(ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
         }
 
         #endregion
-
-        [Obsolete("use Expression.NewArrayInit, Expression.NewArrayBounds, or Utils.NewArrayHelper instead")]
-        public static NewArrayExpression NewArrayHelper(Type type, IEnumerable<Expression> initializers) {
-            ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.RequiresNotNull(initializers, "initializers");
-
-            if (type.Equals(typeof(void))) {
-                throw Error.ArgumentCannotBeOfTypeVoid();
-            }
-
-            ReadOnlyCollection<Expression> initializerList = initializers.ToReadOnly();
-
-            Expression[] clone = null;
-            for (int i = 0; i < initializerList.Count; i++) {
-                Expression initializer = initializerList[i];
-                RequiresCanRead(initializer, "initializers");
-
-                if (!TypeUtils.AreReferenceAssignable(type, initializer.Type)) {
-                    if (clone == null) {
-                        clone = new Expression[initializerList.Count];
-                        for (int j = 0; j < i; j++) {
-                            clone[j] = initializerList[j];
-                        }
-                    }
-                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && TypeUtils.AreAssignable(type, initializer.GetType())) {
-                        initializer = Expression.Quote(initializer);
-                    } else {
-                        initializer = Expression.Convert(initializer, type);
-                    }
-
-                }
-                if (clone != null) {
-                    clone[i] = initializer;
-                }
-            }
-
-            if (clone != null) {
-                initializerList = new ReadOnlyCollection<Expression>(clone);
-            }
-
-            return NewArrayExpression.Make(Annotations.Empty, ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
-        }
 
     }
 }

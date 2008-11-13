@@ -26,14 +26,12 @@ STDMETHODIMP COptionalParams::mTwoOptionalParams(VARIANT a, /* Optional */ VARIA
 
 STDMETHODIMP COptionalParams::mOptionalParamWithDefaultValue(VARIANT a, /* Optional */ VARIANT b, /* Optional */ VARIANT* c)
 {
-	*c = b;
-	return S_OK;
+	return VariantCopy(c, &b);
 }
 
 STDMETHODIMP COptionalParams::mOptionalOutParam(VARIANT a, /* Optional */ VARIANT* b)
 {
-	*b = a;
-	return S_OK;
+    return VariantCopy(b, &a);
 }
 
 STDMETHODIMP COptionalParams::mOptionalStringParam(BSTR a, BSTR *b)

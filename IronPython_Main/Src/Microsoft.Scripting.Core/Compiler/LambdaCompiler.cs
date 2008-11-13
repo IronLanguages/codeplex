@@ -59,10 +59,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // Mapping of labels used for "long" jumps (jumping out and into blocks)
         private readonly Dictionary<LabelTarget, LabelInfo> _labelInfo = new Dictionary<LabelTarget, LabelInfo>();
 
-        // Synthetic label info for doing returns
-        // TODO: remove when merging ReturnStatement and GotoExpression
-        private LabelInfo _returnBlock;
-
         // The currently active variable scope
         private CompilerScope _scope;
 
@@ -81,12 +77,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // True if we want to emitting debug symbols
         private readonly bool _emitDebugSymbols;
-
-        // TODO: remove
-        private ISymbolDocumentWriter _debugSymbolWriter;
-
-        // TODO: Make this readonly. Need to put it with other "whole tree" state
-        private Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter> _symbolWriters;
 
         // Runtime constants bound to the delegate
         private readonly BoundConstants _boundConstants;
@@ -241,25 +231,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return VariableBinder.Bind(lambda);
         }
 
-        private void EmitSequencePointNone() {
-            EmitPosition(SourceLocation.None, SourceLocation.None);
-        }
-
-        private void EmitPosition(SourceLocation start, SourceLocation end) {
-            Debug.Assert(_emitDebugSymbols);
-
-            if (!start.IsValid || !end.IsValid) {
-                start = SourceLocation.None;
-                end = SourceLocation.None;
-            }
-
-            if (_debugSymbolWriter != null) {
-                _ilg.MarkSequencePoint(_debugSymbolWriter, start.Line, start.Column, end.Line, end.Column);
-            }
-
-            _ilg.Emit(OpCodes.Nop);
-        }
-
         internal LocalBuilder GetNamedLocal(Type type, string name) {
             Assert.NotNull(type);
 
@@ -279,27 +250,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return;
             }
             _ilg.FreeLocal(local);
-        }
-
-        private void Finish() {
-            Debug.Assert(_labelBlock.Parent == null && _labelBlock.Kind == LabelBlockKind.Block);
-
-            if (_returnBlock != null) {
-                _ilg.MarkLabel(_returnBlock.Label);
-                if (_returnBlock.Value != null) {
-                    _ilg.Emit(OpCodes.Ldloc, _returnBlock.Value);
-                }
-                _ilg.Emit(OpCodes.Ret);
-            }
-
-            // Validate labels
-            foreach (LabelInfo label in _labelInfo.Values) {
-                label.ValidateFinish();
-            }
-
-            if (_dynamicMethod) {
-                CreateDelegateMethodInfo();
-            }
         }
 
         /// <summary>
@@ -380,7 +330,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // 1) we want to dump all geneated IL to an assembly on disk (SaveSnippets on)
             // 2) the method is debuggable, i.e. DebugMode is on and a source unit is associated with the method
             //
-            if ((DebugOptions.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
+            if ((Snippets.Shared.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
                 var typeBuilder = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
                 lc = CreateStaticCompiler(
                     tree,

@@ -24,8 +24,7 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// Null test means infinite loop.
         /// </summary>
-        internal LoopExpression(Expression body, LabelTarget @break, LabelTarget @continue, Annotations annotations)
-            : base(annotations) {
+        internal LoopExpression(Expression body, LabelTarget @break, LabelTarget @continue) {
             _body = body;
             _break = @break;
             _continue = @continue;
@@ -51,7 +50,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _continue; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitLoop(this);
         }
     }
@@ -61,16 +60,20 @@ namespace Microsoft.Linq.Expressions {
     /// TODO: review which of these overloads we actually need
     /// </summary>
     public partial class Expression {
-        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) {
-            return Loop(body, @break, @continue, null);
+        public static LoopExpression Loop(Expression body) {
+            return Loop(body, null);
         }
 
-        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue, Annotations annotations) {
+        public static LoopExpression Loop(Expression body, LabelTarget @break) {
+            return Loop(body, @break, null);
+        }
+
+        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) {
             RequiresCanRead(body, "body");
             // TODO: lift the restriction on break, and allow loops to have non-void type
             ContractUtils.Requires(@break == null || @break.Type == typeof(void), "break", Strings.LabelTypeMustBeVoid);
             ContractUtils.Requires(@continue == null || @continue.Type == typeof(void), "continue", Strings.LabelTypeMustBeVoid);
-            return new LoopExpression(body, @break, @continue, annotations);
+            return new LoopExpression(body, @break, @continue);
         }
     }
 }

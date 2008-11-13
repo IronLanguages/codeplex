@@ -20,13 +20,16 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
 using Ast = Microsoft.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
     
@@ -84,7 +87,7 @@ namespace IronPython.Runtime.Binding {
                             res = new MetaObject(
                                 Ast.Call(
                                     typeof(StringOps).GetMethod("ConvertToIEnumerable"),
-                                    Ast.ConvertHelper(self.Expression, typeof(string))
+                                    AstUtils.Convert(self.Expression, typeof(string))
                                 ),
                                 Restrictions.GetTypeRestriction(self.Expression, typeof(string))
                             );
@@ -108,13 +111,13 @@ namespace IronPython.Runtime.Binding {
                 return new MetaObject(
                     Ast.Condition(
                         Ast.Equal(
-                            Ast.ConvertHelper(self.Expression, Enum.GetUnderlyingType(type)),
+                            AstUtils.Convert(self.Expression, Enum.GetUnderlyingType(type)),
                             Ast.Constant(Activator.CreateInstance(self.LimitType))
                         ),
                         Ast.Constant(value),
                         Ast.Call(
                             typeof(PythonOps).GetMethod("TypeErrorForBadEnumConversion").MakeGenericMethod(type),
-                            Ast.ConvertHelper(self.Expression, typeof(object))
+                            AstUtils.Convert(self.Expression, typeof(object))
                         )
                     ),
                     self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, self.LimitType)),
@@ -165,7 +168,7 @@ namespace IronPython.Runtime.Binding {
                 return new MetaObject(
                     Ast.New(
                         making.GetConstructor(new Type[] { fromType }),
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             self.Expression,
                             fromType
                         )
@@ -201,7 +204,7 @@ namespace IronPython.Runtime.Binding {
                     strVal = extstr.Value;
                     strExpr =
                         Ast.Property(
-                            Ast.ConvertHelper(
+                            AstUtils.Convert(
                                 strExpr,
                                 typeof(Extensible<string>)
                             ),
@@ -215,7 +218,7 @@ namespace IronPython.Runtime.Binding {
                 self = self.Restrict(self.RuntimeType);
 
                 Expression getLen = Ast.Property(
-                    Ast.ConvertHelper(
+                    AstUtils.Convert(
                         strExpr,
                         typeof(string)
                     ),
@@ -225,7 +228,7 @@ namespace IronPython.Runtime.Binding {
                 if (strVal.Length == 1) {
                     res = new MetaObject(
                         Ast.Call(
-                            Ast.ConvertHelper(strExpr, typeof(string)),
+                            AstUtils.Convert(strExpr, typeof(string)),
                             typeof(string).GetMethod("get_Chars"),
                             Ast.Constant(0)
                         ),
@@ -280,7 +283,7 @@ namespace IronPython.Runtime.Binding {
                     return
                         PythonProtocol.ConvertToBool(this, self) ??
                         new MetaObject(
-                            Ast.True(),
+                            Ast.Constant(true),
                             self.Restrictions
                         );
                 }

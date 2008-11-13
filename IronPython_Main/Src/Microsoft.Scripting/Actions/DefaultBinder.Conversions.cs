@@ -17,7 +17,7 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -42,7 +42,6 @@ namespace Microsoft.Scripting.Actions {
                 TryConvertToObject(toType, arg.Expression.Type, arg) ??
                 TryAllConversions(toType, kind, arg.Expression.Type, arg.Restrictions, arg) ??
                 TryAllConversions(toType, kind, arg.LimitType, typeRestrictions, arg) ??
-                TryExtraConversions(toType, typeRestrictions, arg) ??
                 MakeErrorTarget(toType, kind, typeRestrictions, arg);
         }
 
@@ -224,17 +223,6 @@ namespace Microsoft.Scripting.Actions {
         private static MetaObject TryNullConversion(Type toType, Type knownType, Restrictions restrictions) {
             if (knownType == typeof(Null) && !toType.IsValueType) {
                 return MakeNullTarget(toType, restrictions);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Checks for any extra conversions which aren't based upon the incoming type of the object.
-        /// </summary>
-        private static MetaObject TryExtraConversions(Type toType, Restrictions restrictions, MetaObject arg) {
-            if (typeof(Delegate).IsAssignableFrom(toType) && toType != typeof(Delegate)) {
-                // generate a conversion to delegate
-                return MakeDelegateTarget(toType, restrictions, arg);
             }
             return null;
         }
@@ -508,22 +496,6 @@ namespace Microsoft.Scripting.Actions {
         private static MetaObject MakeNullTarget(Type toType, Restrictions restrictions) {
             return new MetaObject(
                 Ast.Convert(Ast.Constant(null), toType),
-                restrictions
-            );
-        }
-
-        /// <summary>
-        /// Creates a target which creates a new dynamic method which contains a single
-        /// dynamic site that invokes the callable object.
-        /// </summary>
-        private static MetaObject MakeDelegateTarget(Type toType, Restrictions restrictions, MetaObject arg) {
-            return new MetaObject(
-                Ast.Call(
-                    typeof(BinderOps).GetMethod("GetDelegate"),
-                    Ast.Constant(null, typeof(CodeContext)),
-                    arg.Expression,
-                    Ast.Constant(toType)
-                ),
                 restrictions
             );
         }

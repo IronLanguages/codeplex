@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class InvokeMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Actions {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNullItems(args, "args");
 
-            return target.BindInvokeMemberl(this, args);
+            return target.BindInvokeMember(this, args);
         }
 
         public MetaObject FallbackInvokeMember(MetaObject target, MetaObject[] args) {

@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
 namespace Microsoft.Scripting {
     /// <summary>

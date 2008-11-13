@@ -17,9 +17,10 @@ using System; using Microsoft;
 using System.Collections;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Runtime;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 
@@ -28,6 +29,7 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     partial class MetaUserObject : MetaPythonObject, IPythonInvokable {
         private readonly MetaObject _baseMetaObject;            // if we're a subtype of MetaObject this is the base class MO
@@ -47,7 +49,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             CodeContext context = BinderState.GetBinderState(action).Context;
             IPythonObject sdo = (IPythonObject)args[0].Value;
             PythonTypeSlot foundSlot;
@@ -181,11 +183,12 @@ namespace IronPython.Runtime.Binding {
                     // to actually return the underlying value.  If an extensible just keeps 
                     // returning more instances  of it's self a stack overflow occurs - both 
                     // behaviors match CPython.
-                    callExpr = Ast.ConvertHelper(AddExtensibleSelfCheck(convertToAction, self, callExpr), typeof(object));
+                    callExpr = AstUtils.Convert(AddExtensibleSelfCheck(convertToAction, self, callExpr), typeof(object));
                 }
 
                 return new MetaObject(
-                    Ast.Scope(
+                    Ast.Block(
+                        new ParameterExpression[] { tmp },
                         Ast.Condition(
                             BindingHelpers.CheckTypeVersion(
                                 self.Expression,
@@ -199,14 +202,13 @@ namespace IronPython.Runtime.Binding {
                                     tmp
                                 ),
                                 callExpr,
-                                Ast.ConvertHelper(
+                                AstUtils.Convert(
                                     ConversionFallback(convertToAction),
                                     typeof(object)
                                 )
                             ),
                             convertToAction.Defer(this).Expression
-                        ),
-                        tmp
+                        )
                     ),
                     self.Restrict(self.RuntimeType).Restrictions
                 );
@@ -217,7 +219,8 @@ namespace IronPython.Runtime.Binding {
 
         private static Expression/*!*/ AddExtensibleSelfCheck(ConvertBinder/*!*/ convertToAction, MetaObject/*!*/ self, Expression/*!*/ callExpr) {
             ParameterExpression tmp = Ast.Variable(callExpr.Type, "tmp");
-            callExpr = Ast.Scope(
+            callExpr = Ast.Block(
+                new ParameterExpression[] { tmp },
                 Ast.Block(
                     Ast.Assign(tmp, callExpr),
                     Ast.Condition(
@@ -233,8 +236,7 @@ namespace IronPython.Runtime.Binding {
                             tmp
                         )
                     )
-                ),
-                tmp
+                )
             );
             return callExpr;
         }

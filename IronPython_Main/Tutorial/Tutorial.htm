@@ -396,9 +396,9 @@
 	<p class="Stepnonumbering">The __doc__ attribute will be later used also for
 	exploring .NET methods and their parameter types.</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; first.add.__doc__</p>
-	<p class="Code-Background">&#39;add(a, b) - returns a + b&#39;</p>
+	<p class="Code-Background">&#39;add(a, b) -&gt; returns a + b&#39;</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; first.factorial.__doc__</p>
-	<p class="Code-Background">&#39;factorial(n) - returns factorial of n&#39;</p>
+	<p class="Code-Background">&#39;factorial(n) -&gt; returns factorial of n&#39;</p>
 	<ol start="4">
 		<li>
 		<p class="Step">Call the methods in the &quot;first&quot; module and print the contents
@@ -1788,17 +1788,6 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="Code-Background">['CreateObjRef','Equals','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','MemberwiseClone','ReferenceEquals','Register','ShowDefaultCharacterProperties','ToString','Unload','Unregister','__class__','__delattr__','__doc__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__','__str__']</p>
 	<ol start="5">
 		<li>
-		<p class="Step">Explore the parameters of the Load method on AgentServerClass:</p>
-		</li>
-	</ol>
-	<p class="TypedExample">a.Load.__doc__</p>
-	<p class="Code-Highlighted">&gt;&gt;&gt; a.Load.__doc__</p>
-	<p class="Code-Background">'void Load(Object vLoadKey, [out]Int32& pdwCharID, [out]Int32& pdwReqID)'</p>
-	<p class="Stepnonumbering">The Load methods have an input parameter (name of
-	the character to load) and two output parameters.&nbsp; When calling this method, IronPython will turn the two output parameters into
-	multiple return values.</p>
-	<ol start="6">
-		<li>
 		<p class="Step">Load &quot;Merlin the Wizard&quot; character. (The character data
 		is stored in c:\WINDOWS\msagent\chars). The Load method returns multiple
 		values packed into a tuple - the
@@ -1811,7 +1800,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="Code-Background"></p>
 	<p class="TypedExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
 	<p class="Code-Background"></p>
-	<ol start="7">
+	<ol start="6">
 		<li>
 		<p class="Step">Call GetCharacter method on the AgentServerClass instance
 		to get the actual character, display the character and have him think about
@@ -1830,7 +1819,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="HiddenOutput"></p>
 	<p class="TypedExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
 	<p class="HiddenOutput"></p>
-	<ol start="8">
+	<ol start="7">
 		<li>
 		<p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of
 		all the animations by calling the GetAnimationNames method. Play one of the animations,
@@ -1919,7 +1908,7 @@ Search<br>
 Think<br></p>
 	<p class="TypedExample">character.Play(&quot;Read&quot;, reqid)</p>
 	<p class="HiddenOutput"></p>
-	<ol start="9">
+	<ol start="8">
 		<li>
 		<p class="Step">(Optional) To call a series of animations, we could call character.Play(animation_name, reqid)
 		for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation
@@ -1937,7 +1926,7 @@ Think<br></p>
 	<p class="TypedExample">Congratulate()</p>
 	<p class="HiddenOutput"></p>
 	<p class="Code-Background"></p>
-	<ol start="10">
+	<ol start="9">
 		<li>
 		<p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
 		</li>
@@ -2265,7 +2254,7 @@ list(set1-set2)</p>
 	<p class="Stepnonumbering">IronPython will output:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; s = Simple(10)<br />
 	&gt;&gt;&gt; print s</p>
-	<p class="Code-Background">Simple&lt;10</p>
+	<p class="Code-Background">Simple&lt;10&gt;</p>
 	<ol start="9">
 		<li>
 		<p class="Step">You have just explored all the functionality currently available
@@ -2333,16 +2322,16 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; dir(Simple)<br />
 	&gt;&gt;&gt; s = Simple(10)</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in s: print i</p>
-	<p class="Code-Background">Simple&lt;0<br />
-	Simple&lt;1<br />
-	Simple&lt;2<br />
-	Simple&lt;3<br />
-	Simple&lt;4<br />
-	Simple&lt;5<br />
-	Simple&lt;6<br />
-	Simple&lt;7<br />
-	Simple&lt;8<br />
-	Simple&lt;9</p>
+	<p class="Code-Background">Simple&lt;0&gt;<br />
+	Simple&lt;1&gt;<br />
+	Simple&lt;2&gt;<br />
+	Simple&lt;3&gt;<br />
+	Simple&lt;4&gt;<br />
+	Simple&lt;5&gt;<br />
+	Simple&lt;6&gt;<br />
+	Simple&lt;7&gt;<br />
+	Simple&lt;8&gt;<br />
+	Simple&lt;9&gt;</p>
 	<p class="StepNote">Notice that the dir() function now returned the GetEnumerator
 	method.</p>
 	<ol start="4">
@@ -2603,7 +2592,7 @@ list(set1-set2)</p>
 	<p class="Stepnonumbering">IronPython will output:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; s = Simple(10)<br />
 	&gt;&gt;&gt; print s</p>
-	<p class="Code-Background">Simple&lt;10</p>
+	<p class="Code-Background">Simple&lt;10&gt;</p>
 	<ol start="9">
 		<li>
 		<p class="Step">You just have explored all the functionality available in
@@ -2708,16 +2697,16 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; dir(Simple)<br />
 	&gt;&gt;&gt; s = Simple(10)</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in s: print i</p>
-	<p class="Code-Background">Simple&lt;0<br />
-	Simple&lt;1<br />
-	Simple&lt;2<br />
-	Simple&lt;3<br />
-	Simple&lt;4<br />
-	Simple&lt;5<br />
-	Simple&lt;6<br />
-	Simple&lt;7<br />
-	Simple&lt;8<br />
-	Simple&lt;9</p>
+	<p class="Code-Background">Simple&lt;0&gt;<br />
+	Simple&lt;1&gt;<br />
+	Simple&lt;2&gt;<br />
+	Simple&lt;3&gt;<br />
+	Simple&lt;4&gt;<br />
+	Simple&lt;5&gt;<br />
+	Simple&lt;6&gt;<br />
+	Simple&lt;7&gt;<br />
+	Simple&lt;8&gt;<br />
+	Simple&lt;9&gt;</p>
 	<p class="Normal">&nbsp;</p>
 	<p class="StepNote">Notice that the dir() function now returned the GetEnumerator
 	method.</p>

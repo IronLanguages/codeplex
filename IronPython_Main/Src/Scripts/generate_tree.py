@@ -16,10 +16,11 @@
 from generate import generate
 
 class Expression:
-    def __init__(self, kind, type, interop=False):
+    def __init__(self, kind, type, interop = False, reducible = False):
         self.kind = kind
         self.type = type
         self.interop = interop
+        self.reducible = reducible
 
 expressions = [
     #
@@ -30,11 +31,11 @@ expressions = [
     #   DO NOT REORDER THESE, THEY COME FROM THE LINQ V1 ENUM
     #
 
-    #          Enum Value               Expression Class                   Interop
+    #          Enum Value               Expression Class                   Flags
 
-    Expression("Add",                   "BinaryExpression",                True),
+    Expression("Add",                   "BinaryExpression",                interop = True),
     Expression("AddChecked",            "BinaryExpression"),
-    Expression("And",                   "BinaryExpression",                True),
+    Expression("And",                   "BinaryExpression",                interop = True),
     Expression("AndAlso",               "BinaryExpression"),
     Expression("ArrayLength",           "UnaryExpression"),
     Expression("ArrayIndex",            "BinaryExpression"),
@@ -44,37 +45,37 @@ expressions = [
     Expression("Constant",              "ConstantExpression"),
     Expression("Convert",               "UnaryExpression"),
     Expression("ConvertChecked",        "UnaryExpression"),
-    Expression("Divide",                "BinaryExpression",                True),
-    Expression("Equal",                 "BinaryExpression",                True),
-    Expression("ExclusiveOr",           "BinaryExpression",                True),
-    Expression("GreaterThan",           "BinaryExpression",                True),
-    Expression("GreaterThanOrEqual",    "BinaryExpression",                True),
+    Expression("Divide",                "BinaryExpression",                interop = True),
+    Expression("Equal",                 "BinaryExpression",                interop = True),
+    Expression("ExclusiveOr",           "BinaryExpression",                interop = True),
+    Expression("GreaterThan",           "BinaryExpression",                interop = True),
+    Expression("GreaterThanOrEqual",    "BinaryExpression",                interop = True),
     Expression("Invoke",                "InvocationExpression"),
     Expression("Lambda",                "LambdaExpression"),
-    Expression("LeftShift",             "BinaryExpression",                True),
-    Expression("LessThan",              "BinaryExpression",                True),
-    Expression("LessThanOrEqual",       "BinaryExpression",                True),
+    Expression("LeftShift",             "BinaryExpression",                interop = True),
+    Expression("LessThan",              "BinaryExpression",                interop = True),
+    Expression("LessThanOrEqual",       "BinaryExpression",                interop = True),
     Expression("ListInit",              "ListInitExpression"),
     Expression("MemberAccess",          "MemberExpression"),
     Expression("MemberInit",            "MemberInitExpression"),
-    Expression("Modulo",                "BinaryExpression",                True),
-    Expression("Multiply",              "BinaryExpression",                True),
+    Expression("Modulo",                "BinaryExpression",                interop = True),
+    Expression("Multiply",              "BinaryExpression",                interop = True),
     Expression("MultiplyChecked",       "BinaryExpression"),
-    Expression("Negate",                "UnaryExpression",                 True),
-    Expression("UnaryPlus",             "UnaryExpression",                 True),
+    Expression("Negate",                "UnaryExpression",                 interop = True),
+    Expression("UnaryPlus",             "UnaryExpression",                 interop = True),
     Expression("NegateChecked",         "UnaryExpression"),
     Expression("New",                   "NewExpression"),
     Expression("NewArrayInit",          "NewArrayExpression"),
     Expression("NewArrayBounds",        "NewArrayExpression"),
-    Expression("Not",                   "UnaryExpression",                 True),
-    Expression("NotEqual",              "BinaryExpression",                True),
-    Expression("Or",                    "BinaryExpression",                True),
+    Expression("Not",                   "UnaryExpression",                 interop = True),
+    Expression("NotEqual",              "BinaryExpression",                interop = True),
+    Expression("Or",                    "BinaryExpression",                interop = True),
     Expression("OrElse",                "BinaryExpression"),
     Expression("Parameter",             "ParameterExpression"),
-    Expression("Power",                 "BinaryExpression",                True),
+    Expression("Power",                 "BinaryExpression",                interop = True),
     Expression("Quote",                 "UnaryExpression"),
-    Expression("RightShift",            "BinaryExpression",                True),
-    Expression("Subtract",              "BinaryExpression",                True),
+    Expression("RightShift",            "BinaryExpression",                interop = True),
+    Expression("Subtract",              "BinaryExpression",                interop = True),
     Expression("SubtractChecked",       "BinaryExpression"),
     Expression("TypeAs",                "UnaryExpression"),
     Expression("TypeIs",                "TypeBinaryExpression"),
@@ -84,36 +85,40 @@ expressions = [
     Expression("Assign",                "BinaryExpression"),
     Expression("Block",                 "BlockExpression"),
     Expression("DebugInfo",             "DebugInfoExpression"),
+    Expression("Decrement",             "UnaryExpression",                 interop = True),
     Expression("Dynamic",               "DynamicExpression"),
     Expression("Default",               "EmptyExpression"),
     Expression("Extension",             "ExtensionExpression"),
     Expression("Goto",                  "GotoExpression"),
+    Expression("Increment",             "UnaryExpression",                 interop = True),
     Expression("Index",                 "IndexExpression"),
     Expression("Label",                 "LabelExpression"),
     Expression("RuntimeVariables",      "RuntimeVariablesExpression"),
     Expression("Loop",                  "LoopExpression"),
-    Expression("ReturnStatement",       "ReturnStatement"),      # TODO: remove
     Expression("Switch",                "SwitchExpression"),
     Expression("Throw",                 "UnaryExpression"),
     Expression("Try",                   "TryExpression"),
     Expression("Unbox",                 "UnaryExpression"),
-    Expression("AddAssign",             "BinaryExpression",                True),
-    Expression("AndAssign",             "BinaryExpression",                True),
-    Expression("DivideAssign",          "BinaryExpression",                True),
-    Expression("ExclusiveOrAssign",     "BinaryExpression",                True),
-    Expression("LeftShiftAssign",       "BinaryExpression",                True),
-    Expression("ModuloAssign",          "BinaryExpression",                True),
-    Expression("MultiplyAssign",        "BinaryExpression",                True),
-    Expression("OrAssign",              "BinaryExpression",                True),
-    Expression("PowerAssign",           "BinaryExpression",                True),
-    Expression("RightShiftAssign",      "BinaryExpression",                True),
-    Expression("SubtractAssign",        "BinaryExpression",                True),
-    Expression("AddAssignChecked",      "BinaryExpression",                True),
-    Expression("MultiplyAssignChecked", "BinaryExpression",                True),
-    Expression("SubtractAssignChecked", "BinaryExpression",                True),
+    Expression("AddAssign",             "BinaryExpression",                interop = True, reducible = True),
+    Expression("AndAssign",             "BinaryExpression",                interop = True, reducible = True),
+    Expression("DivideAssign",          "BinaryExpression",                interop = True, reducible = True),
+    Expression("ExclusiveOrAssign",     "BinaryExpression",                interop = True, reducible = True),
+    Expression("LeftShiftAssign",       "BinaryExpression",                interop = True, reducible = True),
+    Expression("ModuloAssign",          "BinaryExpression",                interop = True, reducible = True),
+    Expression("MultiplyAssign",        "BinaryExpression",                interop = True, reducible = True),
+    Expression("OrAssign",              "BinaryExpression",                interop = True, reducible = True),
+    Expression("PowerAssign",           "BinaryExpression",                interop = True, reducible = True),
+    Expression("RightShiftAssign",      "BinaryExpression",                interop = True, reducible = True),
+    Expression("SubtractAssign",        "BinaryExpression",                interop = True, reducible = True),
+    Expression("AddAssignChecked",      "BinaryExpression",                interop = True, reducible = True),
+    Expression("MultiplyAssignChecked", "BinaryExpression",                interop = True, reducible = True),
+    Expression("SubtractAssignChecked", "BinaryExpression",                interop = True, reducible = True),
+    Expression("PreIncrementAssign",    "UnaryExpression",                 reducible = True),
+    Expression("PreDecrementAssign",    "UnaryExpression",                 reducible = True),
+    Expression("PostIncrementAssign",   "UnaryExpression",                 reducible = True),
+    Expression("PostDecrementAssign",   "UnaryExpression",                 reducible = True),
+    Expression("TypeEqual",             "TypeBinaryExpression",            reducible = True),
 ]
-
-op_assignments = ["MultiplyAssign", "MultiplyAssignChecked", "SubtractAssign", "SubtractAssignChecked", "ExclusiveOrAssign", "LeftShiftAssign", "RightShiftAssign", "ModuloAssign", "AddAssign", "AddAssignChecked", "AndAssign", "OrAssign", "DivideAssign", "PowerAssign"]
 
 def get_unique_types():
     return sorted(list(set(filter(None, map(lambda n: n.type, expressions)))))
@@ -128,7 +133,7 @@ def gen_stackspiller_switch(cw):
     
     # nodes that need spilling
     for node in expressions:
-        if node.kind in no_spill_node_kinds:
+        if node.kind in no_spill_node_kinds or node.reducible:
             continue
     
         method = "Rewrite"
@@ -141,18 +146,20 @@ def gen_stackspiller_switch(cw):
         if node.kind == "AndAlso" or node.kind == "OrElse":
             method += "Logical"
 
-        #special case OpAssign
-        elif node.kind in op_assignments:
-            method += "OpAssign"
-
-        cw.write("// " + node.kind)
         cw.write("case ExpressionType." + node.kind + ":")
         cw.write("    result = " + method + node.type + "(node, stack);")           
         cw.write("    break;")
+
+    # core reducible nodes
+    for node in expressions:
+        if node.reducible:
+            cw.write("case ExpressionType." + node.kind + ":")
+
+    cw.write("    result = RewriteReducibleExpression(node, stack);")
+    cw.write("    break;")
     
     # no spill nodes
     for kind in no_spill_node_kinds:
-        cw.write("// " + kind)
         cw.write("case ExpressionType." + kind + ":")
 
     cw.write("    return new Result(RewriteAction.None, node);")
@@ -160,6 +167,9 @@ def gen_stackspiller_switch(cw):
 
 def gen_compiler(cw):
     for node in expressions:
+        if node.reducible:
+            continue
+        
         method = "Emit"
 
         # special case certain unary/binary expressions
@@ -167,17 +177,16 @@ def gen_compiler(cw):
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
-        #special case OpAssign
-        elif node.kind in op_assignments:
-            method += "OpAssign"
 
-        cw.write("// " + node.kind)
         cw.write("case ExpressionType." + node.kind + ":")
         cw.write("    " + method + node.type + "(node);")
         cw.write("    break;")
-
+    
 def gen_interpreter(cw):
-   for node in expressions:
+    for node in expressions:
+        if node.reducible:
+            continue
+   
         method = "Interpret"
 
         # special case AndAlso and OrElse
@@ -185,23 +194,17 @@ def gen_interpreter(cw):
             method += node.kind
         elif node.kind in ["Convert", "ConvertChecked"]:
             method += "Convert"
-        #special case OpAssign
-        elif node.kind in op_assignments:
-            method += "OpAssign"
 
         method += node.type           
 			
         cw.write(" case ExpressionType.%s: return %s(state, expr);" % (node.kind, method))
-
-def gen_ast_dispatch(cw, name):
+    
+    # core reducible nodes
     for node in expressions:
-        text = name + node.type + ","
-        comment = "//    " + node.kind
+        if node.reducible:
+            cw.write("case ExpressionType." + node.kind + ":")
 
-        cw.write(text + (40 - len(text)) * " " + comment)
-
-def gen_ast_writer(cw):
-    gen_ast_dispatch(cw, "Write")
+    cw.write("    return InterpretReducibleExpression(state, expr);")
 
 def gen_op_validator(type, cw):
     for node in expressions:

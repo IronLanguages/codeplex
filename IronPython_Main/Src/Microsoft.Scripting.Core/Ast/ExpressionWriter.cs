@@ -21,13 +21,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     // TODO: debug builds only!
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    internal sealed class ExpressionWriter : ExpressionTreeVisitor {
+    internal sealed class ExpressionWriter : ExpressionVisitor {
         [Flags]
         private enum Flow {
             None,
@@ -240,12 +240,6 @@ namespace Microsoft.Linq.Expressions {
             UnaryOperationBinder unary;
             BinaryOperationBinder binary;
 
-#pragma warning disable 618
-            OperationBinder operation;
-            if ((operation = binder as OperationBinder) != null) {
-                return "Operation " + operation.Operation;
-            } else 
-#pragma warning restore 618
             if ((convert = binder as ConvertBinder) != null) {
                 return "Convert " + convert.Type;
             } else if ((getMember = binder as GetMemberBinder) != null) {
@@ -542,7 +536,14 @@ namespace Microsoft.Linq.Expressions {
 
         protected internal override Expression VisitTypeBinary(TypeBinaryExpression node) {
             Visit(node.Expression);
-            Out(Flow.Space, ".is", Flow.Space);
+            switch (node.NodeType) {
+                case ExpressionType.TypeIs:
+                    Out(Flow.Space, ".is", Flow.Space);
+                    break;
+                case ExpressionType.TypeEqual:
+                    Out(Flow.Space, ".TypeEqual", Flow.Space);
+                    break;
+            }
             Out(node.TypeOperand.Name);
             return node;
         }
@@ -613,7 +614,7 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitEmpty(EmptyExpression node) {
+        protected internal override Expression VisitEmpty(DefaultExpression node) {
             if (node.Type == typeof(void)) {
                 Out("/*empty*/");
             } else {
@@ -655,13 +656,6 @@ namespace Microsoft.Linq.Expressions {
             Visit(node.Body);
             Dedent();
             Out(Flow.NewLine, "}"); return node;
-        }
-
-        protected internal override Expression VisitReturn(ReturnStatement node) {
-            Out(".return", Flow.Space);
-            Visit(node.Expression);
-            Out(";", Flow.NewLine);
-            return node;
         }
 
         protected override SwitchCase VisitSwitchCase(SwitchCase node) {

@@ -41,7 +41,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return AstUtils.Block(_expression.Span, expression);
+            return ag.AddDebugInfoAndVoid(expression, _expression.Span);
         }
 
         public override void Walk(PythonWalker walker) {

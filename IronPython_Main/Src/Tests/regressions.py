@@ -64,7 +64,7 @@ output = []
 for i in xrange(0, 100):
     output.append(str(i) + "\\n")
 
-file("%s", "w").writelines(output)''' % (test_log_name)
+file(r"%s", "w").writelines(output)''' % (test_log_name)
     
     write_to_file(test_file_name, test_file)
 

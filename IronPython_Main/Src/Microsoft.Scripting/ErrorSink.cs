@@ -14,8 +14,8 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -32,6 +32,14 @@ namespace Microsoft.Scripting {
         //TODO: need localization
         public virtual void Add(SourceUnit source, string message, SourceSpan span, int errorCode, Severity severity) {
             throw new SyntaxErrorException(message, source, span, errorCode, severity);
+        }
+
+        /// <summary>
+        /// This overload will be called when a SourceUnit is not available. This can happen if the code is being executed remotely,
+        /// since SourceUnit cannot be marshaled across AppDomains.
+        /// </summary>
+        public virtual void Add(string message, string path, string code, string line, SourceSpan span, int errorCode, Severity severity) {
+            throw new SyntaxErrorException(message, path, code, line, span, errorCode, severity);
         }
     }
 

@@ -25,9 +25,8 @@ namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This is similar to ComTypes.EXCEPINFO, but lets us do our own custom marshaling
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
     [StructLayout(LayoutKind.Sequential)]
-    public struct ExcepInfo {
+    internal struct ExcepInfo {
         private short wCode;
         private short wReserved;
         private IntPtr bstrSource;

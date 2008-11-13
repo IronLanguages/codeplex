@@ -596,6 +596,7 @@ def test_import_hooks_import_precence():
     def myimport(*args):
         return 'myimport'
 
+    #TODO: use some other module for this instead of iptest
     import iptest
     import iptest.misc_util
     mi = myimp()
@@ -676,14 +677,14 @@ def test_import_hooks_importer():
         AreEqual(myimpCalled, ('does_not_exist', None))
         
         try:
-            from iptest import blah
+            from testpkg1 import blah
             AssertUnreachable()
         except ImportError:
             pass
 
         AreEqual(type(myimpCalled[1]), list)
-        AreEqual(myimpCalled[0], 'iptest.blah')
-        AreEqual(myimpCalled[1][0][-6:], 'iptest')
+        AreEqual(myimpCalled[0], 'testpkg1.blah')
+        AreEqual(myimpCalled[1][0][-8:], 'testpkg1')
         
         def f(): import does_not_exist_throw
         
@@ -746,15 +747,15 @@ def test_import_hooks_loader():
         AreEqual(does_not_exist_create.fullname, 'does_not_exist_create')
         AreEqual(does_not_exist_create.path, None)
     
-        import iptest.does_not_exist_create_sub
-        AreEqual(iptest.does_not_exist_create_sub.__file__, '<myloader file 3>')
-        AreEqual(iptest.does_not_exist_create_sub.fullname, 'iptest.does_not_exist_create_sub')
-        AreEqual(iptest.does_not_exist_create_sub.path[0][-6:], 'iptest')
+        import testpkg1.does_not_exist_create_sub
+        AreEqual(testpkg1.does_not_exist_create_sub.__file__, '<myloader file 3>')
+        AreEqual(testpkg1.does_not_exist_create_sub.fullname, 'testpkg1.does_not_exist_create_sub')
+        AreEqual(testpkg1.does_not_exist_create_sub.path[0][-8:], 'testpkg1')
         
-        reload(iptest.does_not_exist_create_sub)
-        AreEqual(iptest.does_not_exist_create_sub.__file__, '<myloader file 4>')
-        AreEqual(iptest.does_not_exist_create_sub.fullname, 'iptest.does_not_exist_create_sub')
-        AreEqual(iptest.does_not_exist_create_sub.path[0][-6:], 'iptest')
+        reload(testpkg1.does_not_exist_create_sub)
+        AreEqual(testpkg1.does_not_exist_create_sub.__file__, '<myloader file 4>')
+        AreEqual(testpkg1.does_not_exist_create_sub.fullname, 'testpkg1.does_not_exist_create_sub')
+        AreEqual(testpkg1.does_not_exist_create_sub.path[0][-8:], 'testpkg1')
         
         import does_not_exist_create_pkg.does_not_exist_create_subpkg
         AreEqual(does_not_exist_create_pkg.__file__, '<myloader file 5>')
@@ -907,7 +908,7 @@ def test_import_kw_args():
 
 def test_import_list_empty_string():
     """importing w/ an empty string in the from list should be ignored"""
-    x = __import__('iptest', {}, {}, [''])
+    x = __import__('testpkg1', {}, {}, [''])
     Assert(not '' in dir(x))
 
 @skip("silverlight") #BUG?
@@ -982,8 +983,8 @@ def test_module_subtype():
     AssertError(AttributeError, lambda : a.qux)
     
     #Real *.py file
-    import iptest.assert_util
-    class x(type(iptest.assert_util)):
+    import testpkg1.mod1
+    class x(type(testpkg1.mod1)):
         def __init__(self): self.baz = 100
         def __getattr__(self, name):
             if name == 'qux': raise AttributeError
@@ -1000,8 +1001,8 @@ def test_module_subtype():
     AssertError(AttributeError, lambda : a.qux)
 
     #Package
-    import iptest
-    class x(type(iptest)):
+    import testpkg1
+    class x(type(testpkg1)):
         def __init__(self): self.baz = 100
         def __getattr__(self, name):
             if name == 'qux': raise AttributeError
@@ -1047,8 +1048,8 @@ def test_import_path_seperator():
     
     
 def test_load_package():
-    import iptest
-    pkg = imp.load_package('libcopy', iptest.__path__[0])
+    import testpkg1
+    pkg = imp.load_package('libcopy', testpkg1.__path__[0])
     AreEqual(sys.modules['libcopy'], pkg)
 
     pkg = imp.load_package('some_new_pkg', 'some_path_that_does_not_and_never_will_exist')

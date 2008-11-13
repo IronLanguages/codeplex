@@ -22,6 +22,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
@@ -104,7 +105,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretConditionalExpression(InterpreterState state, Expression expr) {
             ConditionalExpression node = (ConditionalExpression)expr;
-            SetSourceLocation(state, node);
             object test;
 
             if (InterpretAndCheckFlow(state, node.Test, out test)) {
@@ -189,7 +189,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretMethodCallExpression(InterpreterState state, Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
-            SetSourceLocation(state, node);
 
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
@@ -317,12 +316,12 @@ namespace Microsoft.Scripting.Interpretation {
             return ret;
         }
 
-        private static object InterpretOpAssignBinaryExpression(InterpreterState state, Expression expr) {
+        private static object InterpretReducibleExpression(InterpreterState state, Expression expr) {
             Debug.Assert(expr.CanReduce);
 
             //expr is an OpAssignement expression.
             //Reduce it before interpreting.
-            return Interpret(state, expr.ReduceAndCheck());
+            return Interpret(state, expr.Reduce());
         }
 
         private static object InterpretBinaryExpression(InterpreterState state, Expression expr) {
@@ -716,7 +715,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretDynamicExpression(InterpreterState state, Expression expr) {
             DynamicExpression node = (DynamicExpression)expr;
-            SetSourceLocation(state, node);
             var arguments = node.Arguments;
 
             object[] args;
@@ -968,7 +966,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretVariableAssignment(InterpreterState state, Expression expr) {
             var node = (BinaryExpression)expr;
-            SetSourceLocation(state, expr);
             object value;
             if (InterpretAndCheckFlow(state, node.Right, out value)) {
                 return value;
@@ -1149,7 +1146,6 @@ namespace Microsoft.Scripting.Interpretation {
             }
 
             var node = (GotoExpression)expr;
-            SetSourceLocation(state, node);
 
             object value = null;
             if (node.Value != null) {
@@ -1169,8 +1165,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            EmptyExpression node = (EmptyExpression)expr;
-            SetSourceLocation(state, node);
+            DefaultExpression node = (DefaultExpression)expr;
             return ControlFlow.NextStatement;
         }
 
@@ -1179,14 +1174,13 @@ namespace Microsoft.Scripting.Interpretation {
         /// </summary>
         private static object InterpretLabelExpression(InterpreterState state, Expression expr) {
             LabelExpression node = (LabelExpression)expr;
-            SetSourceLocation(state, node);
 
             object res = ControlFlow.NextStatement;
             if (node.DefaultValue != null) {
                 res = Interpret(state, node.DefaultValue);
                 var cf = res as ControlFlow;
                 if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Label) {
-                    res = ControlFlow.NextStatement;
+                    res = cf.Value;
                 }
             }
 
@@ -1195,7 +1189,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretLoopExpression(InterpreterState state, Expression expr) {
             LoopExpression node = (LoopExpression)expr;
-            SetSourceLocation(state, node);
 
             for (; ; ) {
                 ControlFlow cf;
@@ -1209,27 +1202,11 @@ namespace Microsoft.Scripting.Interpretation {
                         } else if (cf.Label != node.ContinueLabel) {
                             return cf;
                         }
-                    } else if (cf.Kind == ControlFlowKind.Return) {
+                    } else if (cf.Kind == ControlFlowKind.Yield) {
                         return body;
                     }
                 }
             }
-        }
-
-        private static object InterpretReturnStatement(InterpreterState state, Expression expr) {
-            ReturnStatement node = (ReturnStatement)expr;
-            SetSourceLocation(state, node);
-            object value = null;
-            if (node.Expression != null) {
-                value = Interpret(state, node.Expression);
-                ControlFlow cf = value as ControlFlow;
-                if (cf != null) {
-                    // propagate
-                    return cf;
-                }
-            }
-
-            return ControlFlow.Return(value);
         }
 
         private static object InterpretDebugInfoExpression(InterpreterState state, Expression expr) {
@@ -1246,7 +1223,6 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretBlockExpression(InterpreterState state, Expression expr) {
             BlockExpression node = (BlockExpression)expr;
-            SetSourceLocation(state, node);
 
             InterpreterState child = state;
             if (node.Variables.Count > 0) {
@@ -1316,7 +1292,6 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretSwitchExpression(InterpreterState state, Expression expr) {
             // TODO: yield aware switch
             SwitchExpression node = (SwitchExpression)expr;
-            SetSourceLocation(state, node);
 
             object testValue;
             if (InterpretAndCheckFlow(state, node.Test, out testValue)) {
@@ -1343,7 +1318,7 @@ namespace Microsoft.Scripting.Interpretation {
                 if (cf != null) {
                     if (cf.Label == node.BreakLabel) {
                         return ControlFlow.NextStatement;
-                    } else if (cf.Kind == ControlFlowKind.Return || cf.Kind == ControlFlowKind.Goto) {
+                    } else if (cf.Kind == ControlFlowKind.Yield || cf.Kind == ControlFlowKind.Goto) {
                         return cf;
                     }
                 }
@@ -1474,8 +1449,7 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretYieldExpression(InterpreterState state, YieldExpression node) {
             // Yield break
             if (node.Value == null) {
-                SetSourceLocation(state, node);
-                return ControlFlow.Return(null);
+                return ControlFlow.YieldBreak;
             }
 
             if (state.CurrentYield == node) {
@@ -1495,7 +1469,7 @@ namespace Microsoft.Scripting.Interpretation {
                 // need to return the result.
                 state.CurrentYield = node;
 
-                return ControlFlow.Return(res);
+                return ControlFlow.YieldReturn(res);
             }
 
             return ControlFlow.NextForYield;
@@ -1634,15 +1608,6 @@ namespace Microsoft.Scripting.Interpretation {
                 return EvaluateAddress(state, node.IfTrue);
             } else {
                 return EvaluateAddress(state, node.IfFalse);
-            }
-        }
-
-        private static void SetSourceLocation(InterpreterState state, Expression node) {
-            if (state.CurrentYield == null) {
-                SourceLocation curLocation = node.Annotations.Get<SourceSpan>().Start;
-                if (curLocation != SourceLocation.Invalid && curLocation != SourceLocation.None) {
-                    state.CurrentLocation = curLocation;
-                }
             }
         }
     }

@@ -41,38 +41,44 @@ namespace IronPython.Compiler.Ast {
         private readonly bool _print;                                   // true if we should print expression statements
         private readonly LabelTarget _generatorLabel;                   // the label, if we're transforming for a generator function
         private int? _curLine;                                          // tracks what the current line we've emitted at code-gen time
-        private MSAst.ParameterExpression _lineNoVar, _lineNoUpdated;    // the variable used for storing current line # and if we need to store to it
-        private List<MSAst.ParameterExpression/*!*/> _temps;             // temporary variables allocated against the lambda so we can re-use them
+        private MSAst.ParameterExpression _lineNoVar, _lineNoUpdated;   // the variable used for storing current line # and if we need to store to it
+        private List<MSAst.ParameterExpression/*!*/> _temps;            // temporary variables allocated against the lambda so we can re-use them
         private MSAst.ParameterExpression _generatorParameter;          // the extra parameter receiving the instance of PythonGenerator
         private readonly BinderState/*!*/ _binderState;                 // the state stored for the binder
         private bool _inFinally;                                        // true if we are currently in a finally (coordinated with our loop state)
         private bool _disableInterpreter;                               // true if we generated loops, functions, etc... that shouldn't be interpreted        
         private LabelTarget _breakLabel;                                // the current label for break, if we're in a loop
         private LabelTarget _continueLabel;                             // the current label for continue, if we're in a loop
+        private LabelTarget _returnLabel;                               // the label for the end of the current method, if "return" was used
+        private readonly MSAst.SymbolDocumentInfo _document;            // if set, used to wrap expressions with debug information
 
         private static readonly Dictionary<string, MethodInfo> _HelperMethods = new Dictionary<string, MethodInfo>(); // cache of helper methods
         private static readonly MethodInfo _UpdateStackTrace = typeof(ExceptionHelpers).GetMethod("UpdateStackTrace");
         private static readonly MethodInfo _GetCurrentMethod = typeof(MethodBase).GetMethod("GetCurrentMethod");
+        internal static readonly MSAst.Expression[] EmptyExpression = new MSAst.Expression[0];
+        internal static readonly MSAst.BlockExpression EmptyBlock = Ast.Block(Ast.Empty());
 
-        private AstGenerator(MSAst.Annotations annotations, string name, bool generator, bool print) {
+        private AstGenerator(string name, bool generator, bool print) {
             _print = print;
             _generatorLabel = generator ? Ast.Label(typeof(object)) : null;
 
-            _block = AstUtils.Lambda(typeof(object), name, annotations);
+            _block = AstUtils.Lambda(typeof(object), name);
         }
 
-        internal AstGenerator(AstGenerator/*!*/ parent, MSAst.Annotations annotations, string name, bool generator, bool print)
-            : this(annotations, name, generator, false) {
+        internal AstGenerator(AstGenerator/*!*/ parent, string name, bool generator, bool print)
+            : this(name, generator, false) {
             Assert.NotNull(parent);
             _context = parent.Context;
             _binderState = parent.BinderState;
+            _document = _context.SourceUnit.Document;
         }
 
-        internal AstGenerator(CompilerContext/*!*/ context, MSAst.Annotations annotations, string name, bool generator, bool print)
-            : this(annotations, name, generator, print) {
+        internal AstGenerator(CompilerContext/*!*/ context, SourceSpan span, string name, bool generator, bool print)
+            : this(name, generator, print) {
             Assert.NotNull(context);
             _context = context;
             _binderState = new BinderState(Binder);
+            _document = _context.SourceUnit.Document;
         }
 
         public bool Optimize {
@@ -161,6 +167,15 @@ namespace IronPython.Compiler.Ast {
             get { return _continueLabel; }
         }
 
+        public MSAst.LabelTarget ReturnLabel {
+            get {
+                if (_returnLabel == null) {
+                    _returnLabel = MSAst.Expression.Label(typeof(object));
+                }
+                return _returnLabel;
+            }
+        }
+
         public void AddError(string message, SourceSpan span) {
             // TODO: error code
             _context.Errors.Add(_context.SourceUnit, message, span, -1, Severity.Error);
@@ -193,12 +208,12 @@ namespace IronPython.Compiler.Ast {
             _temps.Add(temp);
         }
 
-        internal static MSAst.Expression/*!*/ MakeAssignment(MSAst.ParameterExpression/*!*/ variable, MSAst.Expression/*!*/ right) {
-            return MakeAssignment(variable, right, SourceSpan.None);
+        internal MSAst.Expression/*!*/ MakeAssignment(MSAst.ParameterExpression/*!*/ variable, MSAst.Expression/*!*/ right) {
+            return AstUtils.Assign(variable, Ast.Convert(right, variable.Type));
         }
 
-        internal static MSAst.Expression/*!*/ MakeAssignment(MSAst.ParameterExpression/*!*/ variable, MSAst.Expression/*!*/ right, SourceSpan span) {
-            return AstUtils.Assign(variable, Ast.Convert(right, variable.Type), Ast.Annotate(span));
+        internal MSAst.Expression/*!*/ MakeAssignment(MSAst.ParameterExpression/*!*/ variable, MSAst.Expression/*!*/ right, SourceSpan span) {
+            return AddDebugInfo(MakeAssignment(variable, right), span);
         }
 
         internal static MSAst.Expression/*!*/ ConvertIfNeeded(MSAst.Expression/*!*/ expression, Type/*!*/ type) {
@@ -264,6 +279,36 @@ namespace IronPython.Compiler.Ast {
             }
 
             return stmt.Documentation;
+        }
+
+        internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceLocation start, SourceLocation end) {
+            if (_document == null || !start.IsValid || !end.IsValid) {
+                return expression;
+            }
+            return MSAst.Expression.DebugInfo(expression, _document, start.Line, start.Column, end.Line, end.Column);
+        }
+
+        internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceSpan location) {
+            if (_document == null || !location.IsValid) {
+                return expression;
+            }
+            return MSAst.Expression.DebugInfo(expression, _document,
+                location.Start.Line, location.Start.Column, location.End.Line, location.End.Column);
+        }
+
+        internal MSAst.Expression/*!*/ AddDebugInfoAndVoid(MSAst.Expression/*!*/ expression, SourceSpan location) {
+            if (expression.Type != typeof(void)) {
+                expression = Ast.Void(expression);
+            }
+            return AddDebugInfo(expression, location);
+        }
+
+        internal MSAst.Expression/*!*/ AddReturnTarget(MSAst.Expression/*!*/ expression) {
+            if (_returnLabel != null) {
+                expression = Ast.Label(_returnLabel, AstUtils.Convert(expression, typeof(object)));
+                _returnLabel = null;
+            }
+            return expression;
         }
 
         #region Dynamic stack trace support
@@ -351,14 +396,14 @@ namespace IronPython.Compiler.Ast {
         /// Gets the expression for the actual updating of the line number for stack traces to be available
         /// </summary>
         internal MSAst.Expression GetLineNumberUpdateExpression(bool preventAdditionalAdds) {
-            return Ast.BlockVoid(
+            return Ast.Block(
                 AstUtils.If(
                     Ast.Not(
                         LineNumberUpdated
                     ),
-                    AstUtils.Call(
+                    Ast.Call(
                         typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
-                        SourceSpan.None, AstUtils.CodeContext(), 
+                        AstUtils.CodeContext(), 
                         Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")), 
                         Ast.Constant(_block.Name), 
                         Ast.Constant(Context.SourceUnit.Path ?? "<string>"), 
@@ -367,9 +412,9 @@ namespace IronPython.Compiler.Ast {
                 ),
                 AstUtils.Assign(
                     LineNumberUpdated, 
-                    Ast.Constant(preventAdditionalAdds), 
-                    Ast.Annotate(SourceSpan.None)
-                )
+                    Ast.Constant(preventAdditionalAdds)
+                ),
+                Ast.Empty()
             );
         }
 
@@ -403,7 +448,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression TransformOrConstantNull(Expression expression, Type/*!*/ type) {
             if (expression == null) {
-                return Ast.Null(type);
+                return Ast.Constant(null, type);
             } else {
                 return ConvertIfNeeded(expression.Transform(this, type), type);
             }
@@ -479,12 +524,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression toExpr = fromStmt.Transform(this);
 
             if (toExpr != null && updateLine) {
-                toExpr = Ast.BlockVoid(
+                toExpr = Ast.Block(
                     Ast.Assign(
                         LineNumberExpression,
                         Ast.Constant(fromStmt.Start.Line)
                     ),
-                    toExpr
+                    toExpr,
+                    Ast.Empty()
                 );
             }
 

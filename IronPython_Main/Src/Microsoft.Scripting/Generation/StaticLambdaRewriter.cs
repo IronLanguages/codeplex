@@ -17,14 +17,14 @@ using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;    
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;    
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Rewrites dynamic sites so that the lambda can be emitted as a non-dynamic method.
     /// </summary>
-    public abstract class StaticLambdaRewriter : ExpressionTreeVisitor {
+    public abstract class StaticLambdaRewriter : ExpressionVisitor {
         protected override Expression VisitDynamic(DynamicExpression node) {
             Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
 

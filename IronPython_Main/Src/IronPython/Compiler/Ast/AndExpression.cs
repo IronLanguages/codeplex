@@ -58,13 +58,13 @@ namespace IronPython.Compiler.Ast {
                     ConversionResultKind.ExplicitCast,
                     AstUtils.Assign(
                         tmp,
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             left,
                             t
                         )
                     )
                 ),
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     right,
                     t
                 ),

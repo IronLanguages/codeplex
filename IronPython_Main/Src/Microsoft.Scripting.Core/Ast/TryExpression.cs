@@ -33,8 +33,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _finally;
         private readonly Expression _fault;
 
-        internal TryExpression(Expression body, Expression @finally, Expression fault, Annotations annotations, ReadOnlyCollection<CatchBlock> handlers)
-            : base(annotations) {
+        internal TryExpression(Expression body, Expression @finally, Expression fault, ReadOnlyCollection<CatchBlock> handlers) {
             _body = body;
             _handlers = handlers;
             _finally = @finally;
@@ -65,7 +64,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _fault; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitTry(this);
         }
     }
@@ -78,46 +77,31 @@ namespace Microsoft.Linq.Expressions {
 
         // TryFault
         public static TryExpression TryFault(Expression body, Expression fault) {
-            return MakeTry(body, null, fault, Annotations.Empty, null);
-        }
-        public static TryExpression TryFault(Expression body, Expression fault, Annotations annotations) {
-            return MakeTry(body, null, fault, annotations, null);
+            return MakeTry(body, null, fault, null);
         }
 
         // TryFinally
         public static TryExpression TryFinally(Expression body, Expression @finally) {
-            return MakeTry(body, @finally, null, Annotations.Empty, null);
-        }
-        public static TryExpression TryFinally(Expression body, Expression @finally, Annotations annotations) {
-            return MakeTry(body, @finally, null, annotations, null);
+            return MakeTry(body, @finally, null, null);
         }
 
         // TryCatch
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) {
-            return MakeTry(body, null, null, Annotations.Empty, handlers);
-        }
-        public static TryExpression TryCatch(Expression body, Annotations annotations, params CatchBlock[] handlers) {
-            return MakeTry(body, null, null, annotations, handlers);
+            return MakeTry(body, null, null, handlers);
         }
 
         // TryCatchFinally
         public static TryExpression TryCatchFinally(Expression body, Expression @finally, params CatchBlock[] handlers) {
-            return MakeTry(body, @finally, null, Annotations.Empty, handlers);
-        }
-        public static TryExpression TryCatchFinally(Expression body, Expression @finally, Annotations annotations, params CatchBlock[] handlers) {
-            return MakeTry(body, @finally, null, annotations, handlers);
+            return MakeTry(body, @finally, null, handlers);
         }
 
         // TryCatchFault
         public static TryExpression TryCatchFault(Expression body, Expression fault, params CatchBlock[] handlers) {
-            return MakeTry(body, null, fault, Annotations.Empty, handlers);
-        }
-        public static TryExpression TryCatchFault(Expression body, Expression fault, Annotations annotations, params CatchBlock[] handlers) {
-            return MakeTry(body, null, fault, annotations, handlers);
+            return MakeTry(body, null, fault, handlers);
         }
 
         // MakeTry: the one factory that creates TryStatement
-        public static TryExpression MakeTry(Expression body, Expression @finally, Expression fault, Annotations annotations, IEnumerable<CatchBlock> handlers) {
+        public static TryExpression MakeTry(Expression body, Expression @finally, Expression fault, IEnumerable<CatchBlock> handlers) {
             RequiresCanRead(body, "body");
 
             if (@finally != null && fault != null) {
@@ -135,7 +119,7 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.TryMustHaveCatchFinallyOrFault();
             }
 
-            return new TryExpression(body, @finally, fault, annotations, @catch);
+            return new TryExpression(body, @finally, fault, @catch);
         }
     }
 

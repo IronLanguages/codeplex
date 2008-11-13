@@ -19,9 +19,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
@@ -46,7 +47,7 @@ namespace IronPython.Runtime.Binding {
             return new ValidationInfo(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("CheckSpecificTypeVersion"),
-                    Ast.ConvertHelper(Expression, typeof(PythonType)),
+                    AstUtils.Convert(Expression, typeof(PythonType)),
                     Ast.Constant(version)
                 ),
                 new BindingHelpers.PythonTypeValidator(Value, version).Validate
@@ -182,7 +183,7 @@ namespace IronPython.Runtime.Binding {
         private MetaObject/*!*/ MakeTypeGetMember(MetaObjectBinder/*!*/ member, Expression codeContext) {
             // normal attribute, need to check the type version
             MetaObject self = new MetaObject(
-                Ast.ConvertHelper(Expression, Value.GetType()),
+                AstUtils.Convert(Expression, Value.GetType()),
                 Restrictions.Merge(Restrictions.GetInstanceRestriction(Expression, Value)),
                 Value
             );
@@ -209,7 +210,8 @@ namespace IronPython.Runtime.Binding {
                     // mixed new-style/old-style class, search the one slot in it's MRO for the member
                     ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
                     result = new MetaObject(
-                        Ast.Scope(
+                        Ast.Block(
+                            new ParameterExpression[] { tmp },
                             Ast.Condition(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldClassTryLookupOneSlot"),
@@ -218,9 +220,8 @@ namespace IronPython.Runtime.Binding {
                                     tmp
                                 ),
                                 tmp,
-                                Ast.ConvertHelper(result.Expression, typeof(object))
-                            ),
-                            tmp
+                                AstUtils.Convert(result.Expression, typeof(object))
+                            )
                         ),
                         self.Restrictions // don't merge w/ result - we've already restricted to instance.
                     );
@@ -230,23 +231,23 @@ namespace IronPython.Runtime.Binding {
                     ParameterExpression tmp = Ast.Variable(typeof(object), "tmp");
 
                     result = new MetaObject(
-                        Ast.Scope(
+                        Ast.Block(
+                            new ParameterExpression[] { tmp },
                             Ast.Condition(
                                 Ast.Call(
                                     TypeInfo._PythonOps.SlotTryGetBoundValue,
                                     Ast.Constant(BinderState.GetBinderState(member).Context),
                                     Ast.Constant(pts, typeof(PythonTypeSlot)),
-                                    Ast.Null(),
+                                    Ast.Constant(null),
                                     Ast.Constant(Value),
                                     tmp
                                 ),
                                 tmp,
-                                Ast.ConvertHelper(
+                                AstUtils.Convert(
                                     result.Expression,
                                     typeof(object)
                                 )
-                            ),
-                            tmp
+                            )
                         ),
                         self.Restrictions   // don't merge w/ result - we've already restricted to instance.
                     );
@@ -304,7 +305,7 @@ namespace IronPython.Runtime.Binding {
                     state.Binder,
                     BinderState.GetCodeContext(member),
                     null,
-                    Ast.ConvertHelper(AstUtils.WeakConstant(Value), typeof(PythonType)),
+                    AstUtils.Convert(AstUtils.WeakConstant(Value), typeof(PythonType)),
                     error
                 );
 
@@ -326,8 +327,8 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("IsClsVisible"),
                         Ast.Constant(state.Context)
                     ),
-                    Ast.ConvertHelper(success, resType),
-                    Ast.ConvertHelper(error, resType)
+                    AstUtils.Convert(success, resType),
+                    AstUtils.Convert(error, resType)
                 );
             }
             return success;
@@ -355,7 +356,7 @@ namespace IronPython.Runtime.Binding {
                     // and let it sort it out at runtime.  
                     // TODO: IfError support
                     return Ast.Call(
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             Expression,
                             typeof(PythonType)
                         ),
@@ -366,7 +367,8 @@ namespace IronPython.Runtime.Binding {
                 } else if (pt.TryLookupSlot(BinderState.GetBinderState(member).Context, SymbolTable.StringToId(GetGetMemberName(member)), out pts)) {
                     // user defined new style class, see if we have a slot.
                     ParameterExpression tmp = Ast.Variable(typeof(object), "slotRes");
-                    return Ast.Scope(
+                    return Ast.Block(
+                        new ParameterExpression[] { tmp },
                         Ast.Condition(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
@@ -377,9 +379,8 @@ namespace IronPython.Runtime.Binding {
                                 tmp
                             ),
                             tmp,
-                            Ast.ConvertHelper(error, typeof(object))
-                        ),
-                        tmp
+                            AstUtils.Convert(error, typeof(object))
+                        )
                     );
                 }
             }
@@ -388,7 +389,8 @@ namespace IronPython.Runtime.Binding {
             // we define __getattr__ on our meta type.
             if (metaType.TryResolveSlot(BinderState.GetBinderState(member).Context, Symbols.GetBoundAttr, out pts)) {
                 ParameterExpression tmp = Ast.Variable(typeof(object), "res");
-                return Ast.Scope(
+                return Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
@@ -408,12 +410,11 @@ namespace IronPython.Runtime.Binding {
                             tmp,
                             Ast.Constant(name)
                         ),
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             error,
                             typeof(object)
                         )
-                    ),
-                    tmp
+                    )
                 );
             }
 
@@ -432,7 +433,7 @@ namespace IronPython.Runtime.Binding {
             Expression target = null;
 
             if (tracker != null) {
-                tracker = tracker.BindToInstance(Ast.ConvertHelper(Expression, typeof(PythonType)));
+                tracker = tracker.BindToInstance(AstUtils.Convert(Expression, typeof(PythonType)));
                 target = tracker.GetValue(Ast.Constant(state.Context), state.Binder, Value.UnderlyingSystemType);
             }
 
@@ -553,7 +554,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
                         AstUtils.Constant(SymbolTable.StringToId(member.Name)),
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             value.Expression,
                             typeof(object)
                         )
@@ -613,7 +614,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Not(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("IsPythonType"),
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             Expression,
                             typeof(PythonType)
                         )

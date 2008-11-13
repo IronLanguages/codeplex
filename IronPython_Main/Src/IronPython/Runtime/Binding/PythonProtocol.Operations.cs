@@ -20,10 +20,11 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Text;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
@@ -33,6 +34,7 @@ using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     static partial class PythonProtocol {
         private const string DisallowCoerce = "DisallowCoerce";
@@ -129,46 +131,43 @@ namespace IronPython.Runtime.Binding {
 
                     LabelTarget target = Ast.Label();
                     res = new MetaObject(
-                        Ast.Scope(
-                            Ast.Block(
-                                Utils.Loop(
-                                    null,                                                     // test
-                                    Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
-                                    Ast.BlockVoid(                                                // body
+                        Ast.Block(
+                            new ParameterExpression[] { curIndex, getItemRes, containsRes },
+                            Utils.Loop(
+                                null,                                                     // test
+                                Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
+                                Ast.Block(                                            // body
                         // getItemRes = param0.__getitem__(curIndex)
-                                        Utils.Try(
-                                            Ast.Assign(
-                                                getItemRes,
-                                                sf.Target.Expression
-                                            )
-                                        ).Catch(
-                        // end of indexes, return false
-                                            typeof(IndexOutOfRangeException),
-                                            Ast.Break(target)
-                                        ),
-                        // if(getItemRes == param1) return true
-                                        Utils.If(
-                                            Ast.Dynamic(
-                                                new PythonOperationBinder(
-                                                    state,
-                                                    StandardOperators.Equal
-                                                ),
-                                                typeof(bool),
-                                                types[1].Expression,
-                                                getItemRes
-                                            ),
-                                            Ast.Assign(containsRes, Ast.Constant(true)),
-                                            Ast.Break(target)
+                                    Utils.Try(
+                                        Ast.Assign(
+                                            getItemRes,
+                                            sf.Target.Expression
                                         )
+                                    ).Catch(
+                        // end of indexes, return false
+                                        typeof(IndexOutOfRangeException),
+                                        Ast.Break(target)
                                     ),
-                                    null,                                               // loop else
-                                    target,                                             // break label target
-                                    null
+                        // if(getItemRes == param1) return true
+                                    Utils.If(
+                                        Ast.Dynamic(
+                                            new PythonOperationBinder(
+                                                state,
+                                                StandardOperators.Equal
+                                            ),
+                                            typeof(bool),
+                                            types[1].Expression,
+                                            getItemRes
+                                        ),
+                                        Ast.Assign(containsRes, Ast.Constant(true)),
+                                        Ast.Break(target)
+                                    ),
+                                    Ast.Empty()
                                 ),
-                                containsRes
+                                null,                                               // loop else
+                                target,                                             // break label target
+                                null
                             ),
-                            curIndex,
-                            getItemRes,
                             containsRes
                         ),
                         Restrictions.Combine(types)
@@ -190,7 +189,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(IEnumerator),
                                     sf.Target.Expression
                                 ),
-                                Ast.ConvertHelper(types[1].Expression, typeof(object))
+                                AstUtils.Convert(types[1].Expression, typeof(object))
                             ),
                             Restrictions.Combine(types)
                         );
@@ -200,7 +199,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Throw(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("TypeErrorForNonIterableObject"),
-                                    Ast.ConvertHelper(
+                                    AstUtils.Convert(
                                         types[1].Expression,
                                         typeof(object)
                                     )
@@ -252,7 +251,7 @@ namespace IronPython.Runtime.Binding {
 
             if (!nonzero.Success && !length.Success) {
                 // always False or True for None
-                notExpr = self.LimitType == typeof(Null) ? Ast.True() : Ast.False();
+                notExpr = self.LimitType == typeof(Null) ? Ast.Constant(true) : Ast.Constant(false);
             } else {
                 SlotOrFunction target = nonzero.Success ? nonzero : length;
 
@@ -261,17 +260,17 @@ namespace IronPython.Runtime.Binding {
                 if (nonzero.Success) {
                     // call non-zero and negate it
                     if (notExpr.Type == typeof(bool)) {
-                        notExpr = Ast.Equal(notExpr, Ast.False());
+                        notExpr = Ast.Equal(notExpr, Ast.Constant(false));
                     } else {
                         notExpr = Ast.Call(
                             typeof(PythonOps).GetMethod("Not"),
-                            Ast.ConvertHelper(notExpr, typeof(object))
+                            AstUtils.Convert(notExpr, typeof(object))
                         );
                     }
                 } else {
                     // call len, compare w/ zero
                     if (notExpr.Type == typeof(int)) {
-                        notExpr = Ast.Equal(notExpr, Ast.Zero());
+                        notExpr = Ast.Equal(notExpr, Ast.Constant(0));
                     } else {
                         notExpr = Ast.Dynamic(
                             new PythonOperationBinder(
@@ -280,7 +279,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             typeof(int),
                             notExpr,
-                            Ast.Zero()
+                            Ast.Constant(0)
                         );
                     }
                 }
@@ -694,11 +693,11 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
                         Ast.Constant(state.Context),
-                        Ast.ConvertHelper(Utils.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
-                        Ast.ConvertHelper(self, typeof(object)),
+                        AstUtils.Convert(Utils.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
+                        AstUtils.Convert(self, typeof(object)),
                         Ast.Call(
                             typeof(DynamicHelpers).GetMethod("GetPythonType"),
-                            Ast.ConvertHelper(self, typeof(object))
+                            AstUtils.Convert(self, typeof(object))
                         ),
                         callable
                     ),
@@ -938,7 +937,7 @@ namespace IronPython.Runtime.Binding {
             if (xType.IsNull) {
                 if (yType.IsNull) {
                     return new MetaObject(
-                        Ast.Zero(),
+                        Ast.Constant(0),
                         Restrictions.Combine(types)
                     );
                 } else if (yType.UnderlyingSystemType.IsPrimitive || yType.UnderlyingSystemType == typeof(Microsoft.Scripting.Math.BigInteger)) {
@@ -1092,7 +1091,7 @@ namespace IronPython.Runtime.Binding {
 
         private static BinaryExpression/*!*/ ReverseCompareValue(Expression/*!*/ retVal) {
             return Ast.Multiply(
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     retVal,
                     typeof(int)
                 ),
@@ -1116,8 +1115,8 @@ namespace IronPython.Runtime.Binding {
         private static Expression/*!*/ MakeFallbackCompare(string op, MetaObject[] types) {
             return Ast.Call(
                 GetComparisonFallbackMethod(op),
-                Ast.ConvertHelper(types[0].Expression, typeof(object)),
-                Ast.ConvertHelper(types[1].Expression, typeof(object))
+                AstUtils.Convert(types[0].Expression, typeof(object)),
+                AstUtils.Convert(types[1].Expression, typeof(object))
             );
         }
 
@@ -1131,7 +1130,7 @@ namespace IronPython.Runtime.Binding {
                     reverse,
                     Ast.Call(
                         typeof(PythonOps).GetMethod("CompareToZero"),
-                        Ast.ConvertHelper(expr, typeof(object))
+                        AstUtils.Convert(expr, typeof(object))
                     )
                 );
             }
@@ -1304,7 +1303,7 @@ namespace IronPython.Runtime.Binding {
                     // we want self, (tuple, of, args, ...), value
                     Expression[] tupleArgs = new Expression[arguments.Length - 2];
                     for (int i = 1; i < arguments.Length - 1; i++) {
-                        tupleArgs[i - 1] = Ast.ConvertHelper(arguments[i].Expression, typeof(object));
+                        tupleArgs[i - 1] = AstUtils.Convert(arguments[i].Expression, typeof(object));
                     }
                     return new MetaObject[] {
                         arguments[0],
@@ -1324,7 +1323,7 @@ namespace IronPython.Runtime.Binding {
                     // we want self, (tuple, of, args, ...)
                     Expression[] tupleArgs = new Expression[arguments.Length - 1];
                     for (int i = 1; i < arguments.Length; i++) {
-                        tupleArgs[i - 1] = Ast.ConvertHelper(arguments[i].Expression, typeof(object));
+                        tupleArgs[i - 1] = AstUtils.Convert(arguments[i].Expression, typeof(object));
                     }
                     return new MetaObject[] {
                         arguments[0],
@@ -1437,7 +1436,7 @@ namespace IronPython.Runtime.Binding {
                     args[0].Expression,
                     Ast.Call(
                         typeof(DynamicHelpers).GetMethod("GetPythonType"),
-                        Ast.ConvertHelper(args[0].Expression, typeof(object))
+                        AstUtils.Convert(args[0].Expression, typeof(object))
                     ),
                     Ast.Throw(Ast.New(typeof(InvalidOperationException)))
                 );
@@ -1579,12 +1578,10 @@ namespace IronPython.Runtime.Binding {
                     MetaObject res = Callable.CompleteRuleTarget(args, null);
 
                     return new MetaObject(
-                        Ast.Scope(
-                            Ast.Block(
-                                Ast.Assign(_lengthVar, Ast.Constant(null, _lengthVar.Type)),
-                                res.Expression
-                            ),
-                            _lengthVar
+                        Ast.Block(
+                            new ParameterExpression[] { _lengthVar },
+                            Ast.Assign(_lengthVar, Ast.Constant(null, _lengthVar.Type)),
+                            res.Expression
                         ),
                         res.Restrictions
                     );
@@ -1740,9 +1737,9 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    Ast.ConvertHelper(GetSetParameter(args, 1), typeof(object)),
-                    Ast.ConvertHelper(GetSetParameter(args, 2), typeof(object)),
-                    Ast.ConvertHelper(GetSetParameter(args, 3), typeof(object))
+                    AstUtils.Convert(GetSetParameter(args, 1), typeof(object)),
+                    AstUtils.Convert(GetSetParameter(args, 2), typeof(object)),
+                    AstUtils.Convert(GetSetParameter(args, 3), typeof(object))
                 ),
                 Restrictions.Combine(args)
             );
@@ -1752,9 +1749,9 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 1), typeof(object)),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 2), typeof(object)),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 3), typeof(object))
+                    AstUtils.Convert(GetGetOrDeleteParameter(args, 1), typeof(object)),
+                    AstUtils.Convert(GetGetOrDeleteParameter(args, 2), typeof(object)),
+                    AstUtils.Convert(GetGetOrDeleteParameter(args, 3), typeof(object))
                 ),
                 Restrictions.Combine(args)
             );
@@ -1764,7 +1761,7 @@ namespace IronPython.Runtime.Binding {
             if (args.Length > index) {
                 return CheckMissing(args[index].Expression);
             }
-            return Ast.Null();
+            return Ast.Constant(null);
         }
 
         private static Expression GetSetParameter(MetaObject[] args, int index) {
@@ -1772,7 +1769,7 @@ namespace IronPython.Runtime.Binding {
                 return CheckMissing(args[index].Expression);
             }
 
-            return Ast.Null();
+            return Ast.Constant(null);
         }
 
 
@@ -1894,7 +1891,7 @@ namespace IronPython.Runtime.Binding {
 
             Debug.Assert(value.Type == typeof(int));
 
-            Expression zero = Ast.Zero();
+            Expression zero = Ast.Constant(0);
             switch (reverse ? CompilerHelpers.OperatorToReverseOperator(op) : op) {
                 case StandardOperators.Equal: return Ast.Equal(value, zero);
                 case StandardOperators.NotEqual: return Ast.NotEqual(value, zero);
@@ -1925,7 +1922,7 @@ namespace IronPython.Runtime.Binding {
 
         internal static Expression/*!*/ CheckMissing(Expression/*!*/ toCheck) {
             if (toCheck.Type == typeof(MissingParameter)) {
-                return Ast.Null();
+                return Ast.Constant(null);
             }
             if (toCheck.Type != typeof(object)) {
                 return toCheck;
@@ -1933,7 +1930,7 @@ namespace IronPython.Runtime.Binding {
 
             return Ast.Condition(
                 Ast.TypeIs(toCheck, typeof(MissingParameter)),
-                Ast.Null(),
+                Ast.Constant(null),
                 toCheck
             );
         }
@@ -2018,8 +2015,8 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
                             Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(NormalizeOperator(op)))),
-                            Ast.ConvertHelper(args[0].Expression, typeof(object)),
-                            Ast.ConvertHelper(args[1].Expression, typeof(object))
+                            AstUtils.Convert(args[0].Expression, typeof(object)),
+                            AstUtils.Convert(args[1].Expression, typeof(object))
                         )
                     ),
                     Restrictions.Combine(args)
@@ -2062,7 +2059,7 @@ namespace IronPython.Runtime.Binding {
                 Expression error = Ast.Throw(
                     Ast.Call(
                         typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),
-                        Ast.ComplexCallHelper(
+                        AstUtils.ComplexCallHelper(
                             typeof(String).GetMethod("Format", typeArgs),
                             formatArgs
                         )

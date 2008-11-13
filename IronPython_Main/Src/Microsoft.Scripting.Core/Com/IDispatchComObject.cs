@@ -21,7 +21,7 @@ using System.Globalization;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
@@ -30,9 +30,9 @@ namespace Microsoft.Scripting.ComInterop {
     /// An object that implements IDispatch
     /// 
     /// This currently has the following issues:
-    /// 1. If we prefer ComObjectWithTypeInfo over IDispatchObject, then we will often not
-    ///    IDispatchObject since implementations of IDispatch often rely on a registered type library. 
-    ///    If we prefer IDispatchObject over ComObjectWithTypeInfo, users get a non-ideal experience.
+    /// 1. If we prefer ComObjectWithTypeInfo over IDispatchComObject, then we will often not
+    ///    IDispatchComObject since implementations of IDispatch often rely on a registered type library. 
+    ///    If we prefer IDispatchComObject over ComObjectWithTypeInfo, users get a non-ideal experience.
     /// 2. IDispatch cannot distinguish between properties and methods with 0 arguments (and non-0 
     ///    default arguments?). So obj.foo() is ambiguous as it could mean invoking method foo, 
     ///    or it could mean invoking the function pointer returned by property foo.
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// interfaces) and hand it over (advise) to the Connection Point. 
     /// 
     /// Implementation details:
-    /// When IDispatchObject.TryGetMember request is received we first check
+    /// When IDispatchComObject.TryGetMember request is received we first check
     /// whether the requested member is a property or a method. If this check
     /// fails we will try to determine whether an event is requested. To do 
     /// so we will do the following set of steps:
@@ -93,15 +93,15 @@ namespace Microsoft.Scripting.ComInterop {
     /// dispid.
     ///  </summary>
 
-    public partial class IDispatchComObject : GenericComObject {
+    internal sealed class IDispatchComObject : ComObject, IDynamicObject {
 
-        private readonly IDispatchObject _dispatchObject;
+        private readonly IDispatch _dispatchObject;
         private ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
 
         internal IDispatchComObject(IDispatch rcw)
             : base(rcw) {
-            _dispatchObject = new IDispatchObject(rcw);
+            _dispatchObject = rcw;
         }
 
         public override string ToString() {
@@ -111,7 +111,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (String.IsNullOrEmpty(typeName))
                 typeName = "IDispatch";
 
-            return String.Format(CultureInfo.CurrentCulture, "{0} ({1})", Obj.ToString(), typeName);
+            return String.Format(CultureInfo.CurrentCulture, "{0} ({1})", RuntimeCallableWrapper.ToString(), typeName);
         }
 
         public ComTypeDesc ComTypeDesc {
@@ -121,7 +121,7 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        public IDispatchObject DispatchObject {
+        public IDispatch DispatchObject {
             get {
                 return _dispatchObject;
             }
@@ -159,24 +159,6 @@ namespace Microsoft.Scripting.ComInterop {
             return hresult;
         }
 
-        public override string Documentation {
-            get {
-                EnsureScanDefinedMethods();
-
-                return _comTypeDesc.Documentation;
-            }
-        }
-
-        public override int GetHashCode() {
-            return base.GetHashCode();
-        }
-
-        public override bool Equals(object obj) {
-            return Obj.Equals(obj);
-        }
-
-        #region ICustomMembers-like members
-
         public bool TryGetGetItem(out DispCallable value) {
 
             EnsureScanDefinedMethods();
@@ -190,7 +172,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (methodDesc == null) {
                 int dispId;
                 string name = "Item";
-                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
+                int hresult = GetIDsOfNames(_dispatchObject, name, out dispId);
                 if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
                     value = null;
                     return false;
@@ -220,7 +202,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (methodDesc == null) {
                 int dispId;
                 string name = "Item";
-                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
+                int hresult = GetIDsOfNames(_dispatchObject, name, out dispId);
                 if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
                     value = null;
                     return false;
@@ -242,7 +224,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal bool TryGetIDOfName(string name) {
             int dispId;
-            return GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId) == ComHresults.S_OK;
+            return GetIDsOfNames(_dispatchObject, name, out dispId) == ComHresults.S_OK;
         }
 
         internal bool TryGetMemberMethod(string name, out ComMethodDesc method) {
@@ -263,7 +245,7 @@ namespace Microsoft.Scripting.ComInterop {
             // TODO: The workaround is to use Hashtable (which is thread-safe
             // TODO: on read operations) to fetch the value out.
             int dispId;
-            int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
+            int hresult = GetIDsOfNames(_dispatchObject, name, out dispId);
 
             if (hresult == ComHresults.S_OK) {
                 ComMethodDesc cmd = new ComMethodDesc(name, dispId);
@@ -278,33 +260,24 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        #endregion
-
-        #region IMembersList
-
-        public override IList<string> MemberNames {
+        internal override IEnumerable<string> MemberNames {
             get {
                 EnsureScanDefinedMethods();
                 EnsureScanDefinedEvents();
-                List<string> list = new List<string>();
 
-                foreach (string symbol in _comTypeDesc.Funcs.Keys) {
-                    list.Add(symbol);
+                foreach (string name in _comTypeDesc.Funcs.Keys) {
+                    yield return name;
                 }
 
                 if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
-                    foreach (string symbol in _comTypeDesc.Events.Keys) {
-                        list.Add(symbol);
+                    foreach (string name in _comTypeDesc.Events.Keys) {
+                        yield return name;
                     }
                 }
-
-                return list;
             }
         }
 
-        #endregion
-
-        public override MetaObject GetMetaObject(Expression parameter) {
+        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
             EnsureScanDefinedMethods();
             return new IDispatchMetaObject(parameter, _comTypeDesc, this);
         }
@@ -332,7 +305,7 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             // check type info in the type descriptions cache
-            ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject, true);
+            ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(_dispatchObject, true);
             if (typeInfo == null) {
                 _comTypeDesc = ComTypeDesc.CreateEmptyTypeDesc();
                 return;
@@ -354,11 +327,11 @@ namespace Microsoft.Scripting.ComInterop {
             ComTypes.ITypeInfo classTypeInfo = null;
             Dictionary<string, ComEventDesc> events = null;
 
-            ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
+            var cpc = RuntimeCallableWrapper as ComTypes.IConnectionPointContainer;
             if (cpc == null) {
                 // No ICPC - this object does not support events
                 events = ComTypeDesc.EmptyEvents;
-            } else if ((classTypeInfo = GetCoClassTypeInfo(this.Obj, typeInfo)) == null) {
+            } else if ((classTypeInfo = GetCoClassTypeInfo(this.RuntimeCallableWrapper, typeInfo)) == null) {
                 // no class info found - this object may support events
                 // but we could not discover those
                 Debug.Assert(false, "object support IConnectionPoint but no class info found");
@@ -479,7 +452,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (_comTypeDesc != null && _comTypeDesc.Funcs != null)
                 return;
 
-            ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject, true);
+            ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(_dispatchObject, true);
             if (typeInfo == null) {
                 _comTypeDesc = ComTypeDesc.CreateEmptyTypeDesc();
                 return;
@@ -592,7 +565,7 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
         }
-        
+
         internal bool TryGetPropertySetter(string name, out ComMethodDesc method) {
             EnsureScanDefinedMethods();
             return _comTypeDesc.Puts.TryGetValue(name, out method);

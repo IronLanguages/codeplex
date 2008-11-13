@@ -30,8 +30,7 @@ namespace Microsoft.Scripting.Ast {
     internal sealed class SymbolConstantExpression : Expression {
         private readonly SymbolId _value;
 
-        internal SymbolConstantExpression(SymbolId value)
-            : base(Annotations.Empty) {
+        internal SymbolConstantExpression(SymbolId value) {
 
             _value = value;
         }
@@ -70,7 +69,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }

@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Hosting {
                     scriptSource = _source;
                 }
 
-                _listener.ReportError(scriptSource, message, span, errorCode, severity);
+                _listener.ErrorReported(scriptSource, message, span, errorCode, severity);
             } else {
                 throw new SyntaxErrorException(message, sourceUnit, span, errorCode, severity);
             }

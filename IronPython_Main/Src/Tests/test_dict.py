@@ -1066,11 +1066,10 @@ def test_cp16519():
     AreEqual(sys.Dict["1"], "b")
     del sys.Dict
 
-    #TODO: use some other module
-    import iptest
-    iptest.Dict = {"1": "c"}
-    AreEqual(iptest.Dict["1"], "c")
-    del iptest.Dict
+    import testpkg1
+    testpkg1.Dict = {"1": "c"}
+    AreEqual(testpkg1.Dict["1"], "c")
+    del testpkg1.Dict
 
 
 run_test(__name__)

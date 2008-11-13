@@ -96,7 +96,7 @@ namespace Microsoft.Scripting {
                 if (lambda == null) {
                     // If language APIs produced the wrong delegate type,
                     // rewrite the lambda with the correct type
-                    lambda = Expression.Lambda<DlrMainCallTarget>(code.Body, code.Name, code.Annotations, code.Parameters);
+                    lambda = Expression.Lambda<DlrMainCallTarget>(code.Body, code.Name, code.Parameters);
                 }
                 Interlocked.CompareExchange(ref _target, lambda.Compile(SourceUnit.EmitDebugSymbols), null);
             }

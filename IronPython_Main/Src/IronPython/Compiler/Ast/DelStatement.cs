@@ -32,17 +32,15 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // Transform to series of individual del statements.
-            MSAst.Expression[] statements = new MSAst.Expression[_expressions.Length];
-            for (int i = 0; i < statements.Length; i++) {
+            MSAst.Expression[] statements = new MSAst.Expression[_expressions.Length + 1];
+            for (int i = 0; i < _expressions.Length; i++) {
                 statements[i] = _expressions[i].TransformDelete(ag);
                 if (statements[i] == null) {     
                     throw PythonOps.SyntaxError(string.Format("can't delete {0}", _expressions[i].NodeName), ag.Context.SourceUnit, _expressions[i].Span, 1);
                 }
             }
-            return AstUtils.Block(
-                Span,
-                statements
-            );
+            statements[_expressions.Length] = MSAst.Expression.Empty();
+            return ag.AddDebugInfo(MSAst.Expression.Block(statements), Span);
         }
 
         public override void Walk(PythonWalker walker) {

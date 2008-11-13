@@ -27,10 +27,9 @@ namespace Microsoft.Scripting.Ast {
     ///       tracking their own scope chain explicitly
     /// </summary>
     public sealed class CodeContextExpression : Expression {
-        internal static readonly CodeContextExpression Instance = new CodeContextExpression(Annotations.Empty);
+        internal static readonly CodeContextExpression Instance = new CodeContextExpression();
 
-        internal CodeContextExpression(Annotations annotations)
-            : base(annotations) {
+        internal CodeContextExpression() {
         }
 
         protected override System.Type GetExpressionType() {
@@ -41,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
             return ExpressionType.Extension;
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }
@@ -56,8 +55,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _newContext;
         private readonly Expression _body;
 
-        internal CodeContextScopeExpression(Annotations annotations, Expression body, Expression newContext)
-            : base(annotations) {
+        internal CodeContextScopeExpression(Expression body, Expression newContext) {
             _body = body;
             _newContext = newContext;
         }
@@ -84,7 +82,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _newContext; }
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression newContext = visitor.Visit(_newContext);
             Expression body = visitor.Visit(_body);
 
@@ -100,18 +98,12 @@ namespace Microsoft.Scripting.Ast {
         public static Expression CodeContext() {
             return CodeContextExpression.Instance;
         }
-        public static Expression CodeContext(Annotations annotations) {
-            return new CodeContextExpression(annotations);
-        }
         public static CodeContextScopeExpression CodeContextScope(Expression body, Expression newContext) {
-            return CodeContextScope(body, newContext, Annotations.Empty);
-        }
-        public static CodeContextScopeExpression CodeContextScope(Expression body, Expression newContext, Annotations annotations) {
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(newContext, "newContext");
             ContractUtils.Requires(TypeUtils.AreAssignable(typeof(CodeContext), newContext.Type), "newContext");
 
-            return new CodeContextScopeExpression(annotations, body, newContext);
+            return new CodeContextScopeExpression(body, newContext);
         }
     }
 }

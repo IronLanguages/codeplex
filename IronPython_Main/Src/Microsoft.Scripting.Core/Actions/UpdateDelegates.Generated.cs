@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     internal static partial class UpdateDelegates {
 
         //

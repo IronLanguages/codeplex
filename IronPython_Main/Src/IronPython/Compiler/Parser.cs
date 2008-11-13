@@ -1494,7 +1494,6 @@ namespace IronPython.Compiler {
             }
             WhileStatement ret = new WhileStatement(expr, body, else_);
             ret.SetLoc(start, mid, GetEnd());
-            ret.Header = mid;
             return ret;
         }
 

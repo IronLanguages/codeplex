@@ -24,55 +24,65 @@ namespace Microsoft.Scripting.Ast {
         private readonly List<CatchBlock> _catchBlocks = new List<CatchBlock>();
         private Expression _try;
         private Expression _finally, _fault;
-        private Annotations _annotations;
 
-        internal TryStatementBuilder(Annotations annotations, Expression body) {
+        internal TryStatementBuilder(Expression body) {
             _try = body;
-            _annotations = annotations;
         }
 
         public TryStatementBuilder Catch(Type type, Expression body) {
-            return Catch(type, (ParameterExpression)null, body);
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(body, "body");
+            if (_finally != null) {
+                throw Error.FinallyAlreadyDefined();
+            }
+
+            _catchBlocks.Add(Expression.Catch(type, body));
+            return this;
         }
 
         public TryStatementBuilder Catch(Type type, params Expression[] body) {
-            return Catch(type, null, body);
+            return Catch(type, Utils.BlockVoid(body));
         }
 
-        public TryStatementBuilder Catch(Type type, ParameterExpression holder, params Expression[] body) {
-            return Catch(type, holder, Utils.BlockVoid(body));
+        public TryStatementBuilder Catch(ParameterExpression holder, params Expression[] body) {
+            return Catch(holder, Utils.BlockVoid(body));
         }
 
-        public TryStatementBuilder Catch(Type type, ParameterExpression holder, Expression body) {
-            ContractUtils.RequiresNotNull(type, "type");
+        public TryStatementBuilder Catch(ParameterExpression holder, Expression body) {
+            ContractUtils.RequiresNotNull(holder, "holder");
             ContractUtils.RequiresNotNull(body, "body");
 
             if (_finally != null) {
                 throw Error.FinallyAlreadyDefined();
             }
 
-            _catchBlocks.Add(Expression.Catch(type, holder, body));
+            _catchBlocks.Add(Expression.Catch(holder, body));
             return this;
         }
 
         public TryStatementBuilder Filter(Type type, Expression condition, params Expression[] body) {
-            return Filter(type, null, condition, body);
+            return Filter(type, condition, Utils.BlockVoid(body));
         }
 
         public TryStatementBuilder Filter(Type type, Expression condition, Expression body) {
-            return Filter(type, null, condition, body);
-        }
-
-        public TryStatementBuilder Filter(Type type, ParameterExpression holder, Expression condition, params Expression[] body) {
-            return Filter(type, holder, condition, Utils.BlockVoid(body));
-        }
-
-        public TryStatementBuilder Filter(Type type, ParameterExpression holder, Expression condition, Expression body) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(condition, "condition");
             ContractUtils.RequiresNotNull(body, "body");
 
-            _catchBlocks.Add(Expression.Catch(type, holder, body, condition));
+            _catchBlocks.Add(Expression.Catch(type, body, condition));
+            return this;
+        }
+
+        public TryStatementBuilder Filter(ParameterExpression holder, Expression condition, params Expression[] body) {
+            return Filter(holder, condition, Utils.BlockVoid(body));
+        }
+
+        public TryStatementBuilder Filter(ParameterExpression holder, Expression condition, Expression body) {
+            ContractUtils.RequiresNotNull(holder, "holder");
+            ContractUtils.RequiresNotNull(condition, "condition");
+            ContractUtils.RequiresNotNull(body, "body");
+
+            _catchBlocks.Add(Expression.Catch(holder, body, condition));
             return this;
         }
 
@@ -120,7 +130,6 @@ namespace Microsoft.Scripting.Ast {
                 builder._try,
                 builder._finally,
                 builder._fault,
-                builder._annotations,
                 builder._catchBlocks
             );
             if (result.Finally != null || result.Fault != null) {
@@ -131,18 +140,14 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public partial class Utils {
-        public static TryStatementBuilder Try(Annotations annotations, params Expression[] body) {
-            ContractUtils.RequiresNotNull(body, "body");
-            return new TryStatementBuilder(annotations, Utils.BlockVoid(body));
-        }
-
         public static TryStatementBuilder Try(params Expression[] body) {
-            return Try(Annotations.Empty, Utils.BlockVoid(body));
+            ContractUtils.RequiresNotNull(body, "body");
+            return new TryStatementBuilder(Utils.BlockVoid(body));
         }
 
         public static TryStatementBuilder Try(Expression body) {
             ContractUtils.RequiresNotNull(body, "body");
-            return new TryStatementBuilder(Annotations.Empty, body);
+            return new TryStatementBuilder(body);
         }
     }
 }

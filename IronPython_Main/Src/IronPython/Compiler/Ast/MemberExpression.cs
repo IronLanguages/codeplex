@@ -55,22 +55,26 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op == Operators.None) {
-                return AstUtils.Block(
-                    span,
+                return ag.AddDebugInfoAndVoid(
                     Binders.Set(
                         ag.BinderState,
                         typeof(object),
                         SymbolTable.IdToString(_name),
                         ag.Transform(_target),
                         right
-                    )
+                    ),
+                    span
                 );
             } else {
                 MSAst.ParameterExpression temp = ag.GetTemporary("inplace");
-                return AstUtils.Block(
-                    new SourceSpan(Span.Start, span.End),
-                    Ast.Assign(temp, ag.Transform(_target)),
-                    SetMemberOperator(ag, right, op, temp)
+                return ag.AddDebugInfo(
+                    Ast.Block(
+                        Ast.Assign(temp, ag.Transform(_target)),
+                        SetMemberOperator(ag, right, op, temp),
+                        Ast.Empty()
+                    ),
+                    Span.Start,
+                    span.End
                 );
             }
         }

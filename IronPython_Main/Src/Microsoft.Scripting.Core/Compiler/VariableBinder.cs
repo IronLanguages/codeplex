@@ -23,7 +23,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
     /// Determines if variables are closed over in nested lambdas and need to
     /// be hoisted.
     /// </summary>
-    internal sealed class VariableBinder : ExpressionTreeVisitor {
+    internal sealed class VariableBinder : ExpressionVisitor {
         private readonly AnalyzedTree _tree = new AnalyzedTree();
         private readonly Stack<CompilerScope> _scopes = new Stack<CompilerScope>();
         private readonly Stack<BoundConstants> _constants = new Stack<BoundConstants>();

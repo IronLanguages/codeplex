@@ -16,12 +16,11 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
+using Microsoft.Scripting.Utils;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using System.Threading;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -111,10 +110,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 impl = CreateStaticCompiler(_tree, lambda, _typeBuilder, implName, TypeUtils.PublicStatic, returnType, paramTypes, paramNames, _dynamicMethod, _emitDebugSymbols);
             }
 
-            // TODO: better way to flow this in?
-            impl._debugSymbolWriter = _debugSymbolWriter;
-            impl._symbolWriters = _symbolWriters;
-
             // 3. emit the lambda
             impl.EmitLambdaBody(_scope);
 
@@ -150,100 +145,27 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private void EmitLambdaBody(CompilerScope parent) {
             _scope.Enter(this, parent);
-            if (_emitDebugSymbols && _symbolWriters == null) {
-                _symbolWriters = new Dictionary<SymbolDocumentInfo, ISymbolDocumentWriter>();
-            }
-
-            EmitLambdaStart(_lambda);
 
             Type returnType = _method.GetReturnType();
             if (returnType == typeof(void)) {
                 EmitExpressionAsVoid(_lambda.Body);
-                EmitLambdaEnd(_lambda);
             } else {
-                if (_lambda.Body.Type != typeof(void)) {
-                    Expression body = _lambda.Body;
-                    Debug.Assert(TypeUtils.AreReferenceAssignable(returnType, body.Type));
-                    EmitExpression(body);
-                    EmitLambdaEnd(_lambda);
-                } else {
-                    EmitExpressionAsVoid(_lambda.Body);
-                    EmitLambdaEnd(_lambda);
-
-                    _ilg.EmitDefault(returnType);
-                }
+                Debug.Assert(_lambda.Body.Type != typeof(void));
+                EmitExpression(_lambda.Body);
             }
             //must be the last instruction in the body
-            EmitReturn();
+            _ilg.Emit(OpCodes.Ret);
             _scope.Exit();
-            Finish();
-        }
 
-        #region DebugMarkers
-
-        private void EmitLambdaStart(LambdaExpression lambda) {
-            if (!_emitDebugSymbols) {
-                return;
+            // Validate labels
+            Debug.Assert(_labelBlock.Parent == null && _labelBlock.Kind == LabelBlockKind.Block);
+            foreach (LabelInfo label in _labelInfo.Values) {
+                label.ValidateFinish();
             }
 
-            // get the source file & language id, if present, otherwise use the
-            // information from the parent lambda
-            SourceFileInformation fileInfo;
-            if (lambda.Annotations.TryGet<SourceFileInformation>(out fileInfo)) {
-                var module = (ModuleBuilder)_typeBuilder.Module;
-                _debugSymbolWriter = module.DefineDocument(
-                    fileInfo.FileName,
-                    fileInfo.LanguageGuid,
-                    fileInfo.VendorGuid,
-                    SymbolGuids.DocumentType_Text
-                );
-            }
-
-            // ensure a break point exists at the top
-            // of the file if there isn't a statement
-            // flush with the start of the file.
-            SourceSpan lambdaSpan;
-            if (!lambda.Annotations.TryGet<SourceSpan>(out lambdaSpan)) {
-                return;
-            }
-
-            SourceSpan bodySpan = lambda.Body.Annotations.Get<SourceSpan>();
-            if (bodySpan.Start.IsValid) {
-                if (bodySpan.Start != lambdaSpan.Start) {
-                    EmitPosition(lambdaSpan.Start, lambdaSpan.Start);
-                }
-            } else {
-                BlockExpression body = lambda.Body as BlockExpression;
-                if (body != null) {
-                    for (int i = 0; i < body.Expressions.Count; i++) {
-                        bodySpan = body.Expressions[i].Annotations.Get<SourceSpan>();
-                        if (bodySpan.Start.IsValid) {
-                            if (bodySpan.Start != lambdaSpan.Start) {
-                                EmitPosition(lambdaSpan.Start, lambdaSpan.Start);
-                            }
-                            break;
-                        }
-                    }
-                }
+            if (_dynamicMethod) {
+                CreateDelegateMethodInfo();
             }
         }
-
-        private void EmitLambdaEnd(LambdaExpression lambda) {
-            if (!_emitDebugSymbols) {
-                return;
-            }
-
-            // ensure we emit a sequence point at the end
-            // so the user can inspect any info before exiting
-            // the function.  Also make sure additional code
-            // isn't associated with this function.           
-            SourceSpan span;
-            if (lambda.Annotations.TryGet<SourceSpan>(out span)) {
-                EmitPosition(span.End, span.End);
-            }
-            EmitSequencePointNone();
-        }
-
-        #endregion
     }
 }

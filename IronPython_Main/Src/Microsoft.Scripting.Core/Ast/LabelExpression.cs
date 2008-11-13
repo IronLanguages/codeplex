@@ -26,8 +26,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _defaultValue;
         private readonly LabelTarget _label;
 
-        internal LabelExpression(LabelTarget label, Expression defaultValue, Annotations annotations)
-            : base(annotations) {
+        internal LabelExpression(LabelTarget label, Expression defaultValue) {
             _label = label;
             _defaultValue = defaultValue;
         }
@@ -52,24 +51,18 @@ namespace Microsoft.Linq.Expressions {
             get { return _defaultValue; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitLabel(this);
         }
     }
 
     public partial class Expression {
         public static LabelExpression Label(LabelTarget target) {
-            return Label(target, null, null);
-        }
-        public static LabelExpression Label(LabelTarget target, Annotations annotations) {
-            return Label(target, null, annotations);
+            return Label(target, null);
         }
         public static LabelExpression Label(LabelTarget target, Expression defaultValue) {
-            return Label(target, defaultValue, null);
-        }
-        public static LabelExpression Label(LabelTarget target, Expression defaultValue, Annotations annotations) {
             ValidateGoto(target, ref defaultValue, "label", "defaultValue");
-            return new LabelExpression(target, defaultValue, annotations);
+            return new LabelExpression(target, defaultValue);
         }
     }
 }

@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// "I implement this interface" for event sinks only since the common 
     /// practice is to use IDistpach.Invoke when calling into event sinks). 
     /// </summary>
-    public sealed class ComEventSinkProxy : RealProxy {
+    internal sealed class ComEventSinkProxy : RealProxy {
 
         private Guid _sinkIid;
         private ComEventSink _sink;

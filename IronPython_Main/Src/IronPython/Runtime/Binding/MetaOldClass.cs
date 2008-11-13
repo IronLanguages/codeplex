@@ -15,10 +15,11 @@
 
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -51,7 +52,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
@@ -112,36 +113,33 @@ namespace IronPython.Runtime.Binding {
             MetaObject self = Restrict(typeof(OldClass));
 
             return new MetaObject(
-                Ast.Scope(
-                    Ast.Block(
-                        Ast.Assign(
-                            instTmp,
-                            Ast.New(
-                                typeof(OldInstance).GetConstructor(new Type[] { typeof(CodeContext), typeof(OldClass) }),
-                                codeContext,
-                                self.Expression
-                            )
-                        ),
-                        Ast.Condition(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
-                                self.Expression,
-                                instTmp,
-                                init
-                            ),
-                            Ast.Dynamic(
-                                new PythonInvokeBinder(
-                                    BinderState.GetBinderState(call),
-                                    signature
-                                ),
-                                typeof(object),
-                                ArrayUtils.Insert<Expression>(codeContext, init, exprArgs)
-                            ),
-                            NoInitCheckNoArgs(signature, self, args)
-                        ),
-                        instTmp
+                Ast.Block(
+                    new ParameterExpression[] { init, instTmp },
+                    Ast.Assign(
+                        instTmp,
+                        Ast.New(
+                            typeof(OldInstance).GetConstructor(new Type[] { typeof(CodeContext), typeof(OldClass) }),
+                            codeContext,
+                            self.Expression
+                        )
                     ),
-                    init,
+                    Ast.Condition(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
+                            self.Expression,
+                            instTmp,
+                            init
+                        ),
+                        Ast.Dynamic(
+                            new PythonInvokeBinder(
+                                BinderState.GetBinderState(call),
+                                signature
+                            ),
+                            typeof(object),
+                            ArrayUtils.Insert<Expression>(codeContext, init, exprArgs)
+                        ),
+                        NoInitCheckNoArgs(signature, self, args)
+                    ),
                     instTmp
                 ),
                 self.Restrictions.Merge(Restrictions.Combine(args))
@@ -162,7 +160,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 }
 
-                return Ast.Null();
+                return Ast.Constant(null);
             }
 
             return Ast.Call(
@@ -180,7 +178,7 @@ namespace IronPython.Runtime.Binding {
                 return args[index].Expression;
             }
 
-            return Ast.Null();
+            return Ast.Constant(null);
         }
 
         public object MakeCallError() {
@@ -198,7 +196,7 @@ namespace IronPython.Runtime.Binding {
         private MetaObject/*!*/ MakeSetMember(string/*!*/ name, MetaObject/*!*/ value) {
             MetaObject self = Restrict(typeof(OldClass));
 
-            Expression call, valueExpr = Ast.ConvertHelper(value.Expression, typeof(object));
+            Expression call, valueExpr = AstUtils.Convert(value.Expression, typeof(object));
             switch (name) {
                 case "__bases__":
                     call = Ast.Call(
@@ -284,7 +282,8 @@ namespace IronPython.Runtime.Binding {
                 default:
                     ParameterExpression tmp = Ast.Variable(typeof(object), "lookupVal");
                     return new MetaObject(
-                        Ast.Scope(
+                        Ast.Block(
+                            new ParameterExpression[] { tmp },
                             Ast.Condition(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
@@ -294,12 +293,11 @@ namespace IronPython.Runtime.Binding {
                                     tmp
                                 ),
                                 tmp,
-                                Ast.ConvertHelper(
+                                AstUtils.Convert(
                                     GetMemberFallback(member, codeContext).Expression,
                                     typeof(object)
                                 )
-                            ),
-                            tmp
+                            )
                         ),
                         self.Restrictions
                     );

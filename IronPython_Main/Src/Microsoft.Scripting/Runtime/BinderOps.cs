@@ -17,8 +17,9 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Text;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -33,7 +34,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
         private static readonly Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
 
-        public static T CreateDelegate<T>(CodeContext context, object callable) {
+        public static T CreateDelegate<T>(LanguageContext context, object callable) {
             return (T)(object)GetDelegate(context, callable, typeof(T));
         }
 
@@ -43,7 +44,7 @@ namespace Microsoft.Scripting.Runtime {
         /// The stub should be executed within a context of this object's language.
         /// </summary>
         /// <returns>The delegate or a <c>null</c> reference if the object is not callable.</returns>
-        public static Delegate GetDelegate(CodeContext context, object callableObject, Type delegateType) {
+        public static Delegate GetDelegate(LanguageContext context, object callableObject, Type delegateType) {
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
 

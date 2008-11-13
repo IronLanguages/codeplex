@@ -14,7 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.CodeDom.Compiler;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
 namespace Microsoft.Scripting.Actions {
     public static class CallSiteFactory {

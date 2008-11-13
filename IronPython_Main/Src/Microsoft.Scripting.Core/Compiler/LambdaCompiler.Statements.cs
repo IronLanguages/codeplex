@@ -24,9 +24,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void Emit(BlockExpression node, EmitAs emitAs) {
-            var expressions = node.Expressions;
+            int count = node.ExpressionCount;
+
             // Labels defined immediately in the block are valid for the whole block
-            foreach (var e in expressions) {
+
+            for(int i = 0; i < count; i++) {
+                Expression e = node.GetExpression(i);
+
                 var label = e as LabelExpression;
                 if (label != null) {
                     DefineLabel(label.Label);
@@ -35,17 +39,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             EnterScope(node);
 
-            for (int index = 0; index < expressions.Count - 1; index++) {
-                EmitExpressionAsVoid(expressions[index]);
+            for (int index = 0; index < count - 1; index++) {
+                EmitExpressionAsVoid(node.GetExpression(index));
             }
-            if (expressions.Count > 0) {
-                // if the type of Block it means this is not a Comma
-                // so we will force the last expression to emit as void.
-                if (emitAs == EmitAs.Void || node.Type == typeof(void)) {
-                    EmitExpressionAsVoid(expressions[expressions.Count - 1]);
-                } else {
-                    EmitExpression(expressions[expressions.Count - 1]);
-                }
+
+            // if the type of Block it means this is not a Comma
+            // so we will force the last expression to emit as void.
+            if (emitAs == EmitAs.Void || node.Type == typeof(void)) {
+                EmitExpressionAsVoid(node.GetExpression(count - 1));
+            } else {
+                EmitExpression(node.GetExpression(count - 1));
             }
 
             ExitScope(node);
@@ -65,7 +68,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EmitEmptyExpression(Expression expr) {
-            var node = (EmptyExpression)expr;
+            var node = (DefaultExpression)expr;
             if (node.Type != typeof(void)) {
                 // emit default(T)
                 _ilg.EmitDefault(node.Type);
@@ -88,23 +91,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             PopLabelBlock(LabelBlockKind.Block);
 
             breakTarget.Mark();
-        }
-
-        private void EmitReturnStatement(Expression expr) {
-            var node = (ReturnStatement)expr;
-
-            if (node.Expression != null) {
-                // TODO: should be TypeUtils.AreReferenceAssignable
-                // (but ReturnStatement is going away so it doesn't need to be fixed)
-                if (!_lambda.ReturnType.IsAssignableFrom(node.Expression.Type)) {
-                    throw Error.InvalidReturnTypeOfLambda(node.Expression.Type, _lambda.ReturnType, _lambda.Name);
-                }
-            } else if (_lambda.ReturnType != typeof(void)) {
-                // return without expression can be only from lambda with void return type
-                throw Error.MissingReturnForLambda(_lambda.Name, _lambda.ReturnType);
-            }
-
-            EmitReturn(node.Expression);
         }
 
         #region SwitchStatement

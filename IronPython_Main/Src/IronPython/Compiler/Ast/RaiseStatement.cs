@@ -56,8 +56,8 @@ namespace IronPython.Compiler.Ast {
                     ag.TransformOrConstantNull(_traceback, typeof(object))
                 );
             }
-            return AstUtils.Throw(
-                raiseExpression,
+            return ag.AddDebugInfo(
+                Ast.Throw(raiseExpression),
                 Span
             );
         }

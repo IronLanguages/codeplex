@@ -135,7 +135,7 @@ namespace Microsoft.Scripting.Interpretation {
         public void Invoke<T>(ref int state, ref T current) {
             object res = Interpreter.ExecuteGenerator(_state, _generator.Body);
             ControlFlow cf = res as ControlFlow;
-            if (cf != null && cf.Kind == ControlFlowKind.Return && _state.CurrentYield != null) {
+            if (cf != null && cf.Kind == ControlFlowKind.Yield && _state.CurrentYield != null) {
                 current = (T)cf.Value;
                 state = InterpretingGenerator;
                 return;

@@ -17,7 +17,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class UnaryOperationBinder : MetaObjectBinder {
         private ExpressionType _operation;
 
@@ -66,6 +66,8 @@ namespace Microsoft.Scripting.Actions {
                 case ExpressionType.Negate:
                 case ExpressionType.UnaryPlus:
                 case ExpressionType.Not:
+                case ExpressionType.Decrement:
+                case ExpressionType.Increment:
 
                 // *** END GENERATED CODE ***
 

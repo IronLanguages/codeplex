@@ -508,7 +508,7 @@ def test_from_cmdline():
         if not preferComDispatch:
             Assert("System.__ComObject (DlrUniversalObj)" in ipi.ExecuteLine("print com_obj"))
         else:
-            Assert("System.__ComObject (IDlrUniversalObj)" in ipi.ExecuteLine("print com_obj"))
+            Assert("System.__ComObject" in ipi.ExecuteLine("print com_obj"))
         AreEqual(ipi.ExecuteLine("print com_obj.m0()"), "None")
     finally:
         ipi.End()

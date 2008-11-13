@@ -18,13 +18,13 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: Can it be made internal?
-    public sealed class ComTypeLibDesc : IDynamicObject {
+
+    internal sealed class ComTypeLibDesc {
 
         // typically typelibs contain very small number of coclasses
         // so we will just use the linked list as it performs better
@@ -43,59 +43,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         public override string ToString() {
             return String.Format(CultureInfo.CurrentCulture, "<type library {0}>", _typeLibName);
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        public string Documentation {
-            get { return String.Empty; }
-        }
-
-        #region IDynamicObject Members
-
-        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
-            return new TypeLibMetaObject(parameter, this);
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Reads the latest registered type library for the corresponding GUID,
-        /// reads definitions of CoClass'es and Enum's from this library
-        /// and creates a IDynamicObject that allows to instantiate coclasses
-        /// and get actual values for the enums.
-        /// </summary>
-        /// <param name="typeLibGuid">Type Library Guid</param>
-        /// <returns>ComTypeLibDesc object</returns>
-        [System.Runtime.Versioning.ResourceExposure(System.Runtime.Versioning.ResourceScope.Machine)]
-        [System.Runtime.Versioning.ResourceConsumption(System.Runtime.Versioning.ResourceScope.Machine, System.Runtime.Versioning.ResourceScope.Machine)]
-        public static ComTypeLibInfo CreateFromGuid(Guid typeLibGuid) {
-            // passing majorVersion = -1, minorVersion = -1 will always
-            // load the latest typelib
-            ComTypes.ITypeLib typeLib = UnsafeNativeMethods.LoadRegTypeLib(ref typeLibGuid, -1, -1, 0);
-
-            return new ComTypeLibInfo(GetFromTypeLib(typeLib));
-        }
-
-        /// <summary>
-        /// Gets an ITypeLib object from OLE Automation compatible RCW ,
-        /// reads definitions of CoClass'es and Enum's from this library
-        /// and creates a IDynamicObject that allows to instantiate coclasses
-        /// and get actual values for the enums.
-        /// </summary>
-        /// <param name="rcw">OLE automation compatible RCW</param>
-        /// <returns>ComTypeLibDesc object</returns>
-        public static ComTypeLibInfo CreateFromObject(object rcw) {
-            if (Marshal.IsComObject(rcw) == false) {
-                throw Error.ComObjectExpected();
-            }
-
-            ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(rcw as IDispatch, true);
-
-            ComTypes.ITypeLib typeLib;
-            int typeInfoIndex;
-            typeInfo.GetContainingTypeLib(out typeLib, out typeInfoIndex);
-
-            return new ComTypeLibInfo(GetFromTypeLib(typeLib));
         }
 
         internal static ComTypeLibDesc GetFromTypeLib(ComTypes.ITypeLib typeLib) {
@@ -138,7 +85,7 @@ namespace Microsoft.Scripting.ComInterop {
             return typeLibDesc;
         }
 
-        public object GetTypeLibObjectDesc(string member) {
+        internal object GetTypeLibObjectDesc(string member) {
             foreach (ComTypeClassDesc coclass in _classes) {
                 if (member == coclass.TypeName) {
                     return coclass;
@@ -152,7 +99,7 @@ namespace Microsoft.Scripting.ComInterop {
             return null;
         }
 
-        public string[] GetMemberNames() {
+        internal string[] GetMemberNames() {
             string[] retval = new string[_enums.Count + _classes.Count];
             int i = 0;
 

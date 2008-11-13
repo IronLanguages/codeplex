@@ -17,19 +17,18 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public class NewExpression : Expression {
+    public class NewExpression : Expression, IArgumentProvider {
         private readonly ConstructorInfo _constructor;
-        private readonly ReadOnlyCollection<Expression> _arguments;
+        private IList<Expression> _arguments;
         private readonly ReadOnlyCollection<MemberInfo> _members;
 
-        internal NewExpression(Annotations annotations, ConstructorInfo constructor, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
-            : base(annotations) {
+        internal NewExpression(ConstructorInfo constructor, IList<Expression> arguments, ReadOnlyCollection<MemberInfo> members) {
             _constructor = constructor;
             _arguments = arguments;
             _members = members;
@@ -48,14 +47,24 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public ReadOnlyCollection<Expression> Arguments {
-            get { return _arguments; }
+            get { return ReturnReadOnly(ref _arguments); }
+        }
+
+        Expression IArgumentProvider.GetArgument(int index) {
+            return _arguments[index];
+        }
+
+        int IArgumentProvider.ArgumentCount {
+            get {
+                return _arguments.Count;
+            }
         }
 
         public ReadOnlyCollection<MemberInfo> Members {
             get { return _members; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitNew(this);
         }
     }
@@ -63,8 +72,8 @@ namespace Microsoft.Linq.Expressions {
     internal class NewValueTypeExpression : NewExpression {
         private readonly Type _valueType;
 
-        internal NewValueTypeExpression(Annotations annotations, Type type, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
-            : base(annotations, null, arguments, members) {
+        internal NewValueTypeExpression(Type type, ReadOnlyCollection<Expression> arguments, ReadOnlyCollection<MemberInfo> members)
+            : base(null, arguments, members) {
             _valueType = type;
         }
 
@@ -89,30 +98,22 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments) {
-            return New(constructor, null, arguments);
-        }
-
-        public static NewExpression New(ConstructorInfo constructor, Annotations annotations, IEnumerable<Expression> arguments) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNull(constructor.DeclaringType, "constructor.DeclaringType");
             TypeUtils.ValidateType(constructor.DeclaringType);
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
 
-            return new NewExpression(annotations, constructor, argList, null);
+            return new NewExpression(constructor, argList, null);
         }
 
         //CONFORMING
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, IEnumerable<MemberInfo> members) {
-            return New(constructor, arguments, null, members);
-        }
-
-        public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, Annotations annotations, IEnumerable<MemberInfo> members) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
             ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, ref memberList);
-            return new NewExpression(annotations, constructor, argList, memberList);
+            return new NewExpression(constructor, argList, memberList);
         }
 
         //CONFORMING
@@ -134,7 +135,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 return New(ci);
             }
-            return new NewValueTypeExpression(Annotations.Empty, type, EmptyReadOnlyCollection<Expression>.Instance, null);
+            return new NewValueTypeExpression(type, EmptyReadOnlyCollection<Expression>.Instance, null);
         }
 
 
@@ -246,17 +247,6 @@ namespace Microsoft.Linq.Expressions {
                 default:
                     throw Error.ArgumentMustBeFieldInfoOrPropertInfoOrMethod();
             }
-        }
-
-        [Obsolete("use Expression.New or Utils.SimpleNewHelper instead")]
-        public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {
-            ContractUtils.RequiresNotNull(constructor, "constructor");
-            ContractUtils.RequiresNotNullItems(arguments, "arguments");
-
-            ParameterInfo[] parameters = constructor.GetParametersCached();
-            ContractUtils.Requires(arguments.Length == parameters.Length, "arguments", Strings.IncorrectArgNumber);
-
-            return New(constructor, ArgumentConvertHelper(arguments, parameters));
         }
     }
 }

@@ -148,7 +148,7 @@ namespace IronPython.Compiler.Ast {
 
         private static MSAst.Expression MakeBinaryOperation(AstGenerator ag, PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
             if (op == PythonOperator.NotIn) {                
-                return Ast.ConvertHelper(
+                return AstUtils.Convert(
                     Ast.Not(
                         Binders.Operation(
                             ag.BinderState,
@@ -174,11 +174,11 @@ namespace IronPython.Compiler.Ast {
                             AstGenerator.GetHelperMethod("WarnDivision"),
                             AstUtils.CodeContext(),
                             Ast.Constant(ag.DivisionOptions),
-                            Ast.ConvertHelper(
+                            AstUtils.Convert(
                                 Ast.Assign(tempLeft, left),
                                 typeof(object)
                             ),
-                            Ast.ConvertHelper(
+                            AstUtils.Convert(
                                 Ast.Assign(tempRight, right),
                                 typeof(object)
                             )

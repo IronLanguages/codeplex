@@ -17,7 +17,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class BinaryOperationBinder : MetaObjectBinder {
         private ExpressionType _operation;
 
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private static bool OperationIsValid(ExpressionType operation) {
+        internal static bool OperationIsValid(ExpressionType operation) {
             switch (operation) {
                 #region Generated Binary Operation Binder Validator
 
