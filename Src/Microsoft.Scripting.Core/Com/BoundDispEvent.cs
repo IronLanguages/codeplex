@@ -20,8 +20,16 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: should this be an IDO?
-    public sealed class BoundDispEvent {
+    // TODO: Either this should be an IDO, or we need to return a delegate 
+    // (instead of this object) when the event is requested. The latter
+    // approach seems preferrable, because then languages could use their
+    // normal syntax for adding to delegates. But it's tricky because we
+    // wouldn't have notification whether the event has handlers or not, so
+    // we'd have to always hook the COM event once the delegate is fetched
+    //
+    // Note: returning a delegate has an additional benefit: we wouldn't need
+    // SplatCallSite.
+    internal sealed class BoundDispEvent {
         private object _rcw;
         private Guid _sourceIid;
         private int _dispid;
@@ -32,7 +40,7 @@ namespace Microsoft.Scripting.ComInterop {
             _dispid = dispid;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]  // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]
         [SpecialName]
         public object op_AdditionAssignment(object func) {
             return InPlaceAdd(func);

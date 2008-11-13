@@ -21,16 +21,14 @@ namespace Microsoft.Scripting.Ast {
 
     // TODO: remove builders?
     public sealed class SwitchBuilder {
-        private readonly Annotations _annotations;
         private Expression _value;
         private readonly List<SwitchCase> _cases = new List<SwitchCase>();
         private bool _default;
         private LabelTarget _label;
 
-        internal SwitchBuilder(Expression value, LabelTarget label, Annotations annotations) {
+        internal SwitchBuilder(Expression value, LabelTarget label) {
             _value = value;
             _label = label;
-            _annotations = annotations;
         }
 
         public SwitchBuilder Test(Expression value) {
@@ -53,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression ToExpression() {
             ContractUtils.Requires(_value != null);
-            return Expression.Switch(_value, _label, _annotations, _cases);
+            return Expression.Switch(_value, _label, _cases);
         }
 
         public static implicit operator Expression(SwitchBuilder builder) {
@@ -66,35 +64,19 @@ namespace Microsoft.Scripting.Ast {
     // let's use optional args instead
     public partial class Utils {
         public static SwitchBuilder Switch() {
-            return Switch(null, null, Annotations.Empty);
-        }
-
-        public static SwitchBuilder Switch(Annotations annotations) {
-            return Switch(null, null, annotations);
+            return Switch(null, null);
         }
 
         public static SwitchBuilder Switch(LabelTarget label) {
-            return Switch(null, label, Annotations.Empty);
-        }
-
-        public static SwitchBuilder Switch(LabelTarget label, Annotations annotations) {
-            return Switch(null, label, annotations);
+            return Switch(null, label);
         }
 
         public static SwitchBuilder Switch(Expression value) {
-            return Switch(value, null, Annotations.Empty);
-        }
-
-        public static SwitchBuilder Switch(Expression value, Annotations annotations) {
-            return Switch(value, null, annotations);
+            return Switch(value, null);
         }
 
         public static SwitchBuilder Switch(Expression value, LabelTarget label) {
-            return Switch(value, label, Annotations.Empty);
-        }
-        
-        public static SwitchBuilder Switch(Expression value, LabelTarget label, Annotations annotations) {
-            return new SwitchBuilder(value, label, annotations);
+            return new SwitchBuilder(value, label);
         }
     }
 }

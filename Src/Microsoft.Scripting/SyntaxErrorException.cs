@@ -58,6 +58,19 @@ namespace Microsoft.Scripting {
             }
         }
 
+        public SyntaxErrorException(string message, string path, string code, string line, SourceSpan span, int errorCode, Severity severity)
+            : base(message) {
+            ContractUtils.RequiresNotNull(message, "message");
+
+            _span = span;
+            _severity = severity;
+            _errorCode = errorCode;
+
+            _sourcePath = path;
+            _sourceCode = code;
+            _sourceLine = line;
+        }
+
 #if !SILVERLIGHT
         protected SyntaxErrorException(SerializationInfo info, StreamingContext context)
             : base(info, context) {

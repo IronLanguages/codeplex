@@ -618,7 +618,7 @@ namespace Microsoft.Scripting.Actions {
                     Binder,
                     Ast.Call(
                         typeof(BinderOps).GetMethod("GetDelegate"),
-                        _rule.Context,
+                        Ast.Property(_rule.Context, typeof(CodeContext), "LanguageContext"),
                         _rule.Parameters[0],
                         Ast.Constant(toType)
                     )

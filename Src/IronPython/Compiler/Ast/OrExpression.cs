@@ -21,6 +21,7 @@ using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class OrExpression : Expression {
         private readonly Expression _left, _right;
@@ -56,14 +57,14 @@ namespace IronPython.Compiler.Ast {
                     ConversionResultKind.ExplicitCast,
                     Ast.Assign(
                         tmp,
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             left,
                             t
                         )
                     )
                 ),
                 tmp,
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     right,
                     t
                 )

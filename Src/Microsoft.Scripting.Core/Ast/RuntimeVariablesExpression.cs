@@ -28,10 +28,7 @@ namespace Microsoft.Linq.Expressions {
     public sealed class RuntimeVariablesExpression : Expression {
         private readonly ReadOnlyCollection<ParameterExpression> _variables;
 
-        internal RuntimeVariablesExpression(
-            Annotations annotations,
-            ReadOnlyCollection<ParameterExpression> variables)
-            : base(annotations) {
+        internal RuntimeVariablesExpression(ReadOnlyCollection<ParameterExpression> variables) {
             _variables = variables;
         }
 
@@ -50,7 +47,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _variables; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitRuntimeVariables(this);
         }
     }
@@ -58,15 +55,9 @@ namespace Microsoft.Linq.Expressions {
     public partial class Expression {
 
         public static RuntimeVariablesExpression RuntimeVariables(params ParameterExpression[] variables) {
-            return RuntimeVariables(Annotations.Empty, (IEnumerable<ParameterExpression>)variables);
+            return RuntimeVariables((IEnumerable<ParameterExpression>)variables);
         }
         public static RuntimeVariablesExpression RuntimeVariables(IEnumerable<ParameterExpression> variables) {
-            return RuntimeVariables(Annotations.Empty, variables);
-        }
-        public static RuntimeVariablesExpression RuntimeVariables(Annotations annotations, params ParameterExpression[] variables) {
-            return RuntimeVariables(annotations, (IEnumerable<ParameterExpression>)variables);
-        }
-        public static RuntimeVariablesExpression RuntimeVariables(Annotations annotations, IEnumerable<ParameterExpression> variables) {
             ContractUtils.RequiresNotNull(variables, "variables");
 
             var vars = variables.ToReadOnly();
@@ -77,7 +68,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return new RuntimeVariablesExpression(annotations, vars);
+            return new RuntimeVariablesExpression(vars);
         }
     }
 }

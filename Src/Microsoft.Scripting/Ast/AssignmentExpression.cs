@@ -29,8 +29,7 @@ namespace Microsoft.Scripting.Ast {
     public sealed class AssignmentExtensionExpression : Expression {
         private readonly Expression _left, _right;
 
-        internal AssignmentExtensionExpression(Expression left, Expression right, Annotations annotations)
-            : base(annotations) {
+        internal AssignmentExtensionExpression(Expression left, Expression right) {
             Debug.Assert(left is GlobalVariableExpression);
 
             _left = left;
@@ -57,12 +56,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression left = visitor.Visit(_left);
             Expression right = visitor.Visit(_right);
 
             if (left != _left || right != _right) {
-                return new AssignmentExtensionExpression(left, right, Annotations);
+                return new AssignmentExtensionExpression(left, right);
             }
 
             return this;
@@ -71,16 +70,12 @@ namespace Microsoft.Scripting.Ast {
    
     public static partial class Utils {
         public static Expression Assign(Expression left, Expression right) {
-            return Assign(left, right, Annotations.Empty);
-        }
-
-        public static Expression Assign(Expression left, Expression right, Annotations annotations) {
             GlobalVariableExpression assignable = left as GlobalVariableExpression;
             if (assignable != null) {
-                return new AssignmentExtensionExpression(left, right, annotations);
+                return new AssignmentExtensionExpression(left, right);
             }
 
-            return Expression.Assign(left, right, annotations);
+            return Expression.Assign(left, right);
         }
     }
 }

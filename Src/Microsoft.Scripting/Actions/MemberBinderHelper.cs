@@ -161,7 +161,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         /// <param name="expression"></param>
         protected void AddToBody(Expression expression) {
-            if (_body is EmptyExpression) {
+            if (_body is DefaultExpression) {
                 _body = expression;
             } else {
                 _body = Ast.Block(_body, Expression.Void(expression));

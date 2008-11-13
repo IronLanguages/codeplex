@@ -86,6 +86,7 @@ def test_sleep():
         Assert(y-x > sleep_time*(1-(safe_deviation/2)))
         Assert(y-x < sleep_time*(1+safe_deviation))  # make sure we're close...
 
+@skip('cli', 'silverlight')   #CodePlex 11733
 def test_dst():
     if is_silverlight:
         print "Dev10 524020"

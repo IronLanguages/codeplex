@@ -20,8 +20,9 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Text;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Interpretation;
 using Microsoft.Scripting.Utils;
 
@@ -469,6 +470,42 @@ namespace Microsoft.Scripting.Runtime {
             return onBindingError ?? MetaObject.CreateThrow(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
         }
 
+        public virtual UnaryOperationBinder CreateUnaryOperationBinder(ExpressionType operation) {
+            return new DefaultUnaryOperationBinder(operation);
+        }
+
+        private sealed class DefaultUnaryOperationBinder : UnaryOperationBinder {
+            internal DefaultUnaryOperationBinder(ExpressionType operation)
+                : base(operation) {
+            }
+
+            public override MetaObject FallbackUnaryOperation(MetaObject target, MetaObject errorSuggestion) {
+                return ErrorMetaObject(target, new[] { target }, errorSuggestion);
+            }
+            
+            public override object CacheIdentity {
+                get { return this; }
+            }
+        }
+
+        public virtual BinaryOperationBinder CreateBinaryOperationBinder(ExpressionType operation) {
+            return new DefaultBinaryOperationBinder(operation);
+        }
+
+        private sealed class DefaultBinaryOperationBinder : BinaryOperationBinder {
+            internal DefaultBinaryOperationBinder(ExpressionType operation)
+                : base(operation) {
+            }
+
+            public override MetaObject FallbackBinaryOperation(MetaObject target, MetaObject arg, MetaObject errorSuggestion) {
+                return ErrorMetaObject(target, new[] { target, arg }, errorSuggestion);
+            }
+
+            public override object CacheIdentity {
+                get { return this; }
+            }
+        }
+
         [Obsolete("Use UnaryOperation or BinaryOperation")]
         private class DefaultOperationAction : OperationBinder {
             internal DefaultOperationAction(string operation)
@@ -652,6 +689,19 @@ namespace Microsoft.Scripting.Runtime {
         internal protected virtual void InterpretExceptionThrow(InterpreterState state, Exception exception, bool isInterpretedThrow) {
             Assert.NotNull(state, exception);
             // nop
+        }
+
+        /// <summary>
+        /// Gets the member names associated with the object
+        /// By default, only returns IDO names
+        /// </summary>
+        internal protected virtual IList<string> GetMemberNames(object obj) {
+            var ido = obj as IDynamicObject;
+            if (ido != null) {
+                var mo = ido.GetMetaObject(Expression.Parameter(typeof(object), null));
+                return mo.GetDynamicMemberNames().ToReadOnly();
+            }
+            return EmptyArray<string>.Instance;
         }
     }
 }

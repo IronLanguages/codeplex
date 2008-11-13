@@ -14,6 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 
@@ -33,7 +34,7 @@ namespace Microsoft.Scripting.Utils {
 
         //CONFORMING
         internal static Type GetNullableType(Type type) {
-            System.Diagnostics.Debug.Assert(type != null, "type cannot be null");
+            Debug.Assert(type != null, "type cannot be null");
             if (type.IsValueType && !IsNullableType(type)) {
                 return typeof(Nullable<>).MakeGenericType(type);
             }
@@ -209,8 +210,8 @@ namespace Microsoft.Scripting.Utils {
 
         //CONFORMING
         internal static bool HasReferenceConversion(Type source, Type dest) {
-            System.Diagnostics.Debug.Assert(source != null);
-            System.Diagnostics.Debug.Assert(dest != null);
+            Debug.Assert(source != null && dest != null);
+
             Type nnSourceType = GetNonNullableType(source);
             Type nnDestType = GetNonNullableType(dest);
             // Down conversion
@@ -242,14 +243,14 @@ namespace Microsoft.Scripting.Utils {
 
         //CONFORMING
         internal static bool HasIdentityPrimitiveOrNullableConversion(Type source, Type dest) {
-            System.Diagnostics.Debug.Assert(source != null);
-            System.Diagnostics.Debug.Assert(dest != null);
+            Debug.Assert(source != null && dest != null);
+
             // Identity conversion
             if (source == dest) {
                 return true;
             }
-            //REVIEW: is this correct?
-            // everything can be converted to void
+
+            // Everything can be converted to void
             if (dest == typeof(void)) {
                 return true;
             }
@@ -371,7 +372,7 @@ namespace Microsoft.Scripting.Utils {
             }
             // We have two identical value types, modulo nullability.  (If they were both the 
             // same reference type then we would have returned true earlier.)
-            System.Diagnostics.Debug.Assert(left.IsValueType);
+            Debug.Assert(left.IsValueType);
             // Equality between struct types is only defined for numerics, bools, enums,
             // and their nullable equivalents.
             Type nnType = GetNonNullableType(left);

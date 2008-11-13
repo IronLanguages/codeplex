@@ -23,14 +23,12 @@ using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    // TODO: Can it be made internal?
-    public class ComMethodDesc {
+    internal sealed class ComMethodDesc {
 
         private readonly bool _hasTypeInfo;
         private readonly int _memid;  // this is the member id extracted from FUNCDESC.memid
         private readonly string _name;
         internal readonly INVOKEKIND InvokeKind;
-        private readonly ComParamDesc _returnValue;
         private readonly ComParamDesc[] _parameters;
 
         private ComMethodDesc(int dispId) {
@@ -54,13 +52,10 @@ namespace Microsoft.Scripting.ComInterop {
             _hasTypeInfo = true;
             InvokeKind = funcDesc.invkind;
 
-            ELEMDESC returnValue = funcDesc.elemdescFunc;
-            _returnValue = new ComParamDesc(ref returnValue);
-
             int cNames;
             string[] rgNames = new string[1 + funcDesc.cParams];
             typeInfo.GetNames(_memid, rgNames, rgNames.Length, out cNames);
-            if (IsPropertyPut) {
+            if (IsPropertyPut && rgNames[rgNames.Length - 1] == null) {
                 rgNames[rgNames.Length - 1] = "value";
                 cNames++;
             }
@@ -146,36 +141,6 @@ namespace Microsoft.Scripting.ComInterop {
 
                 return false;
             }
-        }
-
-        public string Signature {
-            get {
-                if (!_hasTypeInfo) {
-                    return _name + "(...)";
-                }
-
-                StringBuilder result = new StringBuilder();
-                if (_returnValue.ParameterType == null) {
-                    result.Append("void");
-                } else {
-                    result.Append(_returnValue.ToString());
-                }
-                result.Append(" ");
-                result.Append(_name);
-                result.Append("(");
-                for (int i = 0; i < _parameters.Length; i++) {
-                    result.Append(_parameters[i].ToString());
-                    if (i < (_parameters.Length - 1)) {
-                        result.Append(", ");
-                    }
-                }
-                result.Append(")");
-                return result.ToString();
-            }
-        }
-
-        public override string ToString() {
-            return Signature;
         }
     }
 }

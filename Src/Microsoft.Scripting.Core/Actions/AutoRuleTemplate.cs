@@ -22,7 +22,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     /// <summary>
     /// Handles auto-templating of rules.  There are three important actions this performs:
     ///     1. Detects if templating is possible between two rules
@@ -139,7 +139,7 @@ namespace Microsoft.Scripting.Actions {
             return res;
         }
 
-        internal class TemplateRuleRewriter : ExpressionTreeVisitor {
+        internal class TemplateRuleRewriter : ExpressionVisitor {
             private readonly List<ConstantExpression> _constants;
 
             public TemplateRuleRewriter(List<ConstantExpression> constants) {
@@ -169,7 +169,10 @@ namespace Microsoft.Scripting.Actions {
                     );
                     object constVal = ctor.Invoke(new object[] { value, index });
 
-                    return Expression.Property(Expression.Constant(constVal), genType.GetProperty("Value"));
+                    return Helpers.Convert(
+                        Expression.Property(Expression.Constant(constVal), genType.GetProperty("Value")),
+                        TypeUtils.GetConstantType(node.Type)
+                    );
                 }
 
                 return base.VisitConstant(node);

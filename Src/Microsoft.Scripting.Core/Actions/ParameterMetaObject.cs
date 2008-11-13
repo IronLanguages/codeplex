@@ -15,7 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     internal class ParameterMetaObject : MetaObject {
         internal ParameterMetaObject(Expression expression, object value)
             : base(expression, Restrictions.Empty, value) {

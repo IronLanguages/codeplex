@@ -18,6 +18,7 @@ using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class ConditionalExpression : Expression {
         private readonly Expression _testExpr;
@@ -49,8 +50,8 @@ namespace IronPython.Compiler.Ast {
 
             // Convert both to "type" ... since they are assignable already
             // it is really just a cosmetic cast.
-            ifTrue = Ast.ConvertHelper(ifTrue, type);
-            ifFalse = Ast.ConvertHelper(ifFalse, type);
+            ifTrue = AstUtils.Convert(ifTrue, type);
+            ifFalse = AstUtils.Convert(ifFalse, type);
 
             return Ast.Condition(test, ifTrue, ifFalse);
         }

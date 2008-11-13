@@ -24,18 +24,17 @@ namespace Microsoft.Linq.Expressions {
         private readonly string _name;
         private readonly Type _paramType;
 
-        internal ParameterExpression(Type type, string name, Annotations annotations)
-            : base(annotations) {
+        internal ParameterExpression(Type type, string name) {
             _name = name;
             _paramType = type;
         }
 
-        internal static ParameterExpression Make(Type type, string name, Annotations annotations, bool isByRef) {
+        internal static ParameterExpression Make(Type type, string name, bool isByRef) {
             if (isByRef) {
-                return new ByRefParameterExpression(type, name, annotations);
+                return new ByRefParameterExpression(type, name);
             }
 
-            return new ParameterExpression(type, name, annotations);            
+            return new ParameterExpression(type, name);            
         }
 
         protected override Type GetExpressionType() {
@@ -60,14 +59,14 @@ namespace Microsoft.Linq.Expressions {
             return false;
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitParameter(this);
         }
     }
 
     internal sealed class ByRefParameterExpression : ParameterExpression {
-        internal ByRefParameterExpression(Type type, string name, Annotations annotations)
-            : base(type, name, annotations) {
+        internal ByRefParameterExpression(Type type, string name)
+            : base(type, name) {
         }
 
         internal override bool GetIsByRef() {
@@ -76,12 +75,8 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        public static ParameterExpression Parameter(Type type, string name) {
-            return Parameter(type, name, Annotations.Empty);
-        }
-
         //CONFORMING
-        public static ParameterExpression Parameter(Type type, string name, Annotations annotations) {
+        public static ParameterExpression Parameter(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
 
             if (type == typeof(void)) {
@@ -93,17 +88,14 @@ namespace Microsoft.Linq.Expressions {
                 type = type.GetElementType();
             }
 
-            return ParameterExpression.Make(type, name, annotations, byref);
+            return ParameterExpression.Make(type, name, byref);
         }
 
         public static ParameterExpression Variable(Type type, string name) {
-            return Variable(type, name, Annotations.Empty);
-        }
-        public static ParameterExpression Variable(Type type, string name, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);
             ContractUtils.Requires(!type.IsByRef, "type", Strings.TypeMustNotBeByRef);
-            return ParameterExpression.Make(type, name, annotations, false);
+            return ParameterExpression.Make(type, name, false);
         }
 
         //Variables must not be ByRef.

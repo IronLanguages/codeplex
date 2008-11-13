@@ -33,7 +33,15 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
+            if (_statements.Length == 0) {
+                return AstGenerator.EmptyBlock;
+            }
+
             MSAst.Expression[] stmts = ag.Transform(_statements);
+            if (stmts.Length == 0) {
+                return Ast.Empty();
+            }
+
             foreach (MSAst.Expression stmt in stmts) {
                 if (stmt == null) {
                     // error was encountered and added to sync, 
@@ -41,8 +49,7 @@ namespace IronPython.Compiler.Ast {
                     return null;
                 }
             }
-
-            return Ast.BlockVoid(new ReadOnlyCollection<MSAst.Expression>(stmts));
+            return Ast.Void(Ast.Block(new ReadOnlyCollection<MSAst.Expression>(stmts)));
         }
        
         public override void Walk(PythonWalker walker) {

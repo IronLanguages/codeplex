@@ -25,8 +25,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly SymbolId _name;
         private readonly Expression _value;
 
-        internal UnboundAssignment(Annotations annotations, SymbolId name, Expression value)
-            : base(annotations) {
+        internal UnboundAssignment(SymbolId name, Expression value) {
             _name = name;
             _value = value;
         }
@@ -55,7 +54,6 @@ namespace Microsoft.Scripting.Ast {
             return Expression.Call(
                 null,
                 typeof(ScriptingRuntimeHelpers).GetMethod("SetName"),
-                Annotations,
                 new Expression[] {
                     Utils.CodeContext(), 
                     AstUtils.Constant(_name),
@@ -64,12 +62,12 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression v = visitor.Visit(_value);
             if (v == _value) {
                 return this;
             }
-            return Utils.Assign(_name, v, Annotations);
+            return Utils.Assign(_name, v);
         }
     }
 
@@ -77,17 +75,15 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public static partial class Utils {
-        public static UnboundAssignment Assign(SymbolId name, Expression value) {
-            return Assign(name, value, null);
-        }
         [Obsolete("use Assign overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static UnboundAssignment Assign(SymbolId name, Expression value, SourceSpan span) {
-            return Assign(name, value, Expression.Annotate(span));
+            return Assign(name, value);
         }
-        public static UnboundAssignment Assign(SymbolId name, Expression value, Annotations annotations) {
+        public static UnboundAssignment Assign(SymbolId name, Expression value) {
             ContractUtils.Requires(!name.IsEmpty && !name.IsInvalid, "name", "Invalid or empty name is not allowed");
             ContractUtils.RequiresNotNull(value, "value");
-            return new UnboundAssignment(annotations, name, value);
+            return new UnboundAssignment(name, value);
         }
     }
 }

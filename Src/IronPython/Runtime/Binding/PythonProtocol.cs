@@ -16,15 +16,17 @@
 
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Provides binding logic which is implemented to follow various Python protocols.  This includes
@@ -139,7 +141,7 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod(methodName),
-                    Ast.ConvertHelper(self.Expression, typeof(object))
+                    AstUtils.Convert(self.Expression, typeof(object))
                 ),
                 self.Restrictions
             );
@@ -186,7 +188,7 @@ namespace IronPython.Runtime.Binding {
                         BinderState.GetCodeContext(call),
                         self.Expression,
                         GetPythonType(self),
-                        Ast.ConvertHelper(body, typeof(object))
+                        AstUtils.Convert(body, typeof(object))
                     ), 
                     MetaObject.GetExpressions(args)
                 );
@@ -231,7 +233,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("UncallableError"),
-                    Ast.ConvertHelper(self.Expression, typeof(object))
+                    AstUtils.Convert(self.Expression, typeof(object))
                 )
             );
         }

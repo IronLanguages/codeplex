@@ -93,6 +93,39 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
+        /// <summary>
+        /// Invokes a member on the provided object with the given parameters and returns the result.
+        /// </summary>
+        public object InvokeMember(object obj, string memberName, params object[] parameters) {
+            return InvokeMember(obj, memberName, false, parameters);
+        }
+
+        /// <summary>
+        /// Invokes a member on the provided object with the given parameters and returns the result.
+        /// </summary>
+        public object InvokeMember(object obj, string memberName, bool ignoreCase, params object[] parameters) {
+            // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
+            switch (parameters.Length) {
+                case 0: {
+                        CallSite<Func<CallSite, object, object>> site;
+                        site = GetSite<object, object>(_lc.CreateCallBinder(memberName, ignoreCase));
+                        return site.Target(site, obj);
+                    }
+                case 1: {
+                        CallSite<Func<CallSite, object, object, object>> site;
+                        site = GetSite<object, object, object>(_lc.CreateCallBinder(memberName, ignoreCase, Expression.PositionalArg(0)));
+                        return site.Target(site, obj, parameters[0]);
+                    }
+                case 2: {
+                        CallSite<Func<CallSite, object, object, object, object>> site;
+                        site = GetSite<object, object, object, object>(_lc.CreateCallBinder(memberName, ignoreCase, Expression.PositionalArg(0), Expression.PositionalArg(1)));
+                        return site.Target(site, obj, parameters[0], parameters[1]);
+                    }
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
         public object Create(object obj, params object[] parameters) {
             // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
             switch (parameters.Length) {
@@ -341,6 +374,22 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
+        /// <summary>
+        /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
+        /// </summary>
+        public TResult DoOperation<TTarget, TResult>(ExpressionType operation, TTarget target) {
+            var site = GetSite<TTarget, TResult>(_lc.CreateUnaryOperationBinder(operation));
+            return site.Target(site, target);
+        }
+
+        /// <summary>
+        /// Peforms the generic binary operation on the specified strongly typed targets and returns
+        /// the strongly typed result.
+        /// </summary>
+        public TResult DoOperation<TTarget, TOther, TResult>(ExpressionType operation, TTarget target, TOther other) {
+            var site = GetSite<TTarget, TOther, TResult>(_lc.CreateBinaryOperationBinder(operation));
+            return site.Target(site, target, other);
+        }
         
         /// <summary>
         /// Performs a generic unary operation on the specified target and returns the result.
@@ -377,6 +426,10 @@ namespace Microsoft.Scripting.Runtime {
             CallSite<Func<CallSite, TTarget, TOther, TResult>> site;
             site = GetSite<TTarget, TOther, TResult>(_lc.CreateOperationBinder(op));
             return site.Target(site, target, other);
+        }
+
+        public IList<string> GetMemberNames(object obj) {
+            return _lc.GetMemberNames(obj);
         }
 
         #endregion

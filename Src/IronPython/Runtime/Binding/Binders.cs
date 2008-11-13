@@ -16,6 +16,7 @@
 using System; using Microsoft;
 using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;
@@ -25,15 +26,20 @@ namespace IronPython.Runtime.Binding {
 
     static class Binders {
         public static Expression/*!*/ Invoke(BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
-            return Ast.Dynamic(
-                new PythonInvokeBinder(
-                    binder,
-                    signature
-                ),
-                resultType,
-                null,
-                new ReadOnlyCollection<Expression>(ArrayUtils.Insert(AstUtils.CodeContext(), args))
-            );
+            PythonInvokeBinder invoke = new PythonInvokeBinder(binder, signature);
+            switch(args.Length) {
+                case 0: return Ast.Dynamic(invoke, resultType, AstUtils.CodeContext());
+                case 1: return Ast.Dynamic(invoke, resultType, AstUtils.CodeContext(), args[0]);
+                case 2: return Ast.Dynamic(invoke, resultType, AstUtils.CodeContext(), args[0], args[1]);
+                case 3: return Ast.Dynamic(invoke, resultType, AstUtils.CodeContext(), args[0], args[1], args[2]);
+                default:
+                    return Ast.Dynamic(
+                        invoke,
+                        resultType,
+                        new ReadOnlyCollection<Expression>(ArrayUtils.Insert(AstUtils.CodeContext(), args))
+                    );
+            }
+
         }
 
         public static Expression/*!*/ Convert(BinderState/*!*/ binder, Type/*!*/ type, ConversionResultKind resultKind, Expression/*!*/ target) {

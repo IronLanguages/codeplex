@@ -233,9 +233,7 @@ STDMETHODIMP CParamsInRetval::mUShort(USHORT a, USHORT* b)
 
 STDMETHODIMP CParamsInRetval::mVariant(VARIANT a, VARIANT* b)
 {
-	*b = a;
-
-	return S_OK;
+	return VariantCopy(b, &a);
 }
 
 STDMETHODIMP CParamsInRetval::mVariantBool(VARIANT_BOOL a, VARIANT_BOOL* b)

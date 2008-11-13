@@ -85,30 +85,5 @@ namespace Microsoft.Scripting {
         internal static bool TrackPerformance {
             get { return _trackPerformance; }
         }
-
-
-        // These options are read from the environment variables because they
-        // can be mutated by tests
-
-        /// <summary>
-        /// Directory where snippet assembly will be saved if SaveSnippets is set.
-        /// </summary>
-        internal static string SnippetsDirectory {
-            get { return ReadDebugString("AssembliesDir"); }
-        }
-
-        /// <summary>
-        /// Name of the snippet assembly (w/o extension).
-        /// </summary>
-        internal static string SnippetsFileName {
-            get { return ReadDebugString("AssembliesFileName"); }
-        }
-
-        /// <summary>
-        /// Save snippets to an assembly (see also SnippetsDirectory, SnippetsFileName).
-        /// </summary>
-        internal static bool SaveSnippets {
-            get { return ReadDebugOption("SaveAssemblies"); }
-        }
     }
 }

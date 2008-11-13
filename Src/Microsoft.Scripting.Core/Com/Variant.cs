@@ -30,8 +30,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// to and from COM calls.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
-    [GeneratedCode("DLR", "2.0")] // TODO: remove and fix FxCop warnings
-    public struct Variant {
+    internal struct Variant {
 
 #if DEBUG
         static Variant() {
@@ -100,6 +99,7 @@ namespace Microsoft.Scripting.ComInterop {
             [FieldOffset(0)] internal Int64 _cy;
             [FieldOffset(0)] internal Double _date;
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
             [FieldOffset(0)] internal IntPtr _bstr;
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]
             [FieldOffset(0)] internal IntPtr _unknown;
@@ -110,8 +110,10 @@ namespace Microsoft.Scripting.ComInterop {
 
             #endregion
 
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
             [FieldOffset(0)]
             internal IntPtr _byref;
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
             [FieldOffset(0)]
             internal Record _record;
         }
@@ -119,44 +121,6 @@ namespace Microsoft.Scripting.ComInterop {
         public override string ToString() {
             return String.Format(CultureInfo.CurrentCulture, "{0} ({1}", ToObject().ToString(), VariantType);
         }
-
-        # region FxCop-required APIs
-
-        public override bool Equals(object obj) {
-            if ((obj == null) || (!(obj is Variant))) {
-                return false;
-            }
-
-            object toObject = ToObject();
-            object otherToObject = ((Variant)obj).ToObject();
-            if (toObject == null) {
-                return otherToObject == null;
-            } else {
-                return toObject.Equals(otherToObject);
-            }
-        }
-
-        public override int GetHashCode() {
-            object toObject = ToObject();
-            if (toObject == null) {
-                return 0;
-            } else {
-                return toObject.GetHashCode();
-            }
-        }
-
-        public static bool operator ==(Variant a, Variant b) {
-            return a.Equals(b);
-        }
-        public static bool operator !=(Variant a, Variant b) {
-            return !a.Equals(b);
-        }
-
-        private int Dummy() {
-            throw Error.MethodShouldNotBeCalled();
-        }
-
-        #endregion
 
         /// <summary>
         /// Primitive types are the basic COM types. It includes valuetypes like ints, but also reference tyeps
@@ -272,7 +236,6 @@ namespace Microsoft.Scripting.ComInterop {
                 ((vt) == VarEnum.VT_BSTR) ||
                 ((vt) == VarEnum.VT_UNKNOWN) ||
                 ((vt) == VarEnum.VT_DISPATCH) ||
-                ((vt) == VarEnum.VT_VARIANT) ||
                 ((vt) == VarEnum.VT_RECORD)
                 ) {
                 IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
@@ -303,7 +266,6 @@ namespace Microsoft.Scripting.ComInterop {
             VariantType = VarEnum.VT_NULL;
         }
 
-        [CLSCompliant(false)]
         public void SetAsIConvertible(IConvertible value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
 
@@ -342,7 +304,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_I1
 
-        [CLSCompliant(false)]
         public SByte AsI1 {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_I1);
@@ -355,8 +316,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefI1(ref SByte value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I1 | VarEnum.VT_BYREF);
@@ -377,7 +336,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefI2(ref Int16 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I2 | VarEnum.VT_BYREF);
@@ -398,7 +356,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefI4(ref Int32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I4 | VarEnum.VT_BYREF);
@@ -419,7 +376,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefI8(ref Int64 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_I8 | VarEnum.VT_BYREF);
@@ -428,7 +384,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_UI1
 
-        [CLSCompliant(false)]
         public Byte AsUi1 {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_UI1);
@@ -441,8 +396,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUi1(ref Byte value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI1 | VarEnum.VT_BYREF);
@@ -451,7 +404,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_UI2
 
-        [CLSCompliant(false)]
         public UInt16 AsUi2 {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_UI2);
@@ -464,8 +416,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUi2(ref UInt16 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI2 | VarEnum.VT_BYREF);
@@ -474,7 +424,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_UI4
 
-        [CLSCompliant(false)]
         public UInt32 AsUi4 {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_UI4);
@@ -487,8 +436,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUi4(ref UInt32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI4 | VarEnum.VT_BYREF);
@@ -497,7 +444,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_UI8
 
-        [CLSCompliant(false)]
         public UInt64 AsUi8 {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_UI8);
@@ -510,8 +456,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUi8(ref UInt64 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UI8 | VarEnum.VT_BYREF);
@@ -532,7 +476,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefInt(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_INT | VarEnum.VT_BYREF);
@@ -541,7 +484,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         // VT_UINT
 
-        [CLSCompliant(false)]
         public UIntPtr AsUint {
             get {
                 Debug.Assert(VariantType == VarEnum.VT_UINT);
@@ -554,8 +496,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [CLSCompliant(false)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUint(ref UIntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UINT | VarEnum.VT_BYREF);
@@ -576,7 +516,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefBool(ref Int16 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_BOOL | VarEnum.VT_BYREF);
@@ -597,7 +536,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefError(ref Int32 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_ERROR | VarEnum.VT_BYREF);
@@ -618,7 +556,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefR4(ref Single value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_R4 | VarEnum.VT_BYREF);
@@ -639,7 +576,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefR8(ref Double value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_R8 | VarEnum.VT_BYREF);
@@ -665,7 +601,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefDecimal(ref Decimal value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_DECIMAL | VarEnum.VT_BYREF);
@@ -686,7 +621,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefCy(ref Int64 value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_CY | VarEnum.VT_BYREF);
@@ -707,7 +641,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefDate(ref Double value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_DATE | VarEnum.VT_BYREF);
@@ -728,7 +661,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefBstr(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_BSTR | VarEnum.VT_BYREF);
@@ -749,7 +681,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefUnknown(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_UNKNOWN | VarEnum.VT_BYREF);
@@ -770,7 +701,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefDispatch(ref IntPtr value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_DISPATCH | VarEnum.VT_BYREF);
@@ -791,7 +721,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public void SetAsByrefVariant(ref Variant value) {
             Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
             VariantType = (VarEnum.VT_VARIANT | VarEnum.VT_BYREF);

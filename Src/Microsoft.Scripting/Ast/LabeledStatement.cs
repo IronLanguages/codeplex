@@ -21,8 +21,9 @@ using Microsoft.Linq.Expressions;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("use Expression.Label(label, body, Expression.Annotate(span)) instead")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static LabelExpression Labeled(LabelTarget label, Expression body, SourceSpan span) {
-            return Expression.Label(label, body, Expression.Annotate(span));
+            return Expression.Label(label, body);
         }
     }
 }

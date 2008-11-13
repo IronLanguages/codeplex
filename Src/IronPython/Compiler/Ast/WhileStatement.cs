@@ -20,6 +20,7 @@ using MSAst = Microsoft.Linq.Expressions;
 namespace IronPython.Compiler.Ast {
 
     public class WhileStatement : Statement {
+        // Marks the end of the condition of the while loop
         private SourceLocation _header;
         private readonly Expression _test;
         private readonly Statement _body;
@@ -29,10 +30,6 @@ namespace IronPython.Compiler.Ast {
             _test = test;
             _body = body;
             _else = else_;
-        }
-
-        public SourceLocation Header {
-            set { _header = value; }
         }
 
         public Expression Test {
@@ -45,6 +42,10 @@ namespace IronPython.Compiler.Ast {
 
         public Statement ElseStatement {
             get { return _else; }
+        }
+
+        private SourceSpan Header {
+            get { return new SourceSpan(Start, _header); }
         }
 
         public void SetLoc(SourceLocation start, SourceLocation header, SourceLocation end) {
@@ -60,13 +61,14 @@ namespace IronPython.Compiler.Ast {
             MSAst.LabelTarget breakLabel, continueLabel;
             MSAst.Expression body = ag.TransformLoopBody(_body, out breakLabel, out continueLabel);
             return AstUtils.While(
-                ag.TransformAndDynamicConvert(_test, typeof(bool)), 
+                ag.AddDebugInfo(
+                    ag.TransformAndDynamicConvert(_test, typeof(bool)),
+                    Header
+                ),
                 body, 
                 ag.Transform(_else),
                 breakLabel,
-                continueLabel,
-                _header, 
-                Span
+                continueLabel
             );
         }
 

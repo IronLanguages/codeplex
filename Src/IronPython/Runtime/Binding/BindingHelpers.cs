@@ -17,10 +17,11 @@ using System; using Microsoft;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;
@@ -71,8 +72,8 @@ namespace IronPython.Runtime.Binding {
                             typeof(PythonOps).GetMethod("IsClsVisible"),
                             codeContext
                         ),
-                        Ast.ConvertHelper(res.Expression, resType),
-                        Ast.ConvertHelper(failure, resType)
+                        AstUtils.Convert(res.Expression, resType),
+                        AstUtils.Convert(failure, resType)
 
                     ),
                     res.Restrictions
@@ -254,7 +255,7 @@ namespace IronPython.Runtime.Binding {
                     // add the test and a validator if persent
                     Expression defer = operation.Defer(args).Expression;
                     if (deferType != null) {
-                        defer = Ast.ConvertHelper(defer, deferType);
+                        defer = AstUtils.Convert(defer, deferType);
                     }
 
                     Type bestType = BindingHelpers.GetCompatibleType(defer.Type, res.Expression.Type);
@@ -262,8 +263,8 @@ namespace IronPython.Runtime.Binding {
                     res = new MetaObject(
                         Ast.Condition(
                             typeTest.Test,
-                            Ast.ConvertHelper(res.Expression, bestType),
-                            Ast.ConvertHelper(defer, bestType)
+                            AstUtils.Convert(res.Expression, bestType),
+                            AstUtils.Convert(defer, bestType)
                         ),
                         res.Restrictions // ,
                         //typeTest.Validator
@@ -311,7 +312,7 @@ namespace IronPython.Runtime.Binding {
         internal static MethodCallExpression/*!*/ CheckTypeVersion(Expression/*!*/ tested, int version) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("CheckTypeVersion"),
-                Ast.ConvertHelper(tested, typeof(object)),
+                AstUtils.Convert(tested, typeof(object)),
                 Ast.Constant(version)
             );
         }
@@ -322,7 +323,7 @@ namespace IronPython.Runtime.Binding {
             return new ValidationInfo(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("CheckTypeVersion"),
-                    Ast.ConvertHelper(tested, typeof(object)),
+                    AstUtils.Convert(tested, typeof(object)),
                     Ast.Constant(version)
                 ),
                 new PythonTypeValidator(type, version).Validate

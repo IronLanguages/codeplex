@@ -34,7 +34,6 @@ using IronPython.Runtime.Types;
 #if !SILVERLIGHT
 using ComTypeLibInfo = Microsoft.Scripting.ComInterop.ComTypeLibInfo;
 using ComTypeLibDesc = Microsoft.Scripting.ComInterop.ComTypeLibDesc;
-using ComObjectWithTypeInfo = Microsoft.Scripting.ComInterop.ComObjectWithTypeInfo;
 using System.Runtime.Serialization.Formatters.Binary;
 #endif
 

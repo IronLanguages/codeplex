@@ -17,10 +17,11 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
@@ -60,7 +61,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
@@ -143,7 +144,8 @@ namespace IronPython.Runtime.Binding {
                 // we could get better throughput w/ a more specific rule against our current custom old class but
                 // this favors less code generation.
 
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
@@ -172,8 +174,7 @@ namespace IronPython.Runtime.Binding {
                             tmp
                         ),
                         BindingHelpers.InvokeFallback(invoke, codeContext, this, args).Expression
-                    ),
-                    tmp
+                    )
                 ),
                 self.Restrictions.Merge(Restrictions.Combine(args))
             );
@@ -188,7 +189,8 @@ namespace IronPython.Runtime.Binding {
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.NotEqual(
                             Ast.Assign(
@@ -199,18 +201,17 @@ namespace IronPython.Runtime.Binding {
                                     self.Expression
                                 )
                             ),
-                            Ast.Null()
+                            Ast.Constant(null)
                         ),
                         tmp,
-                        Ast.ConvertHelper(
-                            Ast.ConvertHelper(  // first to object (incase it's a throw), then to IEnumerable
+                        AstUtils.Convert(
+                            AstUtils.Convert(  // first to object (incase it's a throw), then to IEnumerable
                                 conversion.FallbackConvert(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerable)
                         )
-                    ),
-                    tmp
+                    )
                 ),
                 self.Restrictions
             );
@@ -221,7 +222,8 @@ namespace IronPython.Runtime.Binding {
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.NotEqual(
                             Ast.Assign(
@@ -232,18 +234,17 @@ namespace IronPython.Runtime.Binding {
                                     self.Expression
                                 )
                             ),
-                            Ast.Null()
+                            Ast.Constant(null)
                         ),
                         tmp,
-                        Ast.ConvertHelper(
-                            Ast.ConvertHelper(
+                        AstUtils.Convert(
+                            AstUtils.Convert(
                                 conversion.FallbackConvert(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerator)
                         )
-                    ),
-                    tmp
+                    )
                 ),
                 self.Restrictions
             );            
@@ -254,7 +255,8 @@ namespace IronPython.Runtime.Binding {
             MetaObject self = Restrict(typeof(OldInstance));
 
             return new MetaObject(
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.NotEqual(
                             Ast.Assign(
@@ -265,18 +267,17 @@ namespace IronPython.Runtime.Binding {
                                     Expression
                                 )
                             ),
-                            Ast.Null()
+                            Ast.Constant(null)
                         ),
                         tmp,
-                        Ast.ConvertHelper(
-                            Ast.ConvertHelper(
+                        AstUtils.Convert(
+                            AstUtils.Convert(
                                 conversion.FallbackConvert(this).Expression,
                                 typeof(object)
                             ),
                             typeof(IEnumerable)
                         )
-                    ),
-                    tmp
+                    )
                 ),
                 self.Restrictions
             );                       
@@ -286,16 +287,16 @@ namespace IronPython.Runtime.Binding {
             ParameterExpression tmp = Ast.Variable(typeof(object), "convertResult");
             MetaObject self = Restrict(typeof(OldInstance));
             return new MetaObject(
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         MakeOneConvert(conversion, self, symbolId, tmp),
                         tmp,
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             conversion.FallbackConvert(this).Expression,
                             typeof(object)
                         )
-                    ),
-                    tmp
+                    )
                 ),
                 self.Restrictions
             );
@@ -312,7 +313,7 @@ namespace IronPython.Runtime.Binding {
                         AstUtils.Constant(symbolId)
                     )
                 ),
-                Ast.Null()
+                Ast.Constant(null)
             );
         }
         
@@ -324,7 +325,8 @@ namespace IronPython.Runtime.Binding {
             Type resType = BindingHelpers.GetCompatibleType(typeof(bool), fallback.Expression.Type);
 
             return new MetaObject(
-                Ast.Scope(
+                Ast.Block(
+                    new ParameterExpression[] { tmp },
                     Ast.Condition(
                         Ast.NotEqual(
                             Ast.Assign(
@@ -335,12 +337,11 @@ namespace IronPython.Runtime.Binding {
                                     self.Expression
                                 )
                             ),
-                            Ast.Null()
+                            Ast.Constant(null)
                         ),
-                        Ast.ConvertHelper(tmp, resType),
-                        Ast.ConvertHelper(fallback.Expression, resType)
-                    ),
-                    tmp
+                        AstUtils.Convert(tmp, resType),
+                        AstUtils.Convert(fallback.Expression, resType)
+                    )
                 ),
                 self.Restrictions
             );
@@ -372,7 +373,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Constant(dict.KeyVersion)
                         )
                     ), 
-                    Ast.Null()
+                    Ast.Constant(null)
                 ),
                 null
             );
@@ -385,7 +386,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceDictionaryGetValueHelper"),
                         tmp,
                         Ast.Constant(key),
-                        Ast.ConvertHelper(Expression, typeof(object))
+                        AstUtils.Convert(Expression, typeof(object))
                     );
                     break;
                 case MemberAccess.Set:
@@ -393,14 +394,14 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("OldInstanceDictionarySetExtraValue"),
                         tmp,
                         Ast.Constant(key),
-                        Ast.ConvertHelper(args[1].Expression, typeof(object))
+                        AstUtils.Convert(args[1].Expression, typeof(object))
                     );
                     break;
                 case MemberAccess.Delete:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
                         Ast.Constant(BinderState.GetBinderState(member).Context),
-                        Ast.ConvertHelper(Expression, typeof(OldInstance)),
+                        AstUtils.Convert(Expression, typeof(OldInstance)),
                         AstUtils.Constant(SymbolTable.StringToId(name))
                     );
                     break;
@@ -444,7 +445,8 @@ namespace IronPython.Runtime.Binding {
                 case MemberAccess.Get:                    
                     ParameterExpression tmp = Ast.Variable(typeof(object), "result");
 
-                    target = Ast.Scope(
+                    target = Ast.Block(
+                        new ParameterExpression[] { tmp },
                         Ast.Condition(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
@@ -454,12 +456,11 @@ namespace IronPython.Runtime.Binding {
                                 tmp
                             ),
                             tmp,
-                            Ast.ConvertHelper(
+                            AstUtils.Convert(
                                 FallbackGet(member, args),
                                 typeof(object)
                             )
-                        ),
-                        tmp
+                        )
                     );                    
                     break;
                 case MemberAccess.Set:
@@ -468,7 +469,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Constant(BinderState.GetBinderState(member).Context),
                         self.Expression,
                         AstUtils.Constant(symName),
-                        Ast.ConvertHelper(args[1].Expression, typeof(object))
+                        AstUtils.Convert(args[1].Expression, typeof(object))
                     );
                     break;
                 case MemberAccess.Delete:

@@ -16,7 +16,9 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.Serialization;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -143,6 +145,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
        
         private TConsoleOptions _consoleOptions;
 
+        private bool _saveAssemblies = false;
+        private string _assembliesDir = null;
+
         public OptionsParser() {
         }
 
@@ -198,10 +203,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
 #if DEBUG
                 case "-X:AssembliesDir":
-                    SetDlrOption("AssembliesDir", PopNextArg());
+                    _assembliesDir = PopNextArg();
                     break;
 
                 case "-X:SaveAssemblies":
+                    _saveAssemblies = true;
+                    break;
+
                 case "-X:TrackPerformance":
                     SetDlrOption(arg.Substring(3));
                     break;
@@ -218,10 +226,32 @@ namespace Microsoft.Scripting.Hosting.Shell {
                     LanguageSetup.Options[arg.Substring(3)] = ScriptingRuntimeHelpers.True; 
                     break;
 
+#if !SILVERLIGHT // Remote console
+                case Remote.RemoteRuntimeServer.RemoteRuntimeArg:
+                    ConsoleOptions.RemoteRuntimeChannel = PopNextArg();
+                    break;
+#endif
                 default:
                     ConsoleOptions.FileName = arg.Trim();
                     break;
             }
+
+            if (_saveAssemblies) {
+                //Set SaveAssemblies on for inner ring by calling Microsoft.Linq.Expressions.Compiler.Snippets.SetSaveAssemblies via Reflection.
+                Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
+                Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
+                //The type may not exist.
+                if (snippets != null) {
+                    MethodInfo configSaveAssemblies = snippets.GetMethod("SetSaveAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
+                    //The method may not exist.
+                    if (configSaveAssemblies != null) {
+                        string[] coreAssemblyLocations = (string[])configSaveAssemblies.Invoke(null, new[] { _assembliesDir });
+                    }
+                }
+                //Sets SaveAssemblies on for outer ring.
+                Snippets.SetSaveAssemblies(_assembliesDir);
+            }
+
         }
 
         internal static void SetDlrOption(string option) {
@@ -264,9 +294,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
 #endif
 #if DEBUG
-                { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
+                { "-X:AssembliesDir <dir>",      "Set the directory for saving generated assemblies" },
                 { "-X:SaveAssemblies",           "Save generated assemblies" },
                 { "-X:TrackPerformance",         "Track performance sensitive areas" },
+#if !SILVERLIGHT // Remote console
+                { Remote.RemoteRuntimeServer.RemoteRuntimeArg + " <channel_name>", 
+                                                 "Start a remoting server for a remote console session." },
+#endif
 #endif
            };
 

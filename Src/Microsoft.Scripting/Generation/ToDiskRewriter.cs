@@ -81,7 +81,6 @@ namespace Microsoft.Scripting.Generation {
                 return Expression.Lambda<T>(
                     body,
                     node.Name + "$" + Interlocked.Increment(ref _uniqueNameId),
-                    node.Annotations,
                     node.Parameters
                 );
 
@@ -130,7 +129,7 @@ namespace Microsoft.Scripting.Generation {
         protected override Expression VisitDynamic(DynamicExpression node) {
             Type delegateType;
             if (RewriteDelegate(node.DelegateType, out delegateType)) {
-                node = Expression.MakeDynamic(delegateType, node.Binder, node.Annotations, node.Arguments);
+                node = Expression.MakeDynamic(delegateType, node.Binder, node.Arguments);
             }
             return base.VisitDynamic(node);
         }

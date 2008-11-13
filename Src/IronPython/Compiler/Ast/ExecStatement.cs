@@ -51,9 +51,8 @@ namespace IronPython.Compiler.Ast {
 
             if (_locals == null && _globals == null) {
                 // exec code
-                call = AstUtils.Call(
+                call = Ast.Call(
                     AstGenerator.GetHelperMethod("UnqualifiedExec"), 
-                    Span, 
                     AstUtils.CodeContext(), 
                     ag.TransformAsObject(_code)
                 );
@@ -61,9 +60,8 @@ namespace IronPython.Compiler.Ast {
                 // exec code in globals [ , locals ]
                 // We must have globals now (locals is last and may be absent)
                 Debug.Assert(_globals != null);
-                call = AstUtils.Call(
+                call = Ast.Call(
                     AstGenerator.GetHelperMethod("QualifiedExec"), 
-                    Span, 
                     AstUtils.CodeContext(), 
                     ag.TransformAsObject(_code), 
                     ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)), 
@@ -71,7 +69,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return call;
+            return ag.AddDebugInfo(call, Span);
         }
 
         public override void Walk(PythonWalker walker) {

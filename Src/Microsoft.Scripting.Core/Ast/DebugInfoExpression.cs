@@ -90,7 +90,7 @@ namespace Microsoft.Linq.Expressions {
             return _expression;
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitDebugInfo(this);
         }
     }

@@ -24,8 +24,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly NewExpression _newExpression;
         private readonly ReadOnlyCollection<MemberBinding> _bindings;
 
-        internal MemberInitExpression(NewExpression newExpression, ReadOnlyCollection<MemberBinding> bindings, Annotations annotations)
-            : base(annotations) {
+        internal MemberInitExpression(NewExpression newExpression, ReadOnlyCollection<MemberBinding> bindings) {
             _newExpression = newExpression;
             _bindings = bindings;
         }
@@ -51,15 +50,15 @@ namespace Microsoft.Linq.Expressions {
             get { return _bindings; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitMemberInit(this);
         }
 
         public override Expression Reduce() {
-            return ReduceMemberInit(_newExpression, _bindings, true, Annotations);
+            return ReduceMemberInit(_newExpression, _bindings, true);
         }
 
-        internal static Expression ReduceMemberInit(Expression objExpression, ReadOnlyCollection<MemberBinding> bindings, bool keepOnStack, Annotations annotations) {
+        internal static Expression ReduceMemberInit(Expression objExpression, ReadOnlyCollection<MemberBinding> bindings, bool keepOnStack) {
             var objVar = Expression.Variable(objExpression.Type, null);
             int count = bindings.Count;
             var block = new Expression[count + 2];
@@ -68,10 +67,10 @@ namespace Microsoft.Linq.Expressions {
                 block[i + 1] = ReduceMemberBinding(objVar, bindings[i]);
             }
             block[count + 1] = keepOnStack ? (Expression)objVar : Expression.Empty();
-            return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
+            return Expression.Block(new ReadOnlyCollection<Expression>(block));
         }
 
-        internal static Expression ReduceListInit(Expression listExpression, ReadOnlyCollection<ElementInit> initializers, bool keepOnStack, Annotations annotations) {
+        internal static Expression ReduceListInit(Expression listExpression, ReadOnlyCollection<ElementInit> initializers, bool keepOnStack) {
             var listVar = Expression.Variable(listExpression.Type, null);
             int count = initializers.Count;
             var block = new Expression[count + 2];
@@ -81,7 +80,7 @@ namespace Microsoft.Linq.Expressions {
                 block[i + 1] = Expression.Call(listVar, element.AddMethod, element.Arguments);
             }
             block[count + 1] = keepOnStack ? (Expression)listVar : Expression.Empty();
-            return Expression.Block(annotations, new ReadOnlyCollection<Expression>(block));
+            return Expression.Block(new ReadOnlyCollection<Expression>(block));
         }
 
         internal static Expression ReduceMemberBinding(ParameterExpression objVar, MemberBinding binding) {
@@ -90,9 +89,9 @@ namespace Microsoft.Linq.Expressions {
                 case MemberBindingType.Assignment:
                     return Expression.Assign(member, ((MemberAssignment)binding).Expression);
                 case MemberBindingType.ListBinding:
-                    return ReduceListInit(member, ((MemberListBinding)binding).Initializers, false, null);
+                    return ReduceListInit(member, ((MemberListBinding)binding).Initializers, false);
                 case MemberBindingType.MemberBinding:
-                    return ReduceMemberInit(member, ((MemberMemberBinding)binding).Bindings, false, null);
+                    return ReduceMemberInit(member, ((MemberMemberBinding)binding).Bindings, false);
                 default: throw Assert.Unreachable;
             }
         }
@@ -101,17 +100,14 @@ namespace Microsoft.Linq.Expressions {
     public partial class Expression {
         //CONFORMING
         public static MemberInitExpression MemberInit(NewExpression newExpression, params MemberBinding[] bindings) {
-            return MemberInit(newExpression, null, (IEnumerable<MemberBinding>)bindings);
+            return MemberInit(newExpression, (IEnumerable<MemberBinding>)bindings);
         }
         //CONFORMING
         public static MemberInitExpression MemberInit(NewExpression newExpression, IEnumerable<MemberBinding> bindings) {
-            return MemberInit(newExpression, null, bindings);
-        }
-        public static MemberInitExpression MemberInit(NewExpression newExpression, Annotations annotations, IEnumerable<MemberBinding> bindings) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ReadOnlyCollection<MemberBinding> roBindings = bindings.ToReadOnly();
             ValidateMemberInitArgs(newExpression.Type, roBindings);
-            return new MemberInitExpression(newExpression, roBindings, annotations);
+            return new MemberInitExpression(newExpression, roBindings);
         }
     }
 }

@@ -33,11 +33,6 @@ namespace Microsoft.Scripting.ComInterop {
             _returnType = returnType;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        internal Expression ToExpression(Expression ret) {
-            return ret;
-        }
-
         internal Type ReturnType {
             get {
                 return _returnType;

@@ -29,8 +29,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _value;
         private readonly LabelTarget _target;
 
-        internal GotoExpression(GotoExpressionKind kind, LabelTarget target, Expression value, Annotations annotations)
-            : base(annotations) {
+        internal GotoExpression(GotoExpressionKind kind, LabelTarget target, Expression value) {
             _kind = kind;
             _value = value;
             _target = target;
@@ -66,7 +65,7 @@ namespace Microsoft.Linq.Expressions {
             get { return _kind; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitGoto(this);
         }
     }
@@ -76,52 +75,36 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     public partial class Expression {
         public static GotoExpression Break(LabelTarget target) {
-            return MakeGoto(GotoExpressionKind.Break, target, null, null);
+            return MakeGoto(GotoExpressionKind.Break, target, null);
         }
 
         public static GotoExpression Break(LabelTarget target, Expression value) {
-            return MakeGoto(GotoExpressionKind.Break, target, value, null);
-        }
-
-        public static GotoExpression Break(LabelTarget target, Expression value, Annotations annotations) {
-            return MakeGoto(GotoExpressionKind.Break, target, value, annotations);
+            return MakeGoto(GotoExpressionKind.Break, target, value);
         }
 
         public static GotoExpression Continue(LabelTarget target) {
-            return MakeGoto(GotoExpressionKind.Continue, target, null, null);
-        }
-
-        public static GotoExpression Continue(LabelTarget target, Annotations annotations) {
-            return MakeGoto(GotoExpressionKind.Continue, target, null, annotations);
+            return MakeGoto(GotoExpressionKind.Continue, target, null);
         }
 
         public static GotoExpression Return(LabelTarget target) {
-            return MakeGoto(GotoExpressionKind.Return, target, null, null);
+            return MakeGoto(GotoExpressionKind.Return, target, null);
         }
 
         public static GotoExpression Return(LabelTarget target, Expression value) {
-            return MakeGoto(GotoExpressionKind.Return, target, value, null);
+            return MakeGoto(GotoExpressionKind.Return, target, value);
         }
-
-        public static GotoExpression Return(LabelTarget target, Expression value, Annotations annotations) {
-            return MakeGoto(GotoExpressionKind.Return, target, value, annotations);
-        }
-
+        
         public static GotoExpression Goto(LabelTarget target) {
-            return MakeGoto(GotoExpressionKind.Goto, target, null, null);
+            return MakeGoto(GotoExpressionKind.Goto, target, null);
         }
 
         public static GotoExpression Goto(LabelTarget target, Expression value) {
-            return MakeGoto(GotoExpressionKind.Goto, target, value, null);
+            return MakeGoto(GotoExpressionKind.Goto, target, value);
         }
 
-        public static GotoExpression Goto(LabelTarget target, Expression value, Annotations annotations) {
-            return MakeGoto(GotoExpressionKind.Goto, target, value, annotations);
-        }
-
-        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Annotations annotations) {
+        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value) {
             ValidateGoto(target, ref value, "target", "value");
-            return new GotoExpression(kind, target, value, annotations);
+            return new GotoExpression(kind, target, value);
         }
 
         private static void ValidateGoto(LabelTarget target, ref Expression value, string targetParameter, string valueParameter) {

@@ -25,17 +25,15 @@ namespace Microsoft.Scripting.ComInterop {
     InterfaceType(ComInterfaceType.InterfaceIsIDispatch),
     Guid("00020400-0000-0000-C000-000000000046")
     ]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
-    public interface IDispatchForReflection {
+    internal interface IDispatchForReflection {
     }
 
     [
     ComImport,
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("00020400-0000-0000-C000-000000000046"),
-    CLSCompliant(false)
     ]
-    public interface IDispatch {
+    internal interface IDispatch {
 
         [PreserveSig]
         int TryGetTypeInfoCount(out uint pctinfo);
@@ -43,8 +41,6 @@ namespace Microsoft.Scripting.ComInterop {
         [PreserveSig]
         int TryGetTypeInfo(uint iTInfo, int lcid, out IntPtr info);
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         [PreserveSig]
         int TryGetIDsOfNames(
             ref Guid iid,
@@ -56,9 +52,6 @@ namespace Microsoft.Scripting.ComInterop {
             [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.I4, SizeParamIndex = 2)]
             int[] rgDispId);
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         [PreserveSig]
         int TryInvoke(
             int dispIdMember,
@@ -90,7 +83,7 @@ namespace Microsoft.Scripting.ComInterop {
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("B196B283-BAB4-101A-B69C-00AA00341D07")
     ]
-    public interface IProvideClassInfo {
+    internal interface IProvideClassInfo {
         void GetClassInfo(out IntPtr info);
     }
 

@@ -20,6 +20,8 @@ namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     public class ListExpression : SequenceExpression {
+        
+
         public ListExpression(params Expression[] items)
             : base(items) {
         }
@@ -27,7 +29,8 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             if (Items.Length == 0) {
                 return Ast.Call(
-                    AstGenerator.GetHelperMethod("MakeEmptyListFromCode")
+                    AstGenerator.GetHelperMethod("MakeEmptyListFromCode"),
+                    AstGenerator.EmptyExpression
                 );            
             }
 

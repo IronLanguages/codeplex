@@ -32,6 +32,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private bool _colorfulConsole;
         private bool _printUsageAndExit;
         private bool _isMta;
+#if !SILVERLIGHT // Remote console
+        private string _remoteRuntimeChannel;
+#endif
 
         public bool AutoIndent {
             get { return _autoIndent; }
@@ -103,6 +106,13 @@ namespace Microsoft.Scripting.Hosting.Shell {
             set { _isMta = value; }
         }
 
+#if !SILVERLIGHT // Remote console
+        public string RemoteRuntimeChannel {
+            get { return _remoteRuntimeChannel; }
+            set { _remoteRuntimeChannel = value; }
+        }
+#endif
+
         public ConsoleOptions() {
 	    }
 
@@ -121,6 +131,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _colorfulConsole = options._colorfulConsole;
             _printUsageAndExit = options._printUsageAndExit;
             _isMta = options._isMta;
+#if !SILVERLIGHT // Remote console
+            _remoteRuntimeChannel = options._remoteRuntimeChannel;
+#endif
         }
     }
 }

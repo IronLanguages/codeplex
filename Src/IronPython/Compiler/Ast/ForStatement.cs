@@ -100,14 +100,16 @@ namespace IronPython.Compiler.Ast {
                                                     Statement else_, SourceSpan span, SourceLocation header,
                                                     MSAst.LabelTarget breakLabel, MSAst.LabelTarget continueLabel) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
-            MSAst.Expression init = AstUtils.Assign(
-                enumerator, 
-                Ast.Call(
-                    AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
-                    AstUtils.CodeContext(),
-                    ag.TransformAsObject(list)
-                ), 
-                Ast.Annotate(list.Span)
+            MSAst.Expression init = ag.AddDebugInfo(
+                AstUtils.Assign(
+                    enumerator, 
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
+                        AstUtils.CodeContext(),
+                        ag.TransformAsObject(list)
+                    )
+                ),
+                list.Span
             );
 
             // while enumerator.MoveNext():
@@ -115,38 +117,35 @@ namespace IronPython.Compiler.Ast {
             //    body
             // else:
             //    else
-            MSAst.LoopExpression ls = AstUtils.Loop(
-                Ast.Call(
-                    enumerator,
-                    typeof(IEnumerator).GetMethod("MoveNext")
-                ), 
-                null, 
-                Ast.BlockVoid(
-                    left.TransformSet(
-                        ag,
-                        SourceSpan.None,
-                        Ast.Call(
-                            enumerator,
-                            typeof(IEnumerator).GetProperty("Current").GetGetMethod()
+            MSAst.Expression ls = AstUtils.Loop(
+                    ag.AddDebugInfo(Ast.Call(
+                        enumerator,
+                        typeof(IEnumerator).GetMethod("MoveNext")
+                    ), left.Span),
+                    null,
+                    Ast.Block(
+                        left.TransformSet(
+                            ag,
+                            SourceSpan.None,
+                            Ast.Call(
+                                enumerator,
+                                typeof(IEnumerator).GetProperty("Current").GetGetMethod()
+                            ),
+                            Operators.None
                         ),
-                        Operators.None
-                    ),
-                    body,
-                    AstUtils.Block(
-                        SourceSpan.None,
-                        Ast.Assign(ag.LineNumberExpression, Ast.Constant(list.Start.Line))
-                    )
-                ), 
-                ag.Transform(else_), 
-                breakLabel, 
-                continueLabel,
-                left.End, 
-                new SourceSpan(left.Start, span.End)
+                        body,
+                        Ast.Assign(ag.LineNumberExpression, Ast.Constant(list.Start.Line)),
+                        Ast.Empty()
+                    ), 
+                    ag.Transform(else_),
+                    breakLabel, 
+                    continueLabel
             );
 
-            return Ast.BlockVoid(
+            return Ast.Block(
                 init,
-                ls
+                ls,
+                Ast.Empty()
             );
         }
 

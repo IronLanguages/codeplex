@@ -22,17 +22,16 @@ namespace Microsoft.Linq.Expressions {
         private readonly Expression _test;
         private readonly Expression _true;
 
-        internal ConditionalExpression(Annotations annotations, Expression test, Expression ifTrue)
-            : base(annotations) {
+        internal ConditionalExpression(Expression test, Expression ifTrue) {
             _test = test;
             _true = ifTrue;
         }
 
-        internal static ConditionalExpression Make(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse) {
-            if (ifFalse == EmptyExpression.VoidInstance) {
-                return new ConditionalExpression(annotations, test, ifTrue);
+        internal static ConditionalExpression Make(Expression test, Expression ifTrue, Expression ifFalse) {
+            if (ifFalse == DefaultExpression.VoidInstance) {
+                return new ConditionalExpression(test, ifTrue);
             } else {
-                return new FullConditionalExpression(annotations, test, ifTrue, ifFalse);
+                return new FullConditionalExpression(test, ifTrue, ifFalse);
             }
         }
 
@@ -57,10 +56,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual Expression GetFalse() {
-            return EmptyExpression.VoidInstance;
+            return DefaultExpression.VoidInstance;
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitConditional(this);
         }
     }
@@ -68,8 +67,8 @@ namespace Microsoft.Linq.Expressions {
     internal class FullConditionalExpression : ConditionalExpression {
         private readonly Expression _false;
 
-        internal FullConditionalExpression(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse)
-            : base(annotations, test, ifTrue) {
+        internal FullConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
+            : base(test, ifTrue) {
             _false = ifFalse;
         }
 
@@ -79,12 +78,8 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) {
-            return Condition(test, ifTrue, ifFalse, Annotations.Empty);
-        }
-
         //CONFORMING
-        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Annotations annotations) {
+        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) {
             RequiresCanRead(test, "test");
             RequiresCanRead(ifTrue, "ifTrue");
             RequiresCanRead(ifFalse, "ifFalse");
@@ -96,7 +91,7 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.ArgumentTypesMustMatch();
             }
 
-            return ConditionalExpression.Make(annotations, test, ifTrue, ifFalse);
+            return ConditionalExpression.Make(test, ifTrue, ifFalse);
         }
     }
 }

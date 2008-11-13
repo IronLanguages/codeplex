@@ -16,7 +16,7 @@ using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Contracts;
 using System.Globalization;
 
@@ -24,12 +24,12 @@ namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>
-    public sealed class DispCallable : IDynamicObject {
+    internal sealed class DispCallable : IDynamicObject {
 
-        private readonly IDispatchObject _dispatch;
+        private readonly IDispatch _dispatch;
         private readonly ComMethodDesc _methodDesc;
 
-        internal DispCallable(IDispatchObject dispatch, ComMethodDesc methodDesc) {
+        internal DispCallable(IDispatch dispatch, ComMethodDesc methodDesc) {
             _dispatch = dispatch;
             _methodDesc = methodDesc;
         }
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.ComInterop {
             return String.Format(CultureInfo.CurrentCulture, "<bound dispmethod {0}>", _methodDesc.Name);
         }
 
-        public IDispatchObject DispatchObject {
+        public IDispatch DispatchObject {
             get { return _dispatch; }
         }
 

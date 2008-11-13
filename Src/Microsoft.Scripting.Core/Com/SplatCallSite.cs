@@ -19,13 +19,12 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     // First attempt at simple splatting call site helper
-    // TODO: move to COM, that's the only place it's used
-    public sealed partial class SplatCallSite {
+    internal sealed partial class SplatCallSite {
         internal delegate object SplatCaller(object[] args);
 
         // TODO: Should free these eventually

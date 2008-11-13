@@ -21,10 +21,10 @@ using System.Reflection;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Ast = Microsoft.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Linq.Expressions.Expression;
-    
     public abstract class PythonCustomTracker : CustomTracker {
         public abstract PythonTypeSlot/*!*/ GetSlot();
 
@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public override Expression SetValue(Expression context, ActionBinder binder, Type type, Expression value) {
-            return SetBoundValue(context, binder, type, value, Ast.Null());
+            return SetBoundValue(context, binder, type, value, Ast.Constant(null));
         }
 
         protected override Expression GetBoundValue(Expression context, ActionBinder binder, Type type, Expression instance) {
@@ -45,7 +45,7 @@ namespace IronPython.Runtime.Types {
                 typeof(PythonOps).GetMethod("SlotGetValue"),
                 context,
                 Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     instance,
                     typeof(object)
                 ),
@@ -58,7 +58,7 @@ namespace IronPython.Runtime.Types {
                 typeof(PythonOps).GetMethod("SlotSetValue"),
                 context,
                 Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
-                Ast.ConvertHelper(
+                AstUtils.Convert(
                     instance,
                     typeof(object)
                 ),
@@ -72,7 +72,7 @@ namespace IronPython.Runtime.Types {
                 typeof(PythonOps).GetMethod("SlotGetValue"),
                 builder.Context,
                 Ast.Constant(GetSlot(), typeof(PythonTypeSlot)),
-                Ast.Null(),
+                Ast.Constant(null),
                 Ast.Constant(accessing)
             );
         }
@@ -144,7 +144,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public override Expression GetValue(Expression context, ActionBinder binder, Type type) {
-            return GetBoundValue(context, binder, type, Ast.Null());
+            return GetBoundValue(context, binder, type, Ast.Constant(null));
         }
 
         public override Type DeclaringType {

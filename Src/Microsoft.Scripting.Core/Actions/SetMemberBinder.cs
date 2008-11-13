@@ -15,7 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class SetMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;

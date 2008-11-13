@@ -418,6 +418,10 @@ def main():
         ("Easy Dynamic Sites", gen_easy_sites),
         ("SplatCallSite call helpers", gen_splatsite),
         ("Dynamic Sites Construction Helpers", gen_construction_helpers),
+# outer ring generators
+        ("Delegate Microsoft Scripting Action Types", gen_delegate_action),
+        ("Delegate Microsoft Scripting Scripting Func Types", gen_delegate_func),
+        
     )
 
 if __name__ == "__main__":

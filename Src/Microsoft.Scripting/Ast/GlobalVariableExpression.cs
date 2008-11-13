@@ -29,8 +29,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly bool _local;
         private readonly Type _type;
 
-        internal GlobalVariableExpression(Type type, string name, bool local, Annotations annotations)
-            : base(annotations) {
+        internal GlobalVariableExpression(Type type, string name, bool local) {
             Debug.Assert(type != typeof(void));
 
             _name = name;
@@ -69,22 +68,18 @@ namespace Microsoft.Scripting.Ast {
             return string.Format("Global {0} {1}", Type.Name, _name);
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }
 
     public partial class Utils {
         public static GlobalVariableExpression GlobalVariable(Type type, string name) {
-            return GlobalVariable(type, name, false, Annotations.Empty);
+            return GlobalVariable(type, name, false);
         }
 
         public static GlobalVariableExpression GlobalVariable(Type type, string name, bool local) {
-            return GlobalVariable(type, name, local, Annotations.Empty);
-        }
-
-        public static GlobalVariableExpression GlobalVariable(Type type, string name, bool local, Annotations annotations) {
-            return new GlobalVariableExpression(type, name, local, annotations);
+            return new GlobalVariableExpression(type, name, local);
         }
     }
 }

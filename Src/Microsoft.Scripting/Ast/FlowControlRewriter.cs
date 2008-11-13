@@ -66,12 +66,9 @@ namespace Microsoft.Scripting.Ast {
     ///       }
     ///       ...
     /// 
-    /// TODO: the compiler could optimize the switch/goto pattern, but itdoesn't yet
+    /// TODO: the compiler could optimize the switch/goto pattern, but it doesn't yet
     /// </summary>
-    internal sealed class FlowControlRewriter : ExpressionTreeVisitor {
-        // 0 is the value meaning "default flow"
-        // -1 means "returning"
-        private readonly int ReturnMarker = -1;
+    internal sealed class FlowControlRewriter : ExpressionVisitor {
 
         private sealed class BlockInfo {
             // Is this block a finally?
@@ -88,7 +85,6 @@ namespace Microsoft.Scripting.Ast {
             // These two properties tell us what we need to emit in the flow control
             // (if anything)
             internal Set<LabelTarget> NeedFlowLabels;
-            internal bool NeedReturnFlow;
 
             // To emit a jump that we can't do in IL, we set the state variable
             // and then jump to FlowLabel. It's up to the code at FlowLabel to
@@ -112,7 +108,6 @@ namespace Microsoft.Scripting.Ast {
 
         private readonly Dictionary<LabelTarget, LabelInfo> _labels = new Dictionary<LabelTarget, LabelInfo>();
         private readonly Stack<BlockInfo> _blocks = new Stack<BlockInfo>();
-        private ParameterExpression _returnVariable;
         private ParameterExpression _flowVariable;
 
         // Rewriter entry point
@@ -123,9 +118,6 @@ namespace Microsoft.Scripting.Ast {
             if (_flowVariable != null) {
                 var vars = new List<ParameterExpression>();
                 vars.Add(_flowVariable);
-                if (_returnVariable != null) {
-                    vars.Add(_returnVariable);
-                }
                 foreach (var info in _labels.Values) {
                     if (info.Variable != null) {
                         vars.Add(info.Variable);
@@ -202,7 +194,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             if (!block.HasFlow) {
-                return Expression.MakeTry(@try, @finally, fault, node.Annotations, handlers);
+                return Expression.MakeTry(@try, @finally, fault, handlers);
             }
 
             //  If there is a control flow in finally, emit outer:
@@ -227,7 +219,7 @@ namespace Microsoft.Scripting.Ast {
             //  }
 
             if (handlers.Count > 0) {
-                @try = Expression.MakeTry(@try, null, null, null, handlers);
+                @try = Expression.MakeTry(@try, null, null, handlers);
             }
 
             var all = Expression.Variable(typeof(Exception), "$exception");
@@ -253,24 +245,18 @@ namespace Microsoft.Scripting.Ast {
 
             // Emit flow control
             return Expression.Block(
-                node.Annotations,
                 new ParameterExpression[] { all },
-                Expression.MakeTry(@try, @finally, fault, null, handlers),
+                Expression.MakeTry(@try, @finally, fault, handlers),
                 Expression.Label(block.FlowLabel),
                 MakeFlowControlSwitch(block)
             );
         }
 
         private Expression MakeFlowControlSwitch(BlockInfo block) {
-            var cases = new List<SwitchCase>(block.NeedFlowLabels.Count + 1);
-            foreach (var target in block.NeedFlowLabels) {
-                cases.Add(Expression.SwitchCase(_labels[target].FlowState, MakeFlowJump(target)));
-            }
-            // Make return flow if needed
-            if (block.NeedReturnFlow) {
-                cases.Add(Expression.SwitchCase(ReturnMarker, MakeFlowReturn()));
-            }
-            return Expression.Switch(_flowVariable, null, null, cases);
+            var cases = block.NeedFlowLabels.Map(
+                target => Expression.SwitchCase(_labels[target].FlowState, MakeFlowJump(target))
+            );
+            return Expression.Switch(_flowVariable, null, new ReadOnlyCollection<SwitchCase>(cases));
         }
 
         // Determine if we can break directly to the label, or if we need to dispatch again
@@ -296,24 +282,6 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        // This method will go away when ReturnStatement goes away
-#pragma warning disable 618
-        private Expression MakeFlowReturn() {
-            Debug.Assert(_returnVariable != null);
-            foreach (var block in _blocks) {
-                if (block.InFinally || block.HasFlow) {
-                    EnsureFlow(block);
-                    block.NeedReturnFlow = true;
-                    // If we need to go through another finally, just jump
-                    // to its flow label
-                    return Expression.Break(block.FlowLabel);
-                }
-            }
-            // Got here without needing flow, emit the real return
-            return Expression.Return(_returnVariable);
-        }
-#pragma warning restore 618
-
         protected override Expression VisitGoto(GotoExpression node) {
             foreach (var block in _blocks) {
                 if (block.LabelDefs.Contains(node.Target)) {
@@ -327,37 +295,14 @@ namespace Microsoft.Scripting.Ast {
                     var assignFlow = Expression.Assign(_flowVariable, Expression.Constant(info.FlowState));
                     var gotoFlow = Expression.Goto(block.FlowLabel);
                     if (info.Variable == null) {
-                        return Expression.Block(node.Annotations, assignFlow, gotoFlow);
+                        return Expression.Block(assignFlow, gotoFlow);
                     }
 
                     var saveValue = Expression.Assign(info.Variable, node.Value);
-                    return Expression.Block(node.Annotations, saveValue, assignFlow, gotoFlow);
+                    return Expression.Block(saveValue, assignFlow, gotoFlow);
                 }
             }
             return base.VisitGoto(node);
-        }
-
-        // TODO: remove when goto/return merge
-        protected override Expression VisitReturn(ReturnStatement node) {
-            foreach (var block in _blocks) {
-                if (block.InFinally || block.HasFlow) {
-                    EnsureFlow(block);
-                    block.NeedReturnFlow = true;
-                    if (_returnVariable == null) {
-                        // TODO: typeof(object) is really ugly, but it will go away
-                        // when we have goto-with-value (because we'll know the exact
-                        // return type)
-                        _returnVariable = Expression.Variable(typeof(object), "$return");
-                    }
-                    return Expression.Block(
-                        node.Annotations,
-                        Expression.Assign(_returnVariable, Utils.Convert(Visit(node.Expression), typeof(object))),
-                        Expression.Assign(_flowVariable, Expression.Constant(ReturnMarker)),
-                        Expression.Goto(block.FlowLabel)
-                    );
-                }
-            }
-            return base.VisitReturn(node);
         }
 
         protected override Expression VisitBlock(BlockExpression node) {

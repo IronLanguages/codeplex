@@ -33,14 +33,13 @@ namespace Microsoft.Scripting.Interpretation {
         private static WeakDictionary<LambdaExpression, MethodInfo> _Delegates;
 
         private static object DoExecute(InterpreterState state, LambdaExpression lambda) {
-            SetSourceLocation(state, lambda);
             object ret = Interpreter.Interpret(state, lambda.Body);
 
             ControlFlow cf = ret as ControlFlow;
             if (cf != null) {
                 return cf.Value;
             } else {
-                return null;
+                return ret;
             }
         }
 
@@ -66,7 +65,7 @@ namespace Microsoft.Scripting.Interpretation {
 
                 var cf = result as ControlFlow;
                 if (cf != null) {
-                    return (cf.Kind == ControlFlowKind.Return) ? cf.Value : null;
+                    return (cf.Kind == ControlFlowKind.Yield) ? cf.Value : null;
                 }
 
                 return result;

@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.ComInterop {
     internal sealed class ComInvokeBinder {
         private readonly ComMethodDesc _methodDesc;
         private readonly Expression _method;        // ComMethodDesc to be called
-        private readonly Expression _dispatch;      // IDispatchObject
+        private readonly Expression _dispatch;      // IDispatch
 
         private readonly IList<ArgumentInfo> _arguments;
         private readonly MetaObject[] _args;
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.ComInterop {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(dispatch, "dispatch");
             ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(ComMethodDesc), method.Type), "method");
-            ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(IDispatchObject), dispatch.Type), "method");
+            ContractUtils.Requires(TypeUtils.AreReferenceAssignable(typeof(IDispatch), dispatch.Type), "dispatch");
 
             _method = method;
             _dispatch = dispatch;
@@ -70,7 +70,7 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         private ParameterExpression DispatchObjectVariable {
-            get { return EnsureVariable(ref _dispatchObject, typeof(IDispatchObject), "dispatchObject"); }
+            get { return EnsureVariable(ref _dispatchObject, typeof(IDispatch), "dispatchObject"); }
         }
 
         private ParameterExpression DispatchPointerVariable {
@@ -224,12 +224,12 @@ namespace Microsoft.Scripting.ComInterop {
                     variantIndex = reverseIndex;
                 }
                 VariantBuilder variantBuilder = _varEnumSelector.VariantBuilders[i];
-                
+
                 Expression marshal = variantBuilder.InitializeArgumentVariant(
                     VariantArray.GetStructField(ParamVariantsVariable, variantIndex),
                     parameters[i + 1]
                 );
-                
+
                 if (marshal != null) {
                     tryStatements.Add(marshal);
                 }
@@ -289,8 +289,7 @@ namespace Microsoft.Scripting.ComInterop {
             VariantBuilder[] variants = _varEnumSelector.VariantBuilders;
 
             Expression[] parametersForUpdates = MakeArgumentExpressions();
-            Expression returnValues = _varEnumSelector.ReturnBuilder.ToExpression(invokeResultObject);
-            tryStatements.Add(Expression.Assign(ReturnValueVariable, returnValues));
+            tryStatements.Add(Expression.Assign(ReturnValueVariable, invokeResultObject));
 
             for (int i = 0, n = variants.Length; i < n; i++) {
                 Expression updateFromReturn = variants[i].UpdateFromReturn(parametersForUpdates[i + 1]);
@@ -308,12 +307,11 @@ namespace Microsoft.Scripting.ComInterop {
             List<Expression> finallyStatements = new List<Expression>();
 
             //
-            // _dispatchObject.ReleaseDispatchPointer(_dispatchPointer);
+            // UnsafeMethods.IUnknownRelease(dispatchPointer);
             //
             finallyStatements.Add(
                 Expression.Call(
-                    DispatchObjectVariable,
-                    typeof(IDispatchObject).GetMethod("ReleaseDispatchPointer"),
+                    typeof(UnsafeMethods).GetMethod("IUnknownRelease"),
                     DispatchPointerVariable
                 )
             );
@@ -322,7 +320,7 @@ namespace Microsoft.Scripting.ComInterop {
             // Clear memory allocated for marshalling
             //
             for (int i = 0, n = _varEnumSelector.VariantBuilders.Length; i < n; i++) {
-                Expression clear = _varEnumSelector.VariantBuilders[i].Clear();                
+                Expression clear = _varEnumSelector.VariantBuilders[i].Clear();
                 if (clear != null) {
                     finallyStatements.Add(clear);
                 }
@@ -455,8 +453,8 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             //
-            // _dispatchObject = ((DispCallable)this).DispatchObject
-            // _dispatchPointer = dispatchObject.GetDispatchPointerInCurrentApartment();
+            // _dispatchObject = _dispatch
+            // _dispatchPointer = Marshal.GetIDispatchForObject(_dispatchObject);
             //
 
             exprs.Add(Expression.Assign(DispatchObjectVariable, _dispatch));
@@ -465,8 +463,8 @@ namespace Microsoft.Scripting.ComInterop {
                 Expression.Assign(
                     DispatchPointerVariable,
                     Expression.Call(
-                        DispatchObjectVariable,
-                        typeof(IDispatchObject).GetMethod("GetDispatchPointerInCurrentApartment")
+                        typeof(Marshal).GetMethod("GetIDispatchForObject"),
+                        DispatchObjectVariable
                     )
                 )
             );

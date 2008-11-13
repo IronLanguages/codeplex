@@ -251,9 +251,7 @@ STDMETHODIMP COutParams::mUShort(USHORT a, USHORT* b)
 
 STDMETHODIMP COutParams::mVariant(VARIANT a, VARIANT* b)
 {
-    *b = a;
-
-	return S_OK;
+	return VariantCopy(b, &a);
 }
 
 STDMETHODIMP COutParams::mVariantBool(VARIANT_BOOL a, VARIANT_BOOL* b)

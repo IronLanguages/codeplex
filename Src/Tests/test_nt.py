@@ -552,7 +552,7 @@ def test_spawnle():
     if is_cli == False:
         return
     
-    ping_cmd = nt.environ["windir"] + "\system32\ping"
+    ping_cmd = get_environ_variable("windir") + "\system32\ping"
     
     #simple sanity check
     nt.spawnle(nt.P_WAIT, ping_cmd , "ping", "/?", {})
@@ -574,7 +574,7 @@ def test_spawnl():
     
     #sanity check
     #CPython nt has no spawnl function
-    pint_cmd = ping_cmd = nt.environ["windir"] + "\system32\ping.exe"
+    pint_cmd = ping_cmd = get_environ_variable("windir") + "\system32\ping.exe"
     nt.spawnl(nt.P_WAIT, ping_cmd , "ping","127.0.0.1")
     nt.spawnl(nt.P_WAIT, ping_cmd , "ping","/?")
     nt.spawnl(nt.P_WAIT, ping_cmd , "ping")
@@ -587,7 +587,7 @@ def test_spawnl():
 # spawnve tests
 def test_spawnv():
     #sanity check
-    ping_cmd = nt.environ["windir"] + "\system32\ping"
+    ping_cmd = get_environ_variable("windir") + "\system32\ping"
     nt.spawnv(nt.P_WAIT, ping_cmd , ["ping"])
     nt.spawnv(nt.P_WAIT, ping_cmd , ["ping","127.0.0.1"])
     nt.spawnv(nt.P_WAIT, ping_cmd, ["ping", "-n", "5", "-w", "5000", "127.0.0.1"])
@@ -597,7 +597,7 @@ def test_spawnv():
 def test_spawnve():
     '''
     '''
-    ping_cmd = nt.environ["windir"] + "\system32\ping"
+    ping_cmd = get_environ_variable("windir") + "\system32\ping"
     
     #simple sanity checks
     nt.spawnve(nt.P_WAIT, ping_cmd, ["ping", "/?"], {})
@@ -630,7 +630,7 @@ def test_waitpid():
     #sanity check
     #the usage of spawnle is a bug in this case that should be fixed in IP,
     #but since this test is for waitpid it's basically OK
-    #ping_cmd = nt.environ["windir"] + "\system32\ping"
+    #ping_cmd = get_environ_variable("windir") + "\system32\ping"
     #pid = nt.spawnle(nt.P_NOWAIT, ping_cmd ,  "-n", "5", "-w", "1000", "127.0.0.1", {})
     #new_pid, exit_stat = nt.waitpid(pid, 0)
     

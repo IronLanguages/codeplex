@@ -82,7 +82,7 @@ namespace IronPython.Runtime.Types {
             Expression call = Ast.Call(
                  typeof(PythonOps).GetMethod("SlotTryGetValue"),
                  codeContext,
-                 Ast.ConvertHelper(AstUtils.WeakConstant(this), typeof(PythonTypeSlot)),
+                 AstUtils.Convert(AstUtils.WeakConstant(this), typeof(PythonTypeSlot)),
                  instance ?? Ast.Constant(null),
                  owner,
                  tmp
@@ -92,15 +92,15 @@ namespace IronPython.Runtime.Types {
                 call = Ast.Condition(
                     call,
                     tmp,
-                    Ast.ConvertHelper(error, typeof(object))
+                    AstUtils.Convert(error, typeof(object))
                 );
             } else {
                 call = Ast.Block(call, tmp);
             }
 
-            return Ast.Scope(
-                call,
-                tmp
+            return Ast.Block(
+                new ParameterExpression[] { tmp },
+                call
             );
         }
 

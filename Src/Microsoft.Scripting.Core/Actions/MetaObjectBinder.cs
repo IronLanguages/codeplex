@@ -21,24 +21,26 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class MetaObjectBinder : CallSiteBinder {
 
         #region Standard Binder Kinds
 
-        internal const int OperationBinderHash = 0x10000000;
-        internal const int UnaryOperationBinderHash = 0x20000000;
-        internal const int BinaryOperationBinderHash = 0x30000000;
-        internal const int GetMemberBinderHash = 0x40000000;
-        internal const int SetMemberBinderHash = 0x50000000;
-        internal const int DeleteMemberBinderHash = 0x60000000;
-        internal const int GetIndexBinderHash = 0x70000000;
-        internal const int SetIndexBinderHash = unchecked((int)0x80000000);
-        internal const int DeleteIndexBinderHash = unchecked((int)0x90000000);
-        internal const int InvokeMemberBinderHash = unchecked((int)0xA0000000);
-        internal const int ConvertBinderHash = unchecked((int)0xB0000000);
-        internal const int CreateInstanceBinderHash = unchecked((int)0xC0000000);
-        internal const int InvokeBinderHash = unchecked((int)0xD0000000);
+        internal const int OperationBinderHash = 0x08000000;
+        internal const int UnaryOperationBinderHash = 0x10000000;
+        internal const int BinaryOperationBinderHash = 0x18000000;
+        internal const int GetMemberBinderHash = 0x20000000;
+        internal const int SetMemberBinderHash = 0x28000000;
+        internal const int DeleteMemberBinderHash = 0x30000000;
+        internal const int GetIndexBinderHash = 0x38000000;
+        internal const int SetIndexBinderHash = 0x40000000;
+        internal const int DeleteIndexBinderHash = 0x48000000;
+        internal const int InvokeMemberBinderHash = 0x50000000;
+        internal const int ConvertBinderHash = 0x58000000;
+        internal const int CreateInstanceBinderHash = 0x60000000;
+        internal const int InvokeBinderHash = 0x68000000;
+        internal const int OperationOnMemberBinderHash = 0x70000000;
+        internal const int OperationOnIndexBinderHash = 0x78000000;
 
         #endregion
 
@@ -142,14 +144,16 @@ namespace Microsoft.Scripting.Actions {
                     // block could have a throw which we need to run through to avoid 
                     // trying to convert it
                     BlockExpression block = (BlockExpression)body;
-                    if (block.Expressions.Count > 0) {
-                        Expression[] nodes = block.Expressions.ToArray();
-                        nodes[nodes.Length - 1] = AddReturn(nodes[nodes.Length - 1], @return);
 
-                        return Expression.Block(block.Variables, nodes);
+                    int count = block.ExpressionCount;
+                    Expression[] nodes = new Expression[count];
+
+                    for (int i = 0; i < nodes.Length - 1; i++) {
+                        nodes[i] = block.GetExpression(i);
                     }
+                    nodes[nodes.Length - 1] = AddReturn(block.GetExpression(count - 1), @return);
 
-                    goto default;
+                    return Expression.Block(block.Variables, nodes);
                 default:
                     return Expression.Return(@return, Helpers.Convert(body, @return.Type));
             }

@@ -17,12 +17,12 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: Can it be made internal?
-    public class ComTypeClassDesc : ComTypeDesc, IDynamicObject {
+
+    internal sealed class ComTypeClassDesc : ComTypeDesc {
         LinkedList<string> _itfs; // implemented interfaces
         LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
 
@@ -71,14 +71,6 @@ namespace Microsoft.Scripting.ComInterop {
             else
                 return _itfs.Contains(itfName);
         }
-
-        #region IDynamicObject Members
-
-        public MetaObject GetMetaObject(Expression parameter) {
-            return new ComClassMetaObject(parameter, this);
-        }
-
-        #endregion
     }
 }
 

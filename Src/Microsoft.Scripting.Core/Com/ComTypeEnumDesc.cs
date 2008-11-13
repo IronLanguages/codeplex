@@ -17,13 +17,12 @@ using System; using Microsoft;
 
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Globalization;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: Can it be made internal?
-    public sealed class ComTypeEnumDesc : ComTypeDesc, IDynamicObject {
+    internal sealed class ComTypeEnumDesc : ComTypeDesc {
         readonly string[] _memberNames;
         readonly object[] _memberValues;
 
@@ -63,15 +62,6 @@ namespace Microsoft.Scripting.ComInterop {
             _memberNames = memberNames;
             _memberValues = memberValues;
         }
-
-
-        #region IDynamicObject Members
-
-        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
-            return new TypeEnumMetaObject(this, parameter);
-        }
-
-        #endregion
 
         public object GetValue(string enumValueName) {
             for (int i = 0; i < _memberNames.Length; i++) {

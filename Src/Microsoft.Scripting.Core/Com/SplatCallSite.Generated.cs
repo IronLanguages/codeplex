@@ -18,7 +18,7 @@ using Microsoft.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    public sealed partial class SplatCallSite {
+    internal sealed partial class SplatCallSite {
         // TODO: is it worth having the generated helpers?
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args")]

@@ -56,11 +56,13 @@ namespace IronPython.Compiler.Ast {
                 );
 
             // 2. Create body from _item:   list.Append(_item)
-            MSAst.Expression body = AstUtils.Call(
-                AstGenerator.GetHelperMethod("ListAddForComprehension"),
-                _item.Span,
-                list,
-                ag.TransformAsObject(_item)
+            MSAst.Expression body = ag.AddDebugInfo(
+                Ast.Call(
+                    AstGenerator.GetHelperMethod("ListAddForComprehension"),
+                    list,
+                    ag.TransformAsObject(_item)
+                ),
+                _item.Span
             );
 
             // 3. Transform all iterators in reverse order, building the true body:

@@ -20,7 +20,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     /// <summary>
     /// Represents a dynamically assigned class.  Expando objects which share the same 
     /// members will share the same class.  Classes are dynamically assigned as the

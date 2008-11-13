@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
@@ -29,7 +29,7 @@ namespace Microsoft.Linq.Expressions {
         /// Walks all of the nodes of a tree and puts all of the expressions into
         /// a list.
         /// </summary>
-        class FlatTreeWalker : ExpressionTreeVisitor {
+        class FlatTreeWalker : ExpressionVisitor {
             public List<Expression> Expressions = new List<Expression>();
             public Dictionary<ConstantExpression, ConstantExpression> _templated;
 
@@ -87,7 +87,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitConstant(node);
             }
 
-            protected internal override Expression VisitEmpty(EmptyExpression node) {
+            protected internal override Expression VisitEmpty(DefaultExpression node) {
                 Expressions.Add(node);
                 return base.VisitEmpty(node);
             }
@@ -142,11 +142,6 @@ namespace Microsoft.Linq.Expressions {
             protected internal override Expression VisitParameter(ParameterExpression node) {
                 Expressions.Add(node);
                 return base.VisitParameter(node);
-            }
-
-            protected internal override Expression VisitReturn(ReturnStatement node) {
-                Expressions.Add(node);
-                return base.VisitReturn(node);
             }
 
             protected internal override Expression VisitSwitch(SwitchExpression node) {
@@ -373,6 +368,7 @@ namespace Microsoft.Linq.Expressions {
                     }
                     break;
                 case ExpressionType.TypeIs:
+                case ExpressionType.TypeEqual:
                     // check type
                     if (!Compare((TypeBinaryExpression)currentLeft, (TypeBinaryExpression)currentRight)) {
                         return false;
@@ -402,7 +398,6 @@ namespace Microsoft.Linq.Expressions {
                     }
                     break;
                 case ExpressionType.Lambda:
-                case ExpressionType.ReturnStatement:
                 case ExpressionType.Assign:
                 case ExpressionType.Goto:
                 case ExpressionType.Throw:

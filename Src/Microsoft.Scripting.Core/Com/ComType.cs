@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    public enum ComType {
+    internal enum ComType {
         Class,
         Enum,
         Interface

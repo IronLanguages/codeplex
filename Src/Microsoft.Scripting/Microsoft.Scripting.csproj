@@ -131,6 +131,7 @@
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
     <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.Remoting" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
@@ -163,8 +164,12 @@
     <Compile Include="Actions\Calls\ReturnReferenceArgBuilder.cs" />
     <Compile Include="Actions\Calls\SimpleArgBuilder.cs" />
     <Compile Include="Actions\Calls\SiteLocalStorageBuilder.cs" />
+    <Compile Include="Actions\Interceptor.cs" />
+    <Compile Include="Actions\DynamicSiteHelper.cs" />
     <Compile Include="Actions\ExtensionBinaryOperationBinder.cs" />
     <Compile Include="Actions\ExtensionUnaryOperationBinder.cs" />
+    <Compile Include="Actions\OperationBinder.cs" />
+    <Compile Include="Actions\OperationMetaObject.cs" />
     <Compile Include="ArgumentTypeException.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Ast\FinallyFlowControlExpression.cs" />
@@ -173,13 +178,37 @@
     <Compile Include="Ast\NewArrayExpression.cs" />
     <Compile Include="Ast\NewExpression.cs" />
     <Compile Include="Ast\UnaryExpression.cs" />
+    <Compile Include="ComInterop\ComClassMetaObject.cs" />
+    <Compile Include="ComInterop\ComEventDesc.cs" />
+    <Compile Include="ComInterop\ComHresults.cs" />
+    <Compile Include="ComInterop\ComInterop.cs" />
+    <Compile Include="ComInterop\ComMethodDesc.cs" />
+    <Compile Include="ComInterop\ComParamDesc.cs" />
+    <Compile Include="ComInterop\ComRuntimeHelpers.cs" />
+    <Compile Include="ComInterop\ComType.cs" />
+    <Compile Include="ComInterop\ComTypeClassDesc.cs" />
+    <Compile Include="ComInterop\ComTypeDesc.cs" />
+    <Compile Include="ComInterop\ComTypeEnumDesc.cs" />
+    <Compile Include="ComInterop\ComTypeLibDesc.cs" />
+    <Compile Include="ComInterop\ComTypeLibInfo.cs" />
+    <Compile Include="ComInterop\ComTypeLibMemberDesc.cs" />
+    <Compile Include="ComInterop\TypeEnumMetaObject.cs" />
+    <Compile Include="ComInterop\TypeLibInfoMetaObject.cs" />
+    <Compile Include="ComInterop\TypeLibMetaObject.cs" />
+    <Compile Include="ComInterop\VarEnumSelector.cs" />
     <Compile Include="Generation\StaticLambdaRewriter.cs" />
+    <Compile Include="Hosting\ErrorSinkProxyListener.cs" />
+    <Compile Include="Hosting\Shell\ICommandDispatcher.cs" />
+    <Compile Include="Hosting\Shell\Remote\ConsoleRestartManager.cs" />
+    <Compile Include="Hosting\Shell\Remote\RemoteCommandDispatcher.cs" />
+    <Compile Include="Hosting\Shell\Remote\RemoteConsoleCommandLine.cs" />
+    <Compile Include="Hosting\Shell\Remote\RemoteConsoleHost.cs" />
+    <Compile Include="Hosting\Shell\Remote\RemoteRuntimeServer.cs" />
     <Compile Include="Runtime\Generator.cs" />
     <Compile Include="Ast\GeneratorExpression.cs" />
     <Compile Include="Ast\GeneratorRewriter.cs" />
     <Compile Include="Ast\SymbolConstantExpression.cs" />
     <Compile Include="Actions\Calls\Candidate.cs" />
-    <Compile Include="Ast\YieldAnnotation.cs" />
     <Compile Include="Ast\YieldExpression.cs" />
     <Compile Include="Generation\DelegateHelpers.cs" />
     <Compile Include="Generation\DelegateHelpers.Generated.cs" />
@@ -229,7 +258,6 @@
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\Block.cs" />
     <Compile Include="Ast\BreakStatement.cs" />
-    <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\ConditionalExpression.cs" />
     <Compile Include="Ast\ConstantExpression.cs" />
     <Compile Include="Ast\ContinueStatement.cs" />
@@ -241,7 +269,6 @@
     <Compile Include="Ast\LambdaParameterRewriter.cs" />
     <Compile Include="Ast\LoopStatement.cs" />
     <Compile Include="Ast\MethodCallExpression.cs" />
-    <Compile Include="Ast\ReturnStatement.cs" />
     <Compile Include="Ast\SwitchBuilder.cs" />
     <Compile Include="Ast\ThrowStatement.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />

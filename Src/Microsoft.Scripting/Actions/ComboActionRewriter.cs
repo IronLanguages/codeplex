@@ -17,7 +17,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Actions {
     /// turn them into a single combo dynamic site.  The combo dynamic site will then run the
     /// individual meta binders and produce the resulting code in a single dynamic site.
     /// </summary>
-    public class ComboActionRewriter : ExpressionTreeVisitor {
+    public class ComboActionRewriter : ExpressionVisitor {
         /// <summary>
         /// A reducible node which we use to generate the combo dynamic sites.  Each time we encounter
         /// a dynamic site we replace it with a ComboDynamicSiteExpression.  When a child of a dynamic site

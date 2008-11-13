@@ -21,7 +21,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Types;
-using ComObject = Microsoft.Scripting.ComInterop.ComObject;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {
@@ -34,37 +33,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static string __str__(object/*!*/ self) {
-            if (self is ComObject) {
-                return __str__inner((ComObject)self);
-            }
-
-            if (IsComObject(self)) {
-                return __str__inner(ComObject.ObjectToComObject(self));
-            }
-
-            return __str__inner(self);
-        }
-
-        public static string/*!*/ __repr__(object/*!*/ self) {
-            if (self is ComObject) {
-                return __repr__inner((ComObject)self);
-            }
-
-            if (IsComObject(self)) {
-                return __repr__inner(ComObject.ObjectToComObject(self));
-            }
-
-            return __repr__inner(self);
-        }
-
-        private static string __str__inner(object/*!*/ self) {
             return self.ToString();
         }
 
-        private static string/*!*/ __repr__inner(object/*!*/ self) {
+        public static string/*!*/ __repr__(object/*!*/ self) {
             return String.Format("<{0} object at {1}>",
                 self.ToString(),
-                PythonOps.HexId(self));
+                PythonOps.HexId(self)
+            );
         }
     }
 }

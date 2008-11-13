@@ -29,13 +29,22 @@ Assumptions:
 #------------------------------------------------------------------------------
 #--IMPORTS
 
-from sys import exit
-from sys import executable
-from sys import path
+import subprocess
+import sys
+import os
 
-from os  import system
-from os  import listdir
-from os  import getcwd
+#Find the location of the 'iptest' package
+mroot = [os.environ[x] for x in os.environ.keys() if x.lower() == "merlin_root"]
+if len(mroot)==0:
+    rowan_bin = os.getcwd() + r"\..\..\bin\debug\lib"
+else:
+    rowan_bin = [os.environ[x] for x in os.environ.keys() if x.lower() == "rowan_bin"]
+    if len(rowan_bin)==0:
+        rowan_bin = mroot[0] + r"\bin\debug\lib"
+    else:
+        rowan_bin = rowan_bin[0] + r"\lib"
+os.environ.update({ "pythonpath" : sys.exec_prefix + r"\lib;" + rowan_bin})
+
 
 #------------------------------------------------------------------------------
 #--GLOBALS
@@ -68,7 +77,7 @@ PKG_LIST = [ "modules"]
 #------------------------------------------------------------------------------
 
 #get a list of all test_*.py files in the CWD
-test_list = [ x.lower() for x in listdir(getcwd()) if x.startswith("test_") and x.endswith(".py") ]
+test_list = [ x.lower() for x in os.listdir(os.getcwd()) if x.startswith("test_") and x.endswith(".py") ]
 if DEBUG:
     print "test_list:", test_list
     print
@@ -90,7 +99,9 @@ for test_name in test_list:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = system(executable + " " + test_name)
+    ec = subprocess.call(sys.executable + " " + test_name,
+                         env=os.environ,
+                         shell=True)
     
     #if it fails, add it to the list
     if ec!=0:
@@ -98,12 +109,13 @@ for test_name in test_list:
     print
 
 #------------------------------------------------------------------------------
-path.append(getcwd())
+sys.path.append(os.getcwd())
 for test_name in PKG_LIST:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = system(executable + " -m " + test_name)
+    ec = subprocess.call(sys.executable + " -m " + test_name,
+                         env=os.environ)
     
     #if it fails, add it to the list
     if ec!=0:
@@ -116,9 +128,9 @@ print
 print "#######################################################################"
 if  len(failed_tests)==0:
     print "Everything passed!"
-    exit(0)
+    sys.exit(0)
 else:
     print "The following tests failed:"
     for test_name in failed_tests: print test_name
-    exit(1)
+    sys.exit(1)
     

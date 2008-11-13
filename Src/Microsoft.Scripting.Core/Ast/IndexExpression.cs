@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
@@ -25,17 +25,15 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents property or array indexing
     /// </summary>
-    public sealed class IndexExpression : Expression {
+    public sealed class IndexExpression : Expression, IArgumentProvider {
         private readonly Expression _instance;
         private readonly PropertyInfo _indexer;
-        private readonly ReadOnlyCollection<Expression> _arguments;
+        private IList<Expression> _arguments;
 
         internal IndexExpression(
             Expression instance,
             PropertyInfo indexer,
-            Annotations annotations,
-            ReadOnlyCollection<Expression> arguments)
-            : base(annotations) {
+            IList<Expression> arguments) {
 
             if (indexer == null) {
                 Debug.Assert(instance != null && instance.Type.IsArray);
@@ -71,10 +69,20 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public ReadOnlyCollection<Expression> Arguments {
-            get { return _arguments; }
+            get { return ReturnReadOnly(ref _arguments); }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        Expression IArgumentProvider.GetArgument(int index) {
+            return _arguments[index];
+        }
+
+        int IArgumentProvider.ArgumentCount {
+            get {
+                return _arguments.Count;
+            }
+        }
+
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitIndex(this);
         }
     }
@@ -85,29 +93,21 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     public partial class Expression {
 
-        public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, Annotations annotations, IEnumerable<Expression> arguments) {
+        public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) {
             if (indexer != null) {
-                return Property(instance, indexer, annotations, arguments);
+                return Property(instance, indexer, arguments);
             } else {
-                return ArrayAccess(instance, annotations, arguments);
+                return ArrayAccess(instance, arguments);
             }
         }
 
         #region ArrayAccess
 
         public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) {
-            return ArrayAccess(array, null, (IEnumerable<Expression>)indexes);
+            return ArrayAccess(array, (IEnumerable<Expression>)indexes);
         }
 
         public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) {
-            return ArrayAccess(array, null, indexes);
-        }
-
-        public static IndexExpression ArrayAccess(Expression array, Annotations annotations, params Expression[] indexes) {
-            return ArrayAccess(array, annotations, (IEnumerable<Expression>)indexes);
-        }
-
-        public static IndexExpression ArrayAccess(Expression array, Annotations annotations, IEnumerable<Expression> indexes) {
             RequiresCanRead(array, "array");
 
             Type arrayType = array.Type;
@@ -127,7 +127,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return new IndexExpression(array, null, annotations, indexList);
+            return new IndexExpression(array, null, indexList);
         }
 
         #endregion
@@ -135,21 +135,13 @@ namespace Microsoft.Linq.Expressions {
         #region Property
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) {
-            return Property(instance, indexer, null, (IEnumerable<Expression>)arguments);
+            return Property(instance, indexer, (IEnumerable<Expression>)arguments);
         }
-        
+
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) {
-            return Property(instance, indexer, null, arguments);
-        }
-
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, Annotations annotations, params Expression[] arguments) {
-            return Property(instance, indexer, annotations, (IEnumerable<Expression>)arguments);
-        }
-
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, Annotations annotations, IEnumerable<Expression> arguments) {
             var argList = arguments.ToReadOnly();
             ValidateIndexedProperty(instance, indexer, ref argList);
-            return new IndexExpression(instance, indexer, annotations, argList);
+            return new IndexExpression(instance, indexer, argList);
         }
 
         // CTS places no restrictions on properties (see ECMA-335 8.11.3),

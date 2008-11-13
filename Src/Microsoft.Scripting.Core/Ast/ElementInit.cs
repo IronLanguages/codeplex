@@ -23,8 +23,8 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
     // TODO: If annotations is added here, make sure MemberInitExpression.Reduce
-    // methods and ExpressionTreeVisitor.Visit methods preserve it
-    public sealed class ElementInit {
+    // methods and ExpressionVisitor.Visit methods preserve it
+    public sealed class ElementInit : IArgumentProvider {
         private MethodInfo _addMethod;
         private ReadOnlyCollection<Expression> _arguments;
 
@@ -37,6 +37,16 @@ namespace Microsoft.Linq.Expressions {
         }
         public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
+        }
+
+        Expression IArgumentProvider.GetArgument(int index) {
+            return _arguments[index];
+        }
+
+        int IArgumentProvider.ArgumentCount {
+            get {
+                return _arguments.Count;
+            }
         }
 
         public override string ToString() {

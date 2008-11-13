@@ -59,21 +59,20 @@ namespace Microsoft.Scripting.ComInterop {
         #region IDisposable Members
 
         public void Dispose() {
-            Dispose(true);
+            DisposeAll();
             GC.SuppressFinalize(this);
         }
 
         #endregion
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "disposing")]
-        private void Dispose(bool disposing) {
+        private void DisposeAll() {
             foreach (ComEventSink sink in this) {
                 sink.Dispose();
             }
         }
 
         ~ComEventSinksContainer() {
-            Dispose(false);
+            DisposeAll();
         }
     }
 }

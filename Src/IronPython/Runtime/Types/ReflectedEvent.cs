@@ -233,7 +233,7 @@ namespace IronPython.Runtime.Types {
                     stubs = null;
                 } else {
                     // create signature converting stub:
-                    handler = BinderOps.GetDelegate(context, func, _event.Info.EventHandlerType);
+                    handler = BinderOps.GetDelegate(context.LanguageContext, func, _event.Info.EventHandlerType);
                     stubs = _event.GetStubList(_instance);
                 }
 

@@ -60,7 +60,6 @@ namespace Microsoft.Scripting.Generation {
                     Expression.Call(typeof(ScriptingRuntimeHelpers).GetMethod("CreateTopLevelCodeContext"), scopeParameter, languageParameter)
                 ),
                 name,
-                lambda.Annotations,
                 new[] { scopeParameter, languageParameter }
             );
         }

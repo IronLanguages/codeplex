@@ -20,8 +20,9 @@ using Microsoft.Linq.Expressions;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("use Expression.Empty instead")]
-        public static EmptyExpression Empty(SourceSpan span) {
-            return Expression.Empty(Expression.Annotate(span));
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
+        public static DefaultExpression Empty(SourceSpan span) {
+            return Expression.Empty();
         }
     }
 }

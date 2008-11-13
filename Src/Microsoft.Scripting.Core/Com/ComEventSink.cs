@@ -21,7 +21,7 @@ using System.Globalization;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.ComInterop {
     /// ComEventSinksContainer finalizer. Notice that lifetime of ComEventSinksContainer
     /// is bound to the lifetime of the RCW. 
     /// </summary>
-    public class ComEventSink : MarshalByRefObject, IReflect, IDisposable {
+    internal sealed class ComEventSink : MarshalByRefObject, IReflect, IDisposable {
 
         #region private fields
 
@@ -287,18 +287,17 @@ namespace Microsoft.Scripting.ComInterop {
         #region IDisposable
 
         public void Dispose() {
-            Dispose(true);
+            DisposeAll();
             GC.SuppressFinalize(this);
         }
 
         #endregion
 
         ~ComEventSink() {
-            Dispose(false);
+            DisposeAll();
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "disposing")]
-        private void Dispose(bool disposing) {
+        private void DisposeAll() {
             if (_connectionPoint == null) {
                 return;
             }

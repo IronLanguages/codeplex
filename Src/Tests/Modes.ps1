@@ -378,8 +378,8 @@ function saveassemblies-helper
 			
 	hello-helper $dlrexe "-X:SaveAssemblies" $args[1..$args.Length]
 	
-	expect-files(("Snippets.dll"))
-	not-expect-files(("Snippets.pdb"))
+	expect-files(("Snippets.scripting.dll"))
+	not-expect-files(("Snippets.scripting.pdb"))
 	
 	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp\*
 	

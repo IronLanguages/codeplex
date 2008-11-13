@@ -25,8 +25,7 @@ namespace Microsoft.Linq.Expressions {
         private readonly NewExpression _newExpression;
         private readonly ReadOnlyCollection<ElementInit> _initializers;
 
-        internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers, Annotations annotations)
-            : base(annotations) {
+        internal ListInitExpression(NewExpression newExpression, ReadOnlyCollection<ElementInit> initializers) {
             _newExpression = newExpression;
             _initializers = initializers;
         }
@@ -52,12 +51,12 @@ namespace Microsoft.Linq.Expressions {
             get { return _initializers; }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitListInit(this);
         }
 
         public override Expression Reduce() {
-            return MemberInitExpression.ReduceListInit(_newExpression, _initializers, true, Annotations);
+            return MemberInitExpression.ReduceListInit(_newExpression, _initializers, true);
         }
     }
 
@@ -108,21 +107,17 @@ namespace Microsoft.Linq.Expressions {
         }
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) {
-            return ListInit(newExpression, null, (IEnumerable<ElementInit>)initializers);
+            return ListInit(newExpression, (IEnumerable<ElementInit>)initializers);
         }
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) {
-            return ListInit(newExpression, null, initializers);
-        }
-
-        public static ListInitExpression ListInit(NewExpression newExpression, Annotations annotations, IEnumerable<ElementInit> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ReadOnlyCollection<ElementInit> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
             ValidateListInitArgs(newExpression.Type, initializerlist);
-            return new ListInitExpression(newExpression, initializerlist, annotations);
+            return new ListInitExpression(newExpression, initializerlist);
         }
     }
 }

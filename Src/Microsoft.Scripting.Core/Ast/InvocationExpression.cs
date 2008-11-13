@@ -16,19 +16,18 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
-    public sealed class InvocationExpression : Expression {
-        private readonly ReadOnlyCollection<Expression> _arguments;
+    public sealed class InvocationExpression : Expression, IArgumentProvider {
+        private IList<Expression> _arguments;
         private readonly Expression _lambda;
         private readonly Type _returnType;
 
-        internal InvocationExpression(Expression lambda, Annotations annotations, ReadOnlyCollection<Expression> arguments, Type returnType)
-            : base(annotations) {
+        internal InvocationExpression(Expression lambda, IList<Expression> arguments, Type returnType) {
 
             _lambda = lambda;
             _arguments = arguments;
@@ -48,10 +47,20 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public ReadOnlyCollection<Expression> Arguments {
-            get { return _arguments; }
+            get { return ReturnReadOnly(ref _arguments); }
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        Expression IArgumentProvider.GetArgument(int index) {
+            return _arguments[index];
+        }
+
+        int IArgumentProvider.ArgumentCount {
+            get {
+                return _arguments.Count;
+            }
+        }
+
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitInvocation(this);
         }
     }
@@ -68,11 +77,6 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> arguments) {
-            return Invoke(expression, Annotations.Empty, arguments);
-        }
-
-        //CONFORMING
-        public static InvocationExpression Invoke(Expression expression, Annotations annotations, IEnumerable<Expression> arguments) {
             RequiresCanRead(expression, "expression");
 
             Type delegateType = expression.Type;
@@ -89,7 +93,7 @@ namespace Microsoft.Linq.Expressions {
             var mi = delegateType.GetMethod("Invoke");
             var args = arguments.ToReadOnly();
             ValidateArgumentTypes(mi, ExpressionType.Invoke, ref args);
-            return new InvocationExpression(expression, annotations, args, mi.ReturnType);
+            return new InvocationExpression(expression, args, mi.ReturnType);
         }
     }
 }

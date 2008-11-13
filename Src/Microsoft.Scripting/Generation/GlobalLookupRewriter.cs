@@ -39,7 +39,6 @@ namespace Microsoft.Scripting.Generation {
             return AstUtils.Convert(
                 Expression.Call(
                     typeof(ScriptingRuntimeHelpers).GetMethod(node.IsLocal ? "LookupName" : "LookupGlobalName"),
-                    node.Annotations,
                     new Expression[]{
                         Context,
                         AstUtils.Constant(SymbolTable.StringToId(node.Name))
@@ -56,7 +55,6 @@ namespace Microsoft.Scripting.Generation {
             return AstUtils.Convert(
                 Expression.Call(
                     typeof(ScriptingRuntimeHelpers).GetMethod(lvalue.IsLocal ? "SetName" : "SetGlobalName"),
-                    lvalue.Annotations,
                     new Expression[]{
                         Context,
                         AstUtils.Constant(SymbolTable.StringToId(lvalue.Name)),

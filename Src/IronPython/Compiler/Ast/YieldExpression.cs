@@ -70,12 +70,14 @@ namespace IronPython.Compiler.Ast {
             //  }
 
             return Ast.Block(
-                AstUtils.YieldReturn(
-                    ag.GeneratorLabel,
-                    Ast.ConvertHelper(ag.Transform(_expression), typeof(object)),
-                    Ast.Annotate(Span)
+                ag.AddDebugInfo(
+                    AstUtils.YieldReturn(
+                        ag.GeneratorLabel,
+                        AstUtils.Convert(ag.Transform(_expression), typeof(object))
+                    ),
+                    Span
                 ),
-                CreateCheckThrowExpression(ag, this.Span) // emits ($gen.CheckThrowable())
+                CreateCheckThrowExpression(ag, Span) // emits ($gen.CheckThrowable())
             );
         }
 

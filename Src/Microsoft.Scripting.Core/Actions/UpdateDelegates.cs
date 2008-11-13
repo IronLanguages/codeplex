@@ -22,7 +22,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     internal static partial class UpdateDelegates {
         internal static T MakeUpdateDelegate<T>() where T : class {
             Type target = typeof(T);
@@ -149,7 +149,7 @@ namespace Microsoft.Scripting.Actions {
                         Expression.Lambda<T>(
                             Expression.Block(
                                 Expression.Assign(match, Expression.Constant(false)),
-                                Expression.Empty(@return.Type)
+                                Expression.Default(@return.Type)
                             ),
                             new ReadOnlyCollection<ParameterExpression>(@params)
                         )
@@ -238,8 +238,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression.Break(@break)
             );
 
-            // TODO: use PostIncrement unary once available
-            var incrementIndex = Expression.Assign(index, Expression.Add(index, Expression.Constant(1)));
+            var incrementIndex = Expression.PreIncrementAssign(index);
 
             body.Add(
                 IfThen(
@@ -403,7 +402,7 @@ namespace Microsoft.Scripting.Actions {
                 )
             );
 
-            body.Add(Expression.Empty(@return.Type));
+            body.Add(Expression.Default(@return.Type));
             
             var lambda = Expression.Lambda<T>(
                 Expression.Label(
@@ -416,11 +415,13 @@ namespace Microsoft.Scripting.Actions {
                 // TODO: fix the name '_stub_', for now it's the easy way to
                 // get languages to skip this frame in backtraces
                 "_stub_",
-                null,
                 new ReadOnlyCollection<ParameterExpression>(@params)
             );
 
-            return LambdaCompiler.CompileLambda<T>(lambda, false);
+            // Need to compile with forceDynamic because T could be invisible,
+            // or one of the argument types could be invisible
+            MethodInfo method;
+            return LambdaCompiler.CompileLambda<T>(lambda, true, out method);
         }
 
         // TODO: is this general enough that it should be on Expression?

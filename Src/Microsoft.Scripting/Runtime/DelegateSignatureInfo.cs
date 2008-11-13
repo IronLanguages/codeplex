@@ -20,9 +20,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Text;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -37,11 +38,11 @@ namespace Microsoft.Scripting.Runtime {
 
         internal static readonly object TargetPlaceHolder = new object();
 
-        internal DelegateSignatureInfo(CodeContext context, Type returnType, ParameterInfo[] parameters) {
+        internal DelegateSignatureInfo(LanguageContext context, Type returnType, ParameterInfo[] parameters) {
             Assert.NotNull(context, returnType);
             Assert.NotNullItems(parameters);
 
-            _context = context.LanguageContext;
+            _context = context;
             _parameters = parameters;
             _returnType = returnType;
         }

@@ -17,13 +17,15 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 
 using Ast = Microsoft.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
 
@@ -43,7 +45,7 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
@@ -77,7 +79,7 @@ namespace IronPython.Runtime.Binding {
                     Restrictions.GetExpressionRestriction(
                         Ast.Equal(
                             GetSelfExpression(self),
-                            Ast.Null()
+                            Ast.Constant(null)
                         )
                     )
                 );
@@ -88,7 +90,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("MethodCheckSelf"),
                             self.Expression,
-                            Ast.Null()
+                            Ast.Constant(null)
                         ),
                         restrictions
                     );
@@ -127,7 +129,7 @@ namespace IronPython.Runtime.Binding {
                     Restrictions.GetExpressionRestriction(
                         Ast.NotEqual(
                             GetSelfExpression(self),
-                            Ast.Null()
+                            Ast.Constant(null)
                         )
                     )
                 );
@@ -237,14 +239,14 @@ namespace IronPython.Runtime.Binding {
 
             Expression res;
             if (firstArgKind == ArgumentType.Simple || firstArgKind == ArgumentType.Instance) {
-                res = CheckSelf(Ast.ConvertHelper(Expression, typeof(Method)), args[0].Expression);
+                res = CheckSelf(AstUtils.Convert(Expression, typeof(Method)), args[0].Expression);
             } else if (firstArgKind != ArgumentType.List) {
-                res = CheckSelf(Ast.ConvertHelper(Expression, typeof(Method)), Ast.Null());
+                res = CheckSelf(AstUtils.Convert(Expression, typeof(Method)), Ast.Constant(null));
             } else {
                 // list, check arg[0] and then return original list.  If not a list,
                 // or we have no items, then check against null & throw.
                 res = CheckSelf(
-                    Ast.ConvertHelper(Expression, typeof(Method)),
+                    AstUtils.Convert(Expression, typeof(Method)),
                     Ast.Condition(
                         Ast.AndAlso(
                             Ast.TypeIs(args[0].Expression, typeof(IList<object>)),
@@ -261,7 +263,7 @@ namespace IronPython.Runtime.Binding {
                             typeof(IList<object>).GetMethod("get_Item"),
                             Ast.Constant(0)
                         ),
-                        Ast.Null()
+                        Ast.Constant(null)
                     )
                 );
             }
@@ -273,7 +275,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MethodCheckSelf"),
                 method,
-                Ast.ConvertHelper(inst, typeof(object))
+                AstUtils.Convert(inst, typeof(object))
             );
         }
 

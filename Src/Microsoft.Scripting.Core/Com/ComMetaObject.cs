@@ -16,8 +16,9 @@ using System; using Microsoft;
 #if !SILVERLIGHT
 
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class ComMetaObject : MetaObject {
@@ -27,7 +28,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         #region MetaObject
 
-        public override MetaObject BindInvokeMemberl(InvokeMemberBinder binder, MetaObject[] args) {
+        public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.Defer(args.AddFirst(WrapSelf()));
         }
@@ -57,25 +58,45 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.Defer(args.AddFirst(WrapSelf()));
         }
 
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public override MetaObject BindOperation(OperationBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(args.AddFirst(WrapSelf()));
-        }
-
         public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.Defer(WrapSelf(), value);
+        }
+
+        public override IEnumerable<string> GetDynamicMemberNames() {
+            return ComObject.ObjectToComObject(Value).MemberNames;
+        }
+        
+        public override MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(WrapSelf(), arg);
+        }
+
+        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(WrapSelf(), args);
+        }
+
+        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(WrapSelf(), args);
+        }
+
+        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(WrapSelf(), args);
+        }
+
+        public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.Defer(WrapSelf());
         }
 
         #endregion
 
         private MetaObject WrapSelf() {
             return new MetaObject(
-                Expression.Call(
-                    typeof(ComObject).GetMethod("ObjectToComObject"),
-                    Helpers.Convert(Expression, typeof(object))
-                ),
+                ComObject.RcwToComObject(Expression),
                 Restrictions.GetExpressionRestriction(
                     Expression.AndAlso(
                         Expression.NotEqual(
@@ -93,13 +114,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal static MetaObject GetComMetaObject(Expression expression, object arg) {
             return new ComMetaObject(expression, Restrictions.Empty, arg);
-        }
-
-        private static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
-
-        internal static bool IsComObject(object obj) {
-            // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust
-            return obj != null && ComObjectType.IsAssignableFrom(obj.GetType());
         }
     }
 }

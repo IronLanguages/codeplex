@@ -74,7 +74,7 @@ namespace IronPython.Compiler.Ast {
 
             // 2. right_temp = right
             statements.Add(
-                AstGenerator.MakeAssignment(right_temp, right)
+                ag.MakeAssignment(right_temp, right)
                 );
 
             // Do left to right assignment
@@ -93,9 +93,10 @@ namespace IronPython.Compiler.Ast {
             }
 
             // 4. Create and return the resulting suite
-            return AstUtils.Block(
-                Span,
-                statements.ToArray()
+            statements.Add(Ast.Empty());
+            return ag.AddDebugInfo(
+                Ast.Block(statements.ToArray()),
+                Span
             );
         }
 
@@ -111,7 +112,7 @@ namespace IronPython.Compiler.Ast {
                 // a, b = 1, 2, or [a,b] = 1,2 - not something like a, b = range(2)
                 // we can do a fast parallel assignment
                 MSAst.ParameterExpression[] tmps = new MSAst.ParameterExpression[cnt];
-                MSAst.Expression[] body = new MSAst.Expression[cnt * 2];
+                MSAst.Expression[] body = new MSAst.Expression[cnt * 2 + 1];
 
                 // generate the body, the 1st n are the temporary assigns, the
                 // last n are the assignments to the left hand side
@@ -141,10 +142,8 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // 4. Create and return the resulting suite
-                return AstUtils.Block(
-                    Span,
-                    body
-                );
+                body[cnt * 2] = Ast.Empty();
+                return ag.AddDebugInfo(Ast.Block(body), Span);
             }
 
             return _left[0].TransformSet(ag, Span, ag.Transform(_right), Operators.None);

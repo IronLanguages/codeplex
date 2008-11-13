@@ -17,14 +17,12 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     // Represents default(T) in the tree
-    // TODO: rename to DefaultExpression
-    public sealed class EmptyExpression : Expression {
-        internal static readonly EmptyExpression VoidInstance = new EmptyExpression(typeof(void), Annotations.Empty);
+    public sealed class DefaultExpression : Expression {
+        internal static readonly DefaultExpression VoidInstance = new DefaultExpression(typeof(void));
 
         private readonly Type _type;
 
-        internal EmptyExpression(Type type, Annotations annotations)
-            : base(annotations) {
+        internal DefaultExpression(Type type) {
             _type = type;
         }
 
@@ -36,25 +34,21 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionType.Default;
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitEmpty(this);
         }
     }
 
     public partial class Expression {
-        public static EmptyExpression Empty() {
-            return EmptyExpression.VoidInstance;
+        public static DefaultExpression Empty() {
+            return DefaultExpression.VoidInstance;
         }
 
-        public static EmptyExpression Empty(Annotations annotations) {
-            return new EmptyExpression(typeof(void), annotations);
-        }
-
-        public static EmptyExpression Empty(Type type) {
+        public static DefaultExpression Default(Type type) {
             if (type == typeof(void)) {
                 return Empty();
             }
-            return new EmptyExpression(type, null);
+            return new DefaultExpression(type);
         }
     }
 }

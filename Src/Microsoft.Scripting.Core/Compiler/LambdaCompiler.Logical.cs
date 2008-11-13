@@ -53,22 +53,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
         ///   * it has a valid span, and
         ///   * we are emitting debug symbols
         /// </summary>
-        private bool Significant(Expression node) {
-            var empty = node as EmptyExpression;
+        private static bool Significant(Expression node) {
+            var empty = node as DefaultExpression;
             if (empty == null || empty.Type != typeof(void)) {
                 // non-empty expression is significant
                 return true;
-            }
-
-            if (_emitDebugSymbols) {
-                SourceSpan span = node.Annotations.Get<SourceSpan>();
-                if (span.IsValid) {
-                    return true;
-                }
-                SourceLocation header = node.Annotations.Get<SourceLocation>();
-                if (header.IsValid) {
-                    return true;
-                }
             }
 
             // Not a significant expression
@@ -721,11 +710,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitBranchBlock(bool branch, BlockExpression node, Label label) {
             EnterScope(node);
 
-            for (int i = 0; i < node.Expressions.Count - 1; i++) {
-                EmitExpressionAsVoid(node.Expressions[i]);
+            int count = node.ExpressionCount;
+            for (int i = 0; i < count - 1; i++) {
+                EmitExpressionAsVoid(node.GetExpression(i));
             }
-            EmitExpressionAndBranch(branch, node.Expressions[node.Expressions.Count - 1], label);
-
+            EmitExpressionAndBranch(branch, node.GetExpression(count - 1), label);
+            
             ExitScope(node);
         }
 

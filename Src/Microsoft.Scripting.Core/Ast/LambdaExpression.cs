@@ -40,13 +40,11 @@ namespace Microsoft.Linq.Expressions {
         private readonly Type _delegateType;
 
         internal LambdaExpression(
-            Annotations annotations,
             Type delegateType,
             string name,
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
-        )
-            : base(annotations) {
+        ) {
 
             Assert.NotNull(delegateType);
 
@@ -105,12 +103,11 @@ namespace Microsoft.Linq.Expressions {
     //CONFORMING
     public sealed class Expression<TDelegate> : LambdaExpression {
         internal Expression(
-            Annotations annotations,
             string name,
             Expression body,
             ReadOnlyCollection<ParameterExpression> parameters
         )
-            : base(annotations, typeof(TDelegate), name, body, parameters) {
+            : base(typeof(TDelegate), name, body, parameters) {
         }
 
         public new TDelegate Compile() {
@@ -121,7 +118,7 @@ namespace Microsoft.Linq.Expressions {
             return LambdaCompiler.CompileLambda<TDelegate>(this, emitDebugSymbols);
         }
 
-        internal override Expression Accept(ExpressionTreeVisitor visitor) {
+        internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitLambda(this);
         }
 
@@ -132,7 +129,7 @@ namespace Microsoft.Linq.Expressions {
 
 
     public partial class Expression {
-        private static CacheDict<Type, Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>> _exprCtors = new CacheDict<Type, Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>>(200);
+        private static CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>> _exprCtors = new CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>>(200);
         private static MethodInfo _lambdaCtorMethod;
 
         //internal lambda factory that creates an instance of Expression<delegateType>
@@ -141,31 +138,30 @@ namespace Microsoft.Linq.Expressions {
                 Type delegateType,
                 string name,
                 Expression body,
-                Annotations annotations,
                 ReadOnlyCollection<ParameterExpression> parameters
         ) {
             if (nodeType == ExpressionType.Lambda) {
                 // got or create a delegate to the public Expression.Lambda<T> method and call that will be used for
                 // creating instances of this delegate type
-                Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression> func;
+                Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression> func;
                 lock (_exprCtors) {
                     if (_lambdaCtorMethod == null) {
                         EnsureLambdCtor();
                     }
 
                     if (!_exprCtors.TryGetValue(delegateType, out func)) {
-                        _exprCtors[delegateType] = func = (Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>)
+                        _exprCtors[delegateType] = func = (Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>)
                             Delegate.CreateDelegate(
-                                typeof(Func<Expression, string, Annotations, IEnumerable<ParameterExpression>, LambdaExpression>),
+                                typeof(Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>),
                                 _lambdaCtorMethod.MakeGenericMethod(delegateType)
                             );
                     }
                 }
 
-                return func(body, name, annotations, parameters);
+                return func(body, name, parameters);
             }
 
-            return SlowMakeLambda(annotations, nodeType, delegateType, name, body, parameters);
+            return SlowMakeLambda(nodeType, delegateType, name, body, parameters);
         }
 
         private static void EnsureLambdCtor() {
@@ -176,11 +172,10 @@ namespace Microsoft.Linq.Expressions {
                 }
 
                 ParameterInfo[] pis = mi.GetParameters();
-                if (pis.Length == 4) {
+                if (pis.Length == 3) {
                     if (pis[0].ParameterType == typeof(Expression) &&
                         pis[1].ParameterType == typeof(string) &&
-                        pis[2].ParameterType == typeof(Annotations) &&
-                        pis[3].ParameterType == typeof(IEnumerable<ParameterExpression>)) {
+                        pis[2].ParameterType == typeof(IEnumerable<ParameterExpression>)) {
                         _lambdaCtorMethod = mi;
                         break;
                     }
@@ -189,11 +184,11 @@ namespace Microsoft.Linq.Expressions {
             Debug.Assert(_lambdaCtorMethod != null);
         }
 
-        private static LambdaExpression SlowMakeLambda(Annotations annotations, ExpressionType nodeType, Type delegateType, string name, Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
+        private static LambdaExpression SlowMakeLambda(ExpressionType nodeType, Type delegateType, string name, Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
             Type ot = typeof(Expression<>);
             Type ct = ot.MakeGenericType(new Type[] { delegateType });
             ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
-            return (LambdaExpression)ctor.Invoke(new object[] { annotations, nodeType, name, body, parameters });
+            return (LambdaExpression)ctor.Invoke(new object[] { nodeType, name, body, parameters });
         }
 
         //CONFORMING
@@ -203,14 +198,14 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) {
-            return Lambda<TDelegate>(body, "lambda_method", Annotations.Empty, parameters);
+            return Lambda<TDelegate>(body, "lambda_method", parameters);
         }
 
         //CONFORMING
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, IEnumerable<ParameterExpression> parameters) {
             ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
-            return new Expression<TDelegate>(annotations, name, body, parameterList);
+            return new Expression<TDelegate>(name, body, parameterList);
         }
 
 
@@ -224,25 +219,16 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) {
-            return Lambda(delegateType, body, "lambda_method", Annotations.Empty, parameters);
+            return Lambda(delegateType, body, "lambda_method", parameters);
         }
 
         //CONFORMING
         public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters) {
-            return Lambda(delegateType, body, "lambda_method", Annotations.Empty, parameters);
+            return Lambda(delegateType, body, "lambda_method", parameters);
         }
-
-        public static LambdaExpression Lambda(Expression body, string name, IEnumerable<ParameterExpression> parameters) {
-            return Lambda(body, name, Annotations.Empty, parameters);
-        }
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
-            return Lambda(delegateType, body, name, Annotations.Empty, parameters);
-        }
-
 
         //CONFORMING
-        public static LambdaExpression Lambda(Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+        public static LambdaExpression Lambda(Expression body, string name, IEnumerable<ParameterExpression> parameters) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(body, "body");
 
@@ -265,12 +251,11 @@ namespace Microsoft.Linq.Expressions {
                 delegateType = GetFuncType(typeArgs);
             }
 
-            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, parameterList);
+            return Lambda(ExpressionType.Lambda, delegateType, name, body, parameterList);
         }
 
 
         private static Type[] ctorTypes = new Type[] {
-            typeof(Annotations),        // annotations,
             typeof(ExpressionType),     // nodeType,
             typeof(string),             // name,
             typeof(Expression),         // body,
@@ -278,11 +263,11 @@ namespace Microsoft.Linq.Expressions {
         };
 
         //CONFORMING
-        public static LambdaExpression Lambda(Type delegateType, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
+        public static LambdaExpression Lambda(Type delegateType, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
-            return Lambda(ExpressionType.Lambda, delegateType, name, body, annotations, paramList);
+            return Lambda(ExpressionType.Lambda, delegateType, name, body, paramList);
         }
 
         private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type, MethodInfo>(40);
@@ -325,18 +310,10 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.IncorrectNumberOfLambdaDeclarationParameters();
             }
             if (mi.ReturnType != typeof(void) && !TypeUtils.AreReferenceAssignable(mi.ReturnType, body.Type)) {
-                //TODO: statement lambda may be autoquoted to Expression<void>. 
-                // cosider whether this is desirable.
                 if (TypeUtils.IsSameOrSubclass(typeof(Expression), mi.ReturnType) && TypeUtils.AreAssignable(mi.ReturnType, body.GetType())) {
                     body = Expression.Quote(body);
                 } else {
-                    // We allow the body type to be void with non-void return statements, so
-                    // we can’t completely verify this here without walking the tree. Instead we validate
-                    // this condition in VariableBinder.
-                    // TODO: can the return statement design be improved to allow the check here?
-                    if (body.Type != typeof(void)) {
-                        throw Error.ExpressionTypeDoesNotMatchReturn(body.Type, mi.ReturnType);
-                    }
+                    throw Error.ExpressionTypeDoesNotMatchReturn(body.Type, mi.ReturnType);
                 }
             }
         }

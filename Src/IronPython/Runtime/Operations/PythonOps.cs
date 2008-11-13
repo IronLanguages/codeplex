@@ -23,7 +23,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using System.Text;
 using System.Threading;
 using IronPython.Compiler;
@@ -31,6 +31,7 @@ using IronPython.Hosting;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting.Providers;
 using Microsoft.Scripting.Hosting.Shell;
@@ -997,7 +998,8 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in Microsoft.Scripting.ComInterop.ComObject.ObjectToComObject(o).MemberNames) {
+                    var meta = MetaObject.ObjectToMetaObject(o, Microsoft.Linq.Expressions.Expression.Parameter(typeof(object), null));
+                    foreach (string name in meta.GetDynamicMemberNames()) {
                         if (!res.Contains(name)) {
                             res.AddNoLock(name);
                         }
@@ -3192,6 +3194,10 @@ namespace IronPython.Runtime.Operations {
 
         public static CodeContext GetPythonTypeContext(PythonType pt) {
             return pt.PythonContext.DefaultBinderState.Context;
+        }
+
+        public static Delegate GetDelegate(CodeContext context, object target, Type type) {
+            return BinderOps.GetDelegate(context.LanguageContext, target, type);
         }
 
         public static int CompareLists(List self, List other) {

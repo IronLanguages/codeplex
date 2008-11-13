@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public abstract class SetIndexBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 

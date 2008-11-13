@@ -17,41 +17,33 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.ComInterop {
     /// <summary>
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.
     /// </summary>
-    public abstract class ComObject : IDynamicObject {
+    internal class ComObject : IDynamicObject {
         /// <summary>
         /// The runtime-callable wrapper
         /// </summary>
         private readonly object _rcw;
 
-        #region Constructor(s)/Initialization
-
         internal ComObject(object rcw) {
-            Debug.Assert(ComMetaObject.IsComObject(rcw));
+            Debug.Assert(ComObject.IsComObject(rcw));
             _rcw = rcw;
         }
 
-        #endregion
-
-        #region Public Members
-
-        public object Obj {
+        internal object RuntimeCallableWrapper {
             get {
                 return _rcw;
             }
         }
-
-        #endregion
-
-        #region Static Members
 
         private readonly static object _ComObjectInfoKey = new object();
 
@@ -61,7 +53,7 @@ namespace Microsoft.Scripting.ComInterop {
         /// <returns></returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         public static ComObject ObjectToComObject(object rcw) {
-            Debug.Assert(ComMetaObject.IsComObject(rcw));
+            Debug.Assert(ComObject.IsComObject(rcw));
 
             // Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
             // a full demand. We could avoid this by making this method SecurityCritical
@@ -85,6 +77,24 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        // Expression that unwraps ComObject
+        internal static MemberExpression RcwFromComObject(Expression comObject) {
+            Debug.Assert(comObject != null && typeof(ComObject).IsAssignableFrom(comObject.Type), "must be ComObject");
+
+            return Expression.Property(
+                Helpers.Convert(comObject, typeof(ComObject)),
+                typeof(ComObject).GetProperty("RuntimeCallableWrapper", BindingFlags.NonPublic | BindingFlags.Instance)
+            );
+        }
+
+        // Expression that finds or creates a ComObject that corresponds to given Rcw
+        internal static MethodCallExpression RcwToComObject(Expression rcw) {
+            return Expression.Call(
+                typeof(ComObject).GetMethod("ObjectToComObject"),
+                Helpers.Convert(rcw, typeof(object))
+            );
+        }
+
         private static ComObject CreateComObject(object rcw) {
             IDispatch dispatchObject = rcw as IDispatch;
             if (dispatchObject != null) {
@@ -92,36 +102,25 @@ namespace Microsoft.Scripting.ComInterop {
                 return new IDispatchComObject(dispatchObject);
             }
 
-            // First check if we can associate metadata with the COM object
-            ComObject comObject = ComObjectWithTypeInfo.CheckClassInfo(rcw);
-            if (comObject != null) {
-                return comObject;
-            }
-
-            if (dispatchObject != null) {
-                // We can do method invocations on IDispatch objects
-                return new IDispatchComObject(dispatchObject);
-            }
-
             // There is not much we can do in this case
-            return new GenericComObject(rcw);
+            return new ComObject(rcw);
         }
 
-        #endregion
-
-        #region Abstract Members
-
-        public abstract IList<string> MemberNames {
-            get;
+        internal virtual IEnumerable<string> MemberNames {
+            get { return EmptyArray<string>.Instance; }
         }
 
-        public abstract string Documentation {
-            get;
+        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+            return new ComFallbackMetaObject(parameter, Restrictions.Empty, this);
         }
 
-        public abstract MetaObject GetMetaObject(Expression parameter);
+        private static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
 
-        #endregion
+        internal static bool IsComObject(object obj) {
+            // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust
+            return obj != null && ComObjectType.IsAssignableFrom(obj.GetType());
+        }
+
     }
 }
 

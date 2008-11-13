@@ -20,8 +20,9 @@ using Microsoft.Scripting;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("Use Expression.Continue(target, Expression.Annotate(span)) instead")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static GotoExpression Continue(LabelTarget target, SourceSpan span) {
-            return Expression.Continue(target, Expression.Annotate(span));
+            return Expression.Continue(target);
         }
     }
 }

@@ -17,6 +17,7 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -25,13 +26,15 @@ namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
 
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static DynamicExpression Operator(SourceSpan span, ActionBinder binder, Operators op, Type result, params Expression[] arguments) {
-            return Operator(Expression.Annotate(span), binder, op, result, arguments);
+            return Operator(binder, op, result, arguments);
         }
 
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static DynamicExpression DeleteMember(SourceSpan span, ActionBinder binder, string name, params Expression[] arguments) {
-            return DeleteMember(Expression.Annotate(span), binder, name, arguments);
+            return DeleteMember(binder, name, arguments);
         }
 
         /// <summary>
@@ -39,17 +42,12 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <param name="binder">The binder responsible for binding the dynamic operation.</param>
         /// <param name="op">The operation to perform</param>
-        /// <param name="result">Type of the result desired (The DynamicExpression is strongly typed)</param>
+        /// <param name="resultType">Type of the result desired (The DynamicExpression is strongly typed)</param>
         /// <param name="arguments">Array of arguments for the action expression</param>
         /// <returns>New instance of the DynamicExpression</returns>
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
-        public static DynamicExpression Operator(ActionBinder binder, Operators op, Type result, params Expression[] arguments) {
-            return Operator(Annotations.Empty, binder, op, result, arguments);
-        }
-
-        [Obsolete("use Expression.Dynamic instead of old-style action factories")]
-        public static DynamicExpression Operator(Annotations annotations, ActionBinder binder, Operators op, Type resultType, params Expression[] arguments) {
-            return Expression.Dynamic(OldDoOperationAction.Make(binder, op), resultType, annotations, arguments);
+        public static DynamicExpression Operator(ActionBinder binder, Operators op, Type resultType, params Expression[] arguments) {
+            return Expression.Dynamic(OldDoOperationAction.Make(binder, op), resultType, arguments);
         }
 
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
@@ -69,29 +67,19 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
-        public static DynamicExpression SetMember(ActionBinder binder, string name, Type result, params Expression[] arguments) {
-            return SetMember(Annotations.Empty, binder, name, result, arguments);
-        }
-
-        [Obsolete("use Expression.Dynamic instead of old-style action factories")]
-        private static DynamicExpression SetMember(Annotations annotations, ActionBinder binder, string name, Type result, params Expression[] arguments) {
+        private static DynamicExpression SetMember(ActionBinder binder, string name, Type result, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ContractUtils.Requires(arguments.Length >= 2, "arguments");
 
-            return Expression.Dynamic(OldSetMemberAction.Make(binder, name), result, annotations, arguments);
+            return Expression.Dynamic(OldSetMemberAction.Make(binder, name), result, arguments);
         }
 
         [Obsolete("use Expression.Dynamic instead of old-style action factories")]
         public static DynamicExpression DeleteMember(ActionBinder binder, string name, params Expression[] arguments) {
-            return DeleteMember(Annotations.Empty, binder, name, arguments);
-        }
-
-        [Obsolete("use Expression.Dynamic instead of old-style action factories")]
-        public static DynamicExpression DeleteMember(Annotations annotations, ActionBinder binder, string name, params Expression[] arguments) {
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ContractUtils.Requires(arguments.Length >= 1, "arguments");
 
-            return Expression.Dynamic(OldDeleteMemberAction.Make(binder, name), typeof(object), annotations, arguments);
+            return Expression.Dynamic(OldDeleteMemberAction.Make(binder, name), typeof(object), arguments);
         }
 
         // TODO: This helper should go. It does too much number magic.
@@ -101,23 +89,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
-        public static DynamicExpression Call(Annotations annotations, OldCallAction action, Type result, params Expression[] arguments) {
-            return Expression.Dynamic(action, result, annotations, arguments);
-        }
-
-        /// <summary>
-        /// Creates DynamicExpression representing a Call action.
-        /// </summary>
-        /// <param name="action">The call action to perform.</param>
-        /// <param name="result">Type of the result desired (The DynamicExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the DynamicExpression</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
-        [Obsolete("use Expression.Dynamic instead of old-style action factories")]
         public static DynamicExpression Call(OldCallAction action, Type result, params Expression[] arguments) {
-            return Call(Annotations.Empty, action, result, arguments);
-        }
-
+            return Expression.Dynamic(action, result, arguments);
+        }       
 
         /// <summary>
         /// Creates DynamicExpression representing a CreateInstance action.

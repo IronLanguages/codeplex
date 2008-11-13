@@ -34,8 +34,7 @@ namespace Microsoft.Scripting.Ast {
         private Expression _reduced;
         private readonly Type _type;
 
-        internal GeneratorExpression(Type type, LabelTarget label, Expression body, Annotations annotations)
-            : base(annotations) {
+        internal GeneratorExpression(Type type, LabelTarget label, Expression body) {
             _label = label;
             _body = body;
             _type = type;
@@ -76,12 +75,12 @@ namespace Microsoft.Scripting.Ast {
             return _reduced;
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression b = visitor.Visit(_body);
             if (b == _body) {
                 return this;
             }
-            return Utils.Generator(_label, b, Type, Annotations);
+            return Utils.Generator(_label, b, Type);
         }
 
         internal bool IsEnumerable {
@@ -90,23 +89,17 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public partial class Utils {        
-        public static GeneratorExpression Generator(LabelTarget label, Expression body) {
-            return Generator(label, body, (Annotations)null);
-        }
         /// <summary>
         /// Creates a generator with type IEnumerable{T}, where T is the label.Type
         /// </summary>
-        public static GeneratorExpression Generator(LabelTarget label, Expression body, Annotations annotations) {
+        public static GeneratorExpression Generator(LabelTarget label, Expression body) {
             ContractUtils.RequiresNotNull(label, "label");
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.Requires(label.Type != typeof(void), "label", "label must have a non-void type");
 
-            return new GeneratorExpression(typeof(IEnumerable<>).MakeGenericType(label.Type), label, body, annotations);
+            return new GeneratorExpression(typeof(IEnumerable<>).MakeGenericType(label.Type), label, body);
         }
         public static GeneratorExpression Generator(LabelTarget label, Expression body, Type type) {
-            return Generator(label, body, type, null);
-        }
-        public static GeneratorExpression Generator(LabelTarget label, Expression body, Type type, Annotations annotations) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(body, "body");
             ContractUtils.RequiresNotNull(label, "label");
@@ -127,7 +120,7 @@ namespace Microsoft.Scripting.Ast {
 
             ContractUtils.RequiresNotNull(body, "body");
 
-            return new GeneratorExpression(type, label, body, annotations);
+            return new GeneratorExpression(type, label, body);
         }
 
         private static ArgumentException GeneratorTypeMustBeEnumerableOfT(Type type) {
@@ -142,23 +135,23 @@ namespace Microsoft.Scripting.Ast {
         #region Generator lambda factories
 
         public static Expression<T> GeneratorLambda<T>(LabelTarget label, Expression body, params ParameterExpression[] parameters) {
-            return (Expression<T>)GeneratorLambda(typeof(T), label, body, null, null, parameters);
+            return (Expression<T>)GeneratorLambda(typeof(T), label, body, null, parameters);
         }
 
         public static Expression<T> GeneratorLambda<T>(LabelTarget label, Expression body, string name, params ParameterExpression[] parameters) {
-            return (Expression<T>)GeneratorLambda(typeof(T), label, body, name, null, parameters);
+            return (Expression<T>)GeneratorLambda(typeof(T), label, body, name, parameters);
         }
 
-        public static Expression<T> GeneratorLambda<T>(LabelTarget label, Expression body, string name, Annotations annotations, IEnumerable<ParameterExpression> parameters) {
-            return (Expression<T>)GeneratorLambda(typeof(T), label, body, name, annotations, parameters);
+        public static Expression<T> GeneratorLambda<T>(LabelTarget label, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
+            return (Expression<T>)GeneratorLambda(typeof(T), label, body, name, parameters);
         }
 
         public static LambdaExpression GeneratorLambda(Type delegateType, LabelTarget label, Expression body, params ParameterExpression[] parameters) {
-            return GeneratorLambda(delegateType, label, body, null, null, parameters);
+            return GeneratorLambda(delegateType, label, body, null, parameters);
         }
 
         public static LambdaExpression GeneratorLambda(Type delegateType, LabelTarget label, Expression body, string name, params ParameterExpression[] parameters) {
-            return GeneratorLambda(delegateType, label, body, name, null, parameters);
+            return GeneratorLambda(delegateType, label, body, name, (IEnumerable<ParameterExpression>)parameters);
         }
 
         // Creates a GeneratorLambda as a lambda containing a parameterless
@@ -172,7 +165,6 @@ namespace Microsoft.Scripting.Ast {
             LabelTarget label,
             Expression body,
             string name,
-            Annotations annotations,
             IEnumerable<ParameterExpression> parameters)
         {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
@@ -189,7 +181,6 @@ namespace Microsoft.Scripting.Ast {
                  delegateType,
                  Utils.Generator(label, body, generatorType),
                  name,
-                 annotations,
                  paramList
              );
         }
@@ -228,7 +219,7 @@ namespace Microsoft.Scripting.Ast {
             var block = new Expression[count + 1];
             for (int i = 0; i < count; i++) {
                 ParameterExpression param = paramList[i];
-                vars[i] = Expression.Variable(param.Type, param.Name, param.Annotations);
+                vars[i] = Expression.Variable(param.Type, param.Name);
                 map.Add(param, vars[i]);
                 block[i] = Expression.Assign(vars[i], param);
             }

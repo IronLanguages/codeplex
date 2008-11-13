@@ -17,9 +17,10 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -196,7 +197,7 @@ namespace IronPython.Runtime.Binding {
 
                             metaArgs.Add(
                                 Expression.Call(
-                                    Expression.ConvertHelper(args[i].Expression, typeof(IAttributesCollection)),
+                                    AstUtils.Convert(args[i].Expression, typeof(IAttributesCollection)),
                                     typeof(IAttributesCollection).GetMethod("get_Item"),
                                     AstUtils.Constant(SymbolTable.StringToId(key))
                                 )
@@ -206,14 +207,14 @@ namespace IronPython.Runtime.Binding {
                         restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(args[i].Expression, args[i].LimitType));
                         splatKwArgTest = Expression.Call(
                             typeof(PythonOps).GetMethod("CheckDictionaryMembers"),
-                            Expression.ConvertHelper(args[i].Expression, typeof(IAttributesCollection)),
+                            AstUtils.Convert(args[i].Expression, typeof(IAttributesCollection)),
                             Expression.Constant(argNames.ToArray())
                         );
                         break;
                     case ArgumentType.List:
                         IList<object> splattedArgs = (IList<object>)args[i].Value;
                         splatArgTest = Expression.Equal(
-                            Expression.Property(Expression.ConvertHelper(args[i].Expression, args[i].LimitType), typeof(ICollection<object>).GetProperty("Count")),
+                            Expression.Property(AstUtils.Convert(args[i].Expression, args[i].LimitType), typeof(ICollection<object>).GetProperty("Count")),
                             Expression.Constant(splattedArgs.Count)
                         );
 
@@ -221,7 +222,7 @@ namespace IronPython.Runtime.Binding {
                             newArgs.Add(Expression.PositionalArg(splattedArg + i));
                             metaArgs.Add(
                                 Expression.Call(
-                                    Expression.ConvertHelper(args[i].Expression, typeof(IList<object>)),
+                                    AstUtils.Convert(args[i].Expression, typeof(IList<object>)),
                                     typeof(IList<object>).GetMethod("get_Item"),
                                     Expression.Constant(splattedArg)
                                 )

@@ -15,7 +15,7 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Binders {
     public interface IDynamicObject {
         MetaObject GetMetaObject(Expression parameter);
     }

@@ -21,7 +21,6 @@ class VariantType:
         managedType,
         isPrimitiveType=True,
         unmanagedRepresentationType=None,
-        clsCompliant=True,
         includeInUnionTypes=True,
         getStatements=None,
         setStatements=None):
@@ -32,7 +31,6 @@ class VariantType:
         if unmanagedRepresentationType == None: self.unmanagedRepresentationType = managedType
         else: self.unmanagedRepresentationType = unmanagedRepresentationType
         
-        self.clsCompliant = clsCompliant
         self.includeInUnionTypes = includeInUnionTypes
         
         self.getStatements = getStatements
@@ -47,6 +45,8 @@ class VariantType:
         if not self.includeInUnionTypes: return
         if self.unmanagedRepresentationType == "IntPtr":
             cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]')
+        if self.managedFieldName == '_bstr':
+            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]')
         cw.write("[FieldOffset(0)] internal %s %s;" % (self.unmanagedRepresentationType, self.managedFieldName))
 
     def write_ToObject(self, cw):
@@ -55,9 +55,6 @@ class VariantType:
     def write_accessor(self, cw):
         cw.write("// VT_%s" % self.variantType)
         cw.writeline()
-        
-        if not self.clsCompliant:
-            cw.write("[CLSCompliant(false)]")
         
         cw.enter_block('public %s %s' % (self.managedType, self.accessorName))
 
@@ -85,9 +82,6 @@ class VariantType:
         # Byref Setter
         if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
             cw.writeline()
-            if not self.clsCompliant:
-                cw.write("[CLSCompliant(false)]")
-            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
             cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
             cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
             cw.write("VariantType = (VarEnum.VT_%s | VarEnum.VT_BYREF);" % self.variantType)
@@ -114,9 +108,6 @@ class VariantType:
 
     def write_ConvertByrefToPtr(self, cw):
         if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType:
-            if not self.clsCompliant:
-                cw.write("[CLSCompliant(false)]")
-            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
             cw.write("public static IntPtr Convert%sByrefToPtr(ref %s value) { return _Convert%sByrefToPtr(ref value); }" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType, self.unmanagedRepresentationType))
     
     def write_ConvertByrefToPtrDelegates(self, cw):
@@ -125,18 +116,18 @@ class VariantType:
 
 variantTypes = [
   # VariantType('varEnum', 'managed_type')
-    VariantType('I1', "SByte", clsCompliant=False),
+    VariantType('I1', "SByte"),
     VariantType('I2', "Int16"),
     VariantType('I4', "Int32"),
     VariantType('I8', "Int64"),
 
-    VariantType('UI1', "Byte", clsCompliant=False),
-    VariantType('UI2', "UInt16", clsCompliant=False),
-    VariantType('UI4', "UInt32", clsCompliant=False),
-    VariantType('UI8', "UInt64", clsCompliant=False),
+    VariantType('UI1', "Byte"),
+    VariantType('UI2', "UInt16"),
+    VariantType('UI4', "UInt32"),
+    VariantType('UI8', "UInt64"),
 
     VariantType('INT', "IntPtr"),
-    VariantType('UINT', "UIntPtr", clsCompliant=False),
+    VariantType('UINT', "UIntPtr"),
 
     VariantType('BOOL', "bool", 
         unmanagedRepresentationType="Int16",

@@ -64,7 +64,6 @@ namespace Microsoft.Scripting.Generation {
                 node = Expression.Lambda<T>(
                     body,
                     node.Name,
-                    node.Annotations,
                     node.Parameters
                 );
             }

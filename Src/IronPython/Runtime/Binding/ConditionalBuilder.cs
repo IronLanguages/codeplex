@@ -16,11 +16,12 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Linq.Expressions;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Builds up a series of conditionals when the False clause isn't yet known.  We can
@@ -66,15 +67,12 @@ namespace IronPython.Runtime.Binding {
 
                 body = Ast.Condition(
                     _conditions[i],
-                    Ast.ConvertHelper(_bodies[i], t),
-                    Ast.ConvertHelper(body, t)
+                    AstUtils.Convert(_bodies[i], t),
+                    AstUtils.Convert(body, t)
                 );
             }
 
-            _body = Ast.Scope(
-                body,
-                _variables
-            );
+            _body = Ast.Block(_variables, body);
         }
 
         public ParameterExpression CompareRetBool {

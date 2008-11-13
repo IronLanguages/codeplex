@@ -18,7 +18,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -36,9 +36,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
 
-        private class TypeInfo {
+        internal class TypeInfo {
             public Type DelegateType;
             public Dictionary<Type, TypeInfo> TypeChain;
+
+            public Type MakeDelegateType(Type retType, params Expression[] args) {
+                return MakeDelegateType(retType, (IList<Expression>)args);
+            }
+
+            public Type MakeDelegateType(Type retType, IList<Expression> args) {
+                // nope, go ahead and create it and spend the
+                // cost of creating the array.
+                Type[] paramTypes = new Type[args.Count + 2];
+                paramTypes[0] = typeof(CallSite);
+                paramTypes[paramTypes.Length - 1] = retType;
+                for (int i = 0; i < args.Count; i++) {
+                    paramTypes[i + 1] = args[i].Type;
+                }
+
+                return DelegateType = MakeDelegate(paramTypes);
+            }
         }
 
         /// <summary>
@@ -64,16 +81,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // see if we have the delegate already
                 if (curTypeInfo.DelegateType == null) {
-                    // nope, go ahead and create it and spend the
-                    // cost of creating the array.
-                    Type[] paramTypes = new Type[types.Count + 2];
-                    paramTypes[0] = typeof(CallSite);
-                    paramTypes[paramTypes.Length - 1] = returnType;
-                    for (int i = 0; i < types.Count; i++) {
-                        paramTypes[i + 1] = types[i].Type;
-                    }
-
-                    curTypeInfo.DelegateType = MakeDelegate(paramTypes);
+                    curTypeInfo.MakeDelegateType(returnType, types);
                 }
 
                 return curTypeInfo.DelegateType;
@@ -162,6 +170,18 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+
+        internal static TypeInfo NextTypeInfo(Type initialArg) {
+            lock (_DelegateCache) {
+                return NextTypeInfo(initialArg, _DelegateCache);
+            }
+        }
+
+        internal static TypeInfo GetNextTypeInfo(Type initialArg, TypeInfo curTypeInfo) {
+            lock (_DelegateCache) {
+                return NextTypeInfo(initialArg, curTypeInfo);
+            }
+        }
 
         private static TypeInfo NextTypeInfo(Type initialArg, TypeInfo curTypeInfo) {
             Type lookingUp = initialArg;

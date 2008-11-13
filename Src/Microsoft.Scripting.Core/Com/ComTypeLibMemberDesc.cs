@@ -16,8 +16,8 @@ using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: Can it be made internal?
-    public class ComTypeLibMemberDesc {
+
+    internal class ComTypeLibMemberDesc {
         readonly ComType _kind;
 
         internal ComTypeLibMemberDesc(ComType kind) {

@@ -32,8 +32,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [Obsolete("use While overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "header")]
         public static LoopExpression While(Expression test, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
-            return Loop(test, null, body, @else, @break, @continue, Expression.Annotate(header, span));
+            return Loop(test, null, body, @else, @break, @continue);
         }
 
         public static LoopExpression Infinite(Expression body) {
@@ -49,15 +51,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [Obsolete("use Loop overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "header")]
         public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, SourceLocation header, SourceSpan span) {
-            return Loop(test, increment, body, @else, @break, @continue, Expression.Annotate(span, header));
+            return Loop(test, increment, body, @else, @break, @continue);
         }
 
         public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue) {
-            return Loop(test, increment, body, @else, @break, @continue, null);
-        }
-
-        public static LoopExpression Loop(Expression test, Expression increment, Expression body, Expression @else, LabelTarget @break, LabelTarget @continue, Annotations annotations) {
             ContractUtils.RequiresNotNull(body, "body");
             if (test != null) {
                 ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
@@ -95,8 +95,7 @@ namespace Microsoft.Scripting.Ast {
                     increment != null ? increment : Expression.Empty()
                 ),
                 @break,
-                null,
-                annotations
+                null
             );
         }
     }

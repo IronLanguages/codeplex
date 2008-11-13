@@ -27,11 +27,12 @@ namespace Microsoft.Scripting.Ast {
     public sealed class YieldExpression : Expression {
         private readonly LabelTarget _target;
         private readonly Expression _value;
+        private readonly int _yieldMarker;
 
-        internal YieldExpression(LabelTarget target, Expression value, Annotations annotations)
-            : base(annotations) {
+        internal YieldExpression(LabelTarget target, Expression value, int yieldMarker) {
             _target = target;
             _value = value;
+            _yieldMarker = yieldMarker;
         }
 
         public override bool CanReduce {
@@ -59,31 +60,34 @@ namespace Microsoft.Scripting.Ast {
         public LabelTarget Target {
             get { return _target; }
         }
-                
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+
+        public int YieldMarker {
+            get {
+                return _yieldMarker;
+            }
+        }
+
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression v = visitor.Visit(_value);
             if (v == _value) {
                 return this;
             }
-            return Utils.MakeYield(_target, v, Annotations);
+            return Utils.MakeYield(_target, v, YieldMarker);
         }
     }
 
     public partial class Utils {
         public static YieldExpression YieldBreak(LabelTarget target) {
-            return MakeYield(target, null, null);
-        }
-        public static YieldExpression YieldBreak(LabelTarget target, Annotations annotations) {
-            return MakeYield(target, null, annotations);
+            return MakeYield(target, null, -1);
         }
         public static YieldExpression YieldReturn(LabelTarget target, Expression value) {
-            return MakeYield(target, value, null);
+            return MakeYield(target, value, -1);
         }
-        public static YieldExpression YieldReturn(LabelTarget target, Expression value, Annotations annotations) {
+        public static YieldExpression YieldReturn(LabelTarget target, Expression value, int yieldMarker) {
             ContractUtils.RequiresNotNull(value, "value");
-            return MakeYield(target, value, annotations);
+            return MakeYield(target, value, yieldMarker);
         }
-        public static YieldExpression MakeYield(LabelTarget target, Expression value, Annotations annotations) {
+        public static YieldExpression MakeYield(LabelTarget target, Expression value, int yieldMarker) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(target.Type != typeof(void), "target", "generator label must have a non-void type");
             if (value != null) {
@@ -97,7 +101,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            return new YieldExpression(target, value, annotations);
+            return new YieldExpression(target, value, yieldMarker);
         }
     }
 }

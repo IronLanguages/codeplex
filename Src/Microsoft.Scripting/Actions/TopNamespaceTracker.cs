@@ -12,10 +12,13 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
+using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
+using System.Runtime.InteropServices;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -26,6 +29,9 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
         private int _lastDiscovery = 0;
         private readonly ScriptDomainManager _manager;
+#if !SILVERLIGHT
+        private static Dictionary<Guid, Type> _comTypeCache = new Dictionary<Guid, Type>();
+#endif
 
         public TopNamespaceTracker(ScriptDomainManager manager)
             : base(null) {
@@ -92,15 +98,47 @@ namespace Microsoft.Scripting.Actions {
 
                 _packageAssemblies.Add(assem);
                 UpdateId();
-#if !SILVERLIGHT // ComObject
-                Microsoft.Scripting.ComInterop.ComObjectWithTypeInfo.PublishComTypes(assem);
-#endif
+                PublishComTypes(assem);
             }
 
             return true;
         }
 
         #endregion
+
+        /// <summary>
+        /// When an (interop) assembly is loaded, we scan it to discover the GUIDs of COM interfaces so that we can
+        /// associate the type definition with COM objects with that GUID.
+        /// Since scanning all loaded assemblies can be expensive, in the future, we might consider a more explicit 
+        /// user binder to trigger scanning of COM types.
+        /// </summary>
+        public static void PublishComTypes(Assembly interopAssembly) {
+#if !SILVERLIGHT
+            lock (_comTypeCache) { // We lock over the entire operation so that we can publish a consistent view
+
+                foreach (Type type in AssemblyTypeNames.LoadTypesFromAssembly(interopAssembly, false)) {
+                    if (type.IsImport && type.IsInterface) {
+                        Type existing;
+                        if (_comTypeCache.TryGetValue(type.GUID, out existing)) {
+                            if (!existing.IsDefined(typeof(CoClassAttribute), false)) {
+                                // prefer the type w/ CoClassAttribute on it.  Example:
+                                //    MS.Office.Interop.Excel.Worksheet 
+                                //          vs
+                                //    MS.Office.Interop.Excel._Worksheet
+                                //  Worksheet defines all the interfaces that the type supports and has CoClassAttribute.
+                                //  _Worksheet is just the interface for the worksheet.
+                                //
+                                // They both have the same GUID though.
+                                _comTypeCache[type.GUID] = type;
+                            }
+                        } else {
+                            _comTypeCache[type.GUID] = type;
+                        }
+                    }
+                }
+            }
+#endif
+        }
 
         protected override void LoadNamespaces() {
             lock (this) {

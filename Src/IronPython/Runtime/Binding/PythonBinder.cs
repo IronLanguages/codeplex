@@ -17,12 +17,12 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using Microsoft.Scripting;
-using Microsoft.Scripting.ComInterop;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
@@ -31,11 +31,9 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
-
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class PythonBinder : DefaultBinder {
         private PythonContext/*!*/ _context;
@@ -166,7 +164,7 @@ namespace IronPython.Runtime.Binding {
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForTypeMismatch"),
                     Ast.Constant(DynamicHelpers.GetPythonTypeFromType(toType).Name),
-                    Ast.ConvertHelper(value, typeof(object))
+                    AstUtils.Convert(value, typeof(object))
                )
             );
         }
@@ -237,9 +235,9 @@ namespace IronPython.Runtime.Binding {
                    typeof(PythonOps).GetMethod("SlotTrySetValue"),
                    codeContext,
                    Ast.Constant(PythonTypeOps.GetReflectedEvent(ev)),
-                   eventObject != null ? Ast.ConvertHelper(eventObject, typeof(object)) : Ast.Null(),
-                   Ast.Null(typeof(PythonType)),
-                   Ast.ConvertHelper(value, typeof(object))
+                   eventObject != null ? AstUtils.Convert(eventObject, typeof(object)) : Ast.Constant(null),
+                   Ast.Constant(null, typeof(PythonType)),
+                   AstUtils.Convert(value, typeof(object))
                )
             );
         }
@@ -252,9 +250,9 @@ namespace IronPython.Runtime.Binding {
                    typeof(PythonOps).GetMethod("SlotTrySetValue"),
                    rule.Context,
                    Ast.Constant(PythonTypeOps.GetReflectedEvent(ev)),
-                   Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                   Ast.Null(typeof(PythonType)),
-                   Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                   AstUtils.Convert(rule.Parameters[0], typeof(object)),
+                   Ast.Constant(null, typeof(PythonType)),
+                   AstUtils.Convert(rule.Parameters[1], typeof(object))
                )
             );
         }
@@ -385,7 +383,7 @@ namespace IronPython.Runtime.Binding {
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("MakeBoundEvent"),
                         Ast.Constant(PythonTypeOps.GetReflectedEvent((EventTracker)memberTracker)),
-                        Ast.Null(),
+                        Ast.Constant(null),
                         Ast.Constant(type)
                     );
                 case TrackerTypes.Field:
@@ -593,7 +591,7 @@ namespace IronPython.Runtime.Binding {
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("MakeBoundBuiltinFunction"),
                         Ast.Constant(GetBuiltinFunction((MethodGroup)boundTo)),
-                        Ast.ConvertHelper(
+                        AstUtils.Convert(
                             boundMemberTracker.Instance,
                             typeof(object)
                         )
@@ -774,9 +772,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-#if !SILVERLIGHT // ComObject
-            ComObjectWithTypeInfo.PublishComTypes(asm);
-#endif
+            TopNamespaceTracker.PublishComTypes(asm);
 
             // Add it to the references tuple if we
             // loaded a new assembly.

@@ -168,11 +168,10 @@ namespace IronPython.Compiler.Ast {
                 name = context.SourceUnit.Path;
             }
 
-            MSAst.Annotations annotations = MSAst.Expression.Annotate(_body.Span, context.SourceUnit.Information);
-            AstGenerator ag = new AstGenerator(context, annotations, name, false, _printExpressions);            
+            AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);            
             ag.Block.Global = true;
 
-            ag.Block.Body = Ast.BlockVoid(
+            ag.Block.Body = Ast.Block(
                 Ast.Call(
                     AstGenerator.GetHelperMethod("ModuleStarted"),
                     AstUtils.CodeContext(),
@@ -181,15 +180,16 @@ namespace IronPython.Compiler.Ast {
                 ),
                 Ast.Assign(ag.LineNumberExpression, Ast.Constant(0)),
                 Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
-                ag.WrapScopeStatements(Transform(ag))   // new ComboActionRewriter().VisitNode(Transform(ag))
+                ag.WrapScopeStatements(Transform(ag)),   // new ComboActionRewriter().VisitNode(Transform(ag))
+                Ast.Empty()
             );
             if (_isModule) {
                 Debug.Assert(pco.ModuleName != null);
 
-                ag.Block.Body = Ast.BlockVoid(
+                ag.Block.Body = Ast.Block(
                     AstUtils.Assign(_fileVariable.Variable, Ast.Constant(name)),
                     AstUtils.Assign(_nameVariable.Variable, Ast.Constant(pco.ModuleName)),
-                    ag.Block.Body
+                    ag.Block.Body // already typed to void
                 );
 
                 if ((pco.Module & ModuleOptions.Initialize) != 0) {
@@ -206,34 +206,32 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
+            ag.Block.Body = ag.AddReturnTarget(ag.Block.Body);
             DisableInterpreter = ag.DisableInterpreter;
             return ag.Block.MakeLambda();
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            List<MSAst.Expression> init = new List<MSAst.Expression>();
+            List<MSAst.Expression> block = new List<MSAst.Expression>();
             // Create the variables
-            CreateVariables(ag, init);
+            CreateVariables(ag, block);
 
             MSAst.Expression bodyStmt = ag.Transform(_body);
-            MSAst.Expression docStmt;
 
             string doc = ag.GetDocumentation(_body);
 
             if (_isModule && doc != null) {
-                docStmt = AstUtils.Assign(
+                block.Add(AstUtils.Assign(
                     _docVariable.Variable,
                     Ast.Constant(doc)
-                );
-            } else {
-                docStmt = Ast.Empty();
+                ));
             }
+            if (bodyStmt != null) {
+                block.Add(bodyStmt); //  bodyStmt could be null if we have an error - e.g. a top level break
+            }
+            block.Add(Ast.Empty());
 
-            return Ast.BlockVoid(
-                Ast.BlockVoid(init),
-                docStmt,
-                bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
-            );
+            return Ast.Block(block);
         }
 
         public override void Walk(PythonWalker walker) {

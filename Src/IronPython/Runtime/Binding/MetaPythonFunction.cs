@@ -19,9 +19,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Binders;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -30,6 +31,7 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
     
     class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
         public MetaPythonFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonFunction/*!*/ value)
@@ -47,7 +49,7 @@ namespace IronPython.Runtime.Binding {
         
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMemberl(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
@@ -132,9 +134,9 @@ namespace IronPython.Runtime.Binding {
                     Expression target = BindingHelpers.AddRecursionCheck(AddInitialization(MakeFunctionInvoke(invokeArgs)));
 
                     if (_temps.Count > 0) {
-                        target = Ast.Scope(
-                            target,
-                            _temps
+                        target = Ast.Block(
+                            _temps,
+                            target
                         );
                     }
 
@@ -151,7 +153,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod(Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "FunctionBadArgumentError"),
-                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                                 Ast.Constant(Signature.GetProvidedPositionalArgumentCount())
                             )
                         ),
@@ -340,7 +342,7 @@ namespace IronPython.Runtime.Binding {
                             // make a single copy.
                             exprArgs[_func.Value.ExpandListPosition] = Ast.Call(
                                 typeof(PythonOps).GetMethod("GetOrCopyParamsTuple"),
-                                Ast.ConvertHelper(_userProvidedParams, typeof(object))
+                                AstUtils.Convert(_userProvidedParams, typeof(object))
                             );
                         } else {
                             // user provided a sequence to be expanded, and we may have used it,
@@ -349,7 +351,7 @@ namespace IronPython.Runtime.Binding {
 
                             exprArgs[_func.Value.ExpandListPosition] = Ast.Call(
                                 typeof(PythonOps).GetMethod("MakeTupleFromSequence"),
-                                Ast.ConvertHelper(_params, typeof(object))
+                                AstUtils.Convert(_params, typeof(object))
                             );
 
                             if (paramsArgs != null) {
@@ -379,7 +381,7 @@ namespace IronPython.Runtime.Binding {
                 EnsureInit();
 
                 _init.Add(
-                    Ast.ComplexCallHelper(
+                    AstUtils.ComplexCallHelper(
                         typeof(PythonOps).GetMethod("AddParamsArguments"),
                         args.ToArray()
                     )
@@ -417,10 +419,10 @@ namespace IronPython.Runtime.Binding {
                 _init.Add(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AddDictionaryArgument"),
-                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                        AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                         Ast.Constant(SymbolTable.IdToString(kvp.Key)),
-                        Ast.ConvertHelper(kvp.Value, typeof(object)),
-                        Ast.ConvertHelper(_dict, typeof(IAttributesCollection))
+                        AstUtils.Convert(kvp.Value, typeof(object)),
+                        AstUtils.Convert(_dict, typeof(IAttributesCollection))
                     )
                 );
             }
@@ -440,7 +442,7 @@ namespace IronPython.Runtime.Binding {
                         tests.Add(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("CheckParamsZero"),
-                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                                 _params
                             )
                         );
@@ -449,8 +451,8 @@ namespace IronPython.Runtime.Binding {
                         tests.Add(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("CheckUserParamsZero"),
-                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                Ast.ConvertHelper(_userProvidedParams, typeof(object))
+                                AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
+                                AstUtils.Convert(_userProvidedParams, typeof(object))
                             )
                         );
                     }
@@ -461,8 +463,8 @@ namespace IronPython.Runtime.Binding {
                     tests.Add(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("CheckDictionaryZero"),
-                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                            Ast.ConvertHelper(_dict, typeof(IDictionary))
+                            AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
+                            AstUtils.Convert(_dict, typeof(IDictionary))
                         )
                     );
                 }
@@ -496,7 +498,7 @@ namespace IronPython.Runtime.Binding {
                 return Ast.Block(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("VerifyUnduplicatedByPosition"),
-                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),    // function
+                        AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),    // function
                         Ast.Constant(name, typeof(string)),                               // name
                         Ast.Constant(position),                                           // position
                         _paramsLen                                                        // params list length
@@ -535,10 +537,10 @@ namespace IronPython.Runtime.Binding {
 
                 return Ast.Call(
                         typeof(PythonOps).GetMethod("ExtractDictionaryArgument"),
-                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),        // function
+                        AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),        // function
                         Ast.Constant(name, typeof(string)),                                   // name
                         Ast.Constant(Signature.ArgumentCount),                               // arg count
-                        Ast.ConvertHelper(_dict, typeof(IAttributesCollection))               // dictionary
+                        AstUtils.Convert(_dict, typeof(IAttributesCollection))               // dictionary
                     );
             }
 
@@ -551,7 +553,7 @@ namespace IronPython.Runtime.Binding {
                     // we can pull the default directly
                     return Ast.Call(
                       typeof(PythonOps).GetMethod("FunctionGetDefaultValue"),
-                      Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                      AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                       Ast.Constant(dfltIndex)
                   );
                 } else {
@@ -562,7 +564,7 @@ namespace IronPython.Runtime.Binding {
                     _extractedKeyword = true;
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("GetFunctionParameterValue"),
-                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                        AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                         Ast.Constant(dfltIndex),
                         Ast.Constant(_func.Value.ArgNames[index], typeof(string)),
                         VariableOrNull(_params, typeof(List)),
@@ -582,11 +584,11 @@ namespace IronPython.Runtime.Binding {
 
                 return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractAnyArgument"),
-                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),  // function
+                    AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),  // function
                     Ast.Constant(name, typeof(string)),                             // name
                     _paramsLen,                                    // arg count
                     _params,                                       // params list
-                    Ast.ConvertHelper(_dict, typeof(IDictionary))  // dictionary
+                    AstUtils.Convert(_dict, typeof(IDictionary))  // dictionary
                 );
             }
 
@@ -610,7 +612,7 @@ namespace IronPython.Runtime.Binding {
 
                 return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractParamsArgument"),
-                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),  // function
+                    AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),  // function
                     Ast.Constant(Signature.ArgumentCount),                   // arg count
                     _params                                        // list
                 );
@@ -618,12 +620,12 @@ namespace IronPython.Runtime.Binding {
 
             private Expression VariableOrNull(ParameterExpression var, Type type) {
                 if (var != null) {
-                    return Ast.ConvertHelper(
+                    return AstUtils.Convert(
                         var,
                         type
                     );
                 }
-                return Ast.Null(type);
+                return Ast.Constant(null, type);
             }
 
             /// <summary>
@@ -633,7 +635,7 @@ namespace IronPython.Runtime.Binding {
                 Type target = _func.Value.Target.GetType();
                 if (target == typeof(IronPython.Compiler.CallTargetN) || target == typeof(IronPython.Compiler.GeneratorTargetN)) {
                     exprArgs = new Expression[] {
-                        Ast.NewArrayHelper(typeof(object), exprArgs) 
+                        AstUtils.NewArrayHelper(typeof(object), exprArgs) 
                     };
                 }
 
@@ -674,7 +676,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod(methodName),
                                 GetFunctionParam(),
-                                Ast.ConvertHelper(userDict.Expression, userDict.LimitType)
+                                AstUtils.Convert(userDict.Expression, userDict.LimitType)
                             )
                         )
                     );
@@ -707,8 +709,8 @@ namespace IronPython.Runtime.Binding {
                         _params,
                         Ast.Call(
                             typeof(PythonOps).GetMethod("CopyAndVerifyParamsList"),
-                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                            Ast.ConvertHelper(userList, typeof(object))
+                            AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
+                            AstUtils.Convert(userList, typeof(object))
                         )
                     )
                 );
@@ -744,7 +746,7 @@ namespace IronPython.Runtime.Binding {
                     _dict,
                     Ast.Call(
                         typeof(PythonOps).GetMethod("MakeDict"),
-                        Ast.Zero()
+                        Ast.Constant(0)
                     )
                 );
 
@@ -754,7 +756,7 @@ namespace IronPython.Runtime.Binding {
                             dictRef,
                             typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
                             Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object)),
-                            Ast.ConvertHelper(kvp.Value, typeof(object))
+                            AstUtils.Convert(kvp.Value, typeof(object))
                         );
                     }
                 }
@@ -769,7 +771,7 @@ namespace IronPython.Runtime.Binding {
             /// </summary>
             private Expression/*!*/ MakeParamsTuple(List<Expression> extraArgs) {
                 if (extraArgs != null) {
-                    return Ast.ComplexCallHelper(
+                    return AstUtils.ComplexCallHelper(
                         typeof(PythonOps).GetMethod("MakeTuple"),
                         extraArgs.ToArray()
                     );
@@ -812,7 +814,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 }
 
-                Expression invoke = Ast.SimpleCallHelper(
+                Expression invoke = AstUtils.SimpleCallHelper(
                     Ast.Convert(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("FunctionGetTarget"),
@@ -893,7 +895,7 @@ namespace IronPython.Runtime.Binding {
                 _error = Ast.Throw(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("UnexpectedKeywordArgumentError"),
-                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                        AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
                         Ast.Constant(name, typeof(string))
                     )
                 );
@@ -912,7 +914,7 @@ namespace IronPython.Runtime.Binding {
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("GetFunctionSignature"),
-                    Ast.ConvertHelper(
+                    AstUtils.Convert(
                         self.Expression,
                         typeof(PythonFunction)
                     )
@@ -923,7 +925,7 @@ namespace IronPython.Runtime.Binding {
 
         private MetaObject MakeIsCallableRule(MetaObject/*!*/ self) {
             return new MetaObject(
-                Ast.True(),
+                Ast.Constant(true),
                 Restrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }

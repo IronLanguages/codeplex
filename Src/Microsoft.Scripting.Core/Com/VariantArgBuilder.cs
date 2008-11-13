@@ -31,15 +31,22 @@ namespace Microsoft.Scripting.ComInterop {
             _isWrapper = parameterType == typeof(VariantWrapper);
         }
 
-        internal override Expression MarshalToRef(Expression parameter) {
-            parameter = Marshal(parameter);
+        internal override Expression Marshal(Expression parameter) {
+            parameter = base.Marshal(parameter);
 
+            // parameter.WrappedObject
             if (_isWrapper) {
                 parameter = Expression.Property(
                     Helpers.Convert(parameter, typeof(VariantWrapper)),
-                    typeof(VariantWrapper).GetProperty("WrappedOject")
+                    typeof(VariantWrapper).GetProperty("WrappedObject")
                 );
             };
+
+            return Helpers.Convert(parameter, typeof(object));
+        }
+
+        internal override Expression MarshalToRef(Expression parameter) {
+            parameter = Marshal(parameter);
 
             // parameter == null ? IntPtr.Zero : UnsafeMethods.GetVariantForObject(parameter);
             return Expression.Condition(

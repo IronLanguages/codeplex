@@ -27,8 +27,7 @@ namespace Microsoft.Scripting.Ast {
     public sealed class DeleteStatement : Expression {
         private readonly Expression _variable;
 
-        internal DeleteStatement(Annotations annotations, Expression variable)
-            : base(annotations) {
+        internal DeleteStatement(Expression variable) {
             _variable = variable;
         }
 
@@ -52,38 +51,34 @@ namespace Microsoft.Scripting.Ast {
             return Expression.Void(
                 Utils.Assign(
                     _variable,
-                    Expression.Field(null, typeof(Uninitialized).GetField("Instance")),
-                    Annotations
+                    Expression.Field(null, typeof(Uninitialized).GetField("Instance"))
                 )
             );
         }
 
-        protected override Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             Expression v = visitor.Visit(_variable);
             if (v == _variable) {
                 return this;
             }
-            return Utils.Delete(v, Annotations);
+            return Utils.Delete(v);
         }
     }
 
     public static partial class Utils {
         public static DeleteStatement Delete(Expression variable) {
-            return Delete(variable, Annotations.Empty);
-        }
-
-        [Obsolete("use Delete overload without SourceSpan")]
-        public static DeleteStatement Delete(Expression variable, SourceSpan span) {
-            return Delete(variable, Expression.Annotate(span));
-        }
-
-        public static DeleteStatement Delete(Expression variable, Annotations annotations) {
             ContractUtils.RequiresNotNull(variable, "variable");
             ContractUtils.Requires(
                 variable is ParameterExpression || variable is GlobalVariableExpression,
                 "variable",
                 "variable must be ParameterExpression or GlobalVariableExpression");
-            return new DeleteStatement(annotations, variable);
+            return new DeleteStatement(variable);
+        }
+
+        [Obsolete("use Delete overload without SourceSpan")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
+        public static DeleteStatement Delete(Expression variable, SourceSpan span) {
+            return Delete(variable);
         }
     }
 }

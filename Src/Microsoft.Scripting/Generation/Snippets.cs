@@ -36,44 +36,25 @@ namespace Microsoft.Scripting.Generation {
         private AssemblyGen _assembly;
         private AssemblyGen _debugAssembly;
 
-        // once an option is used no changes to the options are allowed any more:
-        private bool _optionsFrozen;
-
         // TODO: options should be internal
         private string _snippetsDirectory;
-        private string _snippetsFileName;
         private bool _saveSnippets;
 
         /// <summary>
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
         /// </summary>
         public string SnippetsDirectory {
-            get { return _optionsFrozen ? _snippetsDirectory : DebugOptions.SnippetsDirectory; }
-        }
-
-        /// <summary>
-        /// Name of the snippet assembly (w/o extension).
-        /// </summary>
-        public string SnippetsFileName {
-            get { return _optionsFrozen ? _snippetsFileName : DebugOptions.SnippetsFileName; }
+            get { return _snippetsDirectory; }
         }
 
         /// <summary>
         /// Save snippets to an assembly (see also SnippetsDirectory, SnippetsFileName).
         /// </summary>
         public bool SaveSnippets {
-            get { return _optionsFrozen ? _saveSnippets : DebugOptions.SaveSnippets; }
+            get { return _saveSnippets; }
         }
 
         private AssemblyGen GetAssembly(bool emitSymbols) {
-            // reload options, the may have changed
-            if (!_optionsFrozen) {
-                _saveSnippets = DebugOptions.SaveSnippets;
-                _snippetsDirectory = DebugOptions.SnippetsDirectory;
-                _snippetsFileName = DebugOptions.SnippetsFileName;
-                _optionsFrozen = true;
-            }
-
             return (emitSymbols) ?
                 GetOrCreateAssembly(emitSymbols,  ref _debugAssembly) :
                 GetOrCreateAssembly(emitSymbols, ref _assembly);
@@ -97,7 +78,7 @@ namespace Microsoft.Scripting.Generation {
                 dir = null;
             }
 
-            string name = (_snippetsFileName ?? "Snippets") + nameSuffix;
+            string name = "Snippets" + nameSuffix;
 
             return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols);
         }
@@ -116,6 +97,15 @@ namespace Microsoft.Scripting.Generation {
             return Path.Combine(dir, filename);
         }
 
+        internal static void SetSaveAssemblies(string directory) {
+            Shared.ConfigureSaveAssemblies(directory);
+        }
+
+        private void ConfigureSaveAssemblies(string directory) {
+            _saveSnippets = true;
+            _snippetsDirectory = directory;
+        }
+
         public static void SaveAndVerifyAssemblies() {
             if (!Shared.SaveSnippets) {
                 return;
@@ -132,15 +122,23 @@ namespace Microsoft.Scripting.Generation {
             // 4) Verify outer ring assemblies.
             Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
             Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
-            MethodInfo saveAssemblies = snippets.GetMethod("SaveAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
-            string[] coreAssemblyLocations = (string[])saveAssemblies.Invoke(null, null);
+            //The type may not exist.
+            string[] coreAssemblyLocations = null;
+            if (snippets != null) {
+                MethodInfo saveAssemblies = snippets.GetMethod("SaveAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
+                //The method may not exist.
+                if (saveAssemblies != null) {
+                    coreAssemblyLocations = (string[])saveAssemblies.Invoke(null, null);
+                }
+            }
 
             string[] outerAssemblyLocations = Shared.SaveAssemblies();
 
-            foreach (var file in coreAssemblyLocations) {
-                AssemblyGen.PeVerifyAssemblyFile(file);
+            if (coreAssemblyLocations != null) {
+                foreach (var file in coreAssemblyLocations) {
+                    AssemblyGen.PeVerifyAssemblyFile(file);
+                }
             }
-
             //verify outer ring assemblies
             foreach (var file in outerAssemblyLocations) {
                 AssemblyGen.PeVerifyAssemblyFile(file);
@@ -172,8 +170,6 @@ namespace Microsoft.Scripting.Generation {
                 _debugAssembly = null;
             }
 
-            _optionsFrozen = false;
-
             return assemlyLocations.ToArray();
         }
 
@@ -183,7 +179,7 @@ namespace Microsoft.Scripting.Generation {
             ContractUtils.RequiresNotNull(returnType, "returnType");
             ContractUtils.RequiresNotNullItems(parameterTypes, "parameterTypes");
 
-            if (DebugOptions.SaveSnippets) {
+            if (Snippets.Shared.SaveSnippets) {
                 AssemblyGen assembly = GetAssembly(isDebuggable);
                 TypeBuilder tb = assembly.DefinePublicType(methodName, typeof(object), false);
                 MethodBuilder mb = tb.DefineMethod(methodName, CompilerHelpers.PublicStatic, returnType, parameterTypes);

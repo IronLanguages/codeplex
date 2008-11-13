@@ -168,7 +168,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 MethodInfo mi = node.Object.Type.GetMethod("Address", BindingFlags.Public | BindingFlags.Instance);
 
-                EmitMethodCall(node.Object, mi, node.Arguments);
+                EmitMethodCall(node.Object, mi, node);
             } else {
                 EmitExpressionAddress(node, type);
             }
@@ -186,7 +186,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 _ilg.Emit(OpCodes.Ldelema, node.Type);
             } else {
                 var address = node.Object.Type.GetMethod("Address", BindingFlags.Public | BindingFlags.Instance);
-                EmitMethodCall(node.Object, address, node.Arguments);
+                EmitMethodCall(node.Object, address, node);
             }
         }
 

@@ -35,15 +35,23 @@ namespace Microsoft.Scripting.ComInterop {
             _isWrapper = parameterType == typeof(BStrWrapper);
         }
 
-        internal override Expression MarshalToRef(Expression parameter) {
-            parameter = Marshal(parameter);
+        internal override Expression Marshal(Expression parameter) {
+            parameter = base.Marshal(parameter);
 
+            // parameter.WrappedObject
             if (_isWrapper) {
                 parameter = Expression.Property(
                     Helpers.Convert(parameter, typeof(BStrWrapper)),
                     typeof(BStrWrapper).GetProperty("WrappedObject")
                 );
             };
+
+            return parameter;
+        }
+
+        internal override Expression MarshalToRef(Expression parameter) {
+            parameter = Marshal(parameter);
+
 
             // Marshal.StringToBSTR(parameter)
             return Expression.Call(
@@ -65,7 +73,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             if (_isWrapper) {
                 unmarshal = Expression.New(
-                    typeof(BStrWrapper).GetConstructor(new Type[] { typeof(object) }),
+                    typeof(BStrWrapper).GetConstructor(new Type[] { typeof(string) }),
                     unmarshal
                 );
             };

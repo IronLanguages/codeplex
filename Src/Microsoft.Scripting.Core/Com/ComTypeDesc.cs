@@ -21,8 +21,8 @@ using System.Runtime.InteropServices.ComTypes;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
-    // TODO: Can it be made internal?
-    public class ComTypeDesc : ComTypeLibMemberDesc {
+
+    internal class ComTypeDesc : ComTypeLibMemberDesc {
         private string _typeName;
         private string _documentation;
         private Guid _guid;
@@ -84,7 +84,6 @@ namespace Microsoft.Scripting.ComInterop {
             set { _events = value; }
         }
 
-        // this property is public - accessed by an AST
         public string TypeName {
             get { return _typeName; }
         }
@@ -93,7 +92,6 @@ namespace Microsoft.Scripting.ComInterop {
             get { return _documentation; }
         }
 
-        // this property is public - accessed by an AST
         public ComTypeLibDesc TypeLib {
             get { return _typeLibDesc; }
         }

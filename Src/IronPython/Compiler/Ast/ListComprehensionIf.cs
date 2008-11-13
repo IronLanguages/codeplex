@@ -31,12 +31,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body) {
-            return AstUtils.Block(
-                Span,
+            return ag.AddDebugInfoAndVoid(
                 AstUtils.If(
                     ag.TransformAndDynamicConvert(_test, typeof(bool)),
                     body
-                )
+                ),
+                Span
             );
         }
 

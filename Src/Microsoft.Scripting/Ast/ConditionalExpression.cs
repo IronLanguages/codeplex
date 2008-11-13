@@ -20,8 +20,9 @@ using Microsoft.Linq.Expressions;
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {
         [Obsolete("use Expression.Condition instead")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "span")]
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, SourceSpan span) {
-            return Expression.Condition(test, ifTrue, ifFalse, Expression.Annotate(span));
+            return Expression.Condition(test, ifTrue, ifFalse);
         }
     }
 }

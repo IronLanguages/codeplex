@@ -14,6 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Microsoft.Scripting;
 using IronPython.Runtime;
 using Microsoft.Scripting.Utils;
@@ -109,7 +110,7 @@ namespace IronPython.Compiler.Ast {
                 ag.TransformAndConvert(_bases, typeof(object))
             );
             ag.DisableInterpreter = true;
-            AstGenerator body = new AstGenerator(ag, MSAst.Expression.Annotate(SourceSpan.None), SymbolTable.IdToString(_name), false, false);
+            AstGenerator body = new AstGenerator(ag, SymbolTable.IdToString(_name), false, false);
 
             List<MSAst.Expression> init = new List<MSAst.Expression>();
             CreateVariables(body, init);
@@ -130,19 +131,23 @@ namespace IronPython.Compiler.Ast {
                 docStmt = Ast.Empty();
             }
 
-            MSAst.Expression returnStmt = Ast.Return(AstUtils.CodeContext());
+            MSAst.Expression returnStmt = Ast.Return(body.ReturnLabel, AstUtils.CodeContext());
 
             body.Block.Dictionary = true;
             body.Block.Visible = false;
             body.Block.Body = body.WrapScopeStatements(
-                Ast.BlockVoid(
-                    Ast.BlockVoid(init),
+                Ast.Block(
+                    init.Count == 0 ? 
+                        AstGenerator.EmptyBlock : 
+                        Ast.Block(new ReadOnlyCollection<MSAst.Expression>(init)),
                     modStmt,
                     docStmt,
                     bodyStmt,
-                    returnStmt
+                    returnStmt,
+                    Ast.Empty()
                 )
             );
+            body.Block.Body = body.AddReturnTarget(body.Block.Body);
 
             MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Compiler.CallTarget0));
             MSAst.Expression classDef = Ast.Call(
@@ -154,7 +159,7 @@ namespace IronPython.Compiler.Ast {
                 lambda
             );
 
-            return AstUtils.Assign(_variable.Variable, classDef, Ast.Annotate(new SourceSpan(Start, Header)));
+            return ag.AddDebugInfo(AstUtils.Assign(_variable.Variable, classDef), new SourceSpan(Start, Header));
         }
 
         public override void Walk(PythonWalker walker) {

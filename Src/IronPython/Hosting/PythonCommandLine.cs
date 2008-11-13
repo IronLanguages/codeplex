@@ -33,6 +33,7 @@ namespace IronPython.Hosting {
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
     public class PythonCommandLine : CommandLine {
+
         private PythonContext PythonContext {
             get { return (PythonContext)Language; }
         }
@@ -144,6 +145,8 @@ namespace IronPython.Hosting {
 
         protected override void Initialize() {
             Debug.Assert(Language != null);
+
+            base.Initialize();
 
             Console.Output = new OutputWriter(PythonContext, false);
             Console.ErrorOutput = new OutputWriter(PythonContext, true);
@@ -263,7 +266,6 @@ namespace IronPython.Hosting {
 
         protected override int RunInteractive() {
             PrintLogo();
-
             if (Scope == null) {
                 Scope = CreateScope();
             }
@@ -291,13 +293,13 @@ namespace IronPython.Hosting {
             if (startup != null && startup.Length > 0) {
                 if (Options.HandleExceptions) {
                     try {
-                        ExecuteCommand(Language.CreateFileUnit(startup));
+                        ExecuteCommand(Engine.CreateScriptSourceFromFile(startup));
                     } catch (Exception e) {
                         if (e is SystemExitException) throw;
                         Console.Write(Language.FormatException(e), Style.Error);
                     }
                 } else {
-                    ExecuteCommand(Language.CreateFileUnit(startup));
+                    ExecuteCommand(Engine.CreateScriptSourceFromFile(startup));
                 }
             }
 #endif
@@ -424,7 +426,7 @@ namespace IronPython.Hosting {
             int result = 1;
             try {
                 Scope = CreateScope();
-                ExecuteCommand(Language.CreateSnippet(command, SourceCodeKind.File));
+                ExecuteCommand(Engine.CreateScriptSourceFromString(command, SourceCodeKind.File));
                 result = 0;
             } catch (SystemExitException pythonSystemExit) {
                 result = GetEffectiveExitCode(pythonSystemExit);

@@ -14,10 +14,13 @@
  * ***************************************************************************/
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Reflection;
 using Microsoft.Scripting.Utils;
 using System.Text;
-using System.Reflection;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -25,22 +28,293 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract partial class Expression {
-        private readonly Annotations _annotations;        
+
+        //private readonly Annotations _annotations;        
         // protected ctors are part of API surface area
+
+#if !MICROSOFT_SCRIPTING_CORE
+        /******************************************************************************************************
+         * BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG 
+         *
+         * We need to switch to using ConditionalWeakHandle whenever that becomes available in our tools drop.
+         * Once that's done we can remove WeakDictionary entirely and just use mscorlib's ConditionalWeakTable.
+         */
+         
+         [Obsolete]
+         private class WeakDictionary<TKey, TValue> : IDictionary<TKey, TValue> {
+            // The one and only comparer instance.
+            static readonly IEqualityComparer<object> comparer = new WeakComparer<object>();
+    
+            IDictionary<object, TValue> dict = new Dictionary<object, TValue>(comparer);
+            int version, cleanupVersion;
+    
+    #if SILVERLIGHT // GC
+            WeakReference cleanupGC = new WeakReference(new object());
+    #else
+            int cleanupGC = 0;
+    #endif
+    
+            public WeakDictionary() {
+            }
+    
+            #region IDictionary<TKey,TValue> Members
+    
+            public void Add(TKey key, TValue value) {
+                CheckCleanup();
+    
+                // If the WeakHash already holds this value as a key, it will lead to a circular-reference and result
+                // in the objects being kept alive forever. The caller needs to ensure that this cannot happen.
+                Debug.Assert(!dict.ContainsKey(value));
+    
+                dict.Add(new WeakObject<TKey>(key), value);
+            }
+    
+            public bool ContainsKey(TKey key) {
+                // We dont have to worry about creating "new WeakObject<TKey>(key)" since the comparer
+                // can compare raw objects with WeakObject<T>.
+                return dict.ContainsKey(key);
+            }
+    
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
+            public ICollection<TKey> Keys {
+                get {
+                    // TODO:
+                    throw new NotImplementedException();
+                }
+            }
+    
+            public bool Remove(TKey key) {
+                return dict.Remove(key);
+            }
+    
+            public bool TryGetValue(TKey key, out TValue value) {
+                return dict.TryGetValue(key, out value);
+            }
+    
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
+            public ICollection<TValue> Values {
+                get {
+                    // TODO:
+                    throw new NotImplementedException();
+                }
+            }
+    
+            public TValue this[TKey key] {
+                get {
+                    return dict[key];
+                }
+                set {
+                    // If the WeakHash already holds this value as a key, it will lead to a circular-reference and result
+                    // in the objects being kept alive forever. The caller needs to ensure that this cannot happen.
+                    Debug.Assert(!dict.ContainsKey(value));
+    
+                    dict[new WeakObject<TKey>(key)] = value;
+                }
+            }
+    
+            /// <summary>
+            /// Check if any of the keys have gotten collected
+            /// 
+            /// Currently, there is also no guarantee of how long the values will be kept alive even after the keys
+            /// get collected. This could be fixed by triggerring CheckCleanup() to be called on every garbage-collection
+            /// by having a dummy watch-dog object with a finalizer which calls CheckCleanup().
+            /// </summary>
+            void CheckCleanup() {
+                version++;
+    
+                long change = version - cleanupVersion;
+    
+                // Cleanup the table if it is a while since we have done it last time.
+                // Take the size of the table into account.
+                if (change > 1234 + dict.Count / 2) {
+                    // It makes sense to do the cleanup only if a GC has happened in the meantime.
+                    // WeakReferences can become zero only during the GC.
+    
+                    bool garbage_collected;
+    #if SILVERLIGHT // GC.CollectionCount
+                    garbage_collected = !cleanupGC.IsAlive;
+                    if (garbage_collected) cleanupGC = new WeakReference(new object());
+    #else
+                    int currentGC = GC.CollectionCount(0);
+                    garbage_collected = currentGC != cleanupGC;
+                    if (garbage_collected) cleanupGC = currentGC;
+    #endif
+                    if (garbage_collected) {
+                        Cleanup();
+                        cleanupVersion = version;
+                    } else {
+                        cleanupVersion += 1234;
+                    }
+                }
+            }
+    
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2004:RemoveCallsToGCKeepAlive")]
+            private void Cleanup() {
+    
+                int liveCount = 0;
+                int emptyCount = 0;
+    
+                foreach (WeakObject<TKey> w in dict.Keys) {
+                    if (w.Target != null)
+                        liveCount++;
+                    else
+                        emptyCount++;
+                }
+    
+                // Rehash the table if there is a significant number of empty slots
+                if (emptyCount > liveCount / 4) {
+                    Dictionary<object, TValue> newtable = new Dictionary<object, TValue>(liveCount + liveCount / 4, comparer);
+    
+                    foreach (WeakObject<TKey> w in dict.Keys) {
+                        object target = w.Target;
+    
+                        if (target != null)
+                            newtable[w] = dict[w];
+    
+                    }
+    
+                    dict = newtable;
+                }
+            }
+            #endregion
+    
+            #region ICollection<KeyValuePair<TKey,TValue>> Members
+    
+            public void Add(KeyValuePair<TKey, TValue> item) {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            public void Clear() {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            public bool Contains(KeyValuePair<TKey, TValue> item) {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
+            public int Count {
+                get {
+                    // TODO:
+                    throw new NotImplementedException();
+                }
+            }
+    
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
+            public bool IsReadOnly {
+                get {
+                    // TODO:
+                    throw new NotImplementedException();
+                }
+            }
+    
+            public bool Remove(KeyValuePair<TKey, TValue> item) {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            #endregion
+    
+            #region IEnumerable<KeyValuePair<TKey,TValue>> Members
+    
+            public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            #endregion
+    
+            #region IEnumerable Members
+    
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+                // TODO:
+                throw new NotImplementedException();
+            }
+    
+            #endregion
+            
+            // WeakComparer treats WeakObject as transparent envelope
+            sealed class WeakComparer<T> : IEqualityComparer<T> {
+                bool IEqualityComparer<T>.Equals(T x, T y) {
+                    WeakObject<T> wx = x as WeakObject<T>;
+                    if (wx != null)
+                        x = wx.Target;
+        
+                    WeakObject<T> wy = y as WeakObject<T>;
+                    if (wy != null)
+                        y = wy.Target;
+        
+                    return Object.Equals(x, y);
+                }
+        
+                int IEqualityComparer<T>.GetHashCode(T obj) {
+                    WeakObject<T> wobj = obj as WeakObject<T>;
+                    if (wobj != null)
+                        return wobj.GetHashCode();
+        
+                    return (obj == null) ? 0 : obj.GetHashCode();
+                }
+            }
+            
+            internal class WeakObject<T> {
+                WeakReference weakReference;
+                int hashCode;
+        
+                public WeakObject(T obj) {
+                    weakReference = new WeakReference(obj, true);
+                    hashCode = (obj == null) ? 0 : obj.GetHashCode();
+                }
+        
+                public T Target {
+                    get {
+                        return (T)weakReference.Target;
+                    }
+                }
+        
+                public override int GetHashCode() {
+                    return hashCode;
+                }
+        
+                public override bool Equals(object obj) {
+                    object target = weakReference.Target;
+                    if (target == null) {
+                        return false;
+                    }
+        
+                    return ((T)target).Equals(obj);
+                }
+            }
+        }
+        
+#pragma warning disable 612
+        private static WeakDictionary<Expression, ExtensionInfo> _legacyCtorSupportTable;
+#pragma warning restore 612
 
         // LinqV1 ctor
         [Obsolete("use a different constructor that does not take ExpressionType.  Then override GetExpressionType and GetNodeKind to provide the values that would be specified to this constructor.")]
         protected Expression(ExpressionType nodeType, Type type) {
             // Can't enforce anything that V1 didn't
-            _annotations = Annotate(new ExtensionInfo(nodeType, type));
-        }
+            if(_legacyCtorSupportTable == null) {
+                Interlocked.CompareExchange(
+                    ref _legacyCtorSupportTable, 
+                    new WeakDictionary<Expression, ExtensionInfo>(),
+                    null
+                );
+            }
 
-        protected Expression(Annotations annotations) {
-            _annotations = annotations ?? Annotations.Empty;
+            _legacyCtorSupportTable[this] = new ExtensionInfo(nodeType, type);
         }
+#endif
 
         protected Expression() {
-            _annotations = Annotations.Empty;
         }
         
         //CONFORMING
@@ -54,12 +328,6 @@ namespace Microsoft.Linq.Expressions {
             get { return GetExpressionType(); }
         }
         
-        public Annotations Annotations {
-            get {
-                return _annotations;
-            }
-        }
-
         /// <summary>
         /// Indicates that the node can be reduced to a simpler node. If this 
         /// returns true, Reduce() can be called to produce the reduced form.
@@ -70,12 +338,28 @@ namespace Microsoft.Linq.Expressions {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         protected virtual ExpressionType GetNodeKind() {
-            return _annotations.Get<ExtensionInfo>().NodeType;
+#if !MICROSOFT_SCRIPTING_CORE
+            ExtensionInfo extInfo;
+            if (_legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
+                return extInfo.NodeType;
+            }
+#endif
+
+            // the base type failed to overload GetNodeKind
+            throw new InvalidOperationException();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        protected virtual Type GetExpressionType() {
-            return _annotations.Get<ExtensionInfo>().Type;
+        protected virtual Type GetExpressionType() {            
+#if !MICROSOFT_SCRIPTING_CORE
+            ExtensionInfo extInfo;
+            if (_legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
+                return extInfo.Type;
+            }
+#endif
+
+            // the base type failed to overload GetExpressionType
+            throw new InvalidOperationException();
         }
 
         /// <summary>
@@ -98,7 +382,7 @@ namespace Microsoft.Linq.Expressions {
         /// The default implementation will reduce the node and then walk it
         /// This will throw an exception if the node is not reducible
         /// </summary>
-        protected internal virtual Expression VisitChildren(ExpressionTreeVisitor visitor) {
+        protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) {
             ContractUtils.Requires(CanReduce, "this", Strings.MustBeReducible);
             return visitor.Visit(ReduceExtensions());
         }
@@ -107,7 +391,7 @@ namespace Microsoft.Linq.Expressions {
         // NOTE: this is unlike the Visit method, which provides a hook for
         // derived classes to extend the visitor framework to be able to walk
         // themselves
-        internal virtual Expression Accept(ExpressionTreeVisitor visitor) {
+        internal virtual Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitExtension(this);
         }
 
@@ -161,7 +445,84 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        internal static void RequiresCanRead(Expression expression, string paramName) {
+        /// <summary>
+        /// Helper used for ensuring we only return 1 instance of a ReadOnlyCollection of T.
+        /// 
+        /// This is called from various methods where we internally hold onto an IList of T
+        /// or a ROC of T.  We check to see if we've already returned a ROC of T and if so
+        /// simply return the other one.  Otherwise we do a thread-safe replacement of hte
+        /// list w/ a ROC which wraps it.
+        /// 
+        /// Ultimately this saves us from having to allocate a ReadOnlyCollection for our
+        /// data types because the compiler is capable of going directly to the IList of T.
+        /// </summary>
+        internal static ReadOnlyCollection<T> ReturnReadOnly<T>(ref IList<T> collection) {
+            IList<T> value = collection;
+
+            // if it's already read-only just return it.
+            ReadOnlyCollection<T> res = value as ReadOnlyCollection<T>;
+            if (res != null) {
+                return res;
+            }
+            
+            // otherwise make sure only ROC every gets exposed
+            Interlocked.CompareExchange<IList<T>>(
+                ref collection,
+                value.ToReadOnly(),
+                value 
+            );
+
+            // and return it
+            return (ReadOnlyCollection<T>)collection;
+        }        
+
+        /// <summary>
+        /// Helper used for ensuring we only return 1 instance of a ReadOnlyCollection of T.
+        /// 
+        /// This is similar to the ReturnReadOnly of T. This version supports nodes which hold 
+        /// onto multiple Expressions where one is typed to object.  That object field holds either
+        /// an expression or a ReadOnlyCollection of Expressions.  When it holds a ReadOnlyCollection
+        /// the IList which backs it is a ListArgumentProvider which uses the Expression which
+        /// implements IArgumentProvider to get 2nd and additional values.  The ListArgumentProvider 
+        /// continues to hold onto the 1st expression.  
+        /// 
+        /// This enables users to get the ReadOnlyCollection w/o it consuming more memory than if 
+        /// it was just an array.  Meanwhile The DLR internally avoids accessing  which would force 
+        /// the ROC to be created resulting in a typical memory savings.
+        /// </summary>
+        internal static ReadOnlyCollection<Expression> ReturnReadOnly(IArgumentProvider provider, ref object collection) {
+            Expression tObj = collection as Expression;
+            if (tObj != null) {
+                // otherwise make sure only one ROC ever gets exposed
+                Interlocked.CompareExchange(
+                    ref collection,
+                    new ReadOnlyCollection<Expression>(new ListArgumentProvider(provider, tObj)),
+                    tObj
+                );
+            }
+
+            // and return what is not guaranteed to be a ROC
+            return (ReadOnlyCollection<Expression>)collection;
+        }        
+
+        /// <summary>
+        /// Helper which is used for specialized subtypes which use ReturnReadOnly(ref object, ...). 
+        /// This is the reverse version of ReturnReadOnly which takes an IArgumentProvider.
+        /// 
+        /// This is used to return the 1st argument.  The 1st argument is typed as object and either
+        /// contains a ReadOnlyCollection or the Expression.  We check for the Expression and if it's
+        /// present we return that, otherwise we return the 1st element of the ReadOnlyCollection.
+        /// </summary>
+        internal static T ReturnObject<T>(object collectionOrT) where T : class {
+            T t = collectionOrT as T;
+            if (t != null) {
+                return t;
+            }
+
+            return ((ReadOnlyCollection<T>)collectionOrT)[0];
+        }
+
+        private static void RequiresCanRead(Expression expression, string paramName) {
             if (expression == null) {
                 throw new ArgumentNullException(paramName);
             }
@@ -187,7 +548,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        internal static void RequiresCanRead(IEnumerable<Expression> items, string paramName) {
+        private static void RequiresCanRead(IEnumerable<Expression> items, string paramName) {
             if (items != null) {
                 // this is called a lot, avoid allocating an enumerator if we can...
                 IList<Expression> listItems = items as IList<Expression>;
@@ -203,7 +564,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
         }
-        internal static void RequiresCanWrite(Expression expression, string paramName) {
+        private static void RequiresCanWrite(Expression expression, string paramName) {
             if (expression == null) {
                 throw new ArgumentNullException(paramName);
             }
@@ -242,6 +603,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+#if !MICROSOFT_SCRIPTING_CORE
         struct ExtensionInfo {
             public ExtensionInfo(ExpressionType nodeType, Type type) {
                 NodeType = nodeType;
@@ -251,5 +613,6 @@ namespace Microsoft.Linq.Expressions {
             internal readonly ExpressionType NodeType;
             internal readonly Type Type;
         }
+#endif
     }
 }
