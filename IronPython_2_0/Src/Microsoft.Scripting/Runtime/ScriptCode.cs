@@ -248,13 +248,11 @@ namespace Microsoft.Scripting {
 
                     Debug.Assert(infos.Item001[i].Length == infos.Item002[i].Length);
 
-                    for (int j = 0; j < infos.Item001[i].Length; j++) {
-                        DlrMainCallTarget[] methods = infos.Item001[i];
-                        string[] names = infos.Item002[i];
+                    DlrMainCallTarget[] methods = infos.Item001[i];
+                    string[] names = infos.Item002[i];
 
-                        for(int k = 0; k<methods.Length; k++) {
-                            codes.Add(lc.LoadCompiledCode(methods[k], names[k]));
-                        }
+                    for (int j = 0; j < methods.Length; j++) {                        
+                        codes.Add(lc.LoadCompiledCode(methods[j], names[j]));                        
                     }
                 }
             }

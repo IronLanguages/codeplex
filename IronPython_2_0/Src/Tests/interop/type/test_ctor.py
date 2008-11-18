@@ -51,12 +51,11 @@ def test_ctor_1_arg():
     #   public Ctor110(ref int arg) { arg = 10; }
     #}
     
-    # bug: 313995
-    #x, y = Ctor110(2)
+    x, y = Ctor110(2)
 
-    #x = box_int()
-    #Ctor110(x)
-    #AreEqual(x.Value, 10)  # bug 313045
+    x = box_int()
+    Ctor110(x)
+    AreEqual(x.Value, 10)  # bug 313045
     
 
     #public class Ctor111 {

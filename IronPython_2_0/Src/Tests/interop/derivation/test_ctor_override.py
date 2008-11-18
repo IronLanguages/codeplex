@@ -69,17 +69,8 @@ def test_1_normal():
     C()
     Flag.Check(3)
 
-@disabled("bug 313995: peverify failure")    
 def test_1_ref():
     class C(CCtor21): pass
-    x, y = C(1)
-    Flag.Check(1)
-    AreEqual(y, 1)   # 313045
-    
-    y = box_int(2)
-    C(y)
-    Flag.Check(2)
-    AreEqual(y.Value, 2)  # 313045
     
     # TODO
     class C(CCtor21):

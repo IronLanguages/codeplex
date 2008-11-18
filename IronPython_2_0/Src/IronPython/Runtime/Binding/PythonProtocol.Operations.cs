@@ -1303,8 +1303,10 @@ namespace IronPython.Runtime.Binding {
 
                     // we want self, (tuple, of, args, ...), value
                     Expression[] tupleArgs = new Expression[arguments.Length - 2];
+                    Restrictions restrictions = Restrictions.Empty;
                     for (int i = 1; i < arguments.Length - 1; i++) {
                         tupleArgs[i - 1] = Ast.ConvertHelper(arguments[i].Expression, typeof(object));
+                        restrictions = restrictions.Merge(arguments[i].Restrictions);
                     }
                     return new MetaObject[] {
                         arguments[0],
@@ -1313,7 +1315,7 @@ namespace IronPython.Runtime.Binding {
                                 typeof(PythonOps).GetMethod("MakeTuple"),
                                 Ast.NewArrayInit(typeof(object), tupleArgs)
                             ),
-                            Restrictions.Empty
+                            restrictions
                         ),
                         arguments[arguments.Length-1]
                     };
@@ -1333,7 +1335,7 @@ namespace IronPython.Runtime.Binding {
                                 typeof(PythonOps).GetMethod("MakeTuple"),
                                 Ast.NewArrayInit(typeof(object), tupleArgs)
                             ),
-                            Restrictions.Empty
+                            Restrictions.Combine(ArrayUtils.RemoveFirst(arguments))
                         )
                     };
                 }

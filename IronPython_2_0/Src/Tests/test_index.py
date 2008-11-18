@@ -422,4 +422,15 @@ def test_error():
     AssertErrorWithPartialMessage(TypeError, "append is not a generic method and is unsubscriptable", lambda: l.append[float](1.0))
     AssertErrorWithPartialMessage(TypeError, "'int' object is unsubscriptable", lambda: 1[2])
     
+def test_cp19350_index_restrictions():
+    class X(object):
+        def __setitem__(self, key, value):
+            print repr(key)
+    
+    def f(a, b):
+         X()[a, b] = object()
+    
+    f(1, 2)
+    f('one', 'two') 
+
 run_test(__name__)

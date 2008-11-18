@@ -433,4 +433,14 @@ def test_long_log():
     AssertError(OverflowError, math.log, 2L, 0.0)
     AssertError(ZeroDivisionError, math.log, 2L, 1.0)
 
+    #Make sure that an object is converted to float before being passed into log funcs
+    class N(object):
+        def __float__(self):
+            return 10.0
+        def __long__(self):
+		    return 100
+		    
+    AreEqual(round(math.log10(N()), 5),1.0)
+    AreEqual(round(math.log(N()), 5),2.30259)
+    
 run_test(__name__)
