@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Linq.Expressions {
 
     internal static partial class Strings {
@@ -464,11 +466,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Static methods requires null expression, non-static property requires non-null expression."
+        /// A string like  "Static method requires null expression, non-static method requires non-null expression."
         /// </summary>
         internal static string OnlyStaticMethodsHaveNullExpr {
             get {
-                return "Static methods requires null expression, non-static property requires non-null expression.";
+                return "Static method requires null expression, non-static method requires non-null expression.";
             }
         }
 

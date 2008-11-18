@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT
 
 using System.Collections.Generic;
@@ -44,16 +46,14 @@ namespace Microsoft.Scripting.ComInterop {
                                     ),
                                     typeof(ComTypeLibDesc).GetProperty("Guid")
                                 ),
-                                Expression.Constant(_lib.Guid.ToString())
+                                Expression.Constant(_lib.Guid)
                             )
                         )
                     );
 
                 return new MetaObject(
-                    Expression.Call(
-                        AstUtils.Convert(Expression, typeof(ComTypeLibDesc)),
-                        typeof(ComTypeLibDesc).GetMethod("GetTypeLibObjectDesc"),
-                        Expression.Constant(binder.Name.ToString())
+                    Expression.Constant(
+                        ((ComTypeLibDesc)Value).GetTypeLibObjectDesc(binder.Name)
                     ),
                     restrictions
                 );

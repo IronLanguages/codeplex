@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
@@ -55,7 +57,7 @@ namespace Microsoft.Scripting.ComInterop {
                 // paramVariants._elementN.SetAsByrefT(ref temp)
                 Debug.Assert(TempVariable == null);
                 var argExpr = _argBuilder.MarshalToRef(parameter);
-
+                
                 TempVariable = Expression.Variable(argExpr.Type, null);
                 return Expression.Block(
                     Expression.Assign(TempVariable, argExpr),

@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Reflection.Emit;
 using System.Diagnostics;
 
@@ -55,7 +57,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EnterScope(BlockExpression node) {
-            if (node.Variables.Count > 0 && !_scope.MergedScopes.Contains(node)) {
+            if (node.Variables.Count > 0 && (_scope.MergedScopes == null || !_scope.MergedScopes.Contains(node))) {
                 _scope = _tree.Scopes[node].Enter(this, _scope);
                 Debug.Assert(_scope.Node == node);
             }

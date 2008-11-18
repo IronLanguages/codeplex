@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
@@ -53,24 +55,24 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
         public static CatchBlock Catch(Type type, Expression body) {
-            return CreateCatchBlock(type, null, body, null);
+            return MakeCatchBlock(type, null, body, null);
         }
 
         public static CatchBlock Catch(ParameterExpression variable, Expression body) {
             ContractUtils.RequiresNotNull(variable, "variable");
-            return CreateCatchBlock(variable.Type, variable, body, null);
+            return MakeCatchBlock(variable.Type, variable, body, null);
         }
 
         public static CatchBlock Catch(Type type, Expression body, Expression filter) {
-            return CreateCatchBlock(type, null, body, filter);
+            return MakeCatchBlock(type, null, body, filter);
         }
 
         public static CatchBlock Catch(ParameterExpression variable, Expression body, Expression filter) {
             ContractUtils.RequiresNotNull(variable, "variable");
-            return CreateCatchBlock(variable.Type, variable, body, filter);
+            return MakeCatchBlock(variable.Type, variable, body, filter);
         }
 
-        public static CatchBlock CreateCatchBlock(Type type, ParameterExpression variable, Expression body, Expression filter) {
+        public static CatchBlock MakeCatchBlock(Type type, ParameterExpression variable, Expression body, Expression filter) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(variable == null || variable.Type.Equals(type), "variable");
             Expression.RequireVariableNotByRef(variable, "variable");

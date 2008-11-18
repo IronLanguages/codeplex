@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
@@ -112,6 +114,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
+            ContractUtils.RequiresNotNull(initializers, "initializers");
             ReadOnlyCollection<ElementInit> initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();

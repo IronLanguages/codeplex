@@ -13,9 +13,12 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -81,13 +84,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // trees. Also we depend on this for simplicity (keeping only one
             // active IL Label per LabelInfo)
             for (LabelBlockInfo j = block; j != null; j = j.Parent) {
-                if (j.Labels != null && j.Labels.ContainsKey(Node)) {
+                if (j.ContainsTarget(Node)) {
                     throw Error.LabelTargetAlreadyDefined(Node.Name);
                 }
             }
 
             Definitions.Add(block);
-            block.Labels.Add(Node, this);
+            block.AddLabelInfo(Node, this);
 
             // Once defined, validate all jumps
             if (Definitions.Count == 1) {
@@ -209,16 +212,40 @@ namespace Microsoft.Linq.Expressions.Compiler {
     }
 
     internal sealed class LabelBlockInfo {
-        internal readonly Dictionary<LabelTarget, LabelInfo> Labels;
+        private Dictionary<LabelTarget, LabelInfo> Labels; // lazily allocated, we typically use this only once every 6th-7th block
         internal readonly LabelBlockKind Kind;
         internal readonly LabelBlockInfo Parent;
 
         internal LabelBlockInfo(LabelBlockInfo parent, LabelBlockKind kind) {
             Parent = parent;
             Kind = kind;
-            if (kind == LabelBlockKind.Block) {
+        }
+
+        internal bool ContainsTarget(LabelTarget target) {
+            if (Labels == null) {
+                return false;
+            }
+
+            return Labels.ContainsKey(target);
+        }
+
+        internal bool TryGetLabelInfo(LabelTarget target, out LabelInfo info) {
+            if (Labels == null) {
+                info = null;
+                return false;
+            }
+
+            return Labels.TryGetValue(target, out info);
+        }
+
+        internal void AddLabelInfo(LabelTarget target, LabelInfo info) {
+            Debug.Assert(Kind == LabelBlockKind.Block);
+
+            if (Labels == null) {
                 Labels = new Dictionary<LabelTarget, LabelInfo>();
             }
+
+            Labels.Add(target, info);
         }
     }
 }

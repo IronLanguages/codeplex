@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
@@ -22,6 +24,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
@@ -254,7 +257,7 @@ namespace Microsoft.Scripting.ComInterop {
         // to do the QueryInterface if needed
         const VarEnum VT_DISPATCH_OR_UNKNOWN = VarEnum.VT_DISPATCH;
 
-        private VarEnum GetComType(Type argumentType) {
+        private VarEnum GetComType(ref Type argumentType) {
             if (argumentType == typeof(Missing)) {
                 //TODO: consider specialcasing marshaling for Missing as VT_ERROR | E_PARAMNOTFOUND 
                 return VarEnum.VT_VARIANT;
@@ -282,11 +285,16 @@ namespace Microsoft.Scripting.ComInterop {
             // Many languages require an explicit cast for an enum to be used as the underlying type.
             // However, we want to allow this conversion for COM without requiring an explicit cast
             // so that enums from interop assemblies can be used as arguments. 
-            // TODO: This will not be needed once we enable loading type libraries and using the enum
-            // definition from the type library. We need to revisit this and decide if we want to allow enums to be used as the underlying type even if the language does not support the conversion
             if (argumentType.IsEnum) {
-                Type underlyingType = Enum.GetUnderlyingType(argumentType);
-                return GetComType(underlyingType);
+                argumentType = Enum.GetUnderlyingType(argumentType);
+                return GetComType(ref argumentType);
+            }
+
+            // COM cannot express valuetype nulls so we will convert to underlying type
+            // it will throw if there is no value
+            if (TypeUtils.IsNullableType(argumentType)) {
+                argumentType = TypeUtils.GetNonNullableType(argumentType);
+                return GetComType(ref argumentType);
             }
 
             if (argumentType.IsCOMObject) {
@@ -336,7 +344,7 @@ namespace Microsoft.Scripting.ComInterop {
                     //This parameter must accept any value including primitives so it should be a VT_VARIANT.
                     elementVarEnum = VarEnum.VT_VARIANT;
                 } else {
-                    elementVarEnum = GetComType(elementType);
+                    elementVarEnum = GetComType(ref elementType);
                 }
 
                 argBuilder = GetSimpleArgBuilder(elementType, elementVarEnum);
@@ -345,7 +353,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             Debug.Assert(!(argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)), "should not have StrongBox here");
 
-            VarEnum varEnum = GetComType(argumentType);
+            VarEnum varEnum = GetComType(ref argumentType);
             argBuilder = GetByValArgBuilder(argumentType, ref varEnum);
 
             return new VariantBuilder(varEnum, argBuilder);

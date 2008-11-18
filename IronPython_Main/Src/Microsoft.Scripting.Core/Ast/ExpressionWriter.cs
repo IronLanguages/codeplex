@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -20,6 +22,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
@@ -487,7 +490,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        protected internal override Expression VisitMemberAccess(MemberExpression node) {
+        protected internal override Expression VisitMember(MemberExpression node) {
             OutMember(node.Expression, node.Member);
             return node;
         }
@@ -614,7 +617,7 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitEmpty(DefaultExpression node) {
+        protected internal override Expression VisitDefault(DefaultExpression node) {
             if (node.Type == typeof(void)) {
                 Out("/*empty*/");
             } else {

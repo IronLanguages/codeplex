@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Reflection;
 using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
@@ -61,7 +63,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {
-            return visitor.VisitMemberAccess(this);
+            return visitor.VisitMember(this);
         }
     }
 
@@ -113,6 +115,7 @@ namespace Microsoft.Linq.Expressions {
             if (field.IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
             } else {
+                ContractUtils.Requires(expression != null, "field", Strings.OnlyStaticFieldsHaveNullExpr);
                 RequiresCanRead(expression, "expression");
                 if (!TypeUtils.AreReferenceAssignable(field.DeclaringType, expression.Type)) {
                     throw Error.FieldNotDefinedForType(field, expression.Type);
@@ -197,6 +200,7 @@ namespace Microsoft.Linq.Expressions {
             if (mi.IsStatic) {
                 ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullExpr); 
             } else {
+                ContractUtils.Requires(expression != null, "property", Strings.OnlyStaticPropertiesHaveNullExpr);
                 RequiresCanRead(expression, "expression");
                 if (!TypeUtils.IsValidInstanceType(property, expression.Type)) {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);

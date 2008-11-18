@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Provides storage which is flowed into a callers site.  The same storage object is 

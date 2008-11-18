@@ -30,6 +30,7 @@ using Microsoft.Scripting.Runtime;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {
     [Documentation("Provides support for asynchronous socket operations.")]

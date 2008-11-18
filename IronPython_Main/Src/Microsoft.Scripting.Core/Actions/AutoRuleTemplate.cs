@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
@@ -20,6 +22,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Binders {
@@ -141,6 +144,7 @@ namespace Microsoft.Scripting.Binders {
 
         internal class TemplateRuleRewriter : ExpressionVisitor {
             private readonly List<ConstantExpression> _constants;
+            private static CacheDict<Type, Func<object, int, object>> _templateCtors = new CacheDict<Type, Func<object, int, object>>(20);
 
             public TemplateRuleRewriter(List<ConstantExpression> constants) {
                 _constants = constants;
@@ -159,20 +163,16 @@ namespace Microsoft.Scripting.Binders {
                     object value = node.Value;
 
                     Type elementType = TypeUtils.GetVisibleType(node.Type);
-                    Type genType = typeof(TemplatedValue<>).MakeGenericType(elementType);
 
-                    var ctor = genType.GetConstructor(
-                        BindingFlags.NonPublic | BindingFlags.Instance,
-                        null,
-                        new Type[] { elementType, typeof(int) },
-                        null
-                    );
-                    object constVal = ctor.Invoke(new object[] { value, index });
+                    Func<object, int, object> ctor;
+                    if (!_templateCtors.TryGetValue(elementType, out ctor)) {
+                        MethodInfo genMethod = typeof(TemplatedValue<>).MakeGenericType(new Type[] { elementType }).GetMethod("Make", BindingFlags.NonPublic | BindingFlags.Static);
+                        _templateCtors[elementType] = ctor = (Func<object, int, object>)genMethod.CreateDelegate(typeof(Func<object, int, object>)); ;
+                    } 
+                    
+                    object constVal = ctor(value, index);                    
 
-                    return Helpers.Convert(
-                        Expression.Property(Expression.Constant(constVal), genType.GetProperty("Value")),
-                        TypeUtils.GetConstantType(node.Type)
-                    );
+                    return Expression.Property(Expression.Constant(constVal), ctor.Method.ReturnType.GetProperty("Value"));
                 }
 
                 return base.VisitConstant(node);
@@ -180,3 +180,4 @@ namespace Microsoft.Scripting.Binders {
         }
     }
 }
+

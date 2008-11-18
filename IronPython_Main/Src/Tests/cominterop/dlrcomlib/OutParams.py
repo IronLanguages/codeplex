@@ -120,7 +120,6 @@ def test_negative():
         AreEqual(com_obj.mDouble(Double.MaxValue), Double.MaxValue)
     AssertError(StandardError, com_obj.mDouble, Double.MaxValue, runonly=preferComDispatch) #Merlin 387386
     
-    AssertErrorWithMessage(TypeError, "mCy() takes exactly 1 argument (1 given)", com_obj.mCy, Decimal(0), skip=preferComDispatch) #Merlin:386453
     AssertError(StandardError, com_obj.mCy, Decimal(0), runonly=preferComDispatch) 
 
 #------------------------------------------------------------------------------

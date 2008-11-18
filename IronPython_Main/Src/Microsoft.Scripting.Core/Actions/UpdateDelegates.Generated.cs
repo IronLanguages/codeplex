@@ -13,13 +13,32 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using System.Threading;
 
 namespace Microsoft.Scripting.Binders {
     internal static partial class UpdateDelegates {
 
+        /// <summary>
+        /// Caches a single Matchmaker and its delegate to avoid expensive delegate
+        /// recreation.  We just Interlock.Exchange this out each time we need one
+        /// and replace it when we're done.  If multiple threads are operating we'll
+        /// sometimes end up creating multiple delegates which is as bad w/o the
+        /// cache.
+        /// </summary>
+        private static class MatchmakerCache<T> {
+            public static Matchmaker Info;
+        }
+
+        private partial class Matchmaker {
+            internal bool Match;
+            internal Delegate Delegete;
+        }
+        
         //
         // WARNING: do not edit these methods here. The real source code lives
         // in two places: generate_dynsites.py, which generates the methods in
@@ -48,130 +67,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback1<T0, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback1<T0, TRet>(CallSite site, T0 arg0) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -189,130 +227,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback2<T0, T1, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback2<T0, T1, TRet>(CallSite site, T0 arg0, T1 arg1) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -330,130 +387,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback3<T0, T1, T2, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback3<T0, T1, T2, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -471,130 +547,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback4<T0, T1, T2, T3, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback4<T0, T1, T2, T3, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -612,130 +707,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback5<T0, T1, T2, T3, T4, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback5<T0, T1, T2, T3, T4, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -753,130 +867,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback6<T0, T1, T2, T3, T4, T5, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, T5, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback6<T0, T1, T2, T3, T4, T5, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -894,130 +1027,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback7<T0, T1, T2, T3, T4, T5, T6, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback7<T0, T1, T2, T3, T4, T5, T6, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -1035,130 +1187,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback8<T0, T1, T2, T3, T4, T5, T6, T7, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -1176,130 +1347,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7, mm_arg8) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback9<T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -1317,130 +1507,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7, mm_arg8, mm_arg9) => {
-                    match = false;
-                    return default(TRet);
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (match) {
-                            return result;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.Fallback10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>;
+            } else {
+                ruleTarget = (Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                            result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                            if (mm.Match) {
+                                return result;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (match) {
+                        if (mm.Match) {
                             return result;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                    if (match) {
-                        return result;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal TRet Fallback10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) {
+                Match = false;
+                return default(TRet);
+            }    
         }
 
 
@@ -1457,130 +1666,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid1<T0>;
+            } else {
+                ruleTarget = (Action<CallSite, T0>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid1<T0>(CallSite site, T0 arg0) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -1597,130 +1825,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid2<T0, T1>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid2<T0, T1>(CallSite site, T0 arg0, T1 arg1) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -1737,130 +1984,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid3<T0, T1, T2>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid3<T0, T1, T2>(CallSite site, T0 arg0, T1 arg1, T2 arg2) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -1877,130 +2143,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid4<T0, T1, T2, T3>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid4<T0, T1, T2, T3>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2017,130 +2302,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid5<T0, T1, T2, T3, T4>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid5<T0, T1, T2, T3, T4>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2157,130 +2461,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid6<T0, T1, T2, T3, T4, T5>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4, T5>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid6<T0, T1, T2, T3, T4, T5>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2297,130 +2620,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid7<T0, T1, T2, T3, T4, T5, T6>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4, T5, T6>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid7<T0, T1, T2, T3, T4, T5, T6>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2437,130 +2779,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid8<T0, T1, T2, T3, T4, T5, T6, T7>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid8<T0, T1, T2, T3, T4, T5, T6, T7>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2577,130 +2938,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7, mm_arg8) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid9<T0, T1, T2, T3, T4, T5, T6, T7, T8>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
+                Match = false;
+                return;
+            }    
         }
 
 
@@ -2717,130 +3097,149 @@ namespace Microsoft.Scripting.Binders {
             int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>> originalRule = null;
 
-            //
-            // Create matchmaker and its site. We'll need them regardless.
-            //
-            bool match = true;
-            site = CallSiteOps.CreateMatchmaker(
-                @this,
-                (mm_site, mm_arg0, mm_arg1, mm_arg2, mm_arg3, mm_arg4, mm_arg5, mm_arg6, mm_arg7, mm_arg8, mm_arg9) => {
-                    match = false;
-                    return;
-                }
-            );
-
-            //
-            // Level 1 cache lookup
-            //
-            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
-
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (match) {
-                            return;
-                        }
-                    } finally {
-                        if (match) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            //
-                            CallSiteOps.SetPolymorphicTarget(@this);
-                        }
-                    }
-
-                    if (startingTarget == ruleTarget) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;            
-                }
+            // get the matchmaker & its delegate
+            Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>.Info, null);
+            if (mm == null) {
+                mm = new Matchmaker();
+                mm.Delegete = ruleTarget = mm.FallbackVoid10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+            } else {
+                ruleTarget = (Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>)mm.Delegete;
             }
 
-            //
-            // Level 2 cache lookup
-            //
-            var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
+            try {    
+                //
+                // Create matchmaker and its site. We'll need them regardless.
+                //
+                mm.Match = true;
+                site = CallSiteOps.CreateMatchmaker(
+                    @this,
+                    ruleTarget
+                );
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Level 1 cache lookup
+                //
+                if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                //
+                                CallSiteOps.SetPolymorphicTarget(@this);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;            
+                    }
+                }
+
+                //
+                // Level 2 cache lookup
+                //
+                var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
+
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+                    for (index = 0, count = applicable.Length; index < count; index++) {
+                        rule = applicable[index];
+
+                        //
+                        // Execute the rule
+                        //
+                        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                        try {
+                             ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                            if (mm.Match) {
+                                return;
+                            }
+                        } finally {
+                            if (mm.Match) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+                                CallSiteOps.AddRule(@this, rule);
+                                // and then move it to the front of the L2 cache
+                                @this.RuleCache.MoveRule(rule, args);
+                            }
+                        }
+
+                        if ((object)startingTarget == (object)ruleTarget) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalRule = rule;
+                        }
+
+                        // Rule didn't match, try the next one
+                        mm.Match = true;
+                    }
+                }
+
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                rule = null;
+
+                for (; ; ) {
+                    rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
 
                     //
-                    // Execute the rule
+                    // Execute the rule on the matchmaker site
                     //
+
                     ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
                     try {
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (match) {
+                        if (mm.Match) {
                             return;
                         }
                     } finally {
-                        if (match) {
+                        if (mm.Match) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
                             CallSiteOps.AddRule(@this, rule);
                         }
                     }
 
-                    if (startingTarget == ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
-                    }
-
-                    // Rule didn't match, try the next one
-                    match = true;
+                    // Rule we got back didn't work, try another one
+                    mm.Match = true;
                 }
+            } finally {
+                Interlocked.Exchange(ref MatchmakerCache<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>.Info, mm);
             }
+        }
 
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            rule = null;
-
-            for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-
-                ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
-                try {
-                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                    if (match) {
-                        return;
-                    }
-                } finally {
-                    if (match) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        CallSiteOps.AddRule(@this, rule);
-                    }
-                }
-
-                // Rule we got back didn't work, try another one
-                match = true;
-            }
+        private partial class Matchmaker {
+            internal void FallbackVoid10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(CallSite site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) {
+                Match = false;
+                return;
+            }    
         }
 
 

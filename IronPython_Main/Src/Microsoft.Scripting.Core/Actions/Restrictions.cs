@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
@@ -210,6 +212,10 @@ namespace Microsoft.Scripting.Binders {
         /// Creates one type identity test 
         /// </summary>
         private static Expression CreateTypeRestriction(Expression expression, Type rt) {
+            // Null is special. True if expression produces null.
+            if (rt == typeof(Null)) {
+                return Expression.Equal(expression, Expression.Constant(null));
+            }
             return Expression.TypeEqual(expression, rt);
         }
 

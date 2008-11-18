@@ -327,7 +327,7 @@ def test_interface_types_typerror():
     
     for val in test_cases:
         AssertError(TypeError, com_obj.mIDispatch, val)
-        AssertError(TypeError, com_obj.mIUnknown, val, skip=not preferComDispatch,  bugid="374282")
+        AssertError(TypeError, com_obj.mIUnknown, val)
 
 
 ###############################################################################

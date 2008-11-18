@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -24,6 +26,7 @@ using System.Text;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
@@ -508,7 +511,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        protected internal override Expression VisitMemberAccess(MemberExpression node) {
+        protected internal override Expression VisitMember(MemberExpression node) {
             OutMember(node.Expression, node.Member);
             return node;
         }
@@ -752,7 +755,7 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
-        protected internal override Expression VisitEmpty(DefaultExpression node) {
+        protected internal override Expression VisitDefault(DefaultExpression node) {
             return node;
         }
 

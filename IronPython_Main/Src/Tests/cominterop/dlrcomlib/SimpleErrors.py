@@ -109,7 +109,7 @@ cor_mapper = {
                 com_obj.genCorMissingMethod : MissingMethodException,
                 com_obj.genCorMulticastNotSupported : MulticastNotSupportedException,
                 com_obj.genCorNotFiniteNumber : NotFiniteNumberException,
-                com_obj.genCorNotSupported : SystemError, #Merlin 380302. Should be NotImplementedException 
+                com_obj.genCorNotSupported : SystemError,  
                 com_obj.genCorNullReference : NullReferenceException,
                 com_obj.genCorOutOfMemory : OutOfMemoryException,
                 com_obj.genCorOverflow : OverflowException,
@@ -195,7 +195,7 @@ def test_error_exceptions():
 
 from System import AppDomainUnloadedException
 msee_mapper = {
-                com_obj.genMseeAppDomainUnloaded : SystemError, #Merlin 380315 - should throw AppDomainUnloadedException
+                com_obj.genMseeAppDomainUnloaded : SystemError,
                 }
 
 def test_msee_exceptions():
@@ -207,7 +207,7 @@ def test_msee_exceptions():
 
 from System.Security.Cryptography import CryptographicException
 nte_mapper = {
-                com_obj.genNTEFail : EnvironmentError, #Merlin 380288 - should be CryptographicException
+                com_obj.genNTEFail : EnvironmentError,
                 }
                 
 def test_nte_exceptions():

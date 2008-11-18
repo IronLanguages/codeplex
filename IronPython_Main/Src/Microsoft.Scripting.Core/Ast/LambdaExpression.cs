@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -129,9 +131,6 @@ namespace Microsoft.Linq.Expressions {
 
 
     public partial class Expression {
-        private static CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>> _exprCtors = new CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>>(200);
-        private static MethodInfo _lambdaCtorMethod;
-
         //internal lambda factory that creates an instance of Expression<delegateType>
         internal static LambdaExpression Lambda(
                 ExpressionType nodeType,
@@ -144,11 +143,12 @@ namespace Microsoft.Linq.Expressions {
                 // got or create a delegate to the public Expression.Lambda<T> method and call that will be used for
                 // creating instances of this delegate type
                 Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression> func;
-                lock (_exprCtors) {
-                    if (_lambdaCtorMethod == null) {
-                        EnsureLambdCtor();
-                    }
 
+                if (_exprCtors == null) {
+                    EnsureLambdaFastPathInitialized();
+                }
+
+                lock (_exprCtors) {
                     if (!_exprCtors.TryGetValue(delegateType, out func)) {
                         _exprCtors[delegateType] = func = (Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>)
                             Delegate.CreateDelegate(
@@ -164,7 +164,17 @@ namespace Microsoft.Linq.Expressions {
             return SlowMakeLambda(nodeType, delegateType, name, body, parameters);
         }
 
-        private static void EnsureLambdCtor() {
+        private static void EnsureLambdaFastPathInitialized() {
+            Interlocked.CompareExchange(
+                ref _exprCtors,
+                new CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>>(200),
+                null
+            );
+
+            EnsureLambdaCtor();
+        }
+        
+        private static void EnsureLambdaCtor() {
             MethodInfo[] methods = (MethodInfo[])typeof(Expression).GetMember("Lambda", MemberTypes.Method, BindingFlags.Public | BindingFlags.Static);
             foreach (MethodInfo mi in methods) {
                 if (!mi.IsGenericMethod) {
@@ -187,6 +197,12 @@ namespace Microsoft.Linq.Expressions {
         private static LambdaExpression SlowMakeLambda(ExpressionType nodeType, Type delegateType, string name, Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
             Type ot = typeof(Expression<>);
             Type ct = ot.MakeGenericType(new Type[] { delegateType });
+            Type[] ctorTypes = new Type[] {
+                typeof(ExpressionType),     // nodeType,
+                typeof(string),             // name,
+                typeof(Expression),         // body,
+                typeof(ReadOnlyCollection<ParameterExpression>) // parameters) 
+            }; 
             ConstructorInfo ctor = ct.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, ctorTypes, null);
             return (LambdaExpression)ctor.Invoke(new object[] { nodeType, name, body, parameters });
         }
@@ -254,14 +270,6 @@ namespace Microsoft.Linq.Expressions {
             return Lambda(ExpressionType.Lambda, delegateType, name, body, parameterList);
         }
 
-
-        private static Type[] ctorTypes = new Type[] {
-            typeof(ExpressionType),     // nodeType,
-            typeof(string),             // name,
-            typeof(Expression),         // body,
-            typeof(ReadOnlyCollection<ParameterExpression>) // parameters) 
-        };
-
         //CONFORMING
         public static LambdaExpression Lambda(Type delegateType, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
             ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
@@ -269,8 +277,6 @@ namespace Microsoft.Linq.Expressions {
 
             return Lambda(ExpressionType.Lambda, delegateType, name, body, paramList);
         }
-
-        private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type, MethodInfo>(40);
 
         //CONFORMING
         private static void ValidateLambdaArgs(Type delegateType, ref Expression body, ReadOnlyCollection<ParameterExpression> parameters) {
@@ -300,6 +306,10 @@ namespace Microsoft.Linq.Expressions {
                     RequiresCanRead(pex, "parameters");
                     Type pType = pi.ParameterType;
                     if (pex.IsByRef) {
+                        if (!pType.IsByRef) {
+                            //We cannot pass a parameter of T& to a delegate that takes T or any non-ByRef type.
+                            throw Error.ParameterExpressionNotValidAsDelegate(pex.Type.MakeByRefType(), pType);
+                        }
                         pType = pType.GetElementType();
                     }
                     if (!TypeUtils.AreReferenceAssignable(pex.Type, pType)) {

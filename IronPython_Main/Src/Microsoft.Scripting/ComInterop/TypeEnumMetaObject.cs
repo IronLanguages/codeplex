@@ -35,11 +35,7 @@ namespace Microsoft.Scripting.ComInterop {
             if (_desc.HasMember(binder.Name)) {
                 return new MetaObject(
                     // return (.bound $arg0).GetValue("<name>")
-                    Expression.Call(
-                        AstUtils.Convert(Expression, typeof(ComTypeEnumDesc)),
-                        typeof(ComTypeEnumDesc).GetMethod("GetValue"),
-                        Expression.Constant(binder.Name)
-                    ),
+                    Expression.Constant(((ComTypeEnumDesc)Value).GetValue(binder.Name)),
                     EnumRestrictions()
                 );
             }

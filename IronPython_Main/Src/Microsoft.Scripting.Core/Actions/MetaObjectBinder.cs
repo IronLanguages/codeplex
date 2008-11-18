@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Binders {
@@ -104,11 +107,14 @@ namespace Microsoft.Scripting.Binders {
             // TODO: we should really be using the same delegate as the CallSite
             Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(args, typeof(object));
 
+            // Because we know the arguments match the delegate type (we just created the argument types)
+            // we go directly to DynamicExpression.Make to avoid a bunch of unnecessary argument validation
             return new MetaObject(
-                Expression.MakeDynamic(
+                DynamicExpression.Make(
+                    typeof(object),
                     delegateType,
                     this,
-                    exprs
+                    new ReadOnlyCollection<Expression>(exprs)
                 ),
                 rs
             );

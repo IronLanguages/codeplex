@@ -50,7 +50,12 @@ class VariantType:
         cw.write("[FieldOffset(0)] internal %s %s;" % (self.unmanagedRepresentationType, self.managedFieldName))
 
     def write_ToObject(self, cw):
-        cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
+        if self.accessorName == 'AsI4':
+            cw.write("case VarEnum.VT_%s: return RuntimeOps.Int32ToObject(%s);" % (self.variantType, self.accessorName))
+        elif self.accessorName == 'AsBool':
+            cw.write("case VarEnum.VT_%s: return %s ? RuntimeOps.True : RuntimeOps.False;" % (self.variantType, self.accessorName))
+        else:
+            cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
 
     def write_accessor(self, cw):
         cw.write("// VT_%s" % self.variantType)
@@ -108,12 +113,18 @@ class VariantType:
 
     def write_ConvertByrefToPtr(self, cw):
         if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType:
-            cw.write("public static IntPtr Convert%sByrefToPtr(ref %s value) { return _Convert%sByrefToPtr(ref value); }" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType, self.unmanagedRepresentationType))
+            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
+            if self.unmanagedRepresentationType == 'Int32':
+                cw.enter_block("public static unsafe IntPtr Convert%sByrefToPtr(ref %s value)" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType))
+            else:
+                cw.enter_block("internal static unsafe IntPtr Convert%sByrefToPtr(ref %s value)" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType))
+            cw.enter_block('fixed (%s *x = &value)' % self.unmanagedRepresentationType)
+            cw.write('AssertByrefPointsToStack(new IntPtr(x));')
+            cw.write('return new IntPtr(x);')
+            cw.exit_block()        
+            cw.exit_block()
+            cw.write('')
     
-    def write_ConvertByrefToPtrDelegates(self, cw):
-        if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType:
-            cw.write("private static readonly ConvertByrefToPtrDelegate<%s> _Convert%sByrefToPtr = (ConvertByrefToPtrDelegate<%s>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<%s>), _ConvertByrefToPtr.MakeGenericMethod(typeof(%s)));" % (5 * (self.unmanagedRepresentationType,)))
-
 variantTypes = [
   # VariantType('varEnum', 'managed_type')
     VariantType('I1', "SByte"),
@@ -208,10 +219,6 @@ def gen_ConvertByrefToPtr(cw):
     for variantType in variantTypes:
         variantType.write_ConvertByrefToPtr(cw)
 
-def gen_ConvertByrefToPtrDelegates(cw):
-    for variantType in variantTypes:
-        variantType.write_ConvertByrefToPtrDelegates(cw)
-
 def main():
     return generate(
         ("Variant union types", gen_UnionTypes),
@@ -222,7 +229,6 @@ def main():
         ("ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes),
         ("Variant IsPrimitiveType", gen_IsPrimitiveType),
         ("ConvertByrefToPtr", gen_ConvertByrefToPtr),
-        ("ConvertByrefToPtrDelegates", gen_ConvertByrefToPtrDelegates),
     )
 
 if __name__ == "__main__":

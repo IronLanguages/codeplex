@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// We ensure we only produce one MemberTracker for each member which logically lives on the declaring type.  So 
         /// for example if you get a member from a derived class which is declared on the base class it should be the same 
-        /// as getting the member from the base class.  That’s easy enough until you get into extension members – here there
+        /// as getting the member from the base class.  Thatï¿½s easy enough until you get into extension members ï¿½ here there
         /// might be one extension member which is being applied to multiple types.  Therefore we need to take into account the 
         /// extension type when ensuring that we only have 1 MemberTracker ever created.
         /// </summary>

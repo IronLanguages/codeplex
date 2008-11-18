@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
@@ -23,11 +25,15 @@ using ComTypes = System.Runtime.InteropServices.ComTypes;
 namespace Microsoft.Scripting.ComInterop {
 
     internal sealed class ComTypeClassDesc : ComTypeDesc {
-        LinkedList<string> _itfs; // implemented interfaces
-        LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
+        private LinkedList<string> _itfs; // implemented interfaces
+        private LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
+        private Type _typeObj;
 
         public object CreateInstance() {
-            return System.Activator.CreateInstance(System.Type.GetTypeFromCLSID(Guid));
+            if (_typeObj == null) {
+                _typeObj = System.Type.GetTypeFromCLSID(Guid);
+            }
+            return System.Activator.CreateInstance(_typeObj);
         }
 
         internal ComTypeClassDesc(ComTypes.ITypeInfo typeInfo, ComTypeLibDesc typeLibDesc) :

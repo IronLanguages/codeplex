@@ -13,9 +13,11 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Binders;
-
+using Microsoft.Scripting.Utils;
 namespace Microsoft.Runtime.CompilerServices {
 
     // Conceptually these are instance methods on CallSite<T> but
@@ -34,8 +36,17 @@ namespace Microsoft.Runtime.CompilerServices {
         [Obsolete("do not use this method", true)]
         public static void AddRule<T>(CallSite<T> site, CallSiteRule<T> rule) where T : class {
             lock (site) {
-                site.Rules = site.Rules.AddRule(rule);
+                if (site.Rules == null) {
+                    site.Rules = rule.RuleSet;
+                } else {
+                    site.Rules = site.Rules.AddRule(rule);
+                }
             }
+        }
+
+        [Obsolete("do not use this method", true)]
+        public static void MoveRule<T>(CallSite<T> site, CallSiteRule<T> rule, object [] args) where T : class {
+            site.RuleCache.MoveRule(rule, args);
         }
 
         [Obsolete("do not use this method", true)]
@@ -99,6 +110,9 @@ namespace Microsoft.Runtime.CompilerServices {
 
         [Obsolete("do not use this method", true)]
         public static CallSiteRule<T>[] GetRules<T>(CallSite<T> site) where T : class {
+            if (site.Rules == null) {
+                return EmptyArray<CallSiteRule<T>>.Instance;
+            }
             return site.Rules.GetRules();
         }
     }

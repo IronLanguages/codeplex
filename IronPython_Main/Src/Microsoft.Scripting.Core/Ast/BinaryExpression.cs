@@ -14,6 +14,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -998,7 +1000,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 return GetUserDefinedBinaryOperatorOrThrow(ExpressionType.AddAssignChecked, "op_Addition", left, right, true);
             }
-            return GetMethodBasedBinaryOperator(ExpressionType.AddAssignChecked, left, right, method, true);
+            return GetMethodBasedAssignOperator(ExpressionType.AddAssignChecked, left, right, method, true);
         }
 
         //CONFORMING
@@ -1068,7 +1070,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 return GetUserDefinedBinaryOperatorOrThrow(ExpressionType.SubtractAssignChecked, "op_Subtraction", left, right, true);
             }
-            return GetMethodBasedBinaryOperator(ExpressionType.SubtractAssignChecked, left, right, method, true);
+            return GetMethodBasedAssignOperator(ExpressionType.SubtractAssignChecked, left, right, method, true);
         }
 
         //CONFORMING
@@ -1200,6 +1202,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static BinaryExpression MultiplyAssignChecked(Expression left, Expression right, MethodInfo method) {
             RequiresCanRead(left, "left");
+            RequiresCanWrite(left, "left");
             RequiresCanRead(right, "right");
             if (method == null) {
                 if (left.Type == right.Type && TypeUtils.IsArithmetic(left.Type)) {
@@ -1207,7 +1210,7 @@ namespace Microsoft.Linq.Expressions {
                 }
                 return GetUserDefinedBinaryOperatorOrThrow(ExpressionType.MultiplyAssignChecked, "op_Multiply", left, right, true);
             }
-            return GetMethodBasedBinaryOperator(ExpressionType.MultiplyAssignChecked, left, right, method, true);
+            return GetMethodBasedAssignOperator(ExpressionType.MultiplyAssignChecked, left, right, method, true);
         }
 
         //CONFORMING

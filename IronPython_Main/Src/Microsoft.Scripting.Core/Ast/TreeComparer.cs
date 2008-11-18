@@ -13,10 +13,13 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
@@ -87,9 +90,9 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitConstant(node);
             }
 
-            protected internal override Expression VisitEmpty(DefaultExpression node) {
+            protected internal override Expression VisitDefault(DefaultExpression node) {
                 Expressions.Add(node);
-                return base.VisitEmpty(node);
+                return base.VisitDefault(node);
             }
 
             protected internal override Expression VisitInvocation(InvocationExpression node) {
@@ -112,7 +115,7 @@ namespace Microsoft.Linq.Expressions {
                 return base.VisitLoop(node);
             }
 
-            protected internal override Expression VisitMemberAccess(MemberExpression node) {
+            protected internal override Expression VisitMember(MemberExpression node) {
                 // ignore the templated constants but add normal member expressions
                 Expression target = node.Expression;
                 if (target == null ||
@@ -121,7 +124,7 @@ namespace Microsoft.Linq.Expressions {
                     Expressions.Add(node);
                 }
 
-                return base.VisitMemberAccess(node);
+                return base.VisitMember(node);
             }
 
             protected internal override Expression VisitMethodCall(MethodCallExpression node) {

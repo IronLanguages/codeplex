@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
@@ -211,7 +213,7 @@ namespace Microsoft.Linq.Expressions {
             return node.Rewrite(a);
         }
 
-        protected internal virtual Expression VisitEmpty(DefaultExpression node) {
+        protected internal virtual Expression VisitDefault(DefaultExpression node) {
             return node;
         }
 
@@ -277,7 +279,7 @@ namespace Microsoft.Linq.Expressions {
             return Expression.Loop(b, @break, @continue);
         }
 
-        protected internal virtual Expression VisitMemberAccess(MemberExpression node) {
+        protected internal virtual Expression VisitMember(MemberExpression node) {
             Expression e = Visit(node.Expression);
             if (e == node.Expression) {
                 return node;
@@ -367,7 +369,7 @@ namespace Microsoft.Linq.Expressions {
             if (v == node.Variable && b == node.Body && f == node.Filter) {
                 return node;
             }
-            return Expression.CreateCatchBlock(node.Test, v, b, f);
+            return Expression.MakeCatchBlock(node.Test, v, b, f);
         }
 
         protected internal virtual Expression VisitTry(TryExpression node) {

@@ -13,9 +13,12 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Scripting.Binders {
 

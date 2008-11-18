@@ -13,11 +13,14 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Scripting.ComInterop {
     // TODO: Either this should be an IDO, or we need to return a delegate 
