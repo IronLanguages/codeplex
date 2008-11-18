@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         public Guid Guid {
-            get { return new Guid(_typeLibDesc.Guid); }
+            get { return _typeLibDesc.Guid; }
         }
 
         public short VersionMajor {

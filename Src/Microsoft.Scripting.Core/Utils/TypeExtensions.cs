@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -51,13 +53,10 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        internal static T CreateDelegate<T>(this MethodInfo methodInfo) {
-            return (T)(object)methodInfo.CreateDelegate(typeof(T));
-        }
+        // Warning: This can be slower than you might expect due to the generic type argument & static method
         internal static T CreateDelegate<T>(this MethodInfo methodInfo, object target) {
             return (T)(object)methodInfo.CreateDelegate(typeof(T), target);
         }
-
 
         internal static Type GetReturnType(this MethodBase mi) {
             return (mi.IsConstructor) ? mi.DeclaringType : ((MethodInfo)mi).ReturnType;

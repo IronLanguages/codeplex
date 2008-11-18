@@ -13,26 +13,21 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+
 namespace Microsoft.Scripting.Binders {
     internal sealed class EmptyRuleSet<T> : RuleSet<T> where T : class {
-        internal static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
-        internal static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);
+        internal static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>();
 
-        private bool _supportAdding;
-
-        private EmptyRuleSet(bool supportAdding) {
-            this._supportAdding = supportAdding;
+        private EmptyRuleSet() {
         }
 
         internal override RuleSet<T> AddRule(CallSiteRule<T> newRule) {
-            if (_supportAdding) {
-                return newRule.RuleSet;
-            } else {
-                return this;
-            }
+            return this;
         }
 
         internal override CallSiteRule<T>[] GetRules() {

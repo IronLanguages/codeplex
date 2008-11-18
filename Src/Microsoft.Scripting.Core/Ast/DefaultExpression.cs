@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
@@ -35,7 +37,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {
-            return visitor.VisitEmpty(this);
+            return visitor.VisitDefault(this);
         }
     }
 

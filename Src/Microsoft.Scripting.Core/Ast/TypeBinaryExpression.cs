@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
-using Microsoft.Scripting;
+
+
+using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
 using System.Text;
-using System.Collections.Generic;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
@@ -69,11 +70,6 @@ namespace Microsoft.Linq.Expressions {
             // value types (including Void). Can perform test right now.
             if (cType.IsValueType) {
                 return EvalAndReturnConst(cType == _typeOperand);
-            }
-
-            // Null is special. True if expression produces null.
-            if (_typeOperand == typeof(Null)) {
-                return Expression.Equal(Expression, Expression.Constant(null));
             }
 
             // Can check the value right now for constants.
@@ -134,10 +130,9 @@ namespace Microsoft.Linq.Expressions {
 
         private Expression ReduceConstantTypeEqual() {
             ConstantExpression ce = Expression as ConstantExpression;
+            //TypeEqual(null, T) always returns false.
             if (ce.Value == null) {
-                return Expression.Constant(
-                    _typeOperand == typeof(Null)
-                );
+                return Expression.Constant(false);
             } else {
                 return Expression.Constant(
                     _typeOperand == ce.Value.GetType()

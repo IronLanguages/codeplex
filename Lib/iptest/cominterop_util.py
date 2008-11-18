@@ -291,7 +291,8 @@ def overflowErrorTrigger(in_type):
     ret_val["CHAR"] +=  overflow_num_helper(System.SByte)
     
     ############################################################
-    ret_val["FLOAT"] = []  #Merlin 374289
+    ret_val["FLOAT"] = []  
+    ret_val["FLOAT"] += overflow_num_helper(System.Double)
     
     #Shouldn't be possible to overflow a double.
     ret_val["DOUBLE"] =  []

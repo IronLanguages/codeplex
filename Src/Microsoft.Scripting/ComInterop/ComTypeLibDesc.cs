@@ -182,8 +182,8 @@ namespace Microsoft.Scripting.ComInterop {
             return false;
         }
 
-        public string Guid {
-            get { return _typeLibAttributes.guid.ToString(); }
+        public Guid Guid {
+            get { return _typeLibAttributes.guid; }
         }
 
         public short VersionMajor {

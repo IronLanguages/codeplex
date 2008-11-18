@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Runtime.CompilerServices {
     internal interface ITemplatedValue {
         int Index { get; }
@@ -28,6 +30,10 @@ namespace Microsoft.Runtime.CompilerServices {
         internal TemplatedValue(T value, int index) {
             _index = index;
             _value = value;
+        }
+
+        internal static TemplatedValue<T> Make(object value, int index) {
+            return new TemplatedValue<T>((T)value, index);
         }
 
         public T Value {

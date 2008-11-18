@@ -226,7 +226,7 @@ def deep_dive(in_name, in_type):
                         
             net_type = Type.GetType(member_fullname)
             #We can only import * from static classes.
-            if not net_type or not (net_type.IsAbstract and net_type.IsSealed):
+            if not net_type or (not (net_type.IsAbstract and net_type.IsSealed) and not net_type.IsEnum):
                 continue
                 
             print member_fullname

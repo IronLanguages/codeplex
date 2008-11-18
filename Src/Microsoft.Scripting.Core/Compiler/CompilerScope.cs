@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
@@ -65,13 +68,17 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Each variable referenced within this scope, and how often it was referenced
         /// Populated by VariableBinder
+        /// 
+        /// Created lazily as we only use in about 1 out of 3 compiles when compiling rules.
         /// </summary>
-        internal readonly Dictionary<ParameterExpression, int> ReferenceCount = new Dictionary<ParameterExpression, int>();
+        internal Dictionary<ParameterExpression, int> ReferenceCount;
 
         /// <summary>
         /// Scopes whose variables were merged into this one
+        /// 
+        /// Created lazily as we create hundreds of compiler scopes w/o merging scopes when compiling rules.
         /// </summary>
-        internal readonly Set<BlockExpression> MergedScopes = new Set<BlockExpression>();
+        internal Set<BlockExpression> MergedScopes;
 
         /// <summary>
         /// The scope's hoisted locals, if any.
@@ -92,7 +99,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         internal CompilerScope(Expression node) {
             Node = node;
-            foreach (var v in GetVariables(node)) {
+            var variables = GetVariables(node);
+
+            Definitions = new Dictionary<ParameterExpression, VariableStorageKind>(variables.Count);
+            foreach (var v in variables) {
                 Definitions.Add(v, VariableStorageKind.Local);
             }
         }
@@ -336,6 +346,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private bool ShouldCache(ParameterExpression v) {
+            if (ReferenceCount == null) {
+                return false;
+            }
             // TODO: this caching is probably too aggressive in the face of
             // conditionals
             int count;
@@ -391,7 +404,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private IList<ParameterExpression> GetVariables() {
             var vars = GetVariables(Node);
-            if (MergedScopes.Count == 0) {
+            if (MergedScopes == null) {
                 return vars;
             }
             var list = new List<ParameterExpression>(vars);

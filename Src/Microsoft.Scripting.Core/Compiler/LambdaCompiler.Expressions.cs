@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -21,6 +23,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
@@ -166,6 +169,35 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             EmitSetIndexCall(index, objectType);
+
+            // Restore the value
+            if (emitAs != EmitAs.Void) {
+                _ilg.Emit(OpCodes.Ldloc, temp);
+                _ilg.FreeLocal(temp);
+            }
+        }
+
+        private void EmitArrayIndexAssignment(BinaryExpression node, EmitAs emitAs) {
+            Debug.Assert(node.NodeType == ExpressionType.ArrayIndex);
+            var arrayIndex = (BinaryExpression)node.Left;
+
+            // Emit array object
+            EmitInstance(arrayIndex.Left, arrayIndex.Left.Type);
+
+            // Emit index
+            EmitExpression(arrayIndex.Right);
+
+            // Emit value
+            EmitExpression(node.Right);
+
+            // Save the expression value, if needed
+            LocalBuilder temp = null;
+            if (emitAs != EmitAs.Void) {
+                _ilg.Emit(OpCodes.Dup);
+                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
+            }
+
+            _ilg.EmitStoreElement(arrayIndex.Type);
 
             // Restore the value
             if (emitAs != EmitAs.Void) {
@@ -347,7 +379,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             _boundConstants.EmitConstant(this, value, type);
         }
-        
+
         private void EmitDynamicExpression(Expression expr) {
             var node = (DynamicExpression)expr;
 
@@ -476,6 +508,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return;
                 case ExpressionType.Parameter:
                     EmitVariableAssignment(node, emitAs);
+                    return;
+                case ExpressionType.ArrayIndex:
+                    EmitArrayIndexAssignment(node, emitAs);
                     return;
                 default:
                     throw Error.InvalidLvalue(node.Left.NodeType);

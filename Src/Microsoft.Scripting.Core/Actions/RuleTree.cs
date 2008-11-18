@@ -13,10 +13,13 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Binders {
@@ -27,6 +30,7 @@ namespace Microsoft.Scripting.Binders {
     /// <typeparam name="T"></typeparam>
     internal class RuleTree<T> where T : class {
         private RuleTable _ruleTable = new RuleTable();
+        private const int MaxRulesPerSignaturePerCallSiteBinder = 100;
 
         internal RuleTree() {
         }
@@ -96,7 +100,10 @@ namespace Microsoft.Scripting.Binders {
         internal void AddRule(object[] args, CallSiteRule<T> rule) {
             LinkedList<CallSiteRule<T>> list = GetRuleList(args);
             lock (list) {
-                list.AddLast(rule);
+                list.AddFirst(rule);
+                if (list.Count > MaxRulesPerSignaturePerCallSiteBinder) {
+                    list.RemoveLast();
+                }
             }
         }
 
@@ -108,6 +115,21 @@ namespace Microsoft.Scripting.Binders {
                 while (node != null) {
                     if (cmp.Equals(node.Value, rule)) {
                         list.Remove(node);
+                        break;
+                    }
+                    node = node.Next;
+                }
+            }
+        }
+
+        internal void MoveRule(CallSiteRule<T> rule, object[] args) {
+            LinkedList<CallSiteRule<T>> list = GetRuleList(args);
+            lock (list) {
+                LinkedListNode<CallSiteRule<T>> node = list.First;
+                while (node != null) {
+                    if (node.Value == rule) {
+                        list.Remove(node);
+                        list.AddFirst(node);
                         break;
                     }
                     node = node.Next;

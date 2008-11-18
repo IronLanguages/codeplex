@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 namespace Microsoft.Scripting.ComInterop {

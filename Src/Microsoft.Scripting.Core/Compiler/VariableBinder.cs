@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -107,6 +109,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 var block = (BlockExpression)body[0];
 
                 if (block.Variables.Count > 0) {
+                    if (currentScope.MergedScopes == null) {
+                        currentScope.MergedScopes = new Set<BlockExpression>();
+                    }
                     currentScope.MergedScopes.Add(block);
                     foreach (var v in block.Variables) {
                         currentScope.Definitions.Add(v, VariableStorageKind.Local);
@@ -130,6 +135,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
 
         protected internal override Expression VisitParameter(ParameterExpression node) {
+            var scope = _scopes.Peek();
+
+            if (scope.Definitions.ContainsKey(node)) {
+                return node;
+            }
+
+            if (scope.ReferenceCount == null) {
+                scope.ReferenceCount = new Dictionary<ParameterExpression, int>();
+            }
+
             Helpers.IncrementCount(node, _scopes.Peek().ReferenceCount);
             Reference(node, VariableStorageKind.Local);
             return node;

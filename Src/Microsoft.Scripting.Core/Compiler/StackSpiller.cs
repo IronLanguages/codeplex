@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Binders;
@@ -178,6 +180,29 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return cr.Finish(node);
         }
 
+        private Result RewriteArrayIndexAssignment(BinaryExpression node, Stack stack) {
+            Debug.Assert(node.NodeType == ExpressionType.ArrayIndex);
+            BinaryExpression arrayIndex = (BinaryExpression)node.Left;
+
+            ChildRewriter cr = new ChildRewriter(this, stack, 3);
+
+            cr.Add(arrayIndex.Left);
+            cr.Add(arrayIndex.Right);
+            cr.Add(node.Right);
+
+            if (cr.Rewrite) {
+                node = new AssignBinaryExpression(
+                    Expression.ArrayIndex(
+                        cr[0],   // array
+                        cr[1]    // index                             
+                    ),
+                    cr[2]        // value
+                );
+            }
+
+            return cr.Finish(node);
+        }
+
         // BinaryExpression: AndAlso, OrElse
         private Result RewriteLogicalBinaryExpression(Expression expr, Stack stack) {
             BinaryExpression node = (BinaryExpression)expr;
@@ -207,7 +232,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // it's at least Copy because we reduced the node
             return new Result(result.Action | RewriteAction.Copy, result.Node);
         }
-        
+
         // BinaryExpression
         private Result RewriteBinaryExpression(Expression expr, Stack stack) {
             BinaryExpression node = (BinaryExpression)expr;
@@ -253,6 +278,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return RewriteVariableAssignment(node, stack);
                 case ExpressionType.Extension:
                     return RewriteExtensionAssignment(node, stack);
+                case ExpressionType.ArrayIndex:
+                    return RewriteArrayIndexAssignment(node, stack);
                 default:
                     throw Error.InvalidLvalue(node.Left.NodeType);
             }
@@ -752,7 +779,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     curAction |= rbody.Action;
 
                     if (curAction != RewriteAction.None) {
-                        handler = Expression.CreateCatchBlock(handler.Test, handler.Variable, rbody.Node, filter);
+                        handler = Expression.MakeCatchBlock(handler.Test, handler.Variable, rbody.Node, filter);
 
                         if (clone == null) {
                             clone = Clone(handlers, i);

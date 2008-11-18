@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
@@ -21,6 +23,7 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
 

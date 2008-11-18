@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
@@ -105,6 +107,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static MemberInitExpression MemberInit(NewExpression newExpression, IEnumerable<MemberBinding> bindings) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
+            ContractUtils.RequiresNotNull(bindings, "bindings");
             ReadOnlyCollection<MemberBinding> roBindings = bindings.ToReadOnly();
             ValidateMemberInitArgs(newExpression.Type, roBindings);
             return new MemberInitExpression(newExpression, roBindings);

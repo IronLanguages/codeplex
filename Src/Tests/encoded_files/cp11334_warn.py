@@ -1,1 +1,1 @@
-print 'µble'
+print 'ï¿½ble'

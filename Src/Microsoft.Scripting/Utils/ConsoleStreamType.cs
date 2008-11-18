@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Scripting.Utils {
     public enum ConsoleStreamType {
         Input,

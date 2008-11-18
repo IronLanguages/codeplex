@@ -26,8 +26,12 @@ namespace Microsoft.Scripting.ComInterop {
     public class ComTypeClassDesc : ComTypeDesc, IDynamicObject {
         LinkedList<string> _itfs; // implemented interfaces
         LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
+        private Type _typeObj;
 
         public object CreateInstance() {
+            if (_typeObj == null) {
+                _typeObj = System.Type.GetTypeFromCLSID(Guid);
+            }
             return System.Activator.CreateInstance(System.Type.GetTypeFromCLSID(Guid));
         }
 

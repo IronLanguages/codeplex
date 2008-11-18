@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
@@ -534,7 +537,9 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(arguments, "arguments");
             ContractUtils.RequiresNotNull(returnType, "returnType");
 
-            return MakeDynamic(binder, returnType, arguments.ToReadOnly());
+            var args = arguments.ToReadOnly();
+            ContractUtils.RequiresNotEmpty(args, "args");
+            return MakeDynamic(binder, returnType, args);
         }
 
         private static DynamicExpression MakeDynamic(CallSiteBinder binder, Type returnType, ReadOnlyCollection<Expression> args) {
@@ -550,11 +555,22 @@ namespace Microsoft.Linq.Expressions {
 
             // Since we made a delegate with argument types that exactly match,
             // we can skip delegate and argument validation
-            // TODO: Create optimially sized nodes for this case
             if (returnType == typeof(object)) {
-                return new DynamicExpressionN(delegateType, binder, args);
+                switch (args.Count) {
+                    case 1: return new DynamicExpression1(delegateType, binder, args[0]);
+                    case 2: return new DynamicExpression2(delegateType, binder, args[0], args[1]);
+                    case 3: return new DynamicExpression3(delegateType, binder, args[0], args[1], args[2]);
+                    case 4: return new DynamicExpression4(delegateType, binder, args[0], args[1], args[2], args[3]);
+                    default: return new DynamicExpressionN(delegateType, binder, args);
+                }
             } else {
-                return new TypedDynamicExpressionN(returnType, delegateType, binder, args);
+                switch (args.Count) {
+                    case 1: return new TypedDynamicExpression1(returnType, delegateType, binder, args[0]);
+                    case 2: return new TypedDynamicExpression2(returnType, delegateType, binder, args[0], args[1]);
+                    case 3: return new TypedDynamicExpression3(returnType, delegateType, binder, args[0], args[1], args[2]);
+                    case 4: return new TypedDynamicExpression4(returnType, delegateType, binder, args[0], args[1], args[2], args[3]);
+                    default: return new TypedDynamicExpressionN(returnType, delegateType, binder, args);
+                }
             }
         }
 

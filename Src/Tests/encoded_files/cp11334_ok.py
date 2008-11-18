@@ -1,2 +1,2 @@
 # coding: utf-8
-print 'µble'
+print 'ï¿½ble'

@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -85,7 +87,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 if (b == node.Body && f == node.Filter) {
                     return node;
                 }
-                return Expression.CreateCatchBlock(node.Test, node.Variable, b, f);
+                return Expression.MakeCatchBlock(node.Test, node.Variable, b, f);
             }
 
             protected internal override Expression VisitRuntimeVariables(RuntimeVariablesExpression node) {

@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -204,6 +206,7 @@ namespace Microsoft.Linq.Expressions {
             if (method.IsStatic) {
                 ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr); 
             } else {
+                ContractUtils.Requires(instance != null, "method", Strings.OnlyStaticMethodsHaveNullExpr);
                 RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }

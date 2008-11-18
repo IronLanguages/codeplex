@@ -17,6 +17,7 @@ using System; using Microsoft;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+
 namespace ImportTestNS {
 #if TEST1
     public class Foo<T> {

@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
@@ -21,6 +23,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using System.Threading;
 
 namespace Microsoft.Linq.Expressions.Compiler {
@@ -37,7 +40,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // if not, emit into IL
             if (_dynamicMethod) {
                 EmitConstant(array, typeof(T[]));
-            } else {
+            } else if(_typeBuilder != null) {
+                // store into field in our type builder, we will initialize
+                // the value only once.
+                FieldBuilder fb = _typeBuilder.DefineField("constantArray" + typeof(T).Name.Replace('.', '_').Replace('+', '_') + Interlocked.Increment(ref _Counter), typeof(T[]), FieldAttributes.Static | FieldAttributes.Private);
+                Label l = _ilg.DefineLabel();
+                _ilg.Emit(OpCodes.Ldsfld, fb);
+                _ilg.Emit(OpCodes.Ldnull);
+                _ilg.Emit(OpCodes.Bne_Un, l);
+                _ilg.EmitArray(array);
+                _ilg.Emit(OpCodes.Stsfld, fb);
+                _ilg.MarkLabel(l);
+                _ilg.Emit(OpCodes.Ldsfld, fb);
+            } else { 
                 _ilg.EmitArray(array);
             }
         }

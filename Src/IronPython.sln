@@ -31,8 +31,8 @@ Global
 		Silverlight Release|Any CPU = Silverlight Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-    {7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.Build.0 = DelaySigned Release|Any CPU
-    {7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.ActiveCfg = DelaySigned Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.Build.0 = DelaySigned Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.DelaySigned Release|Any CPU.ActiveCfg = DelaySigned Release|Any CPU
 		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Silverlight Release|Any CPU.Build.0 = DelaySigned Silverlight Release|Any CPU
 		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Silverlight Release|Any CPU.ActiveCfg = DelaySigned Silverlight Release|Any CPU
 		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.DelaySigned Release|Any CPU.Build.0 = DelaySigned Release|Any CPU

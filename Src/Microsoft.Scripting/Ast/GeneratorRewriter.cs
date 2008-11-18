@@ -605,7 +605,7 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected override Expression VisitMemberAccess(MemberExpression node) {
+        protected override Expression VisitMember(MemberExpression node) {
             int yields = _yields.Count;
             Expression e = Visit(node.Expression);
             if (e == node.Expression) {

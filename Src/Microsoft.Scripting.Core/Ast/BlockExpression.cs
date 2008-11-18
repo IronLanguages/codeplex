@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -590,6 +592,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) {
+            ContractUtils.RequiresNotNull(expressions, "expressions");
             RequiresCanRead(expressions, "expressions");
             var expressionList = expressions.ToReadOnly();
             ContractUtils.RequiresNotEmpty(expressionList, "expressions");

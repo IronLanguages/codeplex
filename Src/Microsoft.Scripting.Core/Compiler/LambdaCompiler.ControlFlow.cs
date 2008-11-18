@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
@@ -64,7 +66,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // be defined. If not, we need to define our own block so this
             // label isn't exposed except to its own child expression.
             LabelInfo label;
-            if (!_labelBlock.Labels.TryGetValue(node.Label, out label)) {
+            if (!_labelBlock.TryGetLabelInfo(node.Label, out label)) {
                 label = DefineLabel(node.Label);
             }
 
@@ -102,7 +104,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     // LabelExpression is a bit special, if it's directly in a block
                     // it becomes associate with the block's scope
                     if (_labelBlock.Kind != LabelBlockKind.Block ||
-                        !_labelBlock.Labels.ContainsKey(((LabelExpression)node).Label)) {
+                        !_labelBlock.ContainsTarget(((LabelExpression)node).Label)) {
                         PushLabelBlock(LabelBlockKind.Block);
                         return true;
                     }

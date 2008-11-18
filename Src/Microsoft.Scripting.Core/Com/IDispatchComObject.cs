@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
@@ -23,6 +25,7 @@ using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Binders;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 
 namespace Microsoft.Scripting.ComInterop {
 
@@ -99,6 +102,9 @@ namespace Microsoft.Scripting.ComInterop {
         private ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
 
+        private DispCallable _getter, _setter;
+
+
         internal IDispatchComObject(IDispatch rcw)
             : base(rcw) {
             _dispatchObject = rcw;
@@ -160,7 +166,15 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         public bool TryGetGetItem(out DispCallable value) {
+            if (_getter != null) {
+                value = _getter;
+                return true;
+            }
 
+            return SlowTryGetGetItem(out value);
+        }
+
+        private bool SlowTryGetGetItem(out DispCallable value) {
             EnsureScanDefinedMethods();
 
             ComMethodDesc methodDesc = _comTypeDesc.GetItem;
@@ -184,13 +198,25 @@ namespace Microsoft.Scripting.ComInterop {
                 _comTypeDesc.GetItem = methodDesc;
             }
 
-            value = new DispCallable(_dispatchObject, methodDesc);
+            Interlocked.CompareExchange(
+                ref _getter,
+                new DispCallable(_dispatchObject, methodDesc),
+                null);
 
+            value = _getter;
             return true;
         }
 
         public bool TryGetSetItem(out DispCallable value) {
+            if (_setter != null) {
+                value = _setter;
+                return true;
+            }
 
+            return SlowTryGetSetItem(out value);
+        }
+
+        public bool SlowTryGetSetItem(out DispCallable value) {
             EnsureScanDefinedMethods();
 
             ComMethodDesc methodDesc = _comTypeDesc.SetItem;
@@ -217,8 +243,12 @@ namespace Microsoft.Scripting.ComInterop {
                 _comTypeDesc.SetItem = methodDesc;
             }
 
-            value = new DispCallable(_dispatchObject, methodDesc);
+            Interlocked.CompareExchange(
+                            ref _setter,
+                            new DispCallable(_dispatchObject, methodDesc),
+                            null);
 
+            value = _setter;
             return true;
         }
 

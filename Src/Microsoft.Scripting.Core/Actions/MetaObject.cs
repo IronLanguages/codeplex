@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using Microsoft.Scripting.ComInterop;
 using Microsoft.Scripting.Utils;
@@ -70,6 +72,11 @@ namespace Microsoft.Scripting.Binders {
         public Type RuntimeType {
             get {
                 if (_hasValue) {
+                    Type ct = Expression.Type;
+                    // valuetype at compile tyme, type cannot change.
+                    if (ct.IsValueType) {
+                        return ct;
+                    }
                     if (_value != null) {
                         return _value.GetType();
                     } else {
@@ -92,7 +99,7 @@ namespace Microsoft.Scripting.Binders {
                 // We can skip _hasValue check as it implies _value == null
                 return _value is IDynamicObject
 #if !SILVERLIGHT
-                    || ComInterop.ComObject.IsComObject(_value)
+ || ComInterop.ComObject.IsComObject(_value)
 #endif
 ;
             }
