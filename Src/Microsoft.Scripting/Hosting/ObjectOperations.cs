@@ -85,8 +85,8 @@ namespace Microsoft.Scripting.Hosting {
             return _ops.InvokeMember(obj, memberName, parameters);
         }
 
-        public object Create(object obj, params object[] parameters) {
-            return _ops.Create(obj, parameters);
+        public object CreateInstance(object obj, params object[] parameters) {
+            return _ops.CreateInstance(obj, parameters);
         }
 
         /// <summary>
@@ -527,11 +527,11 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public ObjectHandle Create(ObjectHandle obj, params ObjectHandle[] parameters) {
-            return new ObjectHandle(Create(GetLocalObject(obj), GetLocalObjects(parameters)));
+            return new ObjectHandle(CreateInstance(GetLocalObject(obj), GetLocalObjects(parameters)));
         }
 
         public ObjectHandle Create(ObjectHandle obj, params object[] parameters) {
-            return new ObjectHandle(Create(GetLocalObject(obj), parameters));
+            return new ObjectHandle(CreateInstance(GetLocalObject(obj), parameters));
         }
 
         /// <summary>
