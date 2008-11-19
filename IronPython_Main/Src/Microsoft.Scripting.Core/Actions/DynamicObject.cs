@@ -72,8 +72,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Call")]
-        public virtual object Call(InvokeMemberBinder binder, params object[] args) {
+        public virtual object InvokeMember(InvokeMemberBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -93,7 +92,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object Create(CreateInstanceBinder binder, params object[] args) {
+        public virtual object CreateInstance(CreateInstanceBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -133,7 +132,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object GetIndex(InvokeMemberBinder binder, params object[] args) {
+        public virtual object GetIndex(GetIndexBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -143,7 +142,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object SetIndex(InvokeMemberBinder binder, params object[] args) {
+        public virtual object SetIndex(SetIndexBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -153,7 +152,27 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object DeleteIndex(InvokeMemberBinder binder, params object[] args) {
+        public virtual object DeleteIndex(DeleteIndexBinder binder, params object[] args) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing an operation on member "a.b (op)=c" operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object OperationOnMember(OperationOnMemberBinder binder, object value) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing an operation on index "a[i,j,k] (op)= c" operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object OperationOnIndex(OperationOnIndexBinder binder, params object[] args) {
             throw new NotSupportedException();
         }
 
@@ -200,16 +219,16 @@ namespace Microsoft.Scripting.Binders {
             }
 
             public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
-                if (IsOverridden("Call")) {
-                    return CallMethodNAry(binder, args, "Call");
+                if (IsOverridden("InvokeMember")) {
+                    return CallMethodNAry(binder, args, "InvokeMember");
                 }
 
                 return base.BindInvokeMember(binder, args);
             }
 
             public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
-                if (IsOverridden("Create")) {
-                    return CallMethodNAry(binder, args, "Create");
+                if (IsOverridden("CreateInstance")) {
+                    return CallMethodNAry(binder, args, "CreateInstance");
                 }
 
                 return base.BindCreateInstance(binder, args);
@@ -261,6 +280,22 @@ namespace Microsoft.Scripting.Binders {
                 }
 
                 return base.BindDeleteIndex(binder, args);
+            }
+
+            public override MetaObject BindOperationOnMember(OperationOnMemberBinder binder, MetaObject value) {
+                if (IsOverridden("OperationOnMember")) {
+                    return CallMethodBinary(binder, value, "OperationOnMember");
+                }
+
+                return base.BindOperationOnMember(binder, value);
+            }
+
+            public override MetaObject BindOperationOnIndex(OperationOnIndexBinder binder, params MetaObject[] args) {
+                if (IsOverridden("OperationOnIndex")) {
+                    return CallMethodNAry(binder, args, "OperationOnIndex");
+                }
+
+                return base.BindOperationOnIndex(binder, args);
             }
 
             /// <summary>
@@ -375,12 +410,11 @@ namespace Microsoft.Scripting.Binders {
         #region IDynamicObject Members
 
         /// <summary>
-        /// Can be overridden in the derived class.  The provided
-        /// MetaObject will dispatch to the Dynamic virtual methods.  The
-        /// object can be encapsulated inside of another MetaObject to
+        /// The provided MetaObject will dispatch to the Dynamic virtual methods.
+        /// The object can be encapsulated inside of another MetaObject to
         /// provide custom behavior for individual actions.
         /// </summary>
-        public virtual MetaObject GetMetaObject(Expression parameter) {
+        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
             return new MetaDynamic(parameter, this);
         }
 

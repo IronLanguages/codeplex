@@ -127,7 +127,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        public object Create(object obj, params object[] parameters) {
+        public object CreateInstance(object obj, params object[] parameters) {
             // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
             switch (parameters.Length) {
                 case 0: {
