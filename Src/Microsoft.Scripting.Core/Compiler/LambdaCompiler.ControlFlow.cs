@@ -117,7 +117,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         PushLabelBlock(LabelBlockKind.Block);
                         return true;
                     }
-                    return false;
+                    // Otherwise go to the default case
+                    goto default;                    
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Conditional:
                 case ExpressionType.Block:

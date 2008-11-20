@@ -217,8 +217,14 @@ def gen_binop_validator(cw):
 def gen_unop_validator(cw):
     gen_op_validator("UnaryExpression", cw)
 
+def gen_checked_ops(cw):
+    for node in expressions:
+        if node.kind.endswith("Checked"):
+            cw.write("case ExpressionType.%s:" % node.kind)
+
 def main():
     return generate(
+        ("Checked Operations", gen_checked_ops),
         ("Binary Operation Binder Validator", gen_binop_validator),
         ("Unary Operation Binder Validator", gen_unop_validator),
         ("Expression Tree Node Types", gen_tree_nodes),

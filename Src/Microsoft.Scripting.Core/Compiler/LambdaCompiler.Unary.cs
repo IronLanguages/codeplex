@@ -207,16 +207,43 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                         break;
                     case ExpressionType.Increment:
-                        _ilg.Emit(OpCodes.Ldc_I4_1);
+                        EmitConstantOne(resultType);
                         _ilg.Emit(OpCodes.Add);
                         break;
                     case ExpressionType.Decrement:
-                        _ilg.Emit(OpCodes.Ldc_I4_1);
+                        EmitConstantOne(resultType);
                         _ilg.Emit(OpCodes.Sub);
                         break;
                     default:
                         throw Error.UnhandledUnary(op);
                 }
+
+                EmitConvertArithmeticResult(op, resultType);
+            }
+        }
+
+        private void EmitConstantOne(Type type) {
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                    _ilg.Emit(OpCodes.Ldc_I4_1);
+                    break;
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    _ilg.Emit(OpCodes.Ldc_I8, (long)1);
+                    break;
+                case TypeCode.Single:
+                    _ilg.Emit(OpCodes.Ldc_R4, 1.0f);
+                    break;
+                case TypeCode.Double:
+                    _ilg.Emit(OpCodes.Ldc_R8, 1.0d);
+                    break;
+                default:
+                    // we only have to worry about aritmetic types, see
+                    // TypeUtils.IsArithmetic
+                    throw Assert.Unreachable;
             }
         }
 

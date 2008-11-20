@@ -264,18 +264,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // 3. Emit the catch blocks
             //******************************************************************
 
-            if (node.Handlers.Count > 0) {
+            foreach (CatchBlock cb in node.Handlers) {
                 PushLabelBlock(LabelBlockKind.Catch);
 
-                foreach (CatchBlock cb in node.Handlers) {
-                    // Begin the strongly typed exception block
-                    EmitCatchStart(cb);
+                // Begin the strongly typed exception block
+                EmitCatchStart(cb);
 
-                    //
-                    // Emit the catch block body
-                    //
-                    EmitExpressionAsVoid(cb.Body);
-                }
+                //
+                // Emit the catch block body
+                //
+                EmitExpressionAsVoid(cb.Body);
 
                 PopLabelBlock(LabelBlockKind.Catch);
             }
