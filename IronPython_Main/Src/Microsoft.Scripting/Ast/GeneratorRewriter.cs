@@ -225,10 +225,6 @@ namespace Microsoft.Scripting.Ast {
                     if (c == node.Handlers[i]) {
                         continue;
                     }
-                    if (c.Filter != handlers[i].Filter) {
-                        // No one needs this yet, and it's not clear what it should even do
-                        throw new NotSupportedException("yield in filter test is not supported");
-                    }
 
                     if (handlers.IsReadOnly) {
                         handlers = handlers.ToArray();
@@ -347,6 +343,23 @@ namespace Microsoft.Scripting.Ast {
                 Expression.Goto(target),
                 Expression.Empty()
             );
+        }
+
+        // This is copied from the base implementation. 
+        // Just want to make sure we disallow yield in filters
+        protected override CatchBlock VisitCatchBlock(CatchBlock node) {
+            ParameterExpression v = VisitAndConvert(node.Variable, "VisitCatchBlock");
+            int yields = _yields.Count;
+            Expression f = Visit(node.Filter);
+            if (yields != _yields.Count) {
+                // No one needs this yet, and it's not clear what it should even do
+                throw new NotSupportedException("yield in filter is not allowed");
+            }
+            Expression b = Visit(node.Body);
+            if (v == node.Variable && b == node.Body && f == node.Filter) {
+                return node;
+            }
+            return Expression.MakeCatchBlock(node.Test, v, b, f);
         }
 
         #endregion
@@ -676,6 +689,12 @@ namespace Microsoft.Scripting.Ast {
             }
             if (yields == _yields.Count) {
                 return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method);
+            }
+            if (node.NodeType == ExpressionType.Throw && node.Operand == null) {
+                // No one needs this yet. It's not terribly hard to implement
+                // but it requires tracking more state (we'd need access to the
+                // hoisted exception variable)
+                throw new NotSupportedException("rethrow is not allowed if the catch block contains a yield");
             }
             return Expression.Block(
                 ToTemp(ref o),

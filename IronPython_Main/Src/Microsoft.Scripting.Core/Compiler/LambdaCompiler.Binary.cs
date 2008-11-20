@@ -145,6 +145,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 EmitLiftedBinaryOp(op, leftType, rightType, resultType, liftedToNull);
             } else {
                 EmitUnliftedBinaryOp(op, leftType, rightType);
+                EmitConvertArithmeticResult(op, resultType);
             }
         }
 
@@ -152,6 +153,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private void EmitUnliftedBinaryOp(ExpressionType op, Type leftType, Type rightType) {
             Debug.Assert(!TypeUtils.IsNullableType(leftType));
+
             if (op == ExpressionType.Equal || op == ExpressionType.NotEqual) {
                 EmitUnliftedEquality(op, leftType);
                 return;
@@ -293,7 +295,33 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+        // Binary/unary operations on 8 and 16 bit operand types will leave a 
+        // 32-bit value on the stack, because that's how IL works. For these
+        // cases, we need to cast it back to the resultType, possibly using a
+        // checked conversion if the original operator was convert
+        private void EmitConvertArithmeticResult(ExpressionType op, Type resultType) {
+            Debug.Assert(!resultType.IsNullableType());
+
+            switch (Type.GetTypeCode(resultType)) {
+                case TypeCode.Byte:
+                    _ilg.Emit(IsChecked(op) ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                    break;
+                case TypeCode.SByte:
+                    _ilg.Emit(IsChecked(op) ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                    break;
+                case TypeCode.UInt16:
+                    _ilg.Emit(IsChecked(op) ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                    break;
+                case TypeCode.Int16:
+                    _ilg.Emit(IsChecked(op) ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                    break;
+            }
+        }
+
         //this code is needed to make sure that we get overflow exception
+        //
+        // TODO: we may not need this now that conversion of the result type is
+        // being handled correctly by EmitConvertArithmeticResult
         private void EmitOverflowHelper(Type leftType, Type rightType) {
             LocalBuilder left = _ilg.GetLocal(leftType);
             LocalBuilder right = _ilg.GetLocal(rightType);
