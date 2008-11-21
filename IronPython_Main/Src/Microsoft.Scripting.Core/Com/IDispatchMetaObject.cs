@@ -154,14 +154,14 @@ namespace Microsoft.Scripting.ComInterop {
             );
         }
 
-        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return IndexOperation(binder.FallbackGetIndex(UnwrapSelf(), args), args, "TryGetGetItem");
+            return IndexOperation(binder.FallbackGetIndex(UnwrapSelf(), indexes), indexes, "TryGetGetItem");
         }
 
-        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return IndexOperation(binder.FallbackSetIndex(UnwrapSelf(), args), args, "TryGetSetItem");
+            return IndexOperation(binder.FallbackSetIndex(UnwrapSelf(), indexes, value), indexes.AddLast(value), "TryGetSetItem");
         }
 
         public override IEnumerable<string> GetDynamicMemberNames() {

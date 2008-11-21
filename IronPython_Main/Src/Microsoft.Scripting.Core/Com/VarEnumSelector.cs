@@ -134,7 +134,6 @@ namespace Microsoft.Scripting.ComInterop {
             dict[VarEnum.VT_DECIMAL] = typeof(Decimal);
             dict[VarEnum.VT_DATE] = typeof(DateTime);
             dict[VarEnum.VT_BSTR] = typeof(String);
-            dict[VarEnum.VT_VARIANT] = typeof(Object);
 
             // *** END GENERATED CODE ***
 
@@ -142,8 +141,6 @@ namespace Microsoft.Scripting.ComInterop {
 
             dict[VarEnum.VT_CY] = typeof(CurrencyWrapper);
             dict[VarEnum.VT_ERROR] = typeof(ErrorWrapper);
-            dict[VarEnum.VT_DISPATCH] = typeof(DispatchWrapper);
-            dict[VarEnum.VT_UNKNOWN] = typeof(UnknownWrapper);
 
             return dict;
         }
@@ -169,8 +166,6 @@ namespace Microsoft.Scripting.ComInterop {
                 // wrappers
                 new VarEnum[] { VarEnum.VT_CY },
                 new VarEnum[] { VarEnum.VT_ERROR },
-                new VarEnum[] { VarEnum.VT_DISPATCH },
-                new VarEnum[] { VarEnum.VT_UNKNOWN },
             };
 
             return typeFamilies;
@@ -260,12 +255,11 @@ namespace Microsoft.Scripting.ComInterop {
         private VarEnum GetComType(ref Type argumentType) {
             if (argumentType == typeof(Missing)) {
                 //TODO: consider specialcasing marshaling for Missing as VT_ERROR | E_PARAMNOTFOUND 
-                return VarEnum.VT_VARIANT;
+                return VarEnum.VT_RECORD;
             }
 
             if (argumentType.IsArray) {
-                //TODO: consider specialcasing marshaling for Arrays as VT_ARRAY
-                return VarEnum.VT_VARIANT;
+                return VarEnum.VT_ARRAY;
             }
 
             if (argumentType == typeof(UnknownWrapper)) {
@@ -307,8 +301,7 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             if (argumentType.IsValueType) {
-                //TODO: consider specialcasing structs as VT_RECORD
-                return VarEnum.VT_VARIANT;
+                return VarEnum.VT_RECORD;
             }
 
             // We could not find a way to marshal the type as a specific COM type
@@ -339,9 +332,10 @@ namespace Microsoft.Scripting.ComInterop {
                 Type elementType = argumentType.GetElementType();
 
                 VarEnum elementVarEnum;
-                if (elementType == typeof(object)) {
-                    //no type information known for a ref argument. 
-                    //This parameter must accept any value including primitives so it should be a VT_VARIANT.
+                if (elementType == typeof(object) || elementType == typeof(DBNull)) {
+                    //no meaningful value to pass ByRef. 
+                    //perhaps the calee will replace it with something.
+                    //need to pass as a variant reference
                     elementVarEnum = VarEnum.VT_VARIANT;
                 } else {
                     elementVarEnum = GetComType(ref elementType);
@@ -365,7 +359,7 @@ namespace Microsoft.Scripting.ComInterop {
         // attempts to find marshalling type failed 
         private static ArgBuilder GetByValArgBuilder(Type elementType, ref VarEnum elementVarEnum) {
             // if VT indicates that marshalling type is unknown
-            if (elementVarEnum == VarEnum.VT_VARIANT || elementVarEnum == VT_DISPATCH_OR_UNKNOWN) {
+            if (elementVarEnum == VarEnum.VT_RECORD || elementVarEnum == VT_DISPATCH_OR_UNKNOWN) {
                 //trying to find a conversion.
                 VarEnum convertibleTo;
                 if (TryGetPrimitiveComTypeViaConversion(elementType, out convertibleTo)) {
@@ -406,6 +400,8 @@ namespace Microsoft.Scripting.ComInterop {
                     argBuilder = new UnknownArgBuilder(elementType);
                     break;
                 case VarEnum.VT_VARIANT:
+                case VarEnum.VT_ARRAY:
+                case VarEnum.VT_RECORD:
                     argBuilder = new VariantArgBuilder(elementType);
                     break;
                 case VarEnum.VT_ERROR:

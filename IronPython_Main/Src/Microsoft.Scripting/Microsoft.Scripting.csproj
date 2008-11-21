@@ -202,7 +202,6 @@
     <Compile Include="Actions\BinderHelper.cs" />
     <Compile Include="Actions\BinderHelpers.cs" />
     <Compile Include="Actions\CallBinderHelper.cs" />
-    <Compile Include="Actions\CallSiteFactory.Generated.cs" />
     <Compile Include="Actions\ComboActionRewriter.cs" />
     <Compile Include="Actions\ComboBinder.cs" />
     <Compile Include="Actions\ConditionalBuilder.cs" />
@@ -219,7 +218,6 @@
     <Compile Include="Actions\DefaultBinder.cs" />
     <Compile Include="Actions\DeleteMemberBinderHelper.cs" />
     <Compile Include="Actions\DoOperationBinderHelper.cs" />
-    <Compile Include="Actions\DynamicSite.Generated.cs" />
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
     <Compile Include="Actions\MemberBinderHelper.cs" />
     <Compile Include="Actions\NoSideEffectsAttribute.cs" />

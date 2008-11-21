@@ -42,7 +42,9 @@ namespace IronPython.Runtime.Binding {
                 return target.BindGetIndex(new GetIndexAdapter(this), args);
             }            
             if (Operation == "SetItem") {
-                return target.BindSetIndex(new SetIndexAdapter(this), args);
+                MetaObject[] indexes = ArrayUtils.RemoveLast(args);
+                MetaObject value = args[args.Length - 1];
+                return target.BindSetIndex(new SetIndexAdapter(this), indexes, value);
             }
             return PythonProtocol.Operation(this, ArrayUtils.Insert(target, args));
         }
@@ -96,8 +98,8 @@ namespace IronPython.Runtime.Binding {
                 _opBinder = opBinder;
             }
 
-            public override MetaObject FallbackSetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
-                return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, args));
+            public override MetaObject FallbackSetIndex(MetaObject target, MetaObject[] indexes, MetaObject value, MetaObject errorSuggestion) {
+                return PythonProtocol.Operation(_opBinder, ArrayUtils.Append(ArrayUtils.Insert(target, indexes), value));
             }
 
             public override object CacheIdentity {
@@ -113,8 +115,8 @@ namespace IronPython.Runtime.Binding {
                 _opBinder = opBinder;
             }
 
-            public override MetaObject FallbackGetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
-                return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, args));
+            public override MetaObject FallbackGetIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion) {
+                return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, indexes));
             }
 
             public override object CacheIdentity {

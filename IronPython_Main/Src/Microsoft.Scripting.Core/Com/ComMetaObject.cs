@@ -74,19 +74,19 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.Defer(WrapSelf(), arg);
         }
 
-        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf(), args);
+            return binder.Defer(WrapSelf(), indexes);
         }
 
-        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf(), args);
+            return binder.Defer(WrapSelf(), indexes);
         }
 
-        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf(), args);
+            return binder.Defer(WrapSelf(), indexes.AddLast(value));
         }
 
         public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {

@@ -24,23 +24,24 @@ using Microsoft.Contracts;
 namespace Microsoft.Scripting.Binders {
     /// <summary>
     /// A Binder that is responsible for runtime binding of operation:
-    /// a[b] (op)= c
+    /// (op) a[b]
+    /// For example : ++ a[b]
     /// </summary>
-    public abstract class OperationOnIndexBinder : MetaObjectBinder {
+    public abstract class UnaryOperationOnIndexBinder : MetaObjectBinder {
         private ExpressionType _operation;
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 
         /// <summary>
-        /// Constructor of the OperationOnIndexBinder object, representing "a[b] (op)= c" operation.
+        /// The constructor of the OperationOnIndexBinder object, representing "(op) a[b]" operation.
         /// </summary>
         /// <param name="operation">Binary operation to be performed.</param>
         /// <param name="arguments">Description of the indexes (named, positional)</param>
-        protected OperationOnIndexBinder(ExpressionType operation, params ArgumentInfo[] arguments)
+        protected UnaryOperationOnIndexBinder(ExpressionType operation, params ArgumentInfo[] arguments)
             : this(operation, (IEnumerable<ArgumentInfo>)arguments) {
         }
 
-        protected OperationOnIndexBinder(ExpressionType operation, IEnumerable<ArgumentInfo> arguments) {
-            BinaryOperationBinder.OperationIsValid(operation);
+        protected UnaryOperationOnIndexBinder(ExpressionType operation, IEnumerable<ArgumentInfo> arguments) {
+            ContractUtils.Requires(UnaryOperationBinder.OperationIsValid(operation), "operation");
             _operation = operation;
             _arguments = arguments.ToReadOnly();
         }
@@ -68,7 +69,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>true/false</returns>
         [Confined]
         public override bool Equals(object obj) {
-            OperationOnIndexBinder ia = obj as OperationOnIndexBinder;
+            UnaryOperationOnIndexBinder ia = obj as UnaryOperationOnIndexBinder;
             return ia != null && ia._operation == _operation && ia._arguments.ListEquals(_arguments);
         }
 
@@ -78,7 +79,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>The hash code.</returns>
         [Confined]
         public override int GetHashCode() {
-            return OperationOnIndexBinderHash ^ (int)_operation ^ _arguments.ListHashCode();
+            return UnaryOperationOnIndexBinderHash ^ (int)_operation ^ _arguments.ListHashCode();
         }
 
         /// <summary>
@@ -92,47 +93,45 @@ namespace Microsoft.Scripting.Binders {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNullItems(args, "args");
 
-            return target.BindOperationOnIndex(this, args);
+            return target.BindUnaryOperationOnIndex(this, args);
         }
 
         /// <summary>
         /// Implements a binding logic for the binary operation part of the binding.
         /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
+        ///    (op) a[b]
         /// as:
-        ///    a[b] = a[b] + c
+        ///    a[b] = (op) a[b]
         /// to let the language participate in the binding of the binary operation only.
         /// </summary>
         /// <param name="target">Target of the operation.</param>
-        /// <param name="arg">Right-hand operator value</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public MetaObject FallbackOperation(MetaObject target, MetaObject arg) {
-            return FallbackOperation(target, arg, null);
+        public MetaObject FallbackUnaryOperation(MetaObject target) {
+            return FallbackUnaryOperation(target, null);
         }
 
         /// <summary>
         /// Implements a binding logic for the binary operation part of the binding.
         /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
+        ///    (op) a[b]
         /// as:
-        ///    a[b] = a[b] + c
+        ///    a[b] = (op) a[b]
         /// to let the language participate in the binding of the binary operation only.
         /// </summary>
         /// <param name="target">Target of the operation.</param>
-        /// <param name="arg">Right-hand operator value</param>
         /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public abstract MetaObject FallbackOperation(MetaObject target, MetaObject arg, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackUnaryOperation(MetaObject target, MetaObject errorSuggestion);
 
         /// <summary>
         /// Implements a binding logic for the operation. This is called by the target when
         /// the target lets the executing language participate in the binding process.
         /// </summary>
         /// <param name="target">Target of the operation.</param>
-        /// <param name="args">List of indexes and right-hand value</param>
+        /// <param name="indexes">List of indexes and right-hand value</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public MetaObject FallbackOperationOnIndex(MetaObject target, MetaObject[] args) {
-            return FallbackOperationOnIndex(target, args, null);
+        public MetaObject FallbackUnaryOperationOnIndex(MetaObject target, MetaObject[] indexes) {
+            return FallbackUnaryOperationOnIndex(target, indexes, null);
         }
 
         /// <summary>
@@ -140,9 +139,9 @@ namespace Microsoft.Scripting.Binders {
         /// the target lets the executing language participate in the binding process.
         /// </summary>
         /// <param name="target">Target of the operation.</param>
-        /// <param name="args">List of indexes and right-hand value</param>
+        /// <param name="indexes">List of indexes and right-hand value</param>
         /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public abstract MetaObject FallbackOperationOnIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackUnaryOperationOnIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion);
     }
 }

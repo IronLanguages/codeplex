@@ -80,10 +80,10 @@ namespace Microsoft.Scripting.Binders {
                     if (_value != null) {
                         return _value.GetType();
                     } else {
-                        return typeof(Null);    // TODO: Return something else ???
+                        return typeof(Null);
                     }
                 } else {
-                    return null;                // TODO: Return something else ???
+                    return null;
                 }
             }
         }
@@ -132,32 +132,32 @@ namespace Microsoft.Scripting.Binders {
             return binder.FallbackDeleteMember(this);
         }
 
-        public virtual MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackGetIndex(this, args);
+            return binder.FallbackGetIndex(this, indexes);
         }
 
-        public virtual MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackSetIndex(this, args);
+            return binder.FallbackSetIndex(this, indexes, value);
         }
 
-        public virtual MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+        public virtual MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackDeleteIndex(this, args);
+            return binder.FallbackDeleteIndex(this, indexes);
         }
 
-        public virtual MetaObject BindInvokeMember(InvokeMemberBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackInvokeMember(this, args);
         }
 
-        public virtual MetaObject BindInvoke(InvokeBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackInvoke(this, args);
         }
 
-        public virtual MetaObject BindCreateInstance(CreateInstanceBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackCreateInstance(this, args);
         }
@@ -178,27 +178,60 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="binder">Binder implementing the language semantics.</param>
         /// <param name="value">Meta Object representing the right-side argument.</param>
         /// <returns>MetaObject representing the result of the binding.</returns>
-        public virtual MetaObject BindOperationOnMember(OperationOnMemberBinder binder, MetaObject value) {
+        public virtual MetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackOperationOnMember(this, value);
         }
+
 
         /// <summary>
         /// Binds an operation a[i,j,k] (op)= c
         /// </summary>
         /// <param name="binder">Binder implementing the language semantics.</param>
-        /// <param name="args">MetaObjects representing the indexes and the right-hand value.</param>
+        /// <param name="indexes">The array of MetaObjects representing the indexes for the index operation.</param>
+        /// <param name="value">The MetaObject representing the right-hand value of the operation.</param>
         /// <returns>MetaObject representing the result of the binding.</returns>
-        public virtual MetaObject BindOperationOnIndex(OperationOnIndexBinder binder, params MetaObject[] args) {
+        public virtual MetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackOperationOnIndex(this, args);
+            return binder.FallbackOperationOnIndex(this, indexes, value);
         }
 
+        /// <summary>
+        /// Binds the unary operation performed on a result of index operation on the object.
+        /// </summary>
+        /// <param name="binder">The binder implementing the language semantics.</param>
+        /// <param name="indexes">The array of MetaObject representing the indexes for the index operation.</param>
+        /// <returns>The MetaObject representing the result of the binding.</returns>
+        public virtual MetaObject BindUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, MetaObject[] indexes) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackUnaryOperationOnIndex(this, indexes);
+        }
+
+        /// <summary>
+        /// Binds the unary operation performed on a result of get member operation on the object.
+        /// </summary>
+        /// <param name="binder">The binder implementing the language semantics.</param>
+        /// <returns>The MetaObject representing the result of the binding.</returns>
+        public virtual MetaObject BindUnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return binder.FallbackUnaryOperationOnMember(this);
+        }
+
+        /// <summary>
+        /// Returns the enumeration of all dynamic member names.
+        /// </summary>
+        /// <returns>The list of dynamic members.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public virtual IEnumerable<string> GetDynamicMemberNames() {
             return EmptyArray<string>.Instance;
         }
 
+        /// <summary>
+        /// Returns the enumeration of key-value pairs of all dynamic data members. Data members include members
+        /// such as properties, fields, but not necessarily methods. The key value pair includes the member name
+        /// and the value.
+        /// </summary>
+        /// <returns>The list of key-value pairs representing data member name and its value.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public virtual IEnumerable<KeyValuePair<string, object>> GetDynamicDataMembers() {

@@ -31,24 +31,24 @@ namespace Microsoft.Scripting.ComInterop {
             _callable = callable;
         }
 
-        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
             if (_callable.ComMethodDesc.IsPropertyGet) {
-                if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+                if (indexes.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, indexes);
                 }
-                return BindComInvoke(binder.Arguments, args);
+                return BindComInvoke(binder.Arguments, indexes);
             }
-            return base.BindGetIndex(binder, args);
+            return base.BindGetIndex(binder, indexes);
         }
 
-        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             if (_callable.ComMethodDesc.IsPropertyPut) {
-                if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args);
+                if (indexes.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
+                    return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, indexes.AddLast(value));
                 }
-                return BindComInvoke(binder.Arguments, args);
+                return BindComInvoke(binder.Arguments, indexes.AddLast(value));
             }
-            return base.BindSetIndex(binder, args);
+            return base.BindSetIndex(binder, indexes, value);
         }
 
         public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {

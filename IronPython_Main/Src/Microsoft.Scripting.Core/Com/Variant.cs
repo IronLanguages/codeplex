@@ -149,15 +149,13 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_INT:
                 case VarEnum.VT_UINT:
                 case VarEnum.VT_BOOL:
+                case VarEnum.VT_ERROR:
                 case VarEnum.VT_R4:
                 case VarEnum.VT_R8:
                 case VarEnum.VT_DECIMAL:
                 case VarEnum.VT_CY:
                 case VarEnum.VT_DATE:
                 case VarEnum.VT_BSTR:
-                case VarEnum.VT_UNKNOWN:
-                case VarEnum.VT_DISPATCH:
-                case VarEnum.VT_VARIANT:
 
                 // *** END GENERATED CODE ***
 
@@ -214,12 +212,7 @@ namespace Microsoft.Scripting.ComInterop {
                 #endregion
 
                 default:
-                    try {
-                        IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
-                        return Marshal.GetObjectForNativeVariant(variantPtr);
-                    } catch (Exception) {
-                        throw Error.VariantToObjectNYI(VariantType);
-                    }
+                    return AsVariant;
             }
         }
 
@@ -713,16 +706,19 @@ namespace Microsoft.Scripting.ComInterop {
             _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value);
         }
 
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
         // VT_VARIANT
 
         public Object AsVariant {
             get {
-                Debug.Assert(VariantType == VarEnum.VT_VARIANT);
                 return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));
             }
             set {
                 Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
-                VariantType = VarEnum.VT_VARIANT;
                 Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));
             }
         }
@@ -733,11 +729,33 @@ namespace Microsoft.Scripting.ComInterop {
             _typeUnion._unionTypes._byref = UnsafeMethods.ConvertVariantByrefToPtr(ref value);
         }
 
+        // constructs a ByRef variant to pass contents of another variant ByRef.
+        public void SetAsByrefVariantIndirect(ref Variant value) {
+            Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise
+            Debug.Assert((value.VariantType & VarEnum.VT_BYREF) == 0, "double indirection");
 
-        // *** END GENERATED CODE ***
+            switch (value.VariantType){
+                case VarEnum.VT_EMPTY:
+                case VarEnum.VT_NULL:
+                    // these cannot combine with VT_BYREF. Should try passing as a variant reference
+                    SetAsByrefVariant(ref value);
+                    return;
+                case VarEnum.VT_RECORD:
+                    // VT_RECORD's are weird in that regardless of is the VT_BYREF flag is set or not
+                    // they have the same internal representation.
+                    _typeUnion._unionTypes._record = value._typeUnion._unionTypes._record;
+                    break;
+                case VarEnum.VT_DECIMAL:
+                    _typeUnion._unionTypes._byref = UnsafeMethods.ConvertDecimalByrefToPtr(ref value._decimal);
+                    break;
+                default:
+                    _typeUnion._unionTypes._byref = UnsafeMethods.ConvertIntPtrByrefToPtr(ref value._typeUnion._unionTypes._byref);
+                    break;
+            }
+            VariantType = (value.VariantType | VarEnum.VT_BYREF);
+        }
 
-        #endregion
-
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         internal static System.Reflection.PropertyInfo GetAccessor(VarEnum varType) {
             switch (varType) {
 
@@ -766,17 +784,22 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR: return typeof(Variant).GetProperty("AsBstr");
                 case VarEnum.VT_UNKNOWN: return typeof(Variant).GetProperty("AsUnknown");
                 case VarEnum.VT_DISPATCH: return typeof(Variant).GetProperty("AsDispatch");
-                case VarEnum.VT_VARIANT: return typeof(Variant).GetProperty("AsVariant");
 
                 // *** END GENERATED CODE ***
 
                 #endregion
+
+                case VarEnum.VT_VARIANT:
+                case VarEnum.VT_RECORD: 
+                case VarEnum.VT_ARRAY: 
+                    return typeof(Variant).GetProperty("AsVariant");
 
                 default:
                     throw Error.VariantGetAccessorNYI(varType);
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         internal static System.Reflection.MethodInfo GetByrefSetter(VarEnum varType) {
             switch (varType) {
 
@@ -805,11 +828,16 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR: return typeof(Variant).GetMethod("SetAsByrefBstr");
                 case VarEnum.VT_UNKNOWN: return typeof(Variant).GetMethod("SetAsByrefUnknown");
                 case VarEnum.VT_DISPATCH: return typeof(Variant).GetMethod("SetAsByrefDispatch");
-                case VarEnum.VT_VARIANT: return typeof(Variant).GetMethod("SetAsByrefVariant");
 
                 // *** END GENERATED CODE ***
 
                 #endregion
+
+                case VarEnum.VT_VARIANT: 
+                    return typeof(Variant).GetMethod("SetAsByrefVariant");
+                case VarEnum.VT_RECORD:
+                case VarEnum.VT_ARRAY: 
+                    return typeof(Variant).GetMethod("SetAsByrefVariantIndirect");
 
                 default:
                     throw Error.VariantGetAccessorNYI(varType);

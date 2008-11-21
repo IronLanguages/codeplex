@@ -58,14 +58,14 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.FallbackBinaryOperation(UnwrapSelf(), arg);
         }
 
-        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, params MetaObject[] args) {
+        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackCreateInstance(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackDeleteIndex(UnwrapSelf(), args);
+            return binder.FallbackDeleteIndex(UnwrapSelf(), indexes);
         }
 
         public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
@@ -73,19 +73,19 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.FallbackDeleteMember(UnwrapSelf());
         }
 
-        public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackGetIndex(UnwrapSelf(), args);
+            return binder.FallbackGetIndex(UnwrapSelf(), indexes);
         }
 
-        public override MetaObject BindInvoke(InvokeBinder binder, params MetaObject[] args) {
+        public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackInvoke(UnwrapSelf(), args);
         }
 
-        public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+        public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackSetIndex(UnwrapSelf(), args);
+            return binder.FallbackSetIndex(UnwrapSelf(), indexes, value);
         }
 
         public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
@@ -98,7 +98,7 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.FallbackGetMember(UnwrapSelf());
         }
 
-        public override MetaObject BindInvokeMember(InvokeMemberBinder binder, params MetaObject[] args) {
+        public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackInvokeMember(UnwrapSelf(), args);
         }
