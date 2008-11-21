@@ -19,12 +19,14 @@ class VariantType:
     def __init__(self, 
         variantType,
         managedType,
+        emitAccessors=True,
         isPrimitiveType=True,
         unmanagedRepresentationType=None,
         includeInUnionTypes=True,
         getStatements=None,
         setStatements=None):
         
+        self.emitAccessors = emitAccessors
         self.variantType = variantType
         self.managedType = managedType
         self.isPrimitiveType = isPrimitiveType
@@ -58,6 +60,9 @@ class VariantType:
             cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
 
     def write_accessor(self, cw):
+        if self.emitAccessors == False :
+            return
+            
         cw.write("// VT_%s" % self.variantType)
         cw.writeline()
         
@@ -85,21 +90,21 @@ class VariantType:
         cw.exit_block()
 
         # Byref Setter
-        if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
-            cw.writeline()
-            cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
-            cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
-            cw.write("VariantType = (VarEnum.VT_%s | VarEnum.VT_BYREF);" % self.variantType)
-            cw.write("_typeUnion._unionTypes._byref = UnsafeMethods.Convert%sByrefToPtr(ref value);" % self.unmanagedRepresentationType)
-            cw.exit_block()
+        cw.writeline()
+        cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
+        cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
+        cw.write("VariantType = (VarEnum.VT_%s | VarEnum.VT_BYREF);" % self.variantType)
+        cw.write("_typeUnion._unionTypes._byref = UnsafeMethods.Convert%sByrefToPtr(ref value);" % self.unmanagedRepresentationType)
+        cw.exit_block()
 
         cw.writeline()
         
     def write_accessor_propertyinfo(self, cw):
-        cw.write('case VarEnum.VT_%s: return typeof(Variant).GetProperty("%s");' % (self.variantType, self.accessorName))
+        if self.emitAccessors == True :
+            cw.write('case VarEnum.VT_%s: return typeof(Variant).GetProperty("%s");' % (self.variantType, self.accessorName))
         
     def write_byref_setters(self, cw):
-        if self.unmanagedRepresentationType == self.managedType or self.isPrimitiveType :
+        if self.emitAccessors == True :
             cw.write('case VarEnum.VT_%s: return typeof(Variant).GetMethod("SetAsByref%s");' % (self.variantType, self.name))
 
     def write_ComToManagedPrimitiveTypes(self, cw):
@@ -112,7 +117,7 @@ class VariantType:
         cw.write("case VarEnum.VT_%s:" % self.variantType)
 
     def write_ConvertByrefToPtr(self, cw):
-        if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType:
+        if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType and self.variantType != "ERROR":
             cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
             if self.unmanagedRepresentationType == 'Int32':
                 cw.enter_block("public static unsafe IntPtr Convert%sByrefToPtr(ref %s value)" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType))
@@ -145,7 +150,7 @@ variantTypes = [
         getStatements=["return _typeUnion._unionTypes._bool != 0;"],
         setStatements=["_typeUnion._unionTypes._bool = value ? (Int16)(-1) : (Int16)0;"]),
     
-    VariantType("ERROR", "Int32", isPrimitiveType=False),
+    VariantType("ERROR", "Int32"),
 
     VariantType('R4', "Single"),
     VariantType('R8', "Double"),
@@ -155,7 +160,7 @@ variantTypes = [
                        "Variant v = this;", 
                        "v._typeUnion._vt = 0;", 
                        "return v._decimal;"],
-         setStatements=["_decimal = value;", 
+        setStatements=["_decimal = value;", 
                         "// _vt overlaps with _decimal, and should be set after setting _decimal", 
                         "_typeUnion._vt = (ushort)VarEnum.VT_DECIMAL;"]),
     VariantType("CY", "Decimal", 
@@ -172,14 +177,18 @@ variantTypes = [
         getStatements=["return (string)Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
         setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"]),
     VariantType("UNKNOWN", "Object", 
+        isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
         getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._unknown);"],
         setStatements=["_typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);"]),
     VariantType("DISPATCH", "Object", 
+        isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
         getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._dispatch);"],
         setStatements=["_typeUnion._unionTypes._dispatch = Marshal.GetIDispatchForObject(value);"]),
     VariantType("VARIANT", "Object", 
+        emitAccessors=False,
+        isPrimitiveType=False,
         unmanagedRepresentationType="Variant",
         includeInUnionTypes=False,              # will use "this" 
         getStatements=["return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],

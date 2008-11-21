@@ -88,7 +88,6 @@ namespace Microsoft.Scripting.ComInterop {
             dict[VarEnum.VT_DECIMAL] = typeof(Decimal);
             dict[VarEnum.VT_DATE] = typeof(DateTime);
             dict[VarEnum.VT_BSTR] = typeof(String);
-            dict[VarEnum.VT_VARIANT] = typeof(Object);
 
             // *** END GENERATED CODE ***
 
@@ -96,8 +95,6 @@ namespace Microsoft.Scripting.ComInterop {
 
             dict[VarEnum.VT_CY] = typeof(CurrencyWrapper);
             dict[VarEnum.VT_ERROR] = typeof(ErrorWrapper);
-            dict[VarEnum.VT_DISPATCH] = typeof(DispatchWrapper);
-            dict[VarEnum.VT_UNKNOWN] = typeof(UnknownWrapper);
 
             return dict;
         }
@@ -124,15 +121,13 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_INT:
                 case VarEnum.VT_UINT:
                 case VarEnum.VT_BOOL:
+                case VarEnum.VT_ERROR:
                 case VarEnum.VT_R4:
                 case VarEnum.VT_R8:
                 case VarEnum.VT_DECIMAL:
                 case VarEnum.VT_CY:
                 case VarEnum.VT_DATE:
                 case VarEnum.VT_BSTR:
-                case VarEnum.VT_UNKNOWN:
-                case VarEnum.VT_DISPATCH:
-                case VarEnum.VT_VARIANT:
 
                 // *** END GENERATED CODE ***
 

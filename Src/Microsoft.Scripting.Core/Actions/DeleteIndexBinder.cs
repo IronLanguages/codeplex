@@ -55,10 +55,10 @@ namespace Microsoft.Scripting.Binders {
             return target.BindDeleteIndex(this, args);
         }
 
-        public MetaObject FallbackDeleteIndex(MetaObject target, MetaObject[] args) {
-            return FallbackDeleteIndex(target, args, null);
+        public MetaObject FallbackDeleteIndex(MetaObject target, MetaObject[] indexes) {
+            return FallbackDeleteIndex(target, indexes, null);
         }
 
-        public abstract MetaObject FallbackDeleteIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackDeleteIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion);
     }
 }

@@ -55,10 +55,10 @@ namespace Microsoft.Scripting.Binders {
             return target.BindGetIndex(this, args);
         }
 
-        public MetaObject FallbackGetIndex(MetaObject target, MetaObject[] args) {
-            return FallbackGetIndex(target, args, null);
+        public MetaObject FallbackGetIndex(MetaObject target, MetaObject[] indexes) {
+            return FallbackGetIndex(target, indexes, null);
         }
 
-        public abstract MetaObject FallbackGetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackGetIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion);
     }
 }

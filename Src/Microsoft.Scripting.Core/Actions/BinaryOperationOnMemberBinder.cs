@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Binders {
     /// A Binder that is responsible for runtime binding of operation:
     /// a.b (op)= c
     /// </summary>
-    public abstract class OperationOnMemberBinder : MetaObjectBinder {
+    public abstract class BinaryOperationOnMemberBinder : MetaObjectBinder {
         private readonly ExpressionType _operation;
         private readonly string _name;
         private readonly bool _ignoreCase;
@@ -35,9 +35,9 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="operation">Binary operation to be performed.</param>
         /// <param name="name">Name of the member for the operation.</param>
         /// <param name="ignoreCase">Ignore case of the member.</param>
-        protected OperationOnMemberBinder(ExpressionType operation, string name, bool ignoreCase) {
+        protected BinaryOperationOnMemberBinder(ExpressionType operation, string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
-            ContractUtils.Requires(BinaryOperationBinder.OperationIsValid(operation));
+            ContractUtils.Requires(BinaryOperationBinder.OperationIsValid(operation), "operation");
             _operation = operation;
             _name = name;
             _ignoreCase = ignoreCase;
@@ -124,7 +124,7 @@ namespace Microsoft.Scripting.Binders {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(args != null && args.Length == 1, "args");
 
-            return target.BindOperationOnMember(this, args[0]);
+            return target.BindBinaryOperationOnMember(this, args[0]);
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>true/false</returns>
         [Confined]
         public override bool Equals(object obj) {
-            OperationOnMemberBinder gma = obj as OperationOnMemberBinder;
+            BinaryOperationOnMemberBinder gma = obj as BinaryOperationOnMemberBinder;
             return gma != null && gma._operation == _operation && gma._name == _name && gma._ignoreCase == _ignoreCase;
         }
 
@@ -144,7 +144,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>The hash code.</returns>
         [Confined]
         public override int GetHashCode() {
-            return OperationOnMemberBinderHash ^ (int)_operation ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);
+            return BinaryOperationOnMemberBinderHash ^ (int)_operation ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);
         }
     }
 }

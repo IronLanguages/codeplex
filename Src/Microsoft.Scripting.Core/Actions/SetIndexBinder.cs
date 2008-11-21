@@ -50,15 +50,22 @@ namespace Microsoft.Scripting.Binders {
 
         public sealed override MetaObject Bind(MetaObject target, MetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
-            ContractUtils.RequiresNotNullItems(args, "args");
+            ContractUtils.RequiresNotNull(args, "args");
+            ContractUtils.Requires(args.Length >= 2, "args");
 
-            return target.BindSetIndex(this, args);
+            MetaObject value = args[args.Length - 1];
+            MetaObject[] indexes = args.RemoveLast();
+
+            ContractUtils.RequiresNotNull(value, "args");
+            ContractUtils.RequiresNotNullItems(indexes, "args");
+
+            return target.BindSetIndex(this, indexes, value);
         }
 
-        public MetaObject FallbackSetIndex(MetaObject target, MetaObject[] args) {
-            return FallbackSetIndex(target, args, null);
+        public MetaObject FallbackSetIndex(MetaObject target, MetaObject[] indexes, MetaObject value) {
+            return FallbackSetIndex(target, indexes, value, null);
         }
 
-        public abstract MetaObject FallbackSetIndex(MetaObject target, MetaObject[] args, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackSetIndex(MetaObject target, MetaObject[] indexes, MetaObject value, MetaObject errorSuggestion);
     }
 }

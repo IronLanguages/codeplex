@@ -309,43 +309,6 @@ private partial class Matchmaker {
 }
 '''
 
-easy_sites="""/// <summary>
-/// Dynamic site - arity %(arity)d
-/// </summary>
-[GeneratedCode("DLR", "2.0")]
-public struct DynamicSite<%(ts)s> {
-    private CallSite<Func<CallSite, CodeContext, %(ts)s>> _site;
-    
-    public DynamicSite(OldDynamicAction action) {
-        _site = CallSite<Func<CallSite, CodeContext, %(ts)s>>.Create(action);
-    }
-
-    public static DynamicSite<%(ts)s> Create(OldDynamicAction action) {
-        return new DynamicSite<%(ts)s>(action);
-    }
-
-    public bool IsInitialized {
-        get {
-            return _site != null;
-        }
-    }
-    
-    public void EnsureInitialized(OldDynamicAction action) {
-        if (_site == null) {
-            Interlocked.CompareExchange(ref _site, CallSite<Func<CallSite, CodeContext, %(ts)s>>.Create(action), null);
-        }
-    }
-
-    public TRet Invoke(CodeContext context%(tparams)s) {
-        return _site.Target(_site, context%(targs)s);
-    }
-}
-"""
-
-def gen_easy_sites(cw):
-    for n in range(MaxSiteArity + 1):
-        cw.write(easy_sites, ts = gsig(n), tparams = gparms(n), targs = gargs(n), arity = n)
-
 MaxTypes = MaxSiteArity + 2
 
 def gen_delegate_func(cw):
@@ -393,30 +356,6 @@ def gen_splatsite(cw):
     for n in range(1, MaxSiteArity + 2):
         cw.write(splatcaller, size = n, ts = ", object" * n, args = gargs_index(n))
 
-construction_helper="""[GeneratedCode("DLR", "2.0")]
-public static DynamicSite<%(generic)s> CreateSimpleCallSite<%(generic)s>(ActionBinder binder) {
-    return DynamicSite<%(generic)s>.Create(OldCallAction.Make(binder, %(args)d));
-}
-"""
-
-ref_constr_helper="""[GeneratedCode("DLR", "2.0")]
-public static void CreateSimpleCallSite<%(generic)s>(ActionBinder binder, ref DynamicSite<%(generic)s> site) {
-    if (!site.IsInitialized) {
-        site.EnsureInitialized(OldCallAction.Make(binder, %(args)d));
-    }
-}
-"""
-
-def gen_one_construction_helper(cw, helper, n):
-    generic = gsig(n + 1)
-    cw.write(helper, generic=generic, args=n)
-
-def gen_construction_helpers(cw):
-    for n in range(MaxSiteArity):
-        gen_one_construction_helper(cw, construction_helper, n)
-    for n in range(MaxSiteArity):
-        gen_one_construction_helper(cw, ref_constr_helper, n)
-
 update_target="""/// <summary>
 /// Site update code - arity %(arity)d
 /// </summary>
@@ -452,9 +391,7 @@ def main():
         ("Delegate Action Types", gen_delegate_action),
         ("Delegate Func Types", gen_delegate_func),
         ("Maximum Delegate Arity", gen_max_delegate_arity),
-        ("Easy Dynamic Sites", gen_easy_sites),
         ("SplatCallSite call helpers", gen_splatsite),
-        ("Dynamic Sites Construction Helpers", gen_construction_helpers),
 # outer ring generators
         ("Delegate Microsoft Scripting Action Types", gen_delegate_action),
         ("Delegate Microsoft Scripting Scripting Func Types", gen_delegate_func),

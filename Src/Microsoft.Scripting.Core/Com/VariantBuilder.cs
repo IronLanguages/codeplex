@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         internal Expression InitializeArgumentVariant(MemberExpression variant, Expression parameter) {
             //NOTE: we must remember our variant
-            //the reason is that argument order does not map exactly to the order of varians for invoke
+            //the reason is that argument order does not map exactly to the order of variants for invoke
             //and when we are doing clean-up we must be sure we are cleaning the variant we have initialized.
 
             _variant = variant;
@@ -84,9 +84,11 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             if (Variant.IsPrimitiveType(_targetComType) ||
+               (_targetComType == VarEnum.VT_DISPATCH) ||
                (_targetComType == VarEnum.VT_UNKNOWN) ||
                (_targetComType == VarEnum.VT_VARIANT) ||
-               (_targetComType == VarEnum.VT_DISPATCH)) {
+               (_targetComType == VarEnum.VT_RECORD) ||
+               (_targetComType == VarEnum.VT_ARRAY)){
                 // paramVariants._elementN.AsT = (cast)argN
                 return Expression.Assign(
                     Expression.Property(
@@ -142,6 +144,8 @@ namespace Microsoft.Scripting.ComInterop {
                 case VarEnum.VT_BSTR:
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
+                case VarEnum.VT_ARRAY:
+                case VarEnum.VT_RECORD:
                 case VarEnum.VT_VARIANT:
                     // paramVariants._elementN.Clear()
                     return Expression.Call(_variant, typeof(Variant).GetMethod("Clear"));

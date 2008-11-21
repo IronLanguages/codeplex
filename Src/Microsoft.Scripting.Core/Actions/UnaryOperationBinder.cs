@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Binders {
             return UnaryOperationBinderHash ^ (int)_operation;
         }
 
-        private static object OperationIsValid(ExpressionType operation) {
+        internal static bool OperationIsValid(ExpressionType operation) {
             switch (operation) {
                 #region Generated Unary Operation Binder Validator
 
@@ -82,6 +82,5 @@ namespace Microsoft.Scripting.Binders {
                     return false;
             }
         }
-
     }
 }

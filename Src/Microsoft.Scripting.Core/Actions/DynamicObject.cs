@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object InvokeMember(InvokeMemberBinder binder, params object[] args) {
+        public virtual object InvokeMember(InvokeMemberBinder binder, object[] args) {
             throw new NotSupportedException();
         }
 
@@ -92,7 +92,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object CreateInstance(CreateInstanceBinder binder, params object[] args) {
+        public virtual object CreateInstance(CreateInstanceBinder binder, object[] args) {
             throw new NotSupportedException();
         }
 
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object Invoke(InvokeBinder binder, params object[] args) {
+        public virtual object Invoke(InvokeBinder binder, object[] args) {
             throw new NotSupportedException();
         }
 
@@ -132,7 +132,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object GetIndex(GetIndexBinder binder, params object[] args) {
+        public virtual object GetIndex(GetIndexBinder binder, object[] args) {
             throw new NotSupportedException();
         }
 
@@ -142,7 +142,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object SetIndex(SetIndexBinder binder, params object[] args) {
+        public virtual object SetIndex(SetIndexBinder binder, object[] indexes, object value) {
             throw new NotSupportedException();
         }
 
@@ -152,7 +152,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object DeleteIndex(DeleteIndexBinder binder, params object[] args) {
+        public virtual object DeleteIndex(DeleteIndexBinder binder, object[] indexes) {
             throw new NotSupportedException();
         }
 
@@ -162,7 +162,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object OperationOnMember(OperationOnMemberBinder binder, object value) {
+        public virtual object BinaryOperationOnMember(BinaryOperationOnMemberBinder binder, object value) {
             throw new NotSupportedException();
         }
 
@@ -172,7 +172,27 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object OperationOnIndex(OperationOnIndexBinder binder, params object[] args) {
+        public virtual object BinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, object[] indexes, object value) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing an operation on member "a.b (op)" operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object UnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class provides the non-Meta implementation of
+        /// performing an operation on index "a[i,j,k] (op)" operation.
+        /// 
+        /// When not overridden the call site requesting the binder determines the behavior.
+        /// </summary>
+        public virtual object UnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, object[] indexes) {
             throw new NotSupportedException();
         }
 
@@ -258,44 +278,61 @@ namespace Microsoft.Scripting.Binders {
                 return base.BindUnaryOperation(binder);
             }
 
-            public override MetaObject BindGetIndex(GetIndexBinder binder, params MetaObject[] args) {
+            public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
                 if (IsOverridden("GetIndex")) {
-                    return CallMethodNAry(binder, args, "GetIndex");
+                    return CallMethodNAry(binder, indexes, "GetIndex");
                 }
 
-                return base.BindGetIndex(binder, args);
+                return base.BindGetIndex(binder, indexes);
             }
 
-            public override MetaObject BindSetIndex(SetIndexBinder binder, params MetaObject[] args) {
+            public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
                 if (IsOverridden("SetIndex")) {
-                    return CallMethodNAry(binder, args, "SetIndex");
+                    return CallMethodNAry(binder, indexes, value, "SetIndex");
                 }
 
-                return base.BindSetIndex(binder, args);
+                return base.BindSetIndex(binder, indexes, value);
             }
 
-            public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] args) {
+            public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
                 if (IsOverridden("DeleteIndex")) {
-                    return CallMethodNAry(binder, args, "DeleteIndex");
+                    return CallMethodNAry(binder, indexes, "DeleteIndex");
                 }
 
-                return base.BindDeleteIndex(binder, args);
+                return base.BindDeleteIndex(binder, indexes);
             }
 
-            public override MetaObject BindOperationOnMember(OperationOnMemberBinder binder, MetaObject value) {
-                if (IsOverridden("OperationOnMember")) {
-                    return CallMethodBinary(binder, value, "OperationOnMember");
+            public override MetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, MetaObject value) {
+                if (IsOverridden("BinaryOperationOnMember")) {
+                    return CallMethodBinary(binder, value, "BinaryOperationOnMember");
                 }
 
-                return base.BindOperationOnMember(binder, value);
+                return base.BindBinaryOperationOnMember(binder, value);
             }
 
-            public override MetaObject BindOperationOnIndex(OperationOnIndexBinder binder, params MetaObject[] args) {
-                if (IsOverridden("OperationOnIndex")) {
-                    return CallMethodNAry(binder, args, "OperationOnIndex");
+            public override MetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, MetaObject[] indexes, MetaObject value) {
+                if (IsOverridden("BinaryOperationOnIndex")) {
+                    return CallMethodNAry(binder, indexes, value, "BinaryOperationOnIndex");
                 }
 
-                return base.BindOperationOnIndex(binder, args);
+                return base.BindBinaryOperationOnIndex(binder, indexes, value);
+            }
+
+
+            public override MetaObject BindUnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
+                if (IsOverridden("UnaryOperationOnMember")) {
+                    return CallMethodUnary(binder, "UnaryOperationOnMember");
+                }
+
+                return base.BindUnaryOperationOnMember(binder);
+            }
+
+            public override MetaObject BindUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, MetaObject[] indexes) {
+                if (IsOverridden("UnaryOperationOnIndex")) {
+                    return CallMethodNAry(binder, indexes, "UnaryOperationOnIndex");
+                }
+
+                return base.BindUnaryOperationOnIndex(binder, indexes);
             }
 
             /// <summary>
@@ -338,7 +375,21 @@ namespace Microsoft.Scripting.Binders {
                     Expression.Call(
                         GetLimitedSelf(),
                         typeof(DynamicObject).GetMethod(method),
-                        GetActionToArgs(binder, args)
+                        Expression.Constant(binder),
+                        CreateArrayForArgs(args)
+                    ),
+                    GetRestrictions()
+                );
+            }
+
+            private MetaObject CallMethodNAry(MetaObjectBinder binder, MetaObject[] args, MetaObject value, string method) {
+                return new MetaObject(
+                    Expression.Call(
+                        GetLimitedSelf(),
+                        typeof(DynamicObject).GetMethod(method),
+                        Expression.Constant(binder),
+                        CreateArrayForArgs(args),
+                        Helpers.Convert(value.Expression, typeof(object))
                     ),
                     GetRestrictions()
                 );
@@ -348,17 +399,14 @@ namespace Microsoft.Scripting.Binders {
             /// Returns the parameters for a call to one of our helpers.  It adds the MetaAction
             /// first and packs the parameters into an object array.
             /// </summary>
-            private static Expression[] GetActionToArgs(MetaObjectBinder binder, MetaObject[] args) {
+            private static Expression CreateArrayForArgs(MetaObject[] args) {
                 Expression[] paramArgs = MetaObject.GetExpressions(args);
 
                 for (int i = 0; i < paramArgs.Length; i++) {
                     paramArgs[i] = Helpers.Convert(args[i].Expression, typeof(object));
                 }
 
-                return new Expression[] { 
-                    Expression.Constant(binder), 
-                    Expression.NewArrayInit(typeof(object), paramArgs)
-                };
+                return Expression.NewArrayInit(typeof(object), paramArgs);
             }
 
             /// <summary>
