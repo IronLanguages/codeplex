@@ -134,6 +134,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="expression"/> is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="scope"/> is a <c>null</c> reference.</exception>
         public T Execute<T>(string expression, ScriptScope scope) {
             return Operations.ConvertTo<T>(Execute(expression, scope));
         }
@@ -143,7 +144,6 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         /// <exception cref="NotSupportedException">The engine doesn't support code execution.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is a <c>null</c> reference.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="scope"/> is a <c>null</c> reference.</exception>
         public ScriptScope ExecuteFile(string path) {
             return ExecuteFile(path, CreateScope());
         }

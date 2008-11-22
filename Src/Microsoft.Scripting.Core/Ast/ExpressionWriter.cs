@@ -14,6 +14,7 @@
  * ***************************************************************************/
 using System; using Microsoft;
 
+#if MICROSOFT_SCRIPTING_CORE
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,7 +29,6 @@ using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
-    // TODO: debug builds only!
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     internal sealed class ExpressionWriter : ExpressionVisitor {
         [Flags]
@@ -58,7 +58,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private const int Tab = 4;
-        private const int MaxColumn = 80;
+        private const int MaxColumn = 120;
 
         private TextWriter _out;
         private int _column;
@@ -101,10 +101,8 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// Write out the given AST
         /// </summary>
-        [Conditional("DEBUG")]
         internal static void Dump(Expression node, string descr, TextWriter writer) {
             Debug.Assert(node != null);
-            Debug.Assert(descr != null);
             Debug.Assert(writer != null);
 
             ExpressionWriter dv = new ExpressionWriter(writer);
@@ -112,7 +110,9 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private void DoDump(Expression node, string description) {
-            WritePrologue(description);
+            if (description != null) {
+                WritePrologue(description);
+            }
 
             Visit(node);
             WriteLine();
@@ -344,11 +344,14 @@ namespace Microsoft.Linq.Expressions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         protected internal override Expression VisitBinary(BinaryExpression node) {
             if (node.NodeType == ExpressionType.ArrayIndex) {
-                Visit(node.Left);
+                ParenthesizedVisit(node, node.Left);
                 Out("[");
                 Visit(node.Right);
                 Out("]");
             } else {
+                bool parenthesizeLeft = NeedsParentheses(node, node.Left);
+                bool parenthesizeRight = NeedsParentheses(node, node.Right);
+
                 string op;
                 bool isChecked = false;
                 Flow beforeOp = Flow.Space;
@@ -398,13 +401,26 @@ namespace Microsoft.Linq.Expressions {
                 }
                 if (isChecked) {
                     Out(Flow.Break, "checked(", Flow.None);
-                } else {
-                    Out(Flow.Break, "(", Flow.None);
+                }
+                
+                
+                if (parenthesizeLeft) {
+                    Out("(", Flow.None);
                 }
                 Visit(node.Left);
+                if (parenthesizeLeft) {
+                    Out(Flow.None, ")", Flow.Break);
+                }                
+
                 Out(beforeOp, op, Flow.Space | Flow.Break);
+                
+                if (parenthesizeRight) {
+                    Out("(", Flow.None);
+                }
                 Visit(node.Right);
-                Out(Flow.None, ")", Flow.Break);
+                if (parenthesizeRight) {
+                    Out(Flow.None, ")", Flow.Break);
+                }
             }
             return node;
         }
@@ -428,12 +444,28 @@ namespace Microsoft.Linq.Expressions {
             return node;
         }
 
+        // TODO: calculate tree depth?
+        private static bool IsSimpleExpression(Expression node) {
+            var binary = node as BinaryExpression;
+            if (binary != null) {
+                return !(binary.Left is BinaryExpression || binary.Right is BinaryExpression);
+            }
+
+            return false;
+        }
+
         protected internal override Expression VisitConditional(ConditionalExpression node) {
-            Out(".if (", Flow.NewLine);
-            Indent();
-            Visit(node.Test);
-            Dedent();
-            Out(Flow.NewLine, ") {", Flow.NewLine);
+            if (IsSimpleExpression(node.Test)) {
+                Out(".if (");
+                Visit(node.Test);
+                Out(") {", Flow.NewLine);
+            } else {
+                Out(".if (", Flow.NewLine);
+                Indent();
+                Visit(node.Test);
+                Dedent();
+                Out(Flow.NewLine, ") {", Flow.NewLine);
+            }
             Indent();
             Visit(node.IfTrue);
             Dedent();
@@ -480,9 +512,9 @@ namespace Microsoft.Linq.Expressions {
         }
 
         // Prints ".instanceField" or "declaringType.staticField"
-        private void OutMember(Expression instance, MemberInfo member) {
+        private void OutMember(Expression node, Expression instance, MemberInfo member) {
             if (instance != null) {
-                Visit(instance);
+                ParenthesizedVisit(node, instance);
                 Out("." + member.Name);
             } else {
                 // For static members, include the type name
@@ -491,23 +523,125 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected internal override Expression VisitMember(MemberExpression node) {
-            OutMember(node.Expression, node.Member);
+            OutMember(node, node.Expression, node.Member);
             return node;
         }
 
         protected internal override Expression VisitInvocation(InvocationExpression node) {
-            Out("(");
-            Visit(node.Expression);
-            Out(").Invoke");
+            ParenthesizedVisit(node, node.Expression);
+            Out(".Invoke");
             VisitExpressions('(', node.Arguments);
             return node;
         }
 
+        private static bool NeedsParentheses(Expression parent, Expression child) {
+            return GetOperatorPrecedence(child) < GetOperatorPrecedence(parent);
+        }
+        
+        // the greater the higher
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+        private static int GetOperatorPrecedence(Expression node) {
+            switch (node.NodeType) {
+                case ExpressionType.Assign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.AddAssign:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.RightShiftAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.PowerAssign:
+                    return 0;
+
+                case ExpressionType.Coalesce:
+                    return 1;
+
+                case ExpressionType.OrElse:
+                    return 2;
+
+                case ExpressionType.AndAlso:
+                    return 3;
+
+                case ExpressionType.Or:
+                    return 4;
+
+                case ExpressionType.ExclusiveOr:
+                    return 5;
+
+                case ExpressionType.And:
+                    return 6;
+
+                case ExpressionType.Equal:
+                case ExpressionType.NotEqual:
+                    return 7;    
+
+                case ExpressionType.GreaterThan:
+                case ExpressionType.LessThan:                
+                case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.LessThanOrEqual:
+                    return 8;
+
+                case ExpressionType.LeftShift:
+                case ExpressionType.RightShift:
+                    return 9;
+
+                case ExpressionType.Add:
+                case ExpressionType.Subtract:
+                    return 10;
+
+                case ExpressionType.Divide:
+                case ExpressionType.Modulo:
+                case ExpressionType.Multiply:
+                    return 11;
+
+                case ExpressionType.Power:
+                    return 12;
+
+                case ExpressionType.Negate:
+                case ExpressionType.UnaryPlus:
+                case ExpressionType.Not:
+                case ExpressionType.Convert:
+                case ExpressionType.PreIncrementAssign:
+                case ExpressionType.PreDecrementAssign:
+                    return 13;
+
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.PostDecrementAssign:
+                case ExpressionType.NegateChecked:
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.AddChecked:
+                case ExpressionType.SubtractChecked:
+                case ExpressionType.MultiplyChecked:
+                case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.AddAssignChecked:
+                    return 14;
+
+                case ExpressionType.Call:
+                case ExpressionType.Parameter:
+                case ExpressionType.Constant:
+                default:
+                    return 15;
+            }
+        }
+
+        private void ParenthesizedVisit(Expression parent, Expression nodeToVisit) {
+            if (NeedsParentheses(parent, nodeToVisit)) {
+                Out("(");
+                Visit(nodeToVisit);
+                Out(")");
+            } else {
+                Visit(nodeToVisit);
+            }
+        }
+        
         protected internal override Expression VisitMethodCall(MethodCallExpression node) {
             if (node.Object != null) {
-                Out("(");
-                Visit(node.Object);
-                Out(").");
+                ParenthesizedVisit(node, node.Object);
+                Out(".");
             }
             if (node.Method.ReflectedType != null) {
                 Out("'" + node.Method.ReflectedType.Name + "." + node.Method.Name + "'");
@@ -554,13 +688,12 @@ namespace Microsoft.Linq.Expressions {
         protected internal override Expression VisitUnary(UnaryExpression node) {
             switch (node.NodeType) {
                 case ExpressionType.Convert:
-                    Out("((" + node.Type.Name + ")");
+                    Out("(" + node.Type.Name + ")");
                     break;
                 case ExpressionType.ConvertChecked:
                     Out("checked((" + node.Type.Name + ")");
                     break;
                 case ExpressionType.TypeAs:
-                    Out("(");
                     break;
                 case ExpressionType.Not:
                     Out(node.Type == typeof(bool) ? "!" : "~");
@@ -580,24 +713,36 @@ namespace Microsoft.Linq.Expressions {
                     Out("'");
                     break;
                 case ExpressionType.Throw:
-                    Out(".throw (");
+                    Out(".throw ");
                     break;
+            }
+
+            bool parenthesize = NeedsParentheses(node, node.Operand);
+            if (parenthesize) {
+                Out("(");
             }
 
             Visit(node.Operand);
 
+            if (parenthesize) {
+                Out(")");
+            }
+
             switch (node.NodeType) {
                 case ExpressionType.Convert:
+                case ExpressionType.Throw:
+                    break;
+
                 case ExpressionType.ConvertChecked:
                 case ExpressionType.NegateChecked:
-                case ExpressionType.Throw:
                     Out(")");
                     break;
+                
                 case ExpressionType.TypeAs:
                     Out(Flow.Space, "as", Flow.Space | Flow.Break);
                     Out(node.Type.Name);
-                    Out(")");
                     break;
+
                 case ExpressionType.ArrayLength:
                     Out(".Length");
                     break;
@@ -611,6 +756,8 @@ namespace Microsoft.Linq.Expressions {
             if (node.Variables.Count > 0) {
                 VisitDeclarations('(', node.Variables, true);
             }
+
+            Out(" ");
 
             VisitExpressions('{', node.Expressions, true);
 
@@ -636,9 +783,8 @@ namespace Microsoft.Linq.Expressions {
         protected internal override Expression VisitGoto(GotoExpression node) {
             Out("." + node.Kind.ToString().ToLower(CultureInfo.CurrentCulture), Flow.Space);
             DumpLabel(node.Target);
-            Out(Flow.Space, "(");
-            Visit(node.Value);
-            Out(")", Flow.Space);
+            ParenthesizedVisit(node, node.Value);
+            Out("", Flow.Space);
             return node;
         }
 
@@ -729,7 +875,7 @@ namespace Microsoft.Linq.Expressions {
 
         protected internal override Expression VisitIndex(IndexExpression node) {
             if (node.Indexer != null) {
-                OutMember(node.Object, node.Indexer);
+                OutMember(node, node.Object, node.Indexer);
             } else {
                 Visit(node.Object);
                 Out(".");
@@ -777,3 +923,5 @@ namespace Microsoft.Linq.Expressions {
         #endregion
     }
 }
+
+#endif

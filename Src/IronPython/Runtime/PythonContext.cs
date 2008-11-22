@@ -96,6 +96,7 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, object, string, object>> _writeSite;
         private CallSite<Func<CallSite, object, object, object>> _getIndexSite, _equalSite, _delIndexSite;
         private CallSite<Func<CallSite, CodeContext, object, IList<string>>> _memberNamesSite;
+        private CallSite<Func<CallSite, object, IList<string>>> _getMemberNamesSite;
         private CallSite<Func<CallSite, CodeContext, object, object>> _finalizerSite;
         private CallSite<Func<CallSite, CodeContext, PythonFunction, object>> _functionCallSite;
         private CallSite<Func<CallSite, object, object, bool>> _greaterThanSite, _lessThanSite, _equalRetBoolSite, _greaterThanEqualSite, _lessThanEqualSite;
@@ -1529,6 +1530,18 @@ namespace IronPython.Runtime {
 #endif
         }
 
+        /// <summary>
+        /// Gets the member names associated with the object
+        /// TODO: Move "GetMemberNames" functionality into MetaObject implementations
+        /// </summary>
+        protected override IList<string> GetMemberNames(object obj) {
+            IList<string> result = base.GetMemberNames(obj);
+            if (result.Count == 0) {
+                result = GetMemberNamesSite.Target(GetMemberNamesSite, obj);
+            }
+            return result;
+        }
+
         internal object GetSystemStateValue(string name) {
             object val;
             if (SystemState.Dict.TryGetValue(SymbolTable.StringToId(name), out val)) {
@@ -2069,6 +2082,22 @@ namespace IronPython.Runtime {
                 }
 
                 return _memberNamesSite;
+            }
+        }
+
+        internal CallSite<Func<CallSite, object, IList<string>>> GetMemberNamesSite {
+            get {
+                if (_getMemberNamesSite == null) {
+                    Interlocked.CompareExchange(
+                        ref _getMemberNamesSite,
+                        CallSite<Func<CallSite, object, IList<string>>>.Create(
+                            CreateOperationBinder(StandardOperators.MemberNames)
+                        ),
+                        null
+                    );
+                }
+
+                return _getMemberNamesSite;
             }
         }
 

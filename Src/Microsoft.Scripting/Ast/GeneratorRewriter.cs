@@ -115,13 +115,27 @@ namespace Microsoft.Scripting.Ast {
                 body = Expression.Lambda(body);
             }
 
+            // We can't create a ConstantExpression of _debugCookies array here because we walk the tree
+            // after constants have already been rewritten.  Instead we create a NewArrayExpression node
+            // which initializes the array with contents from _debugCookies
+            Expression debugCookiesArray = null;
+            if (_debugCookies != null) {
+                Expression[] debugCookies = new Expression[_debugCookies.Count];
+                for(int i=0; i < _debugCookies.Count; i++)
+                    debugCookies[i] = Expression.Constant(_debugCookies[i]);
+
+                debugCookiesArray = Expression.NewArrayInit(
+                    typeof(int),
+                    debugCookies);
+            }
+
             // Generate a call to ScriptingRuntimeHelpers.MakeGenerator<T>(args)
             return Expression.Call(
                 typeof(ScriptingRuntimeHelpers),
                 "MakeGenerator",
                 new[] { _generator.Label.Type },
-                (_debugCookies != null)
-                    ? new[] { body, Expression.Constant(_debugCookies) }
+                (debugCookiesArray != null)
+                    ? new[] { body, debugCookiesArray }
                     : new[] { body }
             );
         }
@@ -131,9 +145,12 @@ namespace Microsoft.Scripting.Ast {
             _yields.Add(result);
             if (node.YieldMarker != -1) {
                 if (_debugCookies == null) {
-                    _debugCookies = new List<int>();
+                    _debugCookies = new List<int>(1);
+                    _debugCookies.Add(Int32.MaxValue);
                 }
                 _debugCookies.Insert(result.State, node.YieldMarker);
+            } else if (_debugCookies != null) {
+                _debugCookies.Insert(result.State, Int32.MaxValue);
             }
             return result;
         }

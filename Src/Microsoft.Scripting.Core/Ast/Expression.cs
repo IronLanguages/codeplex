@@ -23,6 +23,7 @@ using Microsoft.Scripting.Utils;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.IO;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -438,9 +439,8 @@ namespace Microsoft.Linq.Expressions {
             return ExpressionStringBuilder.ExpressionToString(this);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        private string Dump {
+#if MICROSOFT_SCRIPTING_CORE
+        public string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
                     ExpressionWriter.Dump(this, GetType().Name, writer);
@@ -448,6 +448,11 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
         }
+
+        public void DumpExpression(string descr, TextWriter writer) {
+            ExpressionWriter.Dump(this, descr, writer);
+        }
+#endif
 
         /// <summary>
         /// Helper used for ensuring we only return 1 instance of a ReadOnlyCollection of T.

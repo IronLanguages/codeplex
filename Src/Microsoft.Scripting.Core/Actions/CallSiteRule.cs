@@ -119,8 +119,8 @@ namespace Microsoft.Runtime.CompilerServices {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-        private string Dump {
+#if MICROSOFT_SCRIPTING_CORE
+        public string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
                     ExpressionWriter.Dump(_binding, "Rule", writer);
@@ -128,6 +128,7 @@ namespace Microsoft.Runtime.CompilerServices {
                 }
             }
         }
+#endif
     }
 
     /// <summary>
