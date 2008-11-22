@@ -127,6 +127,9 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
+        /// <summary>
+        /// Creates a new instance from the provided object using the given parameters, and returns the result.
+        /// </summary>
         public object CreateInstance(object obj, params object[] parameters) {
             // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
             switch (parameters.Length) {
@@ -429,6 +432,9 @@ namespace Microsoft.Scripting.Runtime {
             return site.Target(site, target, other);
         }
 
+        /// <summary>
+        /// Returns a list of strings which contain the known members of the object.
+        /// </summary>
         public IList<string> GetMemberNames(object obj) {
             return _lc.GetMemberNames(obj);
         }

@@ -412,7 +412,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         public IList<string> GetMemberNames(string code) {
             object value = _engine.CreateScriptSourceFromString(code, SourceCodeKind.Expression).Execute(_scope);
-            return _engine.Operations.OldGetMemberNames(value);
+            return _engine.Operations.GetMemberNames(value);
             // TODO: why doesn't this work ???
             //return _memberCompletionSite.Invoke(new CodeContext(_scope, _engine), value);
         }

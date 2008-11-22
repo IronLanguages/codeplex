@@ -85,6 +85,9 @@ namespace Microsoft.Scripting.Hosting {
             return _ops.InvokeMember(obj, memberName, parameters);
         }
 
+        /// <summary>
+        /// Creates a new instance from the provided object using the given parameters, and returns the result.
+        /// </summary>
         public object CreateInstance(object obj, params object[] parameters) {
             return _ops.CreateInstance(obj, parameters);
         }
@@ -465,13 +468,6 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Returns a list of strings which contain the known members of the object.
         /// </summary>
-        public IList<string> OldGetMemberNames(object obj) {
-            return _ops.DoOperation<object, IList<string>>(StandardOperators.MemberNames, obj);
-        }
-
-        /// <summary>
-        /// Returns a list of strings which contain the known members of the object.
-        /// </summary>
         public IList<string> GetMemberNames(object obj) {
             return _ops.GetMemberNames(obj);
         }
@@ -840,7 +836,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a list of strings which contain the known members of the remote object.
         /// </summary>
         public IList<string> GetMemberNames(ObjectHandle obj) {
-            return OldGetMemberNames(GetLocalObject(obj));
+            return GetMemberNames(GetLocalObject(obj));
         }
 
         /// <summary>
