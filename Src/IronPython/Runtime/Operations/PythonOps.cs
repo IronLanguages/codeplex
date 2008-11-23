@@ -17,14 +17,15 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.ComInterop;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Binders;
 using System.Text;
 using System.Threading;
 using IronPython.Compiler;
@@ -999,8 +1000,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    var meta = MetaObject.ObjectToMetaObject(o, Microsoft.Linq.Expressions.Expression.Parameter(typeof(object), null));
-                    foreach (string name in meta.GetDynamicMemberNames()) {
+                    foreach (string name in ComBinder.GetDynamicMemberNames(o)) {
                         if (!res.Contains(name)) {
                             res.AddNoLock(name);
                         }

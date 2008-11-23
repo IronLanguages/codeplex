@@ -23,31 +23,16 @@ using Microsoft.Scripting.Utils;
 using System.Collections.Generic;
 
 namespace Microsoft.Scripting.ComInterop {
+
+    // Note: we only need to support the operations used by ComBinder
     internal class ComMetaObject : MetaObject {
         internal ComMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {
         }
 
-        #region MetaObject
-
         public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.Defer(args.AddFirst(WrapSelf()));
-        }
-
-        public override MetaObject BindConvert(ConvertBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf());
-        }
-
-        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(args.AddFirst(WrapSelf()));
-        }
-
-        public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf());
         }
 
         public override MetaObject BindGetMember(GetMemberBinder binder) {
@@ -55,28 +40,9 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.Defer(WrapSelf());
         }
 
-        public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(args.AddFirst(WrapSelf()));
-        }
-
         public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.Defer(WrapSelf(), value);
-        }
-
-        public override IEnumerable<string> GetDynamicMemberNames() {
-            return ComObject.ObjectToComObject(Value).MemberNames;
-        }
-        
-        public override MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf(), arg);
-        }
-
-        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf(), indexes);
         }
 
         public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
@@ -88,13 +54,6 @@ namespace Microsoft.Scripting.ComInterop {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.Defer(WrapSelf(), indexes.AddLast(value));
         }
-
-        public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.Defer(WrapSelf());
-        }
-
-        #endregion
 
         private MetaObject WrapSelf() {
             return new MetaObject(
@@ -112,10 +71,6 @@ namespace Microsoft.Scripting.ComInterop {
                     )
                 )
             );
-        }
-
-        internal static MetaObject GetComMetaObject(Expression expression, object arg) {
-            return new ComMetaObject(expression, Restrictions.Empty, arg);
         }
     }
 }

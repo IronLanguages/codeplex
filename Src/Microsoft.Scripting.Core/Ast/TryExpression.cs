@@ -97,26 +97,20 @@ namespace Microsoft.Linq.Expressions {
             return MakeTry(body, @finally, null, handlers);
         }
 
-        // TryCatchFault
-        public static TryExpression TryCatchFault(Expression body, Expression fault, params CatchBlock[] handlers) {
-            return MakeTry(body, null, fault, handlers);
-        }
-
         // MakeTry: the one factory that creates TryStatement
         public static TryExpression MakeTry(Expression body, Expression @finally, Expression fault, IEnumerable<CatchBlock> handlers) {
             RequiresCanRead(body, "body");
 
-            if (@finally != null && fault != null) {
-                throw Error.CannotHaveFinallyAndFault();
-            }
-
             var @catch = handlers.ToReadOnly();
             ContractUtils.RequiresNotNullItems(@catch, "handlers");
 
-            if (@finally != null) {
-                RequiresCanRead(@finally, "finally");
-            } else if (fault != null) {
+            if (fault != null) {
+                if (@finally != null || @catch.Count > 0) {
+                    throw Error.FaultCannotHaveCatchOrFinally();
+                }
                 RequiresCanRead(fault, "fault");
+            } else if (@finally != null) {
+                RequiresCanRead(@finally, "finally");
             } else if (@catch.Count == 0) {
                 throw Error.TryMustHaveCatchFinallyOrFault();
             }

@@ -162,7 +162,7 @@ namespace Microsoft.Scripting.Binders {
                     // this is a constant we want to re-write, replace w/ a templated constant
                     object value = node.Value;
 
-                    Type elementType = TypeUtils.GetVisibleType(node.Type);
+                    Type elementType = TypeUtils.GetConstantType(node.Type);
 
                     Func<object, int, object> ctor;
                     if (!_templateCtors.TryGetValue(elementType, out ctor)) {

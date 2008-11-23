@@ -112,6 +112,10 @@ namespace Microsoft.Scripting.ComInterop {
             get { return EmptyArray<string>.Instance; }
         }
 
+        internal virtual IEnumerable<KeyValuePair<string, object>> DataMembers {
+            get { return EmptyArray<KeyValuePair<string, object>>.Instance; }
+        }
+
         MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
             return new ComFallbackMetaObject(parameter, Restrictions.Empty, this);
         }

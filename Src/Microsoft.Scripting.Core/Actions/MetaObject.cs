@@ -16,7 +16,6 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using Microsoft.Scripting.ComInterop;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
@@ -94,14 +93,12 @@ namespace Microsoft.Scripting.Binders {
             }
         }
 
+        // TODO: do we want to keep this in its current form?
+        // It doesn't offer much value anymore
+        // (but it would be useful as a virtual property)
         public bool IsDynamicObject {
             get {
-                // We can skip _hasValue check as it implies _value == null
-                return _value is IDynamicObject
-#if !SILVERLIGHT
- || ComInterop.ComObject.IsComObject(_value)
-#endif
-;
+                return _value is IDynamicObject;
             }
         }
 
@@ -180,7 +177,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>MetaObject representing the result of the binding.</returns>
         public virtual MetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackOperationOnMember(this, value);
+            return binder.FallbackBinaryOperationOnMember(this, value);
         }
 
 
@@ -193,7 +190,7 @@ namespace Microsoft.Scripting.Binders {
         /// <returns>MetaObject representing the result of the binding.</returns>
         public virtual MetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackOperationOnIndex(this, indexes, value);
+            return binder.FallbackBinaryOperationOnIndex(this, indexes, value);
         }
 
         /// <summary>
@@ -268,12 +265,8 @@ namespace Microsoft.Scripting.Binders {
             IDynamicObject ido = argValue as IDynamicObject;
             if (ido != null) {
                 return ido.GetMetaObject(parameterExpression);
-#if !SILVERLIGHT
-            } else if (ComObject.IsComObject(argValue)) {
-                return ComMetaObject.GetComMetaObject(parameterExpression, argValue);
-#endif
             } else {
-                return new ParameterMetaObject(parameterExpression, argValue);
+                return new MetaObject(parameterExpression, Restrictions.Empty, argValue);
             }
         }
 

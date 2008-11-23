@@ -664,11 +664,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "cannot have finally and fault"
+        /// A string like  "fault cannot be used with catch or finally clauses"
         /// </summary>
-        internal static string CannotHaveFinallyAndFault {
+        internal static string FaultCannotHaveCatchOrFinally {
             get {
-                return "cannot have finally and fault";
+                return "fault cannot be used with catch or finally clauses";
             }
         }
 
@@ -1928,10 +1928,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "cannot have finally and fault"
+        /// ArgumentException with message like "fault cannot be used with catch or finally clauses"
         /// </summary>
-        internal static Exception CannotHaveFinallyAndFault() {
-            return new ArgumentException(Strings.CannotHaveFinallyAndFault);
+        internal static Exception FaultCannotHaveCatchOrFinally() {
+            return new ArgumentException(Strings.FaultCannotHaveCatchOrFinally);
         }
 
         /// <summary>

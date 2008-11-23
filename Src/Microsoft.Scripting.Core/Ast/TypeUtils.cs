@@ -705,14 +705,6 @@ namespace Microsoft.Scripting.Utils {
             return args.Select(a => GetTypeForBinding(a)).ToArray();
         }
 
-        // TODO: should not be using this anymore
-        internal static Type GetVisibleType(Type t) {
-            while (!t.IsVisible) {
-                t = t.BaseType;
-            }
-            return t;
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         internal static IEnumerable<Type> LoadTypesFromAssembly(Assembly asm) {
             try {
