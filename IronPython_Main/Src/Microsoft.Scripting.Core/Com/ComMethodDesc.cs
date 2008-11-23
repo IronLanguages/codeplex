@@ -107,6 +107,12 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        public bool IsDataMember {
+            get {
+                return DispId != ComDispIds.DISPID_NEWENUM && IsPropertyGet;
+            }
+        }
+
         public bool IsPropertyPut {
             get {
                 return (InvokeKind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;

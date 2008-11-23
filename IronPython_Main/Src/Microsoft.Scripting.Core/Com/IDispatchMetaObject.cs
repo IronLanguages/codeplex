@@ -61,27 +61,6 @@ namespace Microsoft.Scripting.ComInterop {
             return base.BindInvokeMember(binder, args);
         }
 
-        public override MetaObject BindConvert(ConvertBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-
-            if (binder.Type.IsInterface) {
-                Expression result =
-                    Expression.Convert(
-                        ComObject.RcwFromComObject(Expression),
-                        binder.Type
-                    );
-
-                // all IDispatchComObjects convert to interfaces in the same way
-                // so restrict only to IDispatchComObject.
-                return new MetaObject(
-                    result,
-                    Restrictions.GetTypeRestriction(Expression, typeof(IDispatchComObject))
-                );
-            }
-
-            return base.BindConvert(binder);
-        }
-
         public override MetaObject BindGetMember(GetMemberBinder binder) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
@@ -115,7 +94,7 @@ namespace Microsoft.Scripting.ComInterop {
                     typeof(IDispatchComObject).GetProperty("DispatchObject")
                 );
 
-            if (method.DispId != ComDispIds.DISPID_NEWENUM && method.IsPropertyGet) {
+            if (method.IsDataMember) {
                 if (method.Parameters.Length == 0) {
                     return new ComInvokeBinder(
                         new ArgumentInfo[0],
@@ -162,10 +141,6 @@ namespace Microsoft.Scripting.ComInterop {
         public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return IndexOperation(binder.FallbackSetIndex(UnwrapSelf(), indexes, value), indexes.AddLast(value), "TryGetSetItem");
-        }
-
-        public override IEnumerable<string> GetDynamicMemberNames() {
-            return _self.MemberNames;
         }
 
         private MetaObject IndexOperation(MetaObject fallback, MetaObject[] args, string method) {
@@ -264,8 +239,8 @@ namespace Microsoft.Scripting.ComInterop {
             );
         }
 
-        protected override MetaObject UnwrapSelf() {
-            return new MetaObject(
+        protected override ComUnwrappedMetaObject UnwrapSelf() {
+            return new ComUnwrappedMetaObject(
                 ComObject.RcwFromComObject(Expression),
                 IDispatchRestriction(),
                 _self.RuntimeCallableWrapper

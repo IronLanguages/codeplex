@@ -19,13 +19,15 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.Utils;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Binders;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 using System.Threading;
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
 
@@ -295,15 +297,36 @@ namespace Microsoft.Scripting.ComInterop {
                 EnsureScanDefinedMethods();
                 EnsureScanDefinedEvents();
 
+                var names = new List<string>();
+
                 foreach (string name in _comTypeDesc.Funcs.Keys) {
-                    yield return name;
+                    names.Add(name);
                 }
 
                 if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
                     foreach (string name in _comTypeDesc.Events.Keys) {
-                        yield return name;
+                        names.Add(name);
                     }
                 }
+
+                return names.ToArray();
+            }
+        }
+
+        internal override IEnumerable<KeyValuePair<string, object>> DataMembers {
+            get {
+                EnsureScanDefinedMethods();
+
+                Type comType = RuntimeCallableWrapper.GetType();
+                var members = new List<KeyValuePair<string, object>>();
+                foreach (ComMethodDesc method in _comTypeDesc.Funcs.Values) {
+                    if (method.IsDataMember) {
+                        object value = comType.InvokeMember(method.Name, BindingFlags.GetProperty, null, RuntimeCallableWrapper, EmptyArray<object>.Instance, CultureInfo.InvariantCulture);
+                        members.Add(new KeyValuePair<string, object>(method.Name, value));
+                    }
+                }
+
+                return members.ToArray();
             }
         }
 

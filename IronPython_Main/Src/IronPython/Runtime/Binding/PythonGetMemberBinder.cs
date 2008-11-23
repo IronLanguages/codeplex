@@ -17,10 +17,11 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.ComInterop;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Runtime;
 
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -70,7 +71,11 @@ namespace IronPython.Runtime.Binding {
             } else if (target.IsDynamicObject) {
                 return GetForeignObject(target);
             }
-
+#if !SILVERLIGHT
+            else if (ComOps.IsComObject(target.Value)) {
+                return GetForeignObject(target);
+            }
+#endif
             return Fallback(target, cc.Expression);
         }
 
@@ -229,6 +234,11 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject FallbackGetMember(MetaObject self, MetaObject onBindingError) {
+#if !SILVERLIGHT
+            if (ComBinder.TryBindGetMember(this, ref self)) {
+                return self;
+            }
+#endif
             return PythonGetMemberBinder.FallbackWorker(self, BinderState.GetCodeContext(this), Name, GetMemberOptions.None, this);
         }
 

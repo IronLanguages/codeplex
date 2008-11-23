@@ -14,9 +14,10 @@
 * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.ComInterop;
 using Microsoft.Linq.Expressions;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
@@ -42,7 +43,11 @@ namespace IronPython.Runtime.Binding {
             if (self.NeedsDeferral()) {
                 return Defer(self, value);
             }
-
+#if !SILVERLIGHT
+            if (ComBinder.TryBindSetMember(this, ref self, value)) {
+                return self;
+            }
+#endif
             return Binder.Binder.SetMember(Name, self, value, Ast.Constant(Binder.Context));
         }
 

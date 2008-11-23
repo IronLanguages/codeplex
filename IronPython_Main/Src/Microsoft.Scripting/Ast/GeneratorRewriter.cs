@@ -253,7 +253,9 @@ namespace Microsoft.Scripting.Ast {
                     temps.Add(deferredVar);
                     handlers[i] = Expression.Catch(deferredVar, Expression.Empty(), c.Filter);
 
-                    var catchBody = c.Body;
+                    // We need to rewrite rethrows into "throw deferredVar"
+                    var catchBody = new RethrowRewriter { Exception = deferredVar }.Visit(c.Body);
+
                     if (c.Variable != null) {
                         catchBody = Expression.Block(Expression.Assign(c.Variable, deferredVar), catchBody);
                     } else {
@@ -347,6 +349,25 @@ namespace Microsoft.Scripting.Ast {
             }
 
             return Expression.Block(Expression.Label(tryStart), @try);
+        }
+
+        private class RethrowRewriter : ExpressionVisitor {
+            internal ParameterExpression Exception;
+
+            protected override Expression VisitUnary(UnaryExpression node) {
+                if (node.NodeType == ExpressionType.Throw && node.Operand == null) {
+                    return Expression.Throw(Exception, node.Type);
+                }
+                return base.VisitUnary(node);
+            }
+
+            protected override Expression VisitLambda<T>(Expression<T> node) {
+                return node; // don't recurse into lambdas 
+            }
+
+            protected override Expression VisitTry(TryExpression node) {
+                return node; // don't recurse into other try's
+            }
         }
 
         // Skip the finally block if we are yielding, but not if we're doing a
@@ -706,12 +727,6 @@ namespace Microsoft.Scripting.Ast {
             }
             if (yields == _yields.Count) {
                 return Expression.MakeUnary(node.NodeType, o, node.Type, node.Method);
-            }
-            if (node.NodeType == ExpressionType.Throw && node.Operand == null) {
-                // No one needs this yet. It's not terribly hard to implement
-                // but it requires tracking more state (we'd need access to the
-                // hoisted exception variable)
-                throw new NotSupportedException("rethrow is not allowed if the catch block contains a yield");
             }
             return Expression.Block(
                 ToTemp(ref o),

@@ -23,54 +23,17 @@ using Microsoft.Scripting.Utils;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.ComInterop {
+    //
     // ComFallbackMetaObject just delegates everything to the binder.
+    //
     // Note that before performing FallBack on a ComObject we need to unwrap it so that
     // binder would act upon the actual object (typically Rcw)
+    //
+    // Also: we don't need to implement these for any operations other than those
+    // supported by ComBinder
     internal class ComFallbackMetaObject : MetaObject {
         internal ComFallbackMetaObject(Expression expression, Restrictions restrictions, object arg)
             : base(expression, restrictions, arg) {
-        }
-
-        #region MetaObject
-
-        public override MetaObject BindConvert(ConvertBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-
-            // TODO: we should not need this code soon because C# won't try to
-            // do a dynamic conversion to an interface
-            if (binder.Type.IsInterface) {
-                // Converting a COM object to any interface is always considered possible - it will result in 
-                // a QueryInterface at runtime
-                return new MetaObject(
-                    Expression.Convert(
-                        ComObject.RcwFromComObject(Expression),
-                        binder.Type
-                    ),
-                    Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, LimitType))
-                );
-            }
-
-            return binder.FallbackConvert(UnwrapSelf());
-        }
-
-        public override MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackBinaryOperation(UnwrapSelf(), arg);
-        }
-
-        public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackCreateInstance(UnwrapSelf(), args);
-        }
-
-        public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackDeleteIndex(UnwrapSelf(), indexes);
-        }
-
-        public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackDeleteMember(UnwrapSelf());
         }
 
         public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
@@ -78,19 +41,9 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.FallbackGetIndex(UnwrapSelf(), indexes);
         }
 
-        public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackInvoke(UnwrapSelf(), args);
-        }
-
         public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackSetIndex(UnwrapSelf(), indexes, value);
-        }
-
-        public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackUnaryOperation(UnwrapSelf());
         }
 
         public override MetaObject BindGetMember(GetMemberBinder binder) {
@@ -108,18 +61,21 @@ namespace Microsoft.Scripting.ComInterop {
             return binder.FallbackSetMember(UnwrapSelf(), value);
         }
 
-        protected virtual MetaObject UnwrapSelf() {
-            ComObject co = base.Value as ComObject;
-            Debug.Assert(co != null, "Expecting ComObject.");
-
-            return new MetaObject(
+        protected virtual ComUnwrappedMetaObject UnwrapSelf() {
+            return new ComUnwrappedMetaObject(
                 ComObject.RcwFromComObject(Expression),
                 Restrictions.Merge(Restrictions.GetTypeRestriction(Expression, LimitType)),
-                co.RuntimeCallableWrapper
+                ((ComObject)Value).RuntimeCallableWrapper
             );
         }
+    }
 
-        #endregion
+    // This type exists as a signal type, so ComBinder knows not to try to bind
+    // again when we're trying to fall back
+    internal sealed class ComUnwrappedMetaObject : MetaObject {
+        internal ComUnwrappedMetaObject(Expression expression, Restrictions restrictions, object value)
+            : base(expression, restrictions, value) {
+        }
     }
 }
 

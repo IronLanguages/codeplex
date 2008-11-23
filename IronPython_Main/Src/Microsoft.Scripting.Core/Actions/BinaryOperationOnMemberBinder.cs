@@ -81,8 +81,8 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="target">Target of the operation.</param>
         /// <param name="arg">Right-hand operator value</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public MetaObject FallbackOperation(MetaObject target, MetaObject arg) {
-            return FallbackOperation(target, arg, null);
+        public MetaObject FallbackBinaryOperation(MetaObject target, MetaObject arg) {
+            return FallbackBinaryOperation(target, arg, null);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="arg">Right-hand operator value</param>
         /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public abstract MetaObject FallbackOperation(MetaObject target, MetaObject arg, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackBinaryOperation(MetaObject target, MetaObject arg, MetaObject errorSuggestion);
 
         /// <summary>
         /// Implements a binding logic for the operation. This is called by the target when
@@ -106,8 +106,8 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="target">Target of the operation.</param>
         /// <param name="value">The right-hand value</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public MetaObject FallbackOperationOnMember(MetaObject target, MetaObject value) {
-            return FallbackOperationOnMember(target, value, null);
+        public MetaObject FallbackBinaryOperationOnMember(MetaObject target, MetaObject value) {
+            return FallbackBinaryOperationOnMember(target, value, null);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Microsoft.Scripting.Binders {
         /// <param name="value">The right-hand value</param>
         /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public abstract MetaObject FallbackOperationOnMember(MetaObject target, MetaObject value, MetaObject errorSuggestion);
+        public abstract MetaObject FallbackBinaryOperationOnMember(MetaObject target, MetaObject value, MetaObject errorSuggestion);
 
         public sealed override MetaObject Bind(MetaObject target, params MetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
