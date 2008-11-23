@@ -27,7 +27,7 @@ using System.Security;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("Microsoft.Scripting.ExtensionAttribute")]
-[assembly: AssemblyCopyright("© Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("Â© Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -55,8 +55,8 @@ using System.Security;
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
 #if !SILVERLIGHT
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.11020.00")]
-[assembly: AssemblyInformationalVersion("1.0")]
+[assembly: AssemblyVersion("0.9.0.0")]
+[assembly: AssemblyFileVersion("0.9.11121.00")]
+[assembly: AssemblyInformationalVersion("0.9")]
 [assembly: AllowPartiallyTrustedCallers]
 #endif

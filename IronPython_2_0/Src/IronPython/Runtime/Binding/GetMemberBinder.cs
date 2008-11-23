@@ -115,7 +115,13 @@ namespace IronPython.Runtime.Binding {
                     );
                     Expression failure = GetFailureExpression(limitType, name, isNoThrow, action);
 
-                    return BindingHelpers.FilterShowCls(codeContext, action, baseRes, failure);
+                    // TODO: We need a better filtering story for things which define GetCustomMember,
+                    // we currently just special case Scope so our modules work correctly.
+                    if (limitType == typeof(Scope)) {
+                        return BindingHelpers.FilterShowClsForScope(codeContext, self, name, action, baseRes, failure);
+                    } else {
+                        return BindingHelpers.FilterShowCls(codeContext, action, baseRes, failure);
+                    }
                 }
             }
 

@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting.Utils;
 using System.Text;
 
@@ -368,10 +371,10 @@ namespace Microsoft.Linq.Expressions {
             ReadOnlyCollection<Expression> finalArgs;
             if (convertedArguments == arguments) {
                 // we didn't convert anything, just convert the users original
-                // array to a ROC.
+                // array to a ReadOnlyCollection.
                 finalArgs = convertedArguments.ToReadOnly();
             } else {
-                // we already copied the array so just stick it in a ROC.
+                // we already copied the array so just stick it in a ReadOnlyCollection.
                 finalArgs = new ReadOnlyCollection<Expression>(convertedArguments);
             }
 

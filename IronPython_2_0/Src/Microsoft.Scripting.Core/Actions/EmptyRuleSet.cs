@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Scripting.Actions {
     internal sealed class EmptyRuleSet<T> : RuleSet<T> where T : class {
         internal static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);

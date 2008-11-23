@@ -13,11 +13,14 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 #if !SILVERLIGHT // ComObject
 
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Scripting.Com {
     // TODO: should this be an IDO?

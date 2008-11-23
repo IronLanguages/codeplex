@@ -82,6 +82,34 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
+        internal static MetaObject/*!*/ FilterShowClsForScope(Expression/*!*/ codeContext, MetaObject/*!*/ scope, string name, MetaAction/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
+            if (action is IPythonSite) {
+                Type resType = BindingHelpers.GetCompatibleType(res.Expression.Type, failure.Type);
+
+                return new MetaObject(
+                    Ast.Condition(
+                        Expression.Or(
+                            Ast.Call(
+                                Ast.ConvertHelper(scope.Expression, typeof(Scope)),
+                                typeof(Scope).GetMethod("ContainsName", new Type[] { typeof(SymbolId) }),
+                                Ast.Constant(SymbolTable.StringToId(name))
+                            ),
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("IsClsVisible"),
+                                codeContext
+                            )
+                        ),
+                        Ast.ConvertHelper(res.Expression, resType),
+                        Ast.ConvertHelper(failure, resType)
+
+                    ),
+                    res.Restrictions
+                );
+            }
+
+            return res;
+        }
+
         /// <summary>
         /// Gets the best CallSignature from a MetaAction.
         /// 

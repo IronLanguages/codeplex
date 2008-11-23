@@ -135,6 +135,53 @@ def test_cp16831():
         if not temp.BProperty==None:
             Fail("Nullable Boolean was set to None")           
 
+def test_cp19675():
+    class MyFloatType(float):
+        def __new__(cls):
+            return float.__new__(cls, 0.0)
+        def __repr__(self):
+            return "MyFloat"
+        __str__ = __repr__
+    
+    AreEqual(str(MyFloatType()), 'MyFloat')
+    AreEqual(repr(MyFloatType()), 'MyFloat')
+
+def test_aaa_cp19656():
+    # needs to run before import System
+    import sys
+    self = sys.modules[__name__]
+    global Keys
+    Keys = 'abc'
+    AreEqual(self.Keys, 'abc')
+
+@skip("win32")
+def test_bbb_cp19656():
+    # needs to run before import System
+    import operator
+    AreEqual(operator.isSequenceType(type), False)
+    import System
+    AreEqual(operator.isSequenceType(type), True)
+    
+def test_cp19678():
+    global iterCalled, getItemCalled
+    iterCalled = False
+    getItemCalled = False
+    class o(object):
+        def __iter__(self):
+            global iterCalled
+            iterCalled = True
+            return iter([1, 2, 3])
+        def __getitem__(self, index):
+            global getItemCalled
+            getItemCalled = True
+            return [1, 2, 3][index]
+        def __len__(self):
+            return 3
+
+    AreEqual(1 in o(), True)
+    AreEqual(iterCalled, True)
+    AreEqual(getItemCalled, False)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

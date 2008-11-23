@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Scripting.Actions {
     internal interface ITemplatedValue {
         int Index { get; }

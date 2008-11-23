@@ -126,38 +126,30 @@
 	itself, and if you're looking for that, we recommend you start with the
 	tutorial at <a href="http://docs.python.org/tut/tut.html">www.python.org</a>
 	or the often recommended book <i>Learning Python</i> by Mark Lutz and David
-	Ascher.<br><br>
+	Ascher. For an introduction to both the Python language as well as the unique
+	capabilities of IronPython, we recommend <i>IronPython in Action</i> by 
+	Michael Foord<br><br>
         Some of the exercises in this tutorial require prerequisites.&nbsp; The prerequisites to successfully complete the whole tutorial are:</p>
 	<ul type="disc">
-		<li class="Normal">Microsoft .NET Framework Version 2.0 Redistributable
-		Package (x86)
+		<li class="Normal">Microsoft .NET Framework Version 3.5
 		<ul type="circle">
-			<li class="Normal">Required to run IronPython.</li>
+			<li class="Normal">Required to run IronPython on Windows Vista.</li>
+			<li class="Normal">Microsoft .NET Framework Version 3.0 SP1 or higher needed for Windows operating systems released prior to Windows Vista</li>
 			<li class="Normal">Download from
-			<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=0856eacb-4362-4b0d-8edd-aab15c5e04f5&DisplayLang=en">
+			<a href="http://www.microsoft.com/downloads/details.aspx?familyid=333325FD-AE52-4E35-B531-508D977D32A6&displaylang=en   ">
 			here</a>.</li>
 		</ul>
 		</li>
 	</ul>
 	<ul>
-		<li class="Normal">.NET Framework 2.0 Software Development Kit (SDK) (x86)
-		<ul type="circle">
-			<li class="Normal">Required for the COM interoperability, extending
-			and embedding tutorials.</li>
-			<li class="Normal">Download from
-			<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
-			here</a>.</li>
+		<li class="Normal">Visual Studio 2005 or 2008<ul type="circle">
+			<li class="Normal">Required for &quot;Setting up Visual Studio for IronPython Debugging&quot; tutorials.</li>
 		</ul>
 		</li>
 	</ul>
 	<ul>
-		<li class="Normal"><a name="Avalon">Microsoft WinFX Runtime Components</a>
-		(Avalon)<ul type="circle">
-			<li class="Normal">Required for &quot;Advanced IronPython&quot; and &quot;Embedding
-			IronPython&quot; tutorials.</li>
-			<li class="Normal">Download from
-			<a href="http://msdn.microsoft.com/windowsvista/getthebeta/default.aspx">
-			here</a>.</li>
+		<li class="Normal">Microsoft Word<ul type="circle">
+			<li class="Normal">Required for &quot;Use Word for Spell Checking&quot; and &quot;Merlin the Wizard&quot; tutorials.</li>
 		</ul>
 		</li>
 	</ul>
@@ -167,9 +159,9 @@
 			<li>Required for the &quot;Basic IronPython&quot; tutorial, exercise &quot;Loading .NET
 			Libraries&quot;.</li>
 			<li>Download Mapack from
-			<a href="http://www.aisto.com/roeder/dotnet/">here</a> (direct link
+			<a href="http://www.lutzroeder.com/dotnet/">here</a> (direct link
 			to the Mapack.zip download is
-			<a href="http://www.aisto.com/roeder/dotnet/Download.aspx?File=Mapack">
+			<a href="http://www.lutzroeder.com/dotnet/Download.aspx?File=Mapack">
 			here</a>).</li>
 			<li>Extract Mapack.dll from the zip file directly into the Tutorial
 			directory.</li>
@@ -177,19 +169,20 @@
 		</li>
 	</ul>
 	<p class="Normal">&nbsp;</p>
-	<p class="Body">Visual Studio 2005 can be used in place of the Microsoft .NET
+	<p class="Body">Visual Studio 2005 or 2008 can be used in place of the Microsoft .NET
 	Framework Version 2.0 and the .NET Framework 2.0 Software Development Kit (SDK).
-	Since Visual Studio 2005 installs both the .NET Framework 2.0 and the .NET Framework
+	Since Visual Studio installs both the .NET Framework 2.0 and the .NET Framework
 	SDK, there is no need to install those explicitly if you have Visual Studio
-	2005 available.</p>
-	<p class="Body">This tutorial assumes that the IronPython distribution was uncompressed
-	into the directory C:\IronPython.&nbsp; Please note that your individual setup may
-	vary.</p>
+	2005 available. Visual Studio 2008 also installs .NET Framework 3.5. </p>
 	<p class="Body">This tutorial also assumes that you will launch the
 	IronPython console (c:\ironpython\ipy.exe) from the tutorial directory.&nbsp;
 	When the tutorials direct you to start the IronPython console from the tutorial directory,
 	you should change to the tutorial directory (&gt;cd c:\ironpython\tutorial)
-	and launch the console with the tutorial as your working directory (&gt;..\ipy.exe).</p>
+	and launch the console with the tutorial as your working directory (&gt;..\ipy.exe). If you
+	install IronPython via the MSI installer, it will install to c:\Program Files\IronPython 2.0 
+	by default. In this scenario, you can still run the tutorial, but several tutorials require 
+	write access to the tutorial directory, which will require administrator access if IronPython
+	is installed under Program Files.</p>
 	<p class="Body">&nbsp;</p>
 	<h1><a name="T1">Tutorial 1: Basic IronPython</a></h1>
 	<p class="Body">The emphasis of this tutorial is on the basic interaction with
@@ -230,7 +223,7 @@
 		the tutorial directory&quot;.</p>
 		</li>
 	</ol>
-	<p class="Code-Highlighted">IronPython 1.0 on .NET 2.0.50727.42<br />
+	<p class="Code-Highlighted">IronPython 2.0 (2.0.0.0) on .NET 2.0.50727.3053<br />
 	Copyright (c) Microsoft Corporation. All rights reserved.</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; _</p>
 	<ol start="2">
@@ -396,9 +389,9 @@
 	<p class="Stepnonumbering">The __doc__ attribute will be later used also for
 	exploring .NET methods and their parameter types.</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; first.add.__doc__</p>
-	<p class="Code-Background">&#39;add(a, b) - returns a + b&#39;</p>
+	<p class="Code-Background">&#39;add(a, b) -&gt; returns a + b&#39;</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; first.factorial.__doc__</p>
-	<p class="Code-Background">&#39;factorial(n) - returns factorial of n&#39;</p>
+	<p class="Code-Background">&#39;factorial(n) -&gt; returns factorial of n&#39;</p>
 	<ol start="4">
 		<li>
 		<p class="Step">Call the methods in the &quot;first&quot; module and print the contents
@@ -949,7 +942,8 @@ list(set1-set2)</p>
 	</ol>
 	<h2><a name="T1.4">Exercise 4: Obtaining and Using Python Standard Library</a></h2>
 	<p class="Body">In this exercise, you will obtain Python and point
-	IronPython at the Python standard library.</p>
+	IronPython at the Python standard library. If you installed IronPython from the MSI installer, 
+	the Python standard library is installed by default and you can skip this exercise.</p>
 	<h3><a name="T1.4.1">Task 1: Configuring IronPython to use the Python standard library</a></h3>
 	<ol>
 		<li>
@@ -1711,7 +1705,9 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<ol>
 		<li>
 		<p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 2005 Command
-		Prompt&quot; from the start menu.</p>
+		Prompt&quot; from the start menu. Note, if you installed IronPython under Program 
+            Files via the MSI installer, you'll need to run the command prompt as an 
+            administrator.</p>
 		</li>
 		<li>
 		<p class="Step">The .NET Frameworks SDK comes with the &quot;tlbimp&quot; tool which converts
@@ -1788,17 +1784,6 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="Code-Background">['CreateObjRef','Equals','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','MemberwiseClone','ReferenceEquals','Register','ShowDefaultCharacterProperties','ToString','Unload','Unregister','__class__','__delattr__','__doc__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__','__str__']</p>
 	<ol start="5">
 		<li>
-		<p class="Step">Explore the parameters of the Load method on AgentServerClass:</p>
-		</li>
-	</ol>
-	<p class="TypedExample">a.Load.__doc__</p>
-	<p class="Code-Highlighted">&gt;&gt;&gt; a.Load.__doc__</p>
-	<p class="Code-Background">'void Load(Object vLoadKey, [out]Int32& pdwCharID, [out]Int32& pdwReqID)'</p>
-	<p class="Stepnonumbering">The Load methods have an input parameter (name of
-	the character to load) and two output parameters.&nbsp; When calling this method, IronPython will turn the two output parameters into
-	multiple return values.</p>
-	<ol start="6">
-		<li>
 		<p class="Step">Load &quot;Merlin the Wizard&quot; character. (The character data
 		is stored in c:\WINDOWS\msagent\chars). The Load method returns multiple
 		values packed into a tuple - the
@@ -1811,7 +1796,7 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="Code-Background"></p>
 	<p class="TypedExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
 	<p class="Code-Background"></p>
-	<ol start="7">
+	<ol start="6">
 		<li>
 		<p class="Step">Call GetCharacter method on the AgentServerClass instance
 		to get the actual character, display the character and have him think about
@@ -1824,11 +1809,13 @@ Registering self.on_Clear to handle Clear.Click</p>
 	<p class="TypedExample">a.GetCharacter(cid.Value, c)</p>
 	<p class="HiddenOutput"></p>
 	<p class="Code-Background"></p>
-	<p class="TypedExample">c.Value.Show(0, reqid)</p>
+	<p class="TypedExample">character = c.Value</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
+	<p class="TypedExample">character.Show(0, reqid)</p>
 	<p class="HiddenOutput"></p>
-	<ol start="8">
+	<p class="TypedExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
+	<p class="HiddenOutput"></p>
+	<ol start="7">
 		<li>
 		<p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of
 		all the animations by calling the GetAnimationNames method. Play one of the animations,
@@ -1837,9 +1824,11 @@ Registering self.on_Clear to handle Clear.Click</p>
 	</ol>
 	<p class="TypedExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
+	<p class="TypedExample">character.GetAnimationNames(enum)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: print n</p>
+	<p class="TypedExample">animations = enum.Value</p>
+	<p class="HiddenOutput"></p>
+	<p class="TypedExample">for n in animations: print n</p>
 	<p class="HiddenOutput">RestPose<br>
 Blink<br>
 Idle2_2<br>
@@ -1913,32 +1902,34 @@ GetAttentionContinued<br>
 Process<br>
 Search<br>
 Think<br></p>
-	<p class="TypedExample">c.Value.Play(&quot;Read&quot;, reqid)</p>
+	<p class="TypedExample">character.Play(&quot;Read&quot;, reqid)</p>
 	<p class="HiddenOutput"></p>
-	<ol start="9">
+	<ol start="8">
 		<li>
-		<p class="Step">(Optional) To call a series of animations, we could call c.Play(animation_name, reqid)
+		<p class="Step">(Optional) To call a series of animations, we could call character.Play(animation_name, reqid)
 		for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation
 		name:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.GetAnimationNames(enum)</p>
+	<p class="TypedExample">character.GetAnimationNames(enum)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">for n in enum.Value: globals()[n] = lambda name=n: c.Value.Play(name, reqid)</p>
+	<p class="TypedExample">animations = enum.Value</p>
+	<p class="HiddenOutput"></p>
+	<p class="TypedExample">for n in animations: globals()[n] = lambda name=n: character.Play(name, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<p class="Stepnonumbering">At this point we can have Merlin play animations
 	simply by calling a function from global namespace:</p>
 	<p class="TypedExample">Congratulate()</p>
 	<p class="HiddenOutput"></p>
 	<p class="Code-Background"></p>
-	<ol start="10">
+	<ol start="9">
 		<li>
 		<p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
 		</li>
 	</ol>
-	<p class="TypedExample">c.Value.StopAll(0)</p>
+	<p class="TypedExample">character.StopAll(0)</p>
 	<p class="HiddenOutput"></p>
-	<p class="TypedExample">c.Value.Hide(0, reqid)</p>
+	<p class="TypedExample">character.Hide(0, reqid)</p>
 	<p class="HiddenOutput"></p>
 	<h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
 	<p class="Body">In this exercise you will create an instance of Microsoft
@@ -2259,7 +2250,7 @@ list(set1-set2)</p>
 	<p class="Stepnonumbering">IronPython will output:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; s = Simple(10)<br />
 	&gt;&gt;&gt; print s</p>
-	<p class="Code-Background">Simple&lt;10</p>
+	<p class="Code-Background">Simple&lt;10&gt;</p>
 	<ol start="9">
 		<li>
 		<p class="Step">You have just explored all the functionality currently available
@@ -2327,16 +2318,16 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; dir(Simple)<br />
 	&gt;&gt;&gt; s = Simple(10)</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in s: print i</p>
-	<p class="Code-Background">Simple&lt;0<br />
-	Simple&lt;1<br />
-	Simple&lt;2<br />
-	Simple&lt;3<br />
-	Simple&lt;4<br />
-	Simple&lt;5<br />
-	Simple&lt;6<br />
-	Simple&lt;7<br />
-	Simple&lt;8<br />
-	Simple&lt;9</p>
+	<p class="Code-Background">Simple&lt;0&gt;<br />
+	Simple&lt;1&gt;<br />
+	Simple&lt;2&gt;<br />
+	Simple&lt;3&gt;<br />
+	Simple&lt;4&gt;<br />
+	Simple&lt;5&gt;<br />
+	Simple&lt;6&gt;<br />
+	Simple&lt;7&gt;<br />
+	Simple&lt;8&gt;<br />
+	Simple&lt;9&gt;</p>
 	<p class="StepNote">Notice that the dir() function now returned the GetEnumerator
 	method.</p>
 	<ol start="4">
@@ -2597,7 +2588,7 @@ list(set1-set2)</p>
 	<p class="Stepnonumbering">IronPython will output:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; s = Simple(10)<br />
 	&gt;&gt;&gt; print s</p>
-	<p class="Code-Background">Simple&lt;10</p>
+	<p class="Code-Background">Simple&lt;10&gt;</p>
 	<ol start="9">
 		<li>
 		<p class="Step">You just have explored all the functionality available in
@@ -2702,16 +2693,16 @@ list(set1-set2)</p>
 	&gt;&gt;&gt; dir(Simple)<br />
 	&gt;&gt;&gt; s = Simple(10)</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in s: print i</p>
-	<p class="Code-Background">Simple&lt;0<br />
-	Simple&lt;1<br />
-	Simple&lt;2<br />
-	Simple&lt;3<br />
-	Simple&lt;4<br />
-	Simple&lt;5<br />
-	Simple&lt;6<br />
-	Simple&lt;7<br />
-	Simple&lt;8<br />
-	Simple&lt;9</p>
+	<p class="Code-Background">Simple&lt;0&gt;<br />
+	Simple&lt;1&gt;<br />
+	Simple&lt;2&gt;<br />
+	Simple&lt;3&gt;<br />
+	Simple&lt;4&gt;<br />
+	Simple&lt;5&gt;<br />
+	Simple&lt;6&gt;<br />
+	Simple&lt;7&gt;<br />
+	Simple&lt;8&gt;<br />
+	Simple&lt;9&gt;</p>
 	<p class="Normal">&nbsp;</p>
 	<p class="StepNote">Notice that the dir() function now returned the GetEnumerator
 	method.</p>
@@ -2947,7 +2938,8 @@ Them</a></h1>
 		<li>
 		<p class="Step">In the properties dialog, you will fill in two
 		fields, the Command Arguments and Working Directory.&nbsp; For the
-		Command Arguments, enter &quot;first.py&quot;.&nbsp; For the Working Directory,
+		Command Arguments, enter &quot;-D first.py&quot;.&nbsp; The -D argument enables 
+            application debugging. For the Working Directory,
 		enter the path to the Tutorial directory (c:\IronPython\Tutorial\ is
 		where we assume you have it).&nbsp; Click Apply and OK to confirm your
 		changes.</p>

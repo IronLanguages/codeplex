@@ -37,6 +37,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.XML" />
   </ItemGroup>
+
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
@@ -48,6 +49,7 @@
     <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <DelaySign>true</DelaySign>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="AppManifestTemplate.cs" />
     <Compile Include="Chiron.cs" />

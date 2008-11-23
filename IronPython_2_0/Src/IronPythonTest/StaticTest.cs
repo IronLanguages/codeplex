@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Runtime.InteropServices;
 
 namespace IronPythonTest.StaticTest {

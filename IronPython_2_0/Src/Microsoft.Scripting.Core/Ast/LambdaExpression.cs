@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -360,7 +362,7 @@ namespace Microsoft.Linq.Expressions {
                     body = Expression.Quote(body);
                 } else {
                     // We allow the body type to be void with non-void return statements, so
-                    // we can’t completely verify this here without walking the tree. Instead we validate
+                    // we canï¿½t completely verify this here without walking the tree. Instead we validate
                     // this condition in VariableBinder.
                     // TODO: can the return statement design be improved to allow the check here?
                     if (body.Type != typeof(void)) {

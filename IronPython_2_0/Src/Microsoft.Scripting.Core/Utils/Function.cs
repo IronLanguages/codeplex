@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft {
     public delegate TResult Func<TResult>();
     public delegate TResult Func<T, TResult>(T arg);

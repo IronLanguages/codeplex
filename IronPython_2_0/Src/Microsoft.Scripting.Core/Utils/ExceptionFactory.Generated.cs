@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Linq.Expressions {
 
     internal static partial class Strings {

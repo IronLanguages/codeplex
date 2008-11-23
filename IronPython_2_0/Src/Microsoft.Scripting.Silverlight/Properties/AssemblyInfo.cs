@@ -13,9 +13,12 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
@@ -26,7 +29,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("MS")]
 [assembly: AssemblyProduct("Microsoft.Scripting.Silverlight")]
-[assembly: AssemblyCopyright("© Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("Â© Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

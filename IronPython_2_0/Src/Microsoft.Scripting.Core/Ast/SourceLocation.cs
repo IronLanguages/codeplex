@@ -12,7 +12,9 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;using Microsoft.Linq.Expressions;
+using System; using Microsoft;
+
+using Microsoft.Linq.Expressions;
 using System.Globalization;
 
 namespace Microsoft.Scripting {

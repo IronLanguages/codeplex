@@ -119,82 +119,82 @@ namespace IronPython.Runtime.Binding {
             } else {
                 RestrictTypes(types);
 
-                ParameterExpression curIndex = Ast.Variable(typeof(int), "count");
-                sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.GetItem, types[0], new MetaObject(curIndex, Restrictions.Empty));
+                sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iterator, types[0]);
                 if (sf.Success) {
-                    // defines __getitem__, need to loop over the indexes and see if we match
-
-                    ParameterExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
-                    ParameterExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
-
-                    LabelTarget target = Ast.Label();
+                    // iterate using __iter__
                     res = new MetaObject(
-                        Ast.Scope(
-                            Ast.Comma(
-                                Ast.Loop(
-                                    null,                                                     // test
-                                    Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
-                                    Ast.Block(                                                // body
-                        // getItemRes = param0.__getitem__(curIndex)
-                                        Utils.Try(
-                                            Ast.Assign(
-                                                getItemRes,
-                                                sf.Target.Expression
-                                            )
-                                        ).Catch(
-                        // end of indexes, return false
-                                            typeof(IndexOutOfRangeException),
-                                            Ast.Break(target)
-                                        ),
-                        // if(getItemRes == param1) return true
-                                        Utils.If(
-                                            Ast.Dynamic(
-                                                new OperationBinder(
-                                                    state,
-                                                    StandardOperators.Equal
-                                                ),
-                                                typeof(bool),
-                                                types[1].Expression,
-                                                getItemRes
-                                            ),
-                                            Ast.Assign(containsRes, Ast.Constant(true)),
-                                            Ast.Break(target)
-                                        )
-                                    ),
-                                    null,                                               // loop else
-                                    target,                                             // break label target
-                                    null
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
+                            Ast.Constant(state.Context),
+                            Ast.Dynamic(
+                                new ConversionBinder(
+                                    state,
+                                    typeof(IEnumerator),
+                                    ConversionResultKind.ExplicitCast
                                 ),
-                                containsRes
+                                typeof(IEnumerator),
+                                sf.Target.Expression
                             ),
-                            curIndex,
-                            getItemRes,
-                            containsRes
+                            Ast.ConvertHelper(types[1].Expression, typeof(object))
                         ),
                         Restrictions.Combine(types)
                     );
                 } else {
-                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iterator, types[0]);
+                    ParameterExpression curIndex = Ast.Variable(typeof(int), "count");
+                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.GetItem, types[0], new MetaObject(curIndex, Restrictions.Empty));
                     if (sf.Success) {
-                        // iterate using __iter__
+                        // defines __getitem__, need to loop over the indexes and see if we match
+    
+                        ParameterExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
+                        ParameterExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
+    
+                        LabelTarget target = Ast.Label();
                         res = new MetaObject(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
-                                Ast.Constant(state.Context),
-                                Ast.Dynamic(
-                                    new ConversionBinder(
-                                        state,
-                                        typeof(IEnumerator),
-                                        ConversionResultKind.ExplicitCast
+                            Ast.Scope(
+                                Ast.Comma(
+                                    Ast.Loop(
+                                        null,                                                     // test
+                                        Ast.Assign(curIndex, Ast.Add(curIndex, Ast.Constant(1))), // increment
+                                        Ast.Block(                                                // body
+                            // getItemRes = param0.__getitem__(curIndex)
+                                            Utils.Try(
+                                                Ast.Assign(
+                                                    getItemRes,
+                                                    sf.Target.Expression
+                                                )
+                                            ).Catch(
+                            // end of indexes, return false
+                                                typeof(IndexOutOfRangeException),
+                                                Ast.Break(target)
+                                            ),
+                            // if(getItemRes == param1) return true
+                                            Utils.If(
+                                                Ast.Dynamic(
+                                                    new OperationBinder(
+                                                        state,
+                                                        StandardOperators.Equal
+                                                    ),
+                                                    typeof(bool),
+                                                    types[1].Expression,
+                                                    getItemRes
+                                                ),
+                                                Ast.Assign(containsRes, Ast.Constant(true)),
+                                                Ast.Break(target)
+                                            )
+                                        ),
+                                        null,                                               // loop else
+                                        target,                                             // break label target
+                                        null
                                     ),
-                                    typeof(IEnumerator),
-                                    sf.Target.Expression
+                                    containsRes
                                 ),
-                                Ast.ConvertHelper(types[1].Expression, typeof(object))
+                                curIndex,
+                                getItemRes,
+                                containsRes
                             ),
                             Restrictions.Combine(types)
                         );
-                    } else {
+                    } else {                    
                         // non-iterable object
                         res = new MetaObject(
                             Ast.Throw(
@@ -208,7 +208,7 @@ namespace IronPython.Runtime.Binding {
                             ),
                             Restrictions.Combine(types)
                         );
-                    }
+                    }                   
                 }
             }
 

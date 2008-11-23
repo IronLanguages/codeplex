@@ -17,11 +17,13 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {
@@ -293,7 +295,7 @@ namespace IronPython.Modules {
         }
 
         public static object concat(CodeContext/*!*/ context, object a, object b) {
-            TestBothSequence(a, b);
+            TestBothSequence(context, a, b);
 
             return PythonContext.GetContext(context).Operation(StandardOperators.Add, a, b);
         }
@@ -429,13 +431,14 @@ namespace IronPython.Modules {
                 o is byte;
         }
 
-        public static bool isSequenceType(object o) {
+        public static bool isSequenceType(CodeContext/*!*/ context, object o) {
             return
                    o is System.Collections.ICollection ||
                    o is System.Collections.IEnumerable ||
                    o is System.Collections.IEnumerator ||
                    o is System.Collections.IList ||
-                   PythonOps.HasAttr(DefaultContext.Default, o, Symbols.GetItem);
+                   (o is PythonType && PythonOps.IsClsVisible(context)) ||
+                   (!(o is PythonType) && PythonOps.HasAttr(context, o, Symbols.GetItem));   // BUG:  HasAttr should give the right answer here but doesn't
         }
 
         private static int SliceToInt(object o) {
@@ -501,13 +504,13 @@ namespace IronPython.Modules {
         }
 
         public static object iconcat(CodeContext/*!*/ context, object a, object b) {
-            TestBothSequence(a, b);
+            TestBothSequence(context, a, b);
 
             return PythonContext.GetContext(context).Operation(StandardOperators.InPlaceAdd, a, b);
         }
 
         public static object irepeat(CodeContext/*!*/ context, object a, object b) {
-            if (!isSequenceType(a)) {
+            if (!isSequenceType(context, a)) {
                 throw PythonOps.TypeError("'{0}' object cannot be repeated", PythonTypeOps.GetName(a));
             }
 
@@ -588,10 +591,10 @@ namespace IronPython.Modules {
             return Converter.ConvertToIndex(a);
         }
 
-        private static void TestBothSequence(object a, object b) {
-            if (!isSequenceType(a)) {
+        private static void TestBothSequence(CodeContext/*!*/ context, object a, object b) {
+            if (!isSequenceType(context, a)) {
                 throw PythonOps.TypeError("'{0}' object cannot be concatenated", PythonTypeOps.GetName(a));
-            } else if (!isSequenceType(b)) {
+            } else if (!isSequenceType(context, b)) {
                 throw PythonOps.TypeError("cannot concatenate '{0}' and '{1} objects", PythonTypeOps.GetName(a), PythonTypeOps.GetName(b));
             }
         }

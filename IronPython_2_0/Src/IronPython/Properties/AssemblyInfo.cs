@@ -15,6 +15,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using System.Runtime.InteropServices;
 using System.Security;
 using System; using Microsoft;
@@ -27,7 +28,7 @@ using System; using Microsoft;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython")]
-[assembly: AssemblyCopyright("© Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("ï¿½ Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -50,7 +51,7 @@ using System; using Microsoft;
 // by using the '*' as shown below:
 
 #if !SILVERLIGHT
-[assembly: AssemblyFileVersion("2.0.11020.0")]
+[assembly: AssemblyFileVersion("2.0.11121.0")]
 [assembly: AssemblyInformationalVersion("2.0")]
 #endif
 [assembly: SecurityTransparent]

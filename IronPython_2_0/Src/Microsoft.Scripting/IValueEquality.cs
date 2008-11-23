@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 using System; using Microsoft;
+
+
 namespace Microsoft.Scripting {
     /// <summary>
     /// Provides hashing and equality based upon the value of the object instead of the reference.

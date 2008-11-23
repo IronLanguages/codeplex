@@ -24,6 +24,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 using RuntimeHelpers = Microsoft.Scripting.Runtime.RuntimeHelpers;
 
 namespace Microsoft.Scripting.Generation {
