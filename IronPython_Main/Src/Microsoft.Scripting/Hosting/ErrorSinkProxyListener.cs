@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Hosting {
             _errorSink = errorSink;
         }
 
-        public override void ErrorReported(ScriptSource source, string message, Microsoft.Scripting.SourceSpan span, int errorCode, Severity severity) {
+        public override void ErrorReported(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity) {
             // Note that we cannot use "source.SourceUnit" since "source" may be a proxy object, and we will not be able to marshall 
             // "source.SourceUnit" to the current AppDomain
 

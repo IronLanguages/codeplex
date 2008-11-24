@@ -23,8 +23,7 @@ load_iron_python_test()
 
 from System import Enum
 import Microsoft.Scripting.Hosting
-from Microsoft.Scripting import SourceLocation, SourceSpan
-from Microsoft.Scripting import TokenTriggers, TokenInfo, TokenCategory
+from Microsoft.Scripting import TokenTriggers, TokenInfo, TokenCategory, SourceLocation, SourceSpan
 from Microsoft.Scripting.Hosting import ScriptRuntime, TokenCategorizer
 from IronPython.Hosting import Python
 

@@ -22,9 +22,7 @@ skiptest("win32")
 load_iron_python_test()
 
 import Microsoft.Scripting.Hosting
-#TODO: SourceSpan and SourceLocation are going away
-from Microsoft.Scripting import SourceSpan, SourceLocation
-from Microsoft.Scripting import Severity, SourceCodeKind
+from Microsoft.Scripting import Severity, SourceCodeKind, SourceSpan, SourceLocation
 from Microsoft.Scripting.Hosting import ErrorListener, ScriptSource, ScriptRuntime
 from IronPython.Hosting import Python
 

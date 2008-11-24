@@ -52,11 +52,6 @@ namespace Microsoft.Scripting {
             get { return _kind; }
         }
 
-        [Obsolete("Use the Document property instead")]
-        public SourceFileInformation Information {
-            get { return new SourceFileInformation(_path, _language.LanguageGuid, _language.VendorGuid); }
-        }
-
         public SymbolDocumentInfo Document {
             get {
                 // _path is valid to be null. In that case we cannot create a valid SymbolDocumentInfo.
