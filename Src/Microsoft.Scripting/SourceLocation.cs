@@ -12,17 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-using Microsoft.Linq.Expressions;
+using System; using Microsoft;
 using System.Globalization;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// Represents a location in source code.
-    /// TODO: move to Microsoft.Linq.Expressions
-    /// TODO: review public APIs !!!
-    ///       Lots of stuff on here that is not used by the compiler
     /// </summary>
     [Serializable]
     public struct SourceLocation {
@@ -48,14 +44,18 @@ namespace Microsoft.Scripting {
 
         private static void ValidateLocation(int index, int line, int column) {
             if (index < 0) {
-                throw Error.OutOfRange("index", "0");
+                throw ErrorOutOfRange("index", 0);
             }
             if (line < 1) {
-                throw Error.OutOfRange("line", "1");
+                throw ErrorOutOfRange("line", 1);
             }
             if (column < 1) {
-                throw Error.OutOfRange("column", "1");
+                throw ErrorOutOfRange("column", 1);
             }
+        }
+
+        private static Exception ErrorOutOfRange(object p0, object p1) {
+            return new ArgumentOutOfRangeException(string.Format("{0} must be greater than or equal to {1}", p0, p1));
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]

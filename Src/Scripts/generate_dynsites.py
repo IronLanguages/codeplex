@@ -17,8 +17,6 @@ from generate import generate
 import clr
 from System import *
 
-
-#This is currently set as MAX_CALL_ARGS + 1 to include the target function as well
 MaxSiteArity = 14
 
 def gsig(n):
@@ -29,30 +27,89 @@ def gsig_noret(n):
 
 def gparms(size):
     if size == 0: return ''
-    
     return ", " + ", ".join(["T%d arg%d" % (i,i) for i in range(size)])
 
 def gargs(size):
     if size == 0: return ''
-    
     return ", " + ", ".join(["arg%d" % i for i in range(size)])
 
 def gargs_index(size):
     if size == 0: return ''
-    
     return ", " + ", ".join(["args[%d]" % i for i in range(size)])
 
 def gargs_indexwithcast(size):
     if size == 0: return ''
-    
     return ", " + ", ".join(["(T%d)args[%d]" % (i, i) for i in range(size)])
 
 def gonlyargs(size):
     if size == 0: return ''
-    
     return ", ".join(["arg%d" % i for i in range(size)])
 
+numbers = {
+     0 : ( 'no',        ''            ),
+     1 : ( 'one',       'first'       ),
+     2 : ( 'two',       'second'      ),
+     3 : ( 'three',     'third'       ),
+     4 : ( 'four',      'fourth'      ),
+     5 : ( 'five',      'fifth'       ),
+     6 : ( 'six',       'sixth'       ),
+     7 : ( 'seven',     'seventh'     ),
+     8 : ( 'eight',     'eighth'      ),
+     9 : ( 'nine',      'nineth'      ),
+    10 : ( 'ten',       'tenth'       ),
+    11 : ( 'eleven',    'eleventh'    ),
+    12 : ( 'twelve',    'twelfth'     ),
+    13 : ( 'thirteen',  'thirteenth'  ),
+    14 : ( 'fourteen',  'fourteenth'  ),
+    15 : ( 'fifteen',   'fifteenth'   ),
+    16 : ( 'sixteen',   'sixteenth'   ),
+}
 
+def gsig_1(n):
+    return ", ".join(["T%d" % i for i in range(1, n + 1)])
+def gparams_1(n):
+    return ", ".join(["T%d arg%d" % (i, i) for i in range(1, n + 1)])
+def gsig_1_result(n):
+    return ", ".join(["T%d" % i for i in range(1, n + 1)] + ['TResult'])
+
+def generate_one_action_type(cw, n):
+    cw.write("""
+/// <summary>
+/// Encapsulates a method that takes %(alpha)s parameters and does not return a value.
+/// </summary>""", alpha = numbers[n][0])
+
+    for i in range(1, n + 1):
+        cw.write('/// <typeparam name="T%(number)d">The type of the %(alphath)s parameter of the method that this delegate encapsulates.</typeparam>', number = i, alphath = numbers[i][1])
+    for i in range(1, n + 1):
+        cw.write('/// <param name="arg%(number)d">The %(alphath)s parameter of the method that this delegate encapsulates.</param>', number = i, alphath = numbers[i][1])
+    if n > 2:
+        cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]')
+    cw.write("public delegate void Action<%(gsig)s>(%(gparms)s);", gsig = gsig_1(n), gparms = gparams_1(n))
+
+def generate_one_func_type(cw, n):
+    if n != 1: plural = "s"
+    else: plural = ""
+    cw.write("""
+/// <summary>
+/// Encapsulates a method that has %(alpha)s parameter%(plural)s and returns a value of the type specified by the TResult parameter.
+/// </summary>""", alpha = numbers[n][0], plural = plural)
+
+    for i in range(1, n + 1):
+        cw.write('/// <typeparam name="T%(number)d">The type of the %(alphath)s parameter of the method that this delegate encapsulates.</typeparam>', number = i, alphath = numbers[i][1])
+    cw.write('/// <typeparam name="TResult">The type of the return value of the method that this delegate encapsulates.</typeparam>')
+    for i in range(1, n + 1):
+        cw.write('/// <param name="arg%(number)d">The %(alphath)s parameter of the method that this delegate encapsulates.</param>', number = i, alphath = numbers[i][1])
+    cw.write("""/// <returns>The return value of the method that this delegate encapsulates.</returns>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]""")
+    cw.write('public delegate TResult Func<%(gsig)s>(%(gparms)s);', gsig = gsig_1_result(n), gparms = gparams_1(n))
+
+def gen_func_types(cw):
+    for i in range(2, 17):
+        generate_one_func_type(cw, i)
+
+def gen_action_types(cw):
+    for i in range(2, 17):
+        generate_one_action_type(cw, i)
 
 #
 # Pregenerated UpdateAndExecute methods for Func, Action delegate types
@@ -387,6 +444,8 @@ def gen_void_matchcaller_targets(cw):
 
 def main():
     return generate(
+        ("Func Types", gen_func_types),
+        ("Action Types", gen_action_types),
         ("UpdateAndExecute Methods", gen_update_targets),
         ("Delegate Action Types", gen_delegate_action),
         ("Delegate Func Types", gen_delegate_func),

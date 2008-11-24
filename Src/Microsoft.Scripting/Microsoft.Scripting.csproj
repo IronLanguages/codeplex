@@ -326,6 +326,8 @@
     <Compile Include="Runtime\StreamContentProvider.cs" />
     <Compile Include="Runtime\TokenInfo.cs" />
     <Compile Include="Runtime\TokenTriggers.cs" />
+    <Compile Include="SourceLocation.cs" />
+    <Compile Include="SourceSpan.cs" />
     <Compile Include="Utils\CollectionExtensions.cs" />
     <Compile Include="Utils\CopyOnWriteList.cs" />
     <Compile Include="Utils\ListEqualityComparer.cs" />

@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;

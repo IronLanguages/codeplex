@@ -198,8 +198,6 @@
     <Compile Include="Ast\NewArrayExpression.cs" />
     <Compile Include="Ast\NewExpression.cs" />
     <Compile Include="Ast\ParameterExpression.cs" />
-    <Compile Include="Ast\SourceLocation.cs" />
-    <Compile Include="Ast\SourceSpan.cs" />
     <Compile Include="Ast\SwitchCase.cs" />
     <Compile Include="Ast\SwitchExpression.cs" />
     <Compile Include="Ast\TreeComparer.cs" />

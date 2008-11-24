@@ -12,19 +12,14 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-
-
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
 using System.Globalization;
 
 namespace Microsoft.Scripting {
+
     /// <summary>
     /// Stores the location of a span of text in a source file.
-    /// TODO: move to Microsoft.Linq.Expressions
-    /// TODO: review public APIs !!!
-    ///       Lots of stuff on here that is not used by the compiler
     /// </summary>
     [Serializable]
     public struct SourceSpan {
@@ -45,11 +40,11 @@ namespace Microsoft.Scripting {
         private static void ValidateLocations(SourceLocation start, SourceLocation end) {
             if (start.IsValid && end.IsValid) {
                 if (start > end) {
-                    throw Error.StartEndMustBeOrdered();
+                    throw new ArgumentException("Start and End must be well ordered");
                 }
             } else {
                 if (start.IsValid || end.IsValid) {
-                    throw Error.StartEndCanOnlyBothBeInvalid();
+                    throw new ArgumentException("Start and End must both be valid or both invalid");
                 }
             }
         }
