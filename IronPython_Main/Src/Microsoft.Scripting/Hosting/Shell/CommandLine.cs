@@ -33,10 +33,12 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private ScriptScope _scope;
         private ScriptEngine _engine;
         private ICommandDispatcher _commandDispatcher;
+        private int? _terminatingExitCode;
 
         protected IConsole Console { get { return _console; } }
         protected ConsoleOptions Options { get { return _options; } }
         protected ScriptEngine Engine { get { return _engine; } }
+        public ScriptScope ScriptScope { get { return _scope; } protected set { _scope = value; } }
 
         /// <summary>
         /// Scope is not remotable, and this only works in the same AppDomain.
@@ -84,6 +86,11 @@ namespace Microsoft.Scripting.Hosting.Shell {
             return new SimpleCommandDispatcher();
         }
 
+        public virtual void Terminate(int exitCode) {
+            // The default implementation just sets a flag. Derived types can support better termination
+            _terminatingExitCode = exitCode;
+        }
+
         /// <summary>
         /// Executes the comand line - depending upon the options provided we will
         /// either run a single file, a single command, or enter the interactive loop.
@@ -127,15 +134,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
         /// </summary>
         /// <returns></returns>
         protected virtual int Run() {
-#if !SILVERLIGHT // Remote console
-            string remoteRuntimeChannel = _options.RemoteRuntimeChannel;
-            if (remoteRuntimeChannel != null) {
-                // Publish the ScriptEngine so that the host can use it
-                Remote.RemoteRuntimeServer.StartServer(remoteRuntimeChannel, _engine);
-                return 0;
-            }
-#endif
-
             int result;
 
             if (_options.Command != null) {
@@ -191,7 +189,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected void PrintLogo() {
-            _console.Write(Logo, Style.Out);
+            if (Logo != null) {
+                _console.Write(Logo, Style.Out);
+            }
         }
 
         #region Interactivity
@@ -218,6 +218,14 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 _scope = _engine.CreateScope();
             }
 
+#if !SILVERLIGHT // Remote console
+            string remoteRuntimeChannel = _options.RemoteRuntimeChannel;
+            if (remoteRuntimeChannel != null) {
+                // Publish the ScriptScope so that the host can use it
+                Remote.RemoteRuntimeServer.StartServer(remoteRuntimeChannel, _scope);
+                return 0;
+            }
+#endif
             int? res = null;
 
             do {
@@ -310,7 +318,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             string s = ReadStatement(out continueInteraction);
 
             if (continueInteraction == false) {
-                return 0;
+                return (_terminatingExitCode == null) ? 0 : _terminatingExitCode;
             }
 
             if (String.IsNullOrEmpty(s)) {
@@ -364,7 +372,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 string line = ReadLine(autoIndentSize);
                 continueInteraction = true;
 
-                if (line == null) {
+                if (line == null || (_terminatingExitCode != null)) {
                     continueInteraction = false;
                     return null;
                 }

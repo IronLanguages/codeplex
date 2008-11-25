@@ -40,6 +40,7 @@ namespace Microsoft.Scripting.ComInterop {
         private int scode;
 
 #if DEBUG
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2207:InitializeValueTypeStaticFieldsInline")]
         static ExcepInfo() {
             Debug.Assert(Marshal.SizeOf(typeof(ExcepInfo)) == Marshal.SizeOf(typeof(ComTypes.EXCEPINFO)));
         }

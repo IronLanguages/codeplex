@@ -38,6 +38,7 @@ namespace Microsoft.Scripting.ComInterop {
     internal struct Variant {
 
 #if DEBUG
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2207:InitializeValueTypeStaticFieldsInline")]
         static Variant() {
             // Variant size is the size of 4 pointers (16 bytes) on a 32-bit processor, 
             // and 3 pointers (24 bytes) on a 64-bit processor.

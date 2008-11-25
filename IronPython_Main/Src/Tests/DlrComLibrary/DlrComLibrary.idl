@@ -320,6 +320,7 @@ interface IProperties : IDispatch{
 	[propput, id(1), helpstring("property pBstr")] HRESULT pBstr([in] BSTR newVal);
 	[propget, id(2), helpstring("property pVariant")] HRESULT pVariant([out, retval] VARIANT* pVal);
 	[propput, id(2), helpstring("property pVariant")] HRESULT pVariant([in] VARIANT newVal);
+	[propputref, id(2), helpstring("property pVariant")] HRESULT pVariant([in] VARIANT* newVal);
 	[propget, id(3), helpstring("property pDate")] HRESULT pDate([out, retval] DATE* pVal);
 	[propput, id(3), helpstring("property pDate")] HRESULT pDate([in] DATE newVal);
 	[propget, id(4), helpstring("property pLong")] HRESULT pLong([out, retval] LONG* pVal);

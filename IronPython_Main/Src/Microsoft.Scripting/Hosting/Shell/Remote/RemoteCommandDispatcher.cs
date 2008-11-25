@@ -33,7 +33,14 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
         /// </summary>
         internal const string OutputCompleteMarker = "{7FF032BB-DB03-4255-89DE-641CA195E5FA}";
 
-        Thread _executingThread;
+        private ScriptScope _scriptScope;
+        private Thread _executingThread;
+
+        public RemoteCommandDispatcher(ScriptScope scope) {
+            _scriptScope = scope;
+        }
+
+        public ScriptScope ScriptScope { get { return _scriptScope; } }
 
         public object Execute(CompiledCode compiledCode, ScriptScope scope) {
             Debug.Assert(_executingThread == null);

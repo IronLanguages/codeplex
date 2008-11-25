@@ -24,6 +24,8 @@ using System.Threading;
 namespace Microsoft.Linq.Expressions.Compiler {
     internal static partial class DelegateHelpers {
 
+        // TODO: suspect we don't need this cache, since we're already caching with
+        // _DelegateCache
         private static Dictionary<ICollection<Type>, Type> _DelegateTypes;
 
         private static Type MakeCustomDelegate(Type[] types) {

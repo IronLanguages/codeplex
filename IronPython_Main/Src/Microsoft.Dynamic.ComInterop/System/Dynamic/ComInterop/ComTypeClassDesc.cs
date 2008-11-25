@@ -27,17 +27,9 @@ namespace Microsoft.Scripting.ComInterop {
     internal sealed class ComTypeClassDesc : ComTypeDesc {
         private LinkedList<string> _itfs; // implemented interfaces
         private LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
-        private Type _typeObj;
 
-        public object CreateInstance() {
-            if (_typeObj == null) {
-                _typeObj = System.Type.GetTypeFromCLSID(Guid);
-            }
-            return System.Activator.CreateInstance(_typeObj);
-        }
-
-        internal ComTypeClassDesc(ComTypes.ITypeInfo typeInfo, ComTypeLibDesc typeLibDesc) :
-            base(typeInfo, ComType.Class, typeLibDesc) {
+        internal ComTypeClassDesc(ComTypes.ITypeInfo typeInfo) :
+            base(typeInfo) {
             ComTypes.TYPEATTR typeAttr = ComRuntimeHelpers.GetTypeAttrForTypeInfo(typeInfo);
             Guid = typeAttr.guid;
 

@@ -188,7 +188,8 @@ namespace Microsoft.Scripting.ComInterop {
 
         private MetaObject TryPropertyPut(SetMemberBinder binder, MetaObject value) {
             ComMethodDesc method;
-            if (_self.TryGetPropertySetter(binder.Name, out method)) {
+            if (_self.TryGetPropertySetter(binder.Name, out method, value.LimitType) ||
+                _self.TryGetPropertySetterExplicit(binder.Name, out method, value.LimitType)) {
                 Restrictions restrictions = IDispatchRestriction();
                 Expression dispatch =
                     Expression.Property(

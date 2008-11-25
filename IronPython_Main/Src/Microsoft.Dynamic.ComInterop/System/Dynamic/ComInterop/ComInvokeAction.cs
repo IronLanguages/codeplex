@@ -15,22 +15,34 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT // ComObject
+#if !SILVERLIGHT
+
+using System.Collections.Generic;
+using Microsoft.Linq.Expressions;
+using Microsoft.Scripting.Binders;
 
 namespace Microsoft.Scripting.ComInterop {
-
-    internal class ComTypeLibMemberDesc {
-        readonly ComType _kind;
-
-        internal ComTypeLibMemberDesc(ComType kind) {
-            _kind = kind;
+    class ComInvokeAction : InvokeBinder {
+        public override object CacheIdentity {
+            get { return this; }
         }
 
-        public ComType Kind {
-            get { return _kind; }
+        internal ComInvokeAction(params ArgumentInfo[] arguments)
+            : base(arguments) {
+        }
+
+        public override int GetHashCode() {
+            return base.GetHashCode();
+        }
+
+        public override bool Equals(object obj) {
+            return base.Equals(obj as ComInvokeAction);
+        }
+
+        public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
+            return errorSuggestion ?? MetaObject.CreateThrow(target, args, typeof(NotSupportedException), "Cannot perform call");
         }
     }
-
 }
 
 #endif

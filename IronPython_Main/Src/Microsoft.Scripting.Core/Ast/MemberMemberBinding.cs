@@ -84,7 +84,7 @@ namespace Microsoft.Linq.Expressions {
             for (int i = 0, n = bindings.Count; i < n; i++) {
                 MemberBinding b = bindings[i];
                 ContractUtils.RequiresNotNull(b, "bindings");
-                if (!TypeUtils.AreAssignable(b.Member.DeclaringType, type)) {
+                if (!b.Member.DeclaringType.IsAssignableFrom(type)) {
                     throw Error.NotAMemberOfType(b.Member.Name, type);
                 }
             }

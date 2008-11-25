@@ -15,38 +15,38 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
-
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Binders;
 
 namespace Microsoft.Scripting.ComInterop {
-    class ComInvokeAction : InvokeBinder {
-        public override object CacheIdentity {
-            get { return this; }
+
+    // TODO: Update with the newest version of the managed contracts stuff
+    internal static class ContractUtils {
+
+        internal static void Requires(bool precondition, string paramName) {
+            Assert.NotEmpty(paramName);
+
+            if (!precondition) {
+                throw new ArgumentException(Strings.InvalidArgumentValue, paramName);
+            }
         }
 
-        internal ComInvokeAction(params ArgumentInfo[] arguments)
-            : base(arguments) {
+        internal static void Requires(bool precondition, string paramName, string message) {
+            Assert.NotEmpty(paramName);
+
+            if (!precondition) {
+                throw new ArgumentException(message, paramName);
+            }
         }
 
-        internal ComInvokeAction(IEnumerable<ArgumentInfo> arguments)
-            : base(arguments) {
-        }
+        internal static void RequiresNotNull(object value, string paramName) {
+            Assert.NotEmpty(paramName);
 
-        public override int GetHashCode() {
-            return base.GetHashCode();
-        }
-
-        public override bool Equals(object obj) {
-            return base.Equals(obj as ComInvokeAction);
-        }
-
-        public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject errorSuggestion) {
-            return errorSuggestion ?? MetaObject.CreateThrow(target, args, typeof(NotSupportedException), "Cannot perform call");
+            if (value == null) {
+                throw new ArgumentNullException(paramName);
+            }
         }
     }
 }
-
-#endif

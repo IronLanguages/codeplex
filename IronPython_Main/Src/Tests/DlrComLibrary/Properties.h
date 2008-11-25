@@ -22,6 +22,7 @@ public:
 	CProperties()
 	{
 		m_pBstr = NULL;
+        VariantInit(&m_variantVal);
 		m_dispVal = NULL;
 		m_dblVal = 0;
 		m_propertyWithParam = 0;
@@ -76,6 +77,7 @@ public:
 	STDMETHOD(put_pBstr)(BSTR newVal);
 	STDMETHOD(get_pVariant)(VARIANT* pVal);
 	STDMETHOD(put_pVariant)(VARIANT newVal);
+	STDMETHOD(putref_pVariant)(VARIANT* newVal);
 	STDMETHOD(get_pDate)(DATE* pVal);
 	STDMETHOD(put_pDate)(DATE newVal);
 	STDMETHOD(get_pLong)(LONG* pVal);

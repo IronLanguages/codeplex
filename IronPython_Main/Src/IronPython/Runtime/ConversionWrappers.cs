@@ -12,8 +12,9 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
+
+
 using System.Collections;
 using System.Collections.Generic;
 
@@ -64,7 +65,9 @@ namespace IronPython.Runtime {
         }
 
         public void CopyTo(T[] array, int arrayIndex) {
-            throw new NotImplementedException();
+            for (int i = 0; i < _value.Count; i++) {
+                array[arrayIndex + i] = (T)_value[i];
+            }
         }
 
         public int Count {

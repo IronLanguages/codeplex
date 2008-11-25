@@ -44,7 +44,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object GetMember(GetMemberBinder binder) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryGetMember(GetMemberBinder binder, out object result) {
             throw new NotSupportedException();
         }
 
@@ -53,7 +54,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual void SetMember(SetMemberBinder binder, object value) {
+        public virtual bool TrySetMember(SetMemberBinder binder, object value) {
             throw new NotSupportedException();
         }
 
@@ -62,7 +63,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual bool DeleteMember(DeleteMemberBinder binder) {
+        public virtual bool TryDeleteMember(DeleteMemberBinder binder) {
             throw new NotSupportedException();
         }
 
@@ -72,7 +73,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object InvokeMember(InvokeMemberBinder binder, object[] args) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
             throw new NotSupportedException();
         }
 
@@ -82,7 +84,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object Convert(ConvertBinder binder) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryConvert(ConvertBinder binder, out object result) {
             throw new NotSupportedException();
         }
 
@@ -92,7 +95,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object CreateInstance(CreateInstanceBinder binder, object[] args) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryCreateInstance(CreateInstanceBinder binder, object[] args, out object result) {
             throw new NotSupportedException();
         }
 
@@ -102,7 +106,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object Invoke(InvokeBinder binder, object[] args) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
             throw new NotSupportedException();
         }
 
@@ -112,7 +117,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object BinaryOperation(BinaryOperationBinder binder, object arg) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) {
             throw new NotSupportedException();
         }
 
@@ -122,7 +128,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object UnaryOperation(UnaryOperationBinder binder) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryUnaryOperation(UnaryOperationBinder binder, out object result) {
             throw new NotSupportedException();
         }
 
@@ -132,7 +139,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object GetIndex(GetIndexBinder binder, object[] args) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryGetIndex(GetIndexBinder binder, object[] args, out object result) {
             throw new NotSupportedException();
         }
 
@@ -142,7 +150,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object SetIndex(SetIndexBinder binder, object[] indexes, object value) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value) {
             throw new NotSupportedException();
         }
 
@@ -152,7 +161,7 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object DeleteIndex(DeleteIndexBinder binder, object[] indexes) {
+        public virtual bool TryDeleteIndex(DeleteIndexBinder binder, object[] indexes) {
             throw new NotSupportedException();
         }
 
@@ -162,7 +171,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object BinaryOperationOnMember(BinaryOperationOnMemberBinder binder, object value) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, object value, out object result) {
             throw new NotSupportedException();
         }
 
@@ -172,7 +182,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object BinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, object[] indexes, object value) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, object[] indexes, object value, out object result) {
             throw new NotSupportedException();
         }
 
@@ -182,7 +193,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object UnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryUnaryOperationOnMember(UnaryOperationOnMemberBinder binder, out object result) {
             throw new NotSupportedException();
         }
 
@@ -192,7 +204,8 @@ namespace Microsoft.Scripting.Binders {
         /// 
         /// When not overridden the call site requesting the binder determines the behavior.
         /// </summary>
-        public virtual object UnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, object[] indexes) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public virtual bool TryUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, object[] indexes, out object result) {
             throw new NotSupportedException();
         }
 
@@ -207,112 +220,113 @@ namespace Microsoft.Scripting.Binders {
             }
 
             public override MetaObject BindGetMember(GetMemberBinder binder) {
-                if (IsOverridden("GetMember")) {
-                    return CallMethodUnary(binder, "GetMember");
+                if (IsOverridden("TryGetMember")) {
+                    return CallMethodWithResult("TryGetMember", binder, NoArgs, (e) => binder.FallbackGetMember(this, e));
                 }
 
                 return base.BindGetMember(binder);
             }
 
             public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
-                if (IsOverridden("SetMember")) {
-                    return CallMethodBinary(binder, value, "SetMember");
+                if (IsOverridden("TrySetMember")) {
+                    return CallMethodReturnLast("TrySetMember", binder, GetArgs(value), (e) => binder.FallbackSetMember(this, value, e));
                 }
 
                 return base.BindSetMember(binder, value);
             }
 
             public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
-                if (IsOverridden("DeleteMember")) {
-                    return CallMethodUnary(binder, "DeleteMember");
+                if (IsOverridden("TryDeleteMember")) {
+                    return CallMethodNoResult("TryDeleteMember", binder, NoArgs, (e) => binder.FallbackDeleteMember(this, e));
                 }
 
                 return base.BindDeleteMember(binder);
             }
 
             public override MetaObject BindConvert(ConvertBinder binder) {
-                if (IsOverridden("Convert")) {
-                    return CallMethodUnary(binder, "Convert");
+                if (IsOverridden("TryConvert")) {
+                    return CallMethodWithResult("TryConvert", binder, NoArgs, (e) => binder.FallbackConvert(this, e));
                 }
 
                 return base.BindConvert(binder);
             }
 
             public override MetaObject BindInvokeMember(InvokeMemberBinder binder, MetaObject[] args) {
-                if (IsOverridden("InvokeMember")) {
-                    return CallMethodNAry(binder, args, "InvokeMember");
+                if (IsOverridden("TryInvokeMember")) {
+                    return CallMethodWithResult("TryInvokeMember", binder, GetArgArray(args), (e) => binder.FallbackInvokeMember(this, args, e));
                 }
 
                 return base.BindInvokeMember(binder, args);
             }
 
+
             public override MetaObject BindCreateInstance(CreateInstanceBinder binder, MetaObject[] args) {
-                if (IsOverridden("CreateInstance")) {
-                    return CallMethodNAry(binder, args, "CreateInstance");
+                if (IsOverridden("TryCreateInstance")) {
+                    return CallMethodWithResult("TryCreateInstance", binder, GetArgArray(args), (e) => binder.FallbackCreateInstance(this, args, e));
                 }
 
                 return base.BindCreateInstance(binder, args);
             }
 
             public override MetaObject BindInvoke(InvokeBinder binder, MetaObject[] args) {
-                if (IsOverridden("Invoke")) {
-                    return CallMethodNAry(binder, args, "Invoke");
+                if (IsOverridden("TryInvoke")) {
+                    return CallMethodWithResult("TryInvoke", binder, GetArgArray(args), (e) => binder.FallbackInvoke(this, args, e));
                 }
 
                 return base.BindInvoke(binder, args);
             }
 
             public override MetaObject BindBinaryOperation(BinaryOperationBinder binder, MetaObject arg) {
-                if (IsOverridden("BinaryOperation")) {
-                    return CallMethodBinary(binder, arg, "BinaryOperation");
+                if (IsOverridden("TryBinaryOperation")) {
+                    return CallMethodWithResult("TryBinaryOperation", binder, GetArgs(arg), (e) => binder.FallbackBinaryOperation(this, arg, e));
                 }
 
                 return base.BindBinaryOperation(binder, arg);
             }
 
             public override MetaObject BindUnaryOperation(UnaryOperationBinder binder) {
-                if (IsOverridden("UnaryOperation")) {
-                    return CallMethodUnary(binder, "UnaryOperation");
+                if (IsOverridden("TryUnaryOperation")) {
+                    return CallMethodWithResult("TryUnaryOperation", binder, NoArgs, (e) => binder.FallbackUnaryOperation(this, e));
                 }
 
                 return base.BindUnaryOperation(binder);
             }
 
             public override MetaObject BindGetIndex(GetIndexBinder binder, MetaObject[] indexes) {
-                if (IsOverridden("GetIndex")) {
-                    return CallMethodNAry(binder, indexes, "GetIndex");
+                if (IsOverridden("TryGetIndex")) {
+                    return CallMethodWithResult("TryGetIndex", binder, GetArgArray(indexes), (e) => binder.FallbackGetIndex(this, indexes, e));
                 }
 
                 return base.BindGetIndex(binder, indexes);
             }
 
             public override MetaObject BindSetIndex(SetIndexBinder binder, MetaObject[] indexes, MetaObject value) {
-                if (IsOverridden("SetIndex")) {
-                    return CallMethodNAry(binder, indexes, value, "SetIndex");
+                if (IsOverridden("TrySetIndex")) {
+                    return CallMethodReturnLast("TrySetIndex", binder, GetArgArray(indexes, value), (e) => binder.FallbackSetIndex(this, indexes, value, e));
                 }
 
                 return base.BindSetIndex(binder, indexes, value);
             }
 
             public override MetaObject BindDeleteIndex(DeleteIndexBinder binder, MetaObject[] indexes) {
-                if (IsOverridden("DeleteIndex")) {
-                    return CallMethodNAry(binder, indexes, "DeleteIndex");
+                if (IsOverridden("TryDeleteIndex")) {
+                    return CallMethodNoResult("TryDeleteIndex", binder, GetArgArray(indexes), (e) => binder.FallbackDeleteIndex(this, indexes, e));
                 }
 
                 return base.BindDeleteIndex(binder, indexes);
             }
 
             public override MetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, MetaObject value) {
-                if (IsOverridden("BinaryOperationOnMember")) {
-                    return CallMethodBinary(binder, value, "BinaryOperationOnMember");
+                if (IsOverridden("TryBinaryOperationOnMember")) {
+                    return CallMethodWithResult("TryBinaryOperationOnMember", binder, GetArgs(value), (e) => binder.FallbackBinaryOperationOnMember(this, value, e));
                 }
 
                 return base.BindBinaryOperationOnMember(binder, value);
             }
 
             public override MetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, MetaObject[] indexes, MetaObject value) {
-                if (IsOverridden("BinaryOperationOnIndex")) {
-                    return CallMethodNAry(binder, indexes, value, "BinaryOperationOnIndex");
+                if (IsOverridden("TryBinaryOperationOnIndex")) {
+                    return CallMethodWithResult("TryBinaryOperationOnIndex", binder, GetArgArray(indexes, value), (e) => binder.FallbackBinaryOperationOnIndex(this, indexes, value, e));
                 }
 
                 return base.BindBinaryOperationOnIndex(binder, indexes, value);
@@ -320,93 +334,197 @@ namespace Microsoft.Scripting.Binders {
 
 
             public override MetaObject BindUnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
-                if (IsOverridden("UnaryOperationOnMember")) {
-                    return CallMethodUnary(binder, "UnaryOperationOnMember");
+                if (IsOverridden("TryUnaryOperationOnMember")) {
+                    return CallMethodWithResult("TryUnaryOperationOnMember", binder, NoArgs, (e) => binder.FallbackUnaryOperationOnMember(this, e));
                 }
 
                 return base.BindUnaryOperationOnMember(binder);
             }
 
             public override MetaObject BindUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, MetaObject[] indexes) {
-                if (IsOverridden("UnaryOperationOnIndex")) {
-                    return CallMethodNAry(binder, indexes, "UnaryOperationOnIndex");
+                if (IsOverridden("TryUnaryOperationOnIndex")) {
+                    return CallMethodWithResult("TryUnaryOperationOnIndex", binder, GetArgArray(indexes), (e) => binder.FallbackUnaryOperationOnIndex(this, indexes, e));
                 }
 
                 return base.BindUnaryOperationOnIndex(binder, indexes);
             }
 
-            /// <summary>
-            /// Helper method for generating a MetaObject which calls a specific method on Dynamic
-            /// w/o any additional parameters.
-            /// </summary>
-            private MetaObject CallMethodUnary(MetaObjectBinder binder, string methodName) {
-                return new MetaObject(
-                    Expression.Call(
-                        GetLimitedSelf(),
-                        typeof(DynamicObject).GetMethod(methodName),
-                        Expression.Constant(binder)
-                    ),
-                    GetRestrictions()
-                );
-            }
+            private delegate MetaObject Fallback(MetaObject errorSuggestion);
 
-            /// <summary>
-            /// Helper method for generating a MetaObject which calls a specific method declared on
-            /// Dynamic w/ one additional parameter.
-            /// </summary>
-            private MetaObject CallMethodBinary(MetaObjectBinder binder, MetaObject arg, string name) {
-                return new MetaObject(
-                    Expression.Call(
-                        GetLimitedSelf(),
-                        typeof(DynamicObject).GetMethod(name),
-                        Expression.Constant(binder),
-                        arg.Expression
-                    ),
-                    GetRestrictions()
-                );
-            }
+            private readonly static Expression[] NoArgs = EmptyArray<Expression>.Instance;
 
-            /// <summary>
-            /// Helper method for generating a MetaObject which calls a specific method on Dynamic w/ the
-            /// meta object array as the params.
-            /// </summary>
-            private MetaObject CallMethodNAry(MetaObjectBinder binder, MetaObject[] args, string method) {
-                return new MetaObject(
-                    Expression.Call(
-                        GetLimitedSelf(),
-                        typeof(DynamicObject).GetMethod(method),
-                        Expression.Constant(binder),
-                        CreateArrayForArgs(args)
-                    ),
-                    GetRestrictions()
-                );
-            }
-
-            private MetaObject CallMethodNAry(MetaObjectBinder binder, MetaObject[] args, MetaObject value, string method) {
-                return new MetaObject(
-                    Expression.Call(
-                        GetLimitedSelf(),
-                        typeof(DynamicObject).GetMethod(method),
-                        Expression.Constant(binder),
-                        CreateArrayForArgs(args),
-                        Helpers.Convert(value.Expression, typeof(object))
-                    ),
-                    GetRestrictions()
-                );
-            }
-
-            /// <summary>
-            /// Returns the parameters for a call to one of our helpers.  It adds the MetaAction
-            /// first and packs the parameters into an object array.
-            /// </summary>
-            private static Expression CreateArrayForArgs(MetaObject[] args) {
+            private static Expression[] GetArgs(params MetaObject[] args) {
                 Expression[] paramArgs = MetaObject.GetExpressions(args);
 
                 for (int i = 0; i < paramArgs.Length; i++) {
                     paramArgs[i] = Helpers.Convert(args[i].Expression, typeof(object));
                 }
 
-                return Expression.NewArrayInit(typeof(object), paramArgs);
+                return paramArgs;
+            }
+
+            private static Expression[] GetArgArray(MetaObject[] args) {
+                return new[] { Expression.NewArrayInit(typeof(object), GetArgs(args)) };
+            }
+
+            private static Expression[] GetArgArray(MetaObject[] args, MetaObject value) {
+                return new[] {
+                    Expression.NewArrayInit(typeof(object), GetArgs(args)),
+                    Helpers.Convert(value.Expression, typeof(object))
+                };
+            }
+
+            private static ConstantExpression Constant(MetaObjectBinder binder) {
+                Type t = binder.GetType();
+                while (!t.IsVisible) {
+                    t = t.BaseType;
+                }
+                return Expression.Constant(binder, t);
+            }
+
+            /// <summary>
+            /// Helper method for generating a MetaObject which calls a
+            /// specific method on Dynamic that returns a result
+            /// </summary>
+            private MetaObject CallMethodWithResult(string methodName, MetaObjectBinder binder, Expression[] args, Fallback fallback) {
+                //
+                // First, call fallback to do default binding
+                // This produces either an error or a call to a .NET member
+                //
+                MetaObject fallbackResult = fallback(null);
+
+                //
+                // Build a new expression like:
+                // {
+                //   object result;
+                //   TryGetMember(payload, out result) ? result : fallbackResult
+                // }
+                //
+                var result = Expression.Parameter(typeof(object), null);
+
+                var callArgs = new Expression[args.Length + 2];
+                Array.Copy(args, 0, callArgs, 1, args.Length);
+                callArgs[0] = Constant(binder);
+                callArgs[callArgs.Length - 1] = result;
+
+                var callDynamic = new MetaObject(
+                    Expression.Block(
+                        new[] { result },
+                        Expression.Condition(
+                            Expression.Call(
+                                GetLimitedSelf(),
+                                typeof(DynamicObject).GetMethod(methodName),
+                                callArgs
+                            ),
+                            result,
+                            Expression.Convert(fallbackResult.Expression, typeof(object))
+                        )
+                    ),
+                    GetRestrictions().Merge(fallbackResult.Restrictions)
+                );
+                
+                //
+                // Now, call fallback again using our new MO as the error
+                // When we do this, one of two things can happen:
+                //   1. Binding will succeed, and it will ignore our call to
+                //      the dynamic method, OR
+                //   2. Binding will fail, and it will use the MO we created
+                //      above.
+                //
+                return fallback(callDynamic);
+            }
+
+
+            /// <summary>
+            /// Helper method for generating a MetaObject which calls a
+            /// specific method on Dynamic, but uses one of the arguments for
+            /// the result.
+            /// </summary>
+            private MetaObject CallMethodReturnLast(string methodName, MetaObjectBinder binder, Expression[] args, Fallback fallback) {
+                //
+                // First, call fallback to do default binding
+                // This produces either an error or a call to a .NET member
+                //
+                MetaObject fallbackResult = fallback(null);
+
+                //
+                // Build a new expression like:
+                // {
+                //   object result;
+                //   TrySetMember(payload, result = value) ? result : fallbackResult
+                // }
+                //
+
+                var result = Expression.Parameter(typeof(object), null);
+                var callArgs = args.AddFirst(Constant(binder));
+                callArgs[args.Length] = Expression.Assign(result, callArgs[args.Length]);
+
+                var callDynamic = new MetaObject(
+                    Expression.Block(
+                        new[] { result },
+                        Expression.Condition(
+                            Expression.Call(
+                                GetLimitedSelf(),
+                                typeof(DynamicObject).GetMethod(methodName),
+                                callArgs
+                            ),
+                            result,
+                            Expression.Convert(fallbackResult.Expression, typeof(object))
+                        )
+                    ),
+                    GetRestrictions().Merge(fallbackResult.Restrictions)
+                );
+
+                //
+                // Now, call fallback again using our new MO as the error
+                // When we do this, one of two things can happen:
+                //   1. Binding will succeed, and it will ignore our call to
+                //      the dynamic method, OR
+                //   2. Binding will fail, and it will use the MO we created
+                //      above.
+                //
+                return fallback(callDynamic);
+            }
+
+
+            /// <summary>
+            /// Helper method for generating a MetaObject which calls a
+            /// specific method on Dynamic, but uses one of the arguments for
+            /// the result.
+            /// </summary>
+            private MetaObject CallMethodNoResult(string methodName, MetaObjectBinder binder, Expression[] args, Fallback fallback) {
+                //
+                // First, call fallback to do default binding
+                // This produces either an error or a call to a .NET member
+                //
+                MetaObject fallbackResult = fallback(null);
+
+                //
+                // Build a new expression like:
+                //   TryDeleteMember(payload) ? null : fallbackResult
+                //
+                var callDynamic = new MetaObject(
+                    Expression.Condition(
+                        Expression.Call(
+                            GetLimitedSelf(),
+                            typeof(DynamicObject).GetMethod(methodName),
+                            args.AddFirst(Constant(binder))
+                        ),
+                        Expression.Constant(null),
+                        Expression.Convert(fallbackResult.Expression, typeof(object))
+                    ),
+                    GetRestrictions().Merge(fallbackResult.Restrictions)
+                );
+
+                //
+                // Now, call fallback again using our new MO as the error
+                // When we do this, one of two things can happen:
+                //   1. Binding will succeed, and it will ignore our call to
+                //      the dynamic method, OR
+                //   2. Binding will fail, and it will use the MO we created
+                //      above.
+                //
+                return fallback(callDynamic);
             }
 
             /// <summary>

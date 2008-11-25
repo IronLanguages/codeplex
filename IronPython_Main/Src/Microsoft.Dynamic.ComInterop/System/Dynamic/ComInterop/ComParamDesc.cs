@@ -43,8 +43,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         # endregion
 
-        # region ctor
-
         /// <summary>
         /// Creates a representation for the paramter of a COM method
         /// </summary>
@@ -86,14 +84,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             _type = GetTypeForVarEnum(vtWithoutByref);
-        }
-
-        /// <summary>
-        /// Creates a representation for the return value of a COM method
-        /// TODO: Return values should be represented by a different type
-        /// </summary>
-        internal ComParamDesc(ref ELEMDESC elemDesc)
-            : this(ref elemDesc, String.Empty) {
         }
 
         internal struct PARAMDESCEX {
@@ -205,42 +195,13 @@ namespace Microsoft.Scripting.ComInterop {
             return result.ToString();
         }
 
-        # endregion
-
-        # region properties
-
         public bool IsOut {
             get { return _isOut; }
-        }
-
-        public bool IsOptional {
-            get { return _isOpt; }
         }
 
         public bool ByReference {
             get { return _byRef; }
         }
-
-        public bool IsArray {
-            get { return _isArray; }
-        }
-
-        public Type ParameterType {
-            get {
-                return _type;
-            }
-        }
-
-        /// <summary>
-        /// DBNull.Value if there is no default value
-        /// </summary>
-        internal object DefaultValue {
-            get {
-                return _defaultValue;
-            }
-        }
-
-        # endregion
     }
 }
 

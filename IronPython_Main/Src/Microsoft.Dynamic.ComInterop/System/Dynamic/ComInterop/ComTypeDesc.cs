@@ -24,35 +24,34 @@ using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
 
-    internal class ComTypeDesc : ComTypeLibMemberDesc {
+    internal class ComTypeDesc {
         private string _typeName;
         private string _documentation;
         private Guid _guid;
         private Dictionary<string, ComMethodDesc> _funcs;
         private Dictionary<string, ComMethodDesc> _puts;
+        private Dictionary<string, ComMethodDesc> _putRefs;
         private Dictionary<string, ComEventDesc> _events;
         private ComMethodDesc _getItem;
         private ComMethodDesc _setItem;
-        private readonly ComTypeLibDesc _typeLibDesc;
         private static readonly Dictionary<string, ComEventDesc> _EmptyEventsDict = new Dictionary<string, ComEventDesc>();
 
-        internal ComTypeDesc(ITypeInfo typeInfo, ComType memberType, ComTypeLibDesc typeLibDesc) : base(memberType) {
+        internal ComTypeDesc(ITypeInfo typeInfo) {
             if (typeInfo != null) {
                 ComRuntimeHelpers.GetInfoFromType(typeInfo, out _typeName, out _documentation);
             }
-            _typeLibDesc = typeLibDesc;
         }
 
-        internal static ComTypeDesc FromITypeInfo(ComTypes.ITypeInfo typeInfo, ComTypeLibDesc typeLibDesc) {
+        internal static ComTypeDesc FromITypeInfo(ComTypes.ITypeInfo typeInfo) {
             ComTypes.TYPEATTR typeAttr;
             typeAttr = ComRuntimeHelpers.GetTypeAttrForTypeInfo(typeInfo);
             if (typeAttr.typekind == ComTypes.TYPEKIND.TKIND_COCLASS) {
-                return new ComTypeClassDesc(typeInfo, typeLibDesc);
+                return new ComTypeClassDesc(typeInfo);
             } else if (typeAttr.typekind == ComTypes.TYPEKIND.TKIND_ENUM) {
-                return new ComTypeEnumDesc(typeInfo, typeLibDesc);
+                return new ComTypeEnumDesc(typeInfo);
             } else if ((typeAttr.typekind == ComTypes.TYPEKIND.TKIND_DISPATCH) ||
                   (typeAttr.typekind == ComTypes.TYPEKIND.TKIND_INTERFACE)) {
-                ComTypeDesc typeDesc = new ComTypeDesc(typeInfo, ComType.Interface, typeLibDesc);
+                ComTypeDesc typeDesc = new ComTypeDesc(typeInfo);
                 return typeDesc;
             } else {
                 throw Error.UnsupportedEnumType();
@@ -60,7 +59,7 @@ namespace Microsoft.Scripting.ComInterop {
         }
 
         internal static ComTypeDesc CreateEmptyTypeDesc() {
-            ComTypeDesc typeDesc = new ComTypeDesc(null, ComType.Interface, null);
+            ComTypeDesc typeDesc = new ComTypeDesc(null);
             typeDesc._funcs = new Dictionary<string, ComMethodDesc>();
             typeDesc._events = _EmptyEventsDict;
 
@@ -80,6 +79,10 @@ namespace Microsoft.Scripting.ComInterop {
             get { return _puts; }
             set { _puts = value; }
         }
+        internal Dictionary<string, ComMethodDesc> PutRefs {
+            get { return _putRefs; }
+            set { _putRefs = value; }
+        }
 
         internal Dictionary<string, ComEventDesc> Events {
             get { return _events; }
@@ -88,14 +91,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         public string TypeName {
             get { return _typeName; }
-        }
-
-        internal string Documentation {
-            get { return _documentation; }
-        }
-
-        public ComTypeLibDesc TypeLib {
-            get { return _typeLibDesc; }
         }
 
         internal Guid Guid {

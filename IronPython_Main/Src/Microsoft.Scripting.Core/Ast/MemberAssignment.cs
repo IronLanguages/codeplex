@@ -39,7 +39,7 @@ namespace Microsoft.Linq.Expressions {
             RequiresCanRead(expression, "expression");
             Type memberType;
             ValidateSettableFieldOrPropertyMember(member, out memberType);
-            if (!TypeUtils.AreAssignable(memberType, expression.Type)) {
+            if (!memberType.IsAssignableFrom(expression.Type)) {
                 throw Error.ArgumentTypesMustMatch();
             }
             return new MemberAssignment(member, expression);

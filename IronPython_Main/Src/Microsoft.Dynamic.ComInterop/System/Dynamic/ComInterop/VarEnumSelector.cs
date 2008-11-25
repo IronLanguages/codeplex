@@ -44,24 +44,15 @@ namespace Microsoft.Scripting.ComInterop {
     /// </summary>
     internal class VarEnumSelector {
         private readonly VariantBuilder[] _variantBuilders;
-        private readonly ReturnBuilder _returnBuilder;
 
         private static readonly Dictionary<VarEnum, Type> _ComToManagedPrimitiveTypes = CreateComToManagedPrimitiveTypes();
         private static readonly IList<IList<VarEnum>> _ComPrimitiveTypeFamilies = CreateComPrimitiveTypeFamilies();
 
-        internal VarEnumSelector(Type returnType, Type[] explicitArgTypes) {
+        internal VarEnumSelector(Type[] explicitArgTypes) {
             _variantBuilders = new VariantBuilder[explicitArgTypes.Length];
 
             for (int i = 0; i < explicitArgTypes.Length; i++) {
                 _variantBuilders[i] = GetVariantBuilder(explicitArgTypes[i]);
-            }
-
-            _returnBuilder = new ReturnBuilder(returnType);
-        }
-
-        internal ReturnBuilder ReturnBuilder {
-            get {
-                return _returnBuilder;
             }
         }
 

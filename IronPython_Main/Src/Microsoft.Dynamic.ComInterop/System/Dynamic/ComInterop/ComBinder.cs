@@ -37,10 +37,10 @@ namespace Microsoft.Scripting.ComInterop {
         /// <summary>
         /// Determines if an object is a COM object.
         /// </summary>
-        /// <param name="obj">The object to test.</param>
+        /// <param name="value">The object to test.</param>
         /// <returns>True if the object is a COM object, False otherwise.</returns>
-        public static bool IsComObject(object obj) {
-            return ComObject.IsComObject(obj);
+        public static bool IsComObject(object value) {
+            return ComObject.IsComObject(value);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#")]
@@ -88,20 +88,20 @@ namespace Microsoft.Scripting.ComInterop {
             return false;
         }
 
-        public static IEnumerable<string> GetDynamicMemberNames(object comObject) {
-            ContractUtils.RequiresNotNull(comObject, "comObject");
-            ContractUtils.Requires(IsComObject(comObject), "comObject", Strings.ComObjectExpected);
+        public static IEnumerable<string> GetDynamicMemberNames(object value) {
+            ContractUtils.RequiresNotNull(value, "value");
+            ContractUtils.Requires(IsComObject(value), "value", Strings.ComObjectExpected);
 
-            return ComObject.ObjectToComObject(comObject).MemberNames;
+            return ComObject.ObjectToComObject(value).MemberNames;
         }
 
         // IEnumerable<KeyValuePair<string, object>> is a standard idiom
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
-        public static IEnumerable<KeyValuePair<string, object>> GetDynamicDataMembers(object comObject) {
-            ContractUtils.RequiresNotNull(comObject, "comObject");
-            ContractUtils.Requires(IsComObject(comObject), "comObject", Strings.ComObjectExpected);
+        public static IEnumerable<KeyValuePair<string, object>> GetDynamicDataMembers(object value) {
+            ContractUtils.RequiresNotNull(value, "value");
+            ContractUtils.Requires(IsComObject(value), "value", Strings.ComObjectExpected);
 
-            return ComObject.ObjectToComObject(comObject).DataMembers;
+            return ComObject.ObjectToComObject(value).DataMembers;
         }
 
         private static bool TryGetMetaObject(ref MetaObject instance) {

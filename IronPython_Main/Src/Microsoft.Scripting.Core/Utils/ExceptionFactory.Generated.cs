@@ -88,51 +88,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Array index must be an int."
-        /// </summary>
-        internal static string ArrayIndexMustBeInt {
-            get {
-                return "Array index must be an int.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Array argument must be array."
-        /// </summary>
-        internal static string ArrayArgumentMustBeArray {
-            get {
-                return "Array argument must be array.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect number of indices."
-        /// </summary>
-        internal static string IncorrectIndicesCount {
-            get {
-                return "Incorrect number of indices.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Value type must match the array element type."
-        /// </summary>
-        internal static string ValueTypeMustMatchElementType {
-            get {
-                return "Value type must match the array element type.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "right side must be assignable to left side"
-        /// </summary>
-        internal static string RhsMustBeAssignableToLhs {
-            get {
-                return "right side must be assignable to left side";
-            }
-        }
-
-        /// <summary>
         /// A string like  "reducible nodes must override Expression.Reduce()"
         /// </summary>
         internal static string ReducibleMustOverrideReduce {
@@ -156,15 +111,6 @@ namespace Microsoft.Linq.Expressions {
         internal static string ReducedNotCompatible {
             get {
                 return "cannot assign from the reduced node type to the original node type";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "No getter or setter specified"
-        /// </summary>
-        internal static string NoGetterSetter {
-            get {
-                return "No getter or setter specified";
             }
         }
 
@@ -210,78 +156,6 @@ namespace Microsoft.Linq.Expressions {
         internal static string AccessorsCannotHaveByRefArgs {
             get {
                 return "Accessor indexes cannot be passed ByRef.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect instance type for the field"
-        /// </summary>
-        internal static string IncorrectInstanceTypeField {
-            get {
-                return "Incorrect instance type for the field";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect value type for the field"
-        /// </summary>
-        internal static string IncorrectValueTypeField {
-            get {
-                return "Incorrect value type for the field";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect instance type for the property"
-        /// </summary>
-        internal static string IncorrectinstanceTypeProperty {
-            get {
-                return "Incorrect instance type for the property";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "set method must have at least one parameter"
-        /// </summary>
-        internal static string SetMustHaveParams {
-            get {
-                return "set method must have at least one parameter";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect value type for the property"
-        /// </summary>
-        internal static string IncorrectValueTypeForProperty {
-            get {
-                return "Incorrect value type for the property";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Method must be static"
-        /// </summary>
-        internal static string MustBeStatic {
-            get {
-                return "Method must be static";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Incorrect number of arguments"
-        /// </summary>
-        internal static string IncorrectArgNumber {
-            get {
-                return "Incorrect number of arguments";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Argument not provided for a mandatory parameter"
-        /// </summary>
-        internal static string ArgumentNotProvided {
-            get {
-                return "Argument not provided for a mandatory parameter";
             }
         }
 
@@ -336,42 +210,6 @@ namespace Microsoft.Linq.Expressions {
         internal static string VariableMustNotBeByRef {
             get {
                 return "variable must not be ByRef";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "operation kind must match node type"
-        /// </summary>
-        internal static string OperationKindMustMatchNodeType {
-            get {
-                return "operation kind must match node type";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Must receive at least one argument, the target to call"
-        /// </summary>
-        internal static string MustHaveAtLeastTarget {
-            get {
-                return "Must receive at least one argument, the target to call";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Property doesn't exist on the provided type"
-        /// </summary>
-        internal static string PropertyDoesNotExist {
-            get {
-                return "Property doesn't exist on the provided type";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Field doesn't exist on provided type"
-        /// </summary>
-        internal static string FieldDoesNotExist {
-            get {
-                return "Field doesn't exist on provided type";
             }
         }
 
@@ -448,29 +286,29 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Static field requires null expression, non-static field requires non-null expression."
+        /// A string like  "Static field requires null instance, non-static field requires non-null instance."
         /// </summary>
-        internal static string OnlyStaticFieldsHaveNullExpr {
+        internal static string OnlyStaticFieldsHaveNullInstance {
             get {
-                return "Static field requires null expression, non-static field requires non-null expression.";
+                return "Static field requires null instance, non-static field requires non-null instance.";
             }
         }
 
         /// <summary>
-        /// A string like  "Static property requires null expression, non-static property requires non-null expression."
+        /// A string like  "Static property requires null instance, non-static property requires non-null instance."
         /// </summary>
-        internal static string OnlyStaticPropertiesHaveNullExpr {
+        internal static string OnlyStaticPropertiesHaveNullInstance {
             get {
-                return "Static property requires null expression, non-static property requires non-null expression.";
+                return "Static property requires null instance, non-static property requires non-null instance.";
             }
         }
 
         /// <summary>
-        /// A string like  "Static method requires null expression, non-static method requires non-null expression."
+        /// A string like  "Static method requires null instance, non-static method requires non-null instance."
         /// </summary>
-        internal static string OnlyStaticMethodsHaveNullExpr {
+        internal static string OnlyStaticMethodsHaveNullInstance {
             get {
-                return "Static method requires null expression, non-static method requires non-null expression.";
+                return "Static method requires null instance, non-static method requires non-null instance.";
             }
         }
 
@@ -480,24 +318,6 @@ namespace Microsoft.Linq.Expressions {
         internal static string PropertyTypeCannotBeVoid {
             get {
                 return "Property cannot have a void type.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Property is not readable"
-        /// </summary>
-        internal static string PropertyNotReadable {
-            get {
-                return "Property is not readable";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Property is not writeable"
-        /// </summary>
-        internal static string PropertyNotWriteable {
-            get {
-                return "Property is not writeable";
             }
         }
 
@@ -538,33 +358,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "subtrees of nodes with non-null type must also have non-null type"
-        /// </summary>
-        internal static string SubtreesMustBeBound {
-            get {
-                return "subtrees of nodes with non-null type must also have non-null type";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "readable Expression must reduce to readable Expression"
-        /// </summary>
-        internal static string MustReduceToReadable {
-            get {
-                return "readable Expression must reduce to readable Expression";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "writeable Expression must reduce to writeable Expression"
-        /// </summary>
-        internal static string MustReduceToWriteable {
-            get {
-                return "writeable Expression must reduce to writeable Expression";
-            }
-        }
-
-        /// <summary>
         /// A string like  "must be reducible node"
         /// </summary>
         internal static string MustBeReducible {
@@ -574,29 +367,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "must be readable or writeable"
-        /// </summary>
-        internal static string MustBeReadableOrWriteable {
-            get {
-                return "must be readable or writeable";
-            }
-        }
-
-        /// <summary>
         /// A string like  "TypeBuilder does not have a valid ModuleBuilder"
         /// </summary>
         internal static string InvalidTypeBuilder {
             get {
                 return "TypeBuilder does not have a valid ModuleBuilder";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Condition must be boolean."
-        /// </summary>
-        internal static string ConditionMustBeBoolean {
-            get {
-                return "Condition must be boolean.";
             }
         }
 
@@ -637,29 +412,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "type or bindingInfo must be non-null"
-        /// </summary>
-        internal static string TypeOrBindingInfoMustBeNonNull {
-            get {
-                return "type or bindingInfo must be non-null";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Start and End must be well ordered"
         /// </summary>
         internal static string StartEndMustBeOrdered {
             get {
                 return "Start and End must be well ordered";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Start and End must both be valid or both invalid"
-        /// </summary>
-        internal static string StartEndCanOnlyBothBeInvalid {
-            get {
-                return "Start and End must both be valid or both invalid";
             }
         }
 
@@ -819,13 +576,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "An expression of type '{0}' cannot be cast to type '{1}'"
-        /// </summary>
-        internal static string CannotCastTypeToType(object p0, object p1) {
-            return FormatString("An expression of type '{0}' cannot be cast to type '{1}'", p0, p1);
-        }
-
-        /// <summary>
         /// A string like  "The type used in TypeAs Expression must be of reference or nullable type, {0} is neither"
         /// </summary>
         internal static string IncorrectTypeForTypeAs(object p0) {
@@ -916,6 +666,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static string FieldNotDefinedForType(object p0, object p1) {
             return FormatString("Field '{0}' is not defined for type '{1}'", p0, p1);
+        }
+
+        /// <summary>
+        /// A string like  "Field '{0}.{1}' is not defined for type '{2}'"
+        /// </summary>
+        internal static string FieldInfoNotDefinedForType(object p0, object p1, object p2) {
+            return FormatString("Field '{0}.{1}' is not defined for type '{2}'", p0, p1, p2);
         }
 
         /// <summary>
@@ -1280,15 +1037,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "A lambda expression cannot contain pass by reference parameters."
-        /// </summary>
-        internal static string ExpressionMayNotContainByrefParameters {
-            get {
-                return "A lambda expression cannot contain pass by reference parameters.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Argument type cannot be System.Void."
         /// </summary>
         internal static string ArgumentCannotBeOfTypeVoid {
@@ -1316,38 +1064,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "expected StrongBox, but found null."
-        /// </summary>
-        internal static string FirstArgumentMustBeStrongBox {
-            get {
-                return "expected StrongBox, but found null.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Bind cannot return null."
         /// </summary>
         internal static string BindingCannotBeNull {
             get {
                 return "Bind cannot return null.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Empty rule set does not have target."
-        /// </summary>
-        internal static string EmptyRuleSetTarget {
-            get {
-                return "Empty rule set does not have target.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Left side of assignment is not an assignable node type."
-        /// </summary>
-        internal static string LhsUnassignable {
-            get {
-                return "Left side of assignment is not an assignable node type.";
             }
         }
 
@@ -1358,13 +1079,6 @@ namespace Microsoft.Linq.Expressions {
             get {
                 return "Bad data bound to delegate.";
             }
-        }
-
-        /// <summary>
-        /// A string like  "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'"
-        /// </summary>
-        internal static string ArgumentCountMustMatchBinding(object p0, object p1) {
-            return FormatString("Argument count (including instance) '{0}' must match arguments in the binding information '{1}'", p0, p1);
         }
 
         /// <summary>
@@ -1382,201 +1096,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Removing an event handler that is not registered."
-        /// </summary>
-        internal static string RemovingUnregisteredEvent {
-            get {
-                return "Removing an event handler that is not registered.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "COM object does not support events."
-        /// </summary>
-        internal static string COMObjectDoesNotSupportEvents {
-            get {
-                return "COM object does not support events.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "COM object does not support specified source interface."
-        /// </summary>
-        internal static string COMObjectDoesNotSupportSourceInterface {
-            get {
-                return "COM object does not support specified source interface.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Removing not registered handler."
-        /// </summary>
-        internal static string RemovingUnregisteredHandler {
-            get {
-                return "Removing not registered handler.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Marshal.SetComObjectData failed."
-        /// </summary>
-        internal static string SetComObjectDataFailed {
-            get {
-                return "Marshal.SetComObjectData failed.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "TypeLib '{0}' does not contain COM interface '{1}'."
-        /// </summary>
-        internal static string TypeLibDoesNotContainInterface(object p0, object p1) {
-            return FormatString("TypeLib '{0}' does not contain COM interface '{1}'.", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "This method exists only to keep the compiler happy."
-        /// </summary>
-        internal static string MethodShouldNotBeCalled {
-            get {
-                return "This method exists only to keep the compiler happy.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Default value of COM parameter cannot be read properly."
-        /// </summary>
-        internal static string DefaultValueCannotBeRead {
-            get {
-                return "Default value of COM parameter cannot be read properly.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Unexpected VarEnum {0}."
-        /// </summary>
-        internal static string UnexpectedVarEnum(object p0) {
-            return FormatString("Unexpected VarEnum {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Error while invoking {0}."
-        /// </summary>
-        internal static string DispBadParamCount(object p0) {
-            return FormatString("Error while invoking {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Error while invoking {0}."
-        /// </summary>
-        internal static string DispMemberNotFound(object p0) {
-            return FormatString("Error while invoking {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Error while invoking {0}. Named arguments are not supported."
-        /// </summary>
-        internal static string DispNoNamedArgs(object p0) {
-            return FormatString("Error while invoking {0}. Named arguments are not supported.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Error while invoking {0}."
-        /// </summary>
-        internal static string DispOverflow(object p0) {
-            return FormatString("Error while invoking {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Could not convert argument {0} for call to {1}."
-        /// </summary>
-        internal static string DispTypeMismatch(object p0, object p1) {
-            return FormatString("Could not convert argument {0} for call to {1}.", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "Error while invoking {0}. A required parameter was omitted."
-        /// </summary>
-        internal static string DispParamNotOptional(object p0) {
-            return FormatString("Error while invoking {0}. A required parameter was omitted.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "ResolveComReference.CannotRetrieveTypeInformation."
-        /// </summary>
-        internal static string CannotRetrieveTypeInformation {
-            get {
-                return "ResolveComReference.CannotRetrieveTypeInformation.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "IDispatch::GetIDsOfNames behaved unexpectedly for {0}."
-        /// </summary>
-        internal static string GetIDsOfNamesInvalid(object p0) {
-            return FormatString("IDispatch::GetIDsOfNames behaved unexpectedly for {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Attempting to wrap an unsupported enum type."
-        /// </summary>
-        internal static string UnsupportedEnumType {
-            get {
-                return "Attempting to wrap an unsupported enum type.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "COM object is expected."
-        /// </summary>
-        internal static string ComObjectExpected {
-            get {
-                return "COM object is expected.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Could not get DispId for {0} (error:{1})."
-        /// </summary>
-        internal static string CouldNotGetDispId(object p0, object p1) {
-            return FormatString("Could not get DispId for {0} (error:{1}).", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "There are valid conversions from {0} to {1}."
-        /// </summary>
-        internal static string AmbiguousConversion(object p0, object p1) {
-            return FormatString("There are valid conversions from {0} to {1}.", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "Variant.ToObject cannot handle {0}."
-        /// </summary>
-        internal static string VariantToObjectNYI(object p0) {
-            return FormatString("Variant.ToObject cannot handle {0}.", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Variant.GetAccessor cannot handle {0}."
-        /// </summary>
-        internal static string VariantGetAccessorNYI(object p0) {
-            return FormatString("Variant.GetAccessor cannot handle {0}.", p0);
-        }
-
-        /// <summary>
         /// A string like  "Queue empty."
         /// </summary>
         internal static string QueueEmpty {
             get {
                 return "Queue empty.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Cannot emit address of void-typed block."
-        /// </summary>
-        internal static string AddressOfVoidBlock {
-            get {
-                return "Cannot emit address of void-typed block.";
             }
         }
 
@@ -1638,33 +1162,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Dynamic expression not reduced."
-        /// </summary>
-        internal static string DynamicNotReduced {
-            get {
-                return "Dynamic expression not reduced.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Action should have been reduced."
-        /// </summary>
-        internal static string ActionNotReduced {
-            get {
-                return "Action should have been reduced.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Delete should have been reduced."
-        /// </summary>
-        internal static string DeleteNotReduced {
-            get {
-                return "Delete should have been reduced.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Extension should have been reduced."
         /// </summary>
         internal static string ExtensionNotReduced {
@@ -1697,15 +1194,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "OpAssignment should have been reduced."
-        /// </summary>
-        internal static string OpAssignmentNotReduced {
-            get {
-                return "OpAssignment should have been reduced.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "unknown lift type: '{0}'."
         /// </summary>
         internal static string UnknownLiftType(object p0) {
@@ -1731,36 +1219,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Cannot emit constant {0} ({1})"
-        /// </summary>
-        internal static string CanotEmitConstant(object p0, object p1) {
-            return FormatString("Cannot emit constant {0} ({1})", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "No implicit cast from {0} to {1}"
-        /// </summary>
-        internal static string NoImplicitCast(object p0, object p1) {
-            return FormatString("No implicit cast from {0} to {1}", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "No explicit cast from {0} to {1}"
-        /// </summary>
-        internal static string NoExplicitCast(object p0, object p1) {
-            return FormatString("No explicit cast from {0} to {1}", p0, p1);
-        }
-
-        /// <summary>
-        /// A string like  "No default value for a given type."
-        /// </summary>
-        internal static string NoDefaultValue {
-            get {
-                return "No default value for a given type.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Stack changed while enumerating."
         /// </summary>
         internal static string StackChangedWhileEnumerationg {
@@ -1779,42 +1237,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "can't read from property"
-        /// </summary>
-        internal static string CantReadProperty {
-            get {
-                return "can't read from property";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "can't write to property"
-        /// </summary>
-        internal static string CantWriteProperty {
-            get {
-                return "can't write to property";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Cannot create instance of {0} because it contains generic parameters"
         /// </summary>
         internal static string IllegalNewGenericParams(object p0) {
             return FormatString("Cannot create instance of {0} because it contains generic parameters", p0);
-        }
-
-        /// <summary>
-        /// A string like  "Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n"
-        /// </summary>
-        internal static string VerificationException(object p0, object p1, object p2) {
-            return FormatString("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n", p0, p1, p2);
-        }
-
-        /// <summary>
-        /// A string like  "Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope"
-        /// </summary>
-        internal static string UnboundVariable(object p0, object p1) {
-            return FormatString("Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope", p0, p1);
         }
 
         /// <summary>
@@ -1825,29 +1251,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Iterator return type must be IEnumerator or IEnumerator&lt;object&gt;."
-        /// </summary>
-        internal static string WrongIteratorReturnType {
-            get {
-                return "Iterator return type must be IEnumerator or IEnumerator<object>.";
-            }
-        }
-
-        /// <summary>
-        /// A string like  "Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'"
-        /// </summary>
-        internal static string InvalidReturnTypeOfLambda(object p0, object p1, object p2) {
-            return FormatString("Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'", p0, p1, p2);
-        }
-
-        /// <summary>
-        /// A string like  "Expression missing for return in lambda '{0}', must have return type '{1}'"
-        /// </summary>
-        internal static string MissingReturnForLambda(object p0, object p1) {
-            return FormatString("Expression missing for return in lambda '{0}', must have return type '{1}'", p0, p1);
-        }
-
-        /// <summary>
         /// A string like  "Cannot close over byref parameter '{0}' referenced in lambda '{1}'"
         /// </summary>
         internal static string CannotCloseOverByRef(object p0, object p1) {
@@ -1855,26 +1258,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Expected type {0}, got {1}."
-        /// </summary>
-        internal static string UnexpectedType(object p0, object p1) {
-            return FormatString("Expected type {0}, got {1}.", p0, p1);
-        }
-
-        /// <summary>
         /// A string like  "Unexpected VarArgs call to method '{0}'"
         /// </summary>
         internal static string UnexpectedVarArgsCall(object p0) {
             return FormatString("Unexpected VarArgs call to method '{0}'", p0);
-        }
-
-        /// <summary>
-        /// A string like  "missing parameter value not yet supported"
-        /// </summary>
-        internal static string MissingValueNotSupported {
-            get {
-                return "missing parameter value not yet supported";
-            }
         }
 
         /// <summary>
@@ -1893,13 +1280,6 @@ namespace Microsoft.Linq.Expressions {
             return FormatString("When called from '{0}', rewriting a node of type '{1}' should return a non-null value of the same type. Alternatively, override '{2}' and change it to not visit children of this type.", p0, p1, p2);
         }
 
-        /// <summary>
-        /// A string like  "A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote"
-        /// </summary>
-        internal static string RuntimeVariablesNotSupportedInQuote(object p0) {
-            return FormatString("A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote", p0);
-        }
-
     }
     /// <summary>
     ///    Strongly-typed and parameterized exception factory.
@@ -1907,24 +1287,10 @@ namespace Microsoft.Linq.Expressions {
 
     internal static partial class Error {
         /// <summary>
-        /// ArgumentException with message like "type or bindingInfo must be non-null"
-        /// </summary>
-        internal static Exception TypeOrBindingInfoMustBeNonNull() {
-            return new ArgumentException(Strings.TypeOrBindingInfoMustBeNonNull);
-        }
-
-        /// <summary>
         /// ArgumentException with message like "Start and End must be well ordered"
         /// </summary>
         internal static Exception StartEndMustBeOrdered() {
             return new ArgumentException(Strings.StartEndMustBeOrdered);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Start and End must both be valid or both invalid"
-        /// </summary>
-        internal static Exception StartEndCanOnlyBothBeInvalid() {
-            return new ArgumentException(Strings.StartEndCanOnlyBothBeInvalid);
         }
 
         /// <summary>
@@ -2061,13 +1427,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "An expression of type '{0}' cannot be cast to type '{1}'"
-        /// </summary>
-        internal static Exception CannotCastTypeToType(object p0, object p1) {
-            return new ArgumentException(Strings.CannotCastTypeToType(p0, p1));
-        }
-
-        /// <summary>
         /// ArgumentException with message like "The type used in TypeAs Expression must be of reference or nullable type, {0} is neither"
         /// </summary>
         internal static Exception IncorrectTypeForTypeAs(object p0) {
@@ -2156,6 +1515,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception FieldNotDefinedForType(object p0, object p1) {
             return new ArgumentException(Strings.FieldNotDefinedForType(p0, p1));
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "Field '{0}.{1}' is not defined for type '{2}'"
+        /// </summary>
+        internal static Exception FieldInfoNotDefinedForType(object p0, object p1, object p2) {
+            return new ArgumentException(Strings.FieldInfoNotDefinedForType(p0, p1, p2));
         }
 
         /// <summary>
@@ -2488,13 +1854,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "A lambda expression cannot contain pass by reference parameters."
-        /// </summary>
-        internal static Exception ExpressionMayNotContainByrefParameters() {
-            return new ArgumentException(Strings.ExpressionMayNotContainByrefParameters);
-        }
-
-        /// <summary>
         /// ArgumentException with message like "Argument type cannot be System.Void."
         /// </summary>
         internal static Exception ArgumentCannotBeOfTypeVoid() {
@@ -2516,13 +1875,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "expected StrongBox, but found null."
-        /// </summary>
-        internal static Exception FirstArgumentMustBeStrongBox() {
-            return new ArgumentException(Strings.FirstArgumentMustBeStrongBox);
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Bind cannot return null."
         /// </summary>
         internal static Exception BindingCannotBeNull() {
@@ -2530,31 +1882,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "Empty rule set does not have target."
-        /// </summary>
-        internal static Exception EmptyRuleSetTarget() {
-            return new InvalidOperationException(Strings.EmptyRuleSetTarget);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Left side of assignment is not an assignable node type."
-        /// </summary>
-        internal static Exception LhsUnassignable() {
-            return new ArgumentException(Strings.LhsUnassignable);
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Bad data bound to delegate."
         /// </summary>
         internal static Exception BadDelegateData() {
             return new InvalidOperationException(Strings.BadDelegateData);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Argument count (including instance) '{0}' must match arguments in the binding information '{1}'"
-        /// </summary>
-        internal static Exception ArgumentCountMustMatchBinding(object p0, object p1) {
-            return new ArgumentException(Strings.ArgumentCountMustMatchBinding(p0, p1));
         }
 
         /// <summary>
@@ -2572,187 +1903,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "Removing an event handler that is not registered."
-        /// </summary>
-        internal static Exception RemovingUnregisteredEvent() {
-            return new InvalidOperationException(Strings.RemovingUnregisteredEvent);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "COM object does not support events."
-        /// </summary>
-        internal static Exception COMObjectDoesNotSupportEvents() {
-            return new ArgumentException(Strings.COMObjectDoesNotSupportEvents);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "COM object does not support specified source interface."
-        /// </summary>
-        internal static Exception COMObjectDoesNotSupportSourceInterface() {
-            return new ArgumentException(Strings.COMObjectDoesNotSupportSourceInterface);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Removing not registered handler."
-        /// </summary>
-        internal static Exception RemovingUnregisteredHandler() {
-            return new InvalidOperationException(Strings.RemovingUnregisteredHandler);
-        }
-
-        #if !SILVERLIGHT
-        /// <summary>
-        /// System.Runtime.InteropServices.COMException with message like "Marshal.SetComObjectData failed."
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        internal static Exception SetComObjectDataFailed() {
-            return new System.Runtime.InteropServices.COMException(Strings.SetComObjectDataFailed);
-        }
-        #endif
-
-        #if !SILVERLIGHT
-        /// <summary>
-        /// System.Runtime.InteropServices.COMException with message like "TypeLib '{0}' does not contain COM interface '{1}'."
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        internal static Exception TypeLibDoesNotContainInterface(object p0, object p1) {
-            return new System.Runtime.InteropServices.COMException(Strings.TypeLibDoesNotContainInterface(p0, p1));
-        }
-        #endif
-
-        /// <summary>
-        /// InvalidOperationException with message like "This method exists only to keep the compiler happy."
-        /// </summary>
-        internal static Exception MethodShouldNotBeCalled() {
-            return new InvalidOperationException(Strings.MethodShouldNotBeCalled);
-        }
-
-        /// <summary>
-        /// InvalidProgramException with message like "Default value of COM parameter cannot be read properly."
-        /// </summary>
-        internal static Exception DefaultValueCannotBeRead() {
-            return new InvalidProgramException(Strings.DefaultValueCannotBeRead);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Unexpected VarEnum {0}."
-        /// </summary>
-        internal static Exception UnexpectedVarEnum(object p0) {
-            return new InvalidOperationException(Strings.UnexpectedVarEnum(p0));
-        }
-
-        /// <summary>
-        /// System.Reflection.TargetParameterCountException with message like "Error while invoking {0}."
-        /// </summary>
-        internal static Exception DispBadParamCount(object p0) {
-            return new System.Reflection.TargetParameterCountException(Strings.DispBadParamCount(p0));
-        }
-
-        /// <summary>
-        /// MissingMemberException with message like "Error while invoking {0}."
-        /// </summary>
-        internal static Exception DispMemberNotFound(object p0) {
-            return new MissingMemberException(Strings.DispMemberNotFound(p0));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Error while invoking {0}. Named arguments are not supported."
-        /// </summary>
-        internal static Exception DispNoNamedArgs(object p0) {
-            return new ArgumentException(Strings.DispNoNamedArgs(p0));
-        }
-
-        /// <summary>
-        /// OverflowException with message like "Error while invoking {0}."
-        /// </summary>
-        internal static Exception DispOverflow(object p0) {
-            return new OverflowException(Strings.DispOverflow(p0));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Could not convert argument {0} for call to {1}."
-        /// </summary>
-        internal static Exception DispTypeMismatch(object p0, object p1) {
-            return new ArgumentException(Strings.DispTypeMismatch(p0, p1));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "Error while invoking {0}. A required parameter was omitted."
-        /// </summary>
-        internal static Exception DispParamNotOptional(object p0) {
-            return new ArgumentException(Strings.DispParamNotOptional(p0));
-        }
-
-        #if !SILVERLIGHT
-        /// <summary>
-        /// System.Runtime.InteropServices.COMException with message like "ResolveComReference.CannotRetrieveTypeInformation."
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        internal static Exception CannotRetrieveTypeInformation() {
-            return new System.Runtime.InteropServices.COMException(Strings.CannotRetrieveTypeInformation);
-        }
-        #endif
-
-        /// <summary>
-        /// ArgumentException with message like "IDispatch::GetIDsOfNames behaved unexpectedly for {0}."
-        /// </summary>
-        internal static Exception GetIDsOfNamesInvalid(object p0) {
-            return new ArgumentException(Strings.GetIDsOfNamesInvalid(p0));
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Attempting to wrap an unsupported enum type."
-        /// </summary>
-        internal static Exception UnsupportedEnumType() {
-            return new InvalidOperationException(Strings.UnsupportedEnumType);
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "COM object is expected."
-        /// </summary>
-        internal static Exception ComObjectExpected() {
-            return new ArgumentException(Strings.ComObjectExpected);
-        }
-
-        /// <summary>
-        /// MissingMemberException with message like "Could not get DispId for {0} (error:{1})."
-        /// </summary>
-        internal static Exception CouldNotGetDispId(object p0, object p1) {
-            return new MissingMemberException(Strings.CouldNotGetDispId(p0, p1));
-        }
-
-        /// <summary>
-        /// System.Reflection.AmbiguousMatchException with message like "There are valid conversions from {0} to {1}."
-        /// </summary>
-        internal static Exception AmbiguousConversion(object p0, object p1) {
-            return new System.Reflection.AmbiguousMatchException(Strings.AmbiguousConversion(p0, p1));
-        }
-
-        /// <summary>
-        /// NotImplementedException with message like "Variant.ToObject cannot handle {0}."
-        /// </summary>
-        internal static Exception VariantToObjectNYI(object p0) {
-            return new NotImplementedException(Strings.VariantToObjectNYI(p0));
-        }
-
-        /// <summary>
-        /// NotImplementedException with message like "Variant.GetAccessor cannot handle {0}."
-        /// </summary>
-        internal static Exception VariantGetAccessorNYI(object p0) {
-            return new NotImplementedException(Strings.VariantGetAccessorNYI(p0));
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Queue empty."
         /// </summary>
         internal static Exception QueueEmpty() {
             return new InvalidOperationException(Strings.QueueEmpty);
-        }
-
-        /// <summary>
-        /// NotSupportedException with message like "Cannot emit address of void-typed block."
-        /// </summary>
-        internal static Exception AddressOfVoidBlock() {
-            return new NotSupportedException(Strings.AddressOfVoidBlock);
         }
 
         /// <summary>
@@ -2805,27 +1959,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "Dynamic expression not reduced."
-        /// </summary>
-        internal static Exception DynamicNotReduced() {
-            return new InvalidOperationException(Strings.DynamicNotReduced);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Action should have been reduced."
-        /// </summary>
-        internal static Exception ActionNotReduced() {
-            return new InvalidOperationException(Strings.ActionNotReduced);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Delete should have been reduced."
-        /// </summary>
-        internal static Exception DeleteNotReduced() {
-            return new InvalidOperationException(Strings.DeleteNotReduced);
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Extension should have been reduced."
         /// </summary>
         internal static Exception ExtensionNotReduced() {
@@ -2854,13 +1987,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "OpAssignment should have been reduced."
-        /// </summary>
-        internal static Exception OpAssignmentNotReduced() {
-            return new InvalidOperationException(Strings.OpAssignmentNotReduced);
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "unknown lift type: '{0}'."
         /// </summary>
         internal static Exception UnknownLiftType(object p0) {
@@ -2882,34 +2008,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "Cannot emit constant {0} ({1})"
-        /// </summary>
-        internal static Exception CanotEmitConstant(object p0, object p1) {
-            return new ArgumentException(Strings.CanotEmitConstant(p0, p1));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "No implicit cast from {0} to {1}"
-        /// </summary>
-        internal static Exception NoImplicitCast(object p0, object p1) {
-            return new ArgumentException(Strings.NoImplicitCast(p0, p1));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "No explicit cast from {0} to {1}"
-        /// </summary>
-        internal static Exception NoExplicitCast(object p0, object p1) {
-            return new ArgumentException(Strings.NoExplicitCast(p0, p1));
-        }
-
-        /// <summary>
-        /// ArgumentException with message like "No default value for a given type."
-        /// </summary>
-        internal static Exception NoDefaultValue() {
-            return new ArgumentException(Strings.NoDefaultValue);
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Stack changed while enumerating."
         /// </summary>
         internal static Exception StackChangedWhileEnumerationg() {
@@ -2924,38 +2022,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "can't read from property"
-        /// </summary>
-        internal static Exception CantReadProperty() {
-            return new InvalidOperationException(Strings.CantReadProperty);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "can't write to property"
-        /// </summary>
-        internal static Exception CantWriteProperty() {
-            return new InvalidOperationException(Strings.CantWriteProperty);
-        }
-
-        /// <summary>
         /// ArgumentException with message like "Cannot create instance of {0} because it contains generic parameters"
         /// </summary>
         internal static Exception IllegalNewGenericParams(object p0) {
             return new ArgumentException(Strings.IllegalNewGenericParams(p0));
-        }
-
-        /// <summary>
-        /// System.Security.VerificationException with message like "Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n"
-        /// </summary>
-        internal static Exception VerificationException(object p0, object p1, object p2) {
-            return new System.Security.VerificationException(Strings.VerificationException(p0, p1, p2));
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Variable '{0}' referenced from lambda '{1}', but it is not defined in an outer scope"
-        /// </summary>
-        internal static Exception UnboundVariable(object p0, object p1) {
-            return new InvalidOperationException(Strings.UnboundVariable(p0, p1));
         }
 
         /// <summary>
@@ -2966,27 +2036,6 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "Iterator return type must be IEnumerator or IEnumerator&lt;object&gt;."
-        /// </summary>
-        internal static Exception WrongIteratorReturnType() {
-            return new ArgumentException(Strings.WrongIteratorReturnType);
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Expression of type '{0}' cannot be used for return type '{1}' of lambda '{2}'"
-        /// </summary>
-        internal static Exception InvalidReturnTypeOfLambda(object p0, object p1, object p2) {
-            return new InvalidOperationException(Strings.InvalidReturnTypeOfLambda(p0, p1, p2));
-        }
-
-        /// <summary>
-        /// InvalidOperationException with message like "Expression missing for return in lambda '{0}', must have return type '{1}'"
-        /// </summary>
-        internal static Exception MissingReturnForLambda(object p0, object p1) {
-            return new InvalidOperationException(Strings.MissingReturnForLambda(p0, p1));
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Cannot close over byref parameter '{0}' referenced in lambda '{1}'"
         /// </summary>
         internal static Exception CannotCloseOverByRef(object p0, object p1) {
@@ -2994,24 +2043,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "Expected type {0}, got {1}."
-        /// </summary>
-        internal static Exception UnexpectedType(object p0, object p1) {
-            return new ArgumentException(Strings.UnexpectedType(p0, p1));
-        }
-
-        /// <summary>
         /// InvalidOperationException with message like "Unexpected VarArgs call to method '{0}'"
         /// </summary>
         internal static Exception UnexpectedVarArgsCall(object p0) {
             return new InvalidOperationException(Strings.UnexpectedVarArgsCall(p0));
-        }
-
-        /// <summary>
-        /// NotSupportedException with message like "missing parameter value not yet supported"
-        /// </summary>
-        internal static Exception MissingValueNotSupported() {
-            return new NotSupportedException(Strings.MissingValueNotSupported);
         }
 
         /// <summary>
@@ -3026,13 +2061,6 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception MustRewriteToSameType(object p0, object p1, object p2) {
             return new InvalidOperationException(Strings.MustRewriteToSameType(p0, p1, p2));
-        }
-
-        /// <summary>
-        /// NotSupportedException with message like "A Quote expression cannot be used on RuntimeVariables expression '{0}' because at least one variable is declared outside the Quote"
-        /// </summary>
-        internal static Exception RuntimeVariablesNotSupportedInQuote(object p0) {
-            return new NotSupportedException(Strings.RuntimeVariablesNotSupportedInQuote(p0));
         }
 
     }

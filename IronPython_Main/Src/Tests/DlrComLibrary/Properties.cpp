@@ -35,15 +35,21 @@ STDMETHODIMP CProperties::put_pBstr(BSTR newVal)
 
 STDMETHODIMP CProperties::get_pVariant(VARIANT* pVal)
 {
-	*pVal = m_variantVal;
-	return S_OK;
+	return VariantCopy(pVal, &m_variantVal);
 }
 
 STDMETHODIMP CProperties::put_pVariant(VARIANT newVal)
 {
-	m_variantVal = newVal;
-	return S_OK;
+    if (newVal.vt != VARENUM::VT_DISPATCH){
+        return VariantCopy(&m_variantVal, &newVal);
+    }
 }
+
+STDMETHODIMP CProperties::putref_pVariant(VARIANT* newVal)
+{
+    return VariantCopy(&m_variantVal, newVal);
+}
+
 
 STDMETHODIMP CProperties::get_pDate(DATE* pVal)
 {

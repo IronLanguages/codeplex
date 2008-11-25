@@ -16,6 +16,8 @@
 #if !SILVERLIGHT // Remoting
 
 using System; using Microsoft;
+using System.Diagnostics;
+using System.Runtime.Remoting;
 using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell.Remote {
@@ -25,24 +27,34 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
     public class RemoteConsoleCommandLine : CommandLine {
         private RemoteConsoleCommandDispatcher _remoteConsoleCommandDispatcher;
 
-        public RemoteConsoleCommandLine(RemoteCommandDispatcher remoteCommandDispatcher, AutoResetEvent remoteOutputReceived) {
+        public RemoteConsoleCommandLine(ScriptScope scope, RemoteCommandDispatcher remoteCommandDispatcher, AutoResetEvent remoteOutputReceived) {
             _remoteConsoleCommandDispatcher = new RemoteConsoleCommandDispatcher(remoteCommandDispatcher, remoteOutputReceived);
+            Debug.Assert(scope != null);
+            ScriptScope = scope;
         }
 
         protected override ICommandDispatcher CreateCommandDispatcher() {
             return _remoteConsoleCommandDispatcher;
         }
 
-        protected override void UnhandledException(Exception e) {
-            string message;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        internal void UnhandledExceptionWorker(Exception e) {
             try {
-                ExceptionOperations exceptionOperations = Engine.GetService<ExceptionOperations>();
-                message = exceptionOperations.FormatException(e);
-            } catch (System.Runtime.Remoting.RemotingException) {
+                base.UnhandledException(e);
+            } catch (Exception exceptionDuringHandling) {
+                // All bets are off while accessing the remote runtime. So we catch all exceptions.
+                // However, in most cases, we only expect to see RemotingException here.
+                if (!(exceptionDuringHandling is RemotingException)) {
+                    Console.WriteLine(String.Format("({0} thrown while trying to display unhandled exception)", exceptionDuringHandling.GetType()), Style.Error);
+                }
+
                 // The remote server may have shutdown. So just do something simple
-                message = e.ToString();
+                Console.WriteLine(e.ToString(), Style.Error);
             }
-            Console.WriteLine(message, Style.Error);
+        }
+
+        protected override void UnhandledException(Exception e) {
+            UnhandledExceptionWorker(e);
         }
 
         /// <summary>

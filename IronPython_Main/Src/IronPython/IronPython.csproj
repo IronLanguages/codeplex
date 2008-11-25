@@ -397,6 +397,10 @@
       <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
       <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Dynamic.ComInterop\System.Dynamic.ComInterop.csproj" Condition=" '$(SilverlightBuild)' != 'true' ">
+      <Project>{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}</Project>
+      <Name>System.Dynamic.ComInterop</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
       <Name>Microsoft.Scripting</Name>

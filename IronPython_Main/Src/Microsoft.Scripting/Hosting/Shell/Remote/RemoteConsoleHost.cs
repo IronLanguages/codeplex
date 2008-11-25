@@ -17,8 +17,10 @@
 
 using System; using Microsoft;
 using System.Diagnostics;
+using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Ipc;
+using System.Runtime.Serialization;
 using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell.Remote {
@@ -39,16 +41,12 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
         private string _channelName = RemoteConsoleHost.GetChannelName();
         private IpcChannel _clientChannel;
         private AutoResetEvent _remoteOutputReceived = new AutoResetEvent(false);
-        private EventWaitHandle _serverInitializedEvent;
-
-        ~RemoteConsoleHost() {
-            Dispose(false);
-        }
+        private ScriptScope _scriptScope;
 
         #region Private methods
 
         private static string GetChannelName() {
-            return "RemoteRuntime-" + System.DateTime.Now.Ticks;
+            return "RemoteRuntime-" + Guid.NewGuid().ToString();
         }
 
         private ProcessStartInfo GetProcessStartInfo() {
@@ -79,6 +77,8 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
             process.ErrorDataReceived += new DataReceivedEventHandler(OnErrorDataReceived);
 
             process.Exited += new EventHandler(OnRemoteRuntimeExited);
+            _remoteRuntimeProcess = process;
+
             process.Start();
 
             // Start the asynchronous read of the output streams.
@@ -88,10 +88,12 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
             // wire up exited 
             process.EnableRaisingEvents = true;
 
-            _remoteRuntimeProcess = process;
+            // Wait for the output marker to know when the startup output is complete
+            _remoteOutputReceived.WaitOne();
 
-            _serverInitializedEvent = new EventWaitHandle(false, EventResetMode.AutoReset, _channelName);
-            _serverInitializedEvent.WaitOne();
+            if (process.HasExited) {
+                throw new RemoteRuntimeStartupException("Remote runtime terminated during startup with exitcode " + process.ExitCode);
+            }
         }
 
         private T GetRemoteObject<T>(string uri) {
@@ -106,9 +108,10 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
         private void InitializeRemoteScriptEngine() {
             StartRemoteRuntimeProcess();
 
-            Engine = GetRemoteObject<ScriptEngine>(RemoteRuntimeServer.RuntimeUriName);
-
             _remoteCommandDispatcher = GetRemoteObject<RemoteCommandDispatcher>(RemoteRuntimeServer.CommandDispatcherUri);
+
+            _scriptScope = _remoteCommandDispatcher.ScriptScope;
+            Engine = _scriptScope.Engine;
 
             // Register a channel for the reverse direction, when the remote runtime process wants to fire events
             // or throw an exception
@@ -117,37 +120,25 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
             ChannelServices.RegisterChannel(_clientChannel, false);
         }
 
-        private void OnRemoteRuntimeExited(object sender, EventArgs args) {
-            Debug.Assert(_remoteRuntimeProcess.HasExited);
-            RemoteRuntimeExited(sender, args);
-        }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2109:ReviewVisibleEventHandlers")]
+        protected virtual void OnRemoteRuntimeExited(object sender, EventArgs args) {
+            Debug.Assert(((Process)sender).HasExited);
+            Debug.Assert(sender == _remoteRuntimeProcess || _remoteRuntimeProcess == null);
 
-        #endregion
-
-        protected override CommandLine CreateCommandLine() {
-            return new RemoteConsoleCommandLine(_remoteCommandDispatcher, _remoteOutputReceived);
-        }
-
-        protected override void UnhandledException(ScriptEngine engine, Exception e) {
-            try {
-                base.UnhandledException(engine, e);
-            } catch (System.Runtime.Remoting.RemotingException) {
-                // The remote server may have shutdown. So just do something simple
-                Console.Error.Write(e.ToString());
+            EventHandler remoteRuntimeExited = RemoteRuntimeExited;
+            if (remoteRuntimeExited != null) {
+                remoteRuntimeExited(sender, args);
             }
+
+            // StartRemoteRuntimeProcess also blocks on this event. Signal it in case the 
+            // remote runtime terminates during startup itself.
+            _remoteOutputReceived.Set();
+
+            // Nudge the ConsoleHost to exit the REPL loop
+            Terminate(_remoteRuntimeProcess.ExitCode);
         }
-        /// <summary>
-        /// Called if the remote runtime process exits by itself. ie. without the remote console killing it.
-        /// </summary>
-        internal event EventHandler RemoteRuntimeExited;
 
-        /// <summary>
-        /// Allows the console to customize the environment variables, working directory, etc.
-        /// </summary>
-        /// <param name="processInfo">At the least, processInfo.FileName should be initialized</param>
-        public abstract void CustomizeRemoteRuntimeStartInfo(ProcessStartInfo processInfo);
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2109:ReviewVisibleEventHandlers")] // TODO: review
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2109:ReviewVisibleEventHandlers")] // TODO: This is protected only for test code, which could be rewritten to not require this to be protected
         protected virtual void OnOutputDataReceived(object sender, DataReceivedEventArgs eventArgs) {
             if (String.IsNullOrEmpty(eventArgs.Data)) {
                 return;
@@ -159,16 +150,52 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
                 Debug.Assert(output == RemoteCommandDispatcher.OutputCompleteMarker);
                 _remoteOutputReceived.Set();
             } else {
-                Console.WriteLine(output);
+                ConsoleIO.WriteLine(output, Style.Out);
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2109:ReviewVisibleEventHandlers")] // TODO: review
-        protected virtual void OnErrorDataReceived(object sender, DataReceivedEventArgs eventArgs) {
+        private void OnErrorDataReceived(object sender, DataReceivedEventArgs eventArgs) {
             if (!String.IsNullOrEmpty(eventArgs.Data)) {
-                Console.Error.WriteLine(eventArgs.Data);
+                ConsoleIO.WriteLine((string)eventArgs.Data, Style.Error);
             }
         }
+
+        #endregion
+
+        public override void Terminate(int exitCode) {
+            if (CommandLine == null) {
+                // Terminate may be called during startup when CommandLine has not been initialized.
+                // We could fix this by initializing CommandLine before starting the remote runtime process
+                return;
+            }
+
+            base.Terminate(exitCode);
+        }
+
+        protected override CommandLine CreateCommandLine() {
+            return new RemoteConsoleCommandLine(_scriptScope, _remoteCommandDispatcher, _remoteOutputReceived);
+        }
+
+        public ScriptScope ScriptScope { get { return CommandLine.ScriptScope; } }
+        public Process RemoteRuntimeProcess { get { return _remoteRuntimeProcess; } }
+
+        // TODO: We have to catch all exceptions as we are executing user code in the remote runtime, and we cannot control what 
+        // exception it may throw. This could be fixed if we built our own remoting channel which returned an error code
+        // instead of propagating exceptions back from the remote runtime.
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        protected override void UnhandledException(ScriptEngine engine, Exception e) {
+            ((RemoteConsoleCommandLine)CommandLine).UnhandledExceptionWorker(e);
+        }
+        /// <summary>
+        /// Called if the remote runtime process exits by itself. ie. without the remote console killing it.
+        /// </summary>
+        internal event EventHandler RemoteRuntimeExited;
+
+        /// <summary>
+        /// Allows the console to customize the environment variables, working directory, etc.
+        /// </summary>
+        /// <param name="processInfo">At the least, processInfo.FileName should be initialized</param>
+        public abstract void CustomizeRemoteRuntimeStartInfo(ProcessStartInfo processInfo);
 
         /// <summary>
         /// Aborts the current active call to Execute by doing Thread.Abort
@@ -192,34 +219,45 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
 
             _languageOptionsParser = CreateOptionsParser();
 
+            // Create IConsole early (with default settings) in order to be able to display startup output
+            ConsoleIO = CreateConsole(null, null, new ConsoleOptions());
+
             InitializeRemoteScriptEngine();
             Runtime = Engine.Runtime;
 
             ExecuteInternal();
 
-            _remoteRuntimeProcess.Exited -= OnRemoteRuntimeExited;
             return ExitCode;
         }
 
         #region IDisposable Members
 
-        protected virtual void Dispose(bool disposing) {
-            if (disposing) {
-                // dispose managed resources
-                _remoteOutputReceived.Close();
+        public virtual void Dispose(bool disposing) {
+            if (!disposing) {
+                // Managed fields cannot be reliably accessed during finalization since they may already have been finalized
+                return;
+            }
 
-                if (_clientChannel != null) {
-                    ChannelServices.UnregisterChannel(_clientChannel);
-                }
+            _remoteOutputReceived.Close();
 
-                if (_remoteRuntimeProcess != null && !_remoteRuntimeProcess.HasExited) {
+            if (_clientChannel != null) {
+                ChannelServices.UnregisterChannel(_clientChannel);
+                _clientChannel = null;
+            }
+
+            if (_remoteRuntimeProcess != null) {
+                _remoteRuntimeProcess.Exited -= OnRemoteRuntimeExited;
+
+                // Closing stdin is a signal to the remote runtime to exit the process.
+                _remoteRuntimeProcess.StandardInput.Close();
+                _remoteRuntimeProcess.WaitForExit(5000);
+
+                if (!_remoteRuntimeProcess.HasExited) {
                     _remoteRuntimeProcess.Kill();
                     _remoteRuntimeProcess.WaitForExit();
                 }
 
-                if (_serverInitializedEvent != null) {
-                    _serverInitializedEvent.Close();
-                }
+                _remoteRuntimeProcess = null;
             }
         }
 
@@ -229,6 +267,23 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
         }
 
         #endregion
+    }
+
+    [Serializable]
+    public class RemoteRuntimeStartupException : Exception {
+        public RemoteRuntimeStartupException() { }
+
+        public RemoteRuntimeStartupException(string message)
+            : base(message) {
+        }
+
+        public RemoteRuntimeStartupException(string message, Exception innerException)
+            : base(message, innerException) {
+        }
+
+        protected RemoteRuntimeStartupException(SerializationInfo info, StreamingContext context)
+            : base(info, context) {
+        }
     }
 }
 

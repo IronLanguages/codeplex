@@ -21,7 +21,6 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.Remoting.Lifetime;
-using System.Threading;
 
 namespace Microsoft.Scripting.Hosting.Shell.Remote {
     /// <summary>
@@ -29,7 +28,6 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
     /// over a remoting channel.
     /// </summary>
     public static class RemoteRuntimeServer {
-        internal const string RuntimeUriName = "RuntimeUri";
         internal const string CommandDispatcherUri = "CommandDispatcherUri";
         internal const string RemoteRuntimeArg = "-X:RemoteRuntimeChannel";
 
@@ -45,7 +43,10 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
             System.Collections.IDictionary properties = new System.Collections.Hashtable();
             properties["name"] = channelName;
             properties["portName"] = portName;
-            properties["exclusiveAddressUse"] = true;
+            // exclusiveAddressUse corresponds to the FILE_FLAG_FIRST_PIPE_INSTANCE flag of CreateNamedPipe. 
+            // Setting it to true seems to cause "Failed to create an IPC Port: Access is denied." occasionally.
+            // TODO: Setting this to false is secure only if we use ACLs as well.
+            properties["exclusiveAddressUse"] = false;
 
             // Create the channel.  
             IpcChannel channel = new IpcChannel(properties, null, serverProv);
@@ -53,11 +54,15 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
         }
 
         /// <summary>
-        /// Publish the ScriptEngine so that the host can use it, and then block indefinitely (until the input stream is open)
+        /// Publish objects so that the host can use it, and then block indefinitely (until the input stream is open).
+        /// 
+        /// Note that we should publish only one object, and then have other objects be accessible from it. Publishing
+        /// multiple objects can cause problems if the client does a call like "remoteProxy1(remoteProxy2)" as remoting
+        /// will not be able to know if the server object for both the proxies is on the same server.
         /// </summary>
         /// <param name="remoteRuntimeChannelName">The IPC channel that the remote console expects to use to communicate with the ScriptEngine</param>
-        /// <param name="engine">A intialized ScriptEngine that is ready to start processing script commands</param>
-        internal static void StartServer(string remoteRuntimeChannelName, ScriptEngine engine) {
+        /// <param name="scope">A intialized ScriptScope that is ready to start processing script commands</param>
+        internal static void StartServer(string remoteRuntimeChannelName, ScriptScope scope) {
             Debug.Assert(ChannelServices.GetChannel(remoteRuntimeChannelName) == null);
 
             IpcChannel channel = CreateChannel("ipc", remoteRuntimeChannelName);
@@ -70,14 +75,12 @@ namespace Microsoft.Scripting.Hosting.Shell.Remote {
             ChannelServices.RegisterChannel(channel, false);
 
             try {
-                RemotingServices.Marshal(engine, RuntimeUriName);
-
-                RemoteCommandDispatcher remoteCommandDispatcher = new RemoteCommandDispatcher();
+                RemoteCommandDispatcher remoteCommandDispatcher = new RemoteCommandDispatcher(scope);
                 RemotingServices.Marshal(remoteCommandDispatcher, CommandDispatcherUri);
 
-                // Let the remote console know that the server is ready by using a system-wide synchronization event
-                EventWaitHandle serverInitializedEvent = new EventWaitHandle(false, EventResetMode.AutoReset, remoteRuntimeChannelName);
-                serverInitializedEvent.Set();
+                // Let the remote console know that the startup output (if any) is complete. We use this instead of
+                // a named event as we want all the startup output to reach the remote console before it proceeds.
+                Console.WriteLine(RemoteCommandDispatcher.OutputCompleteMarker);
 
                 // Block on Console.In. This is used to determine when the host process exits, since ReadLine will return null then.
                 string input = System.Console.ReadLine();

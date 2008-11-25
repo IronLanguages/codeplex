@@ -55,7 +55,7 @@ numbers = {
      6 : ( 'six',       'sixth'       ),
      7 : ( 'seven',     'seventh'     ),
      8 : ( 'eight',     'eighth'      ),
-     9 : ( 'nine',      'nineth'      ),
+     9 : ( 'nine',      'ninth'       ),
     10 : ( 'ten',       'tenth'       ),
     11 : ( 'eleven',    'eleventh'    ),
     12 : ( 'twelve',    'twelfth'     ),
@@ -402,7 +402,8 @@ def gen_void_matchmaker(cw):
     for n in range(1, MaxSiteArity + 2):
         cw.write(mismatch_void, ts = gsig_noret(n), size = n, params = "CallSite site" + gparms(n))
 
-splatcaller = """[Obsolete("used by generated code", true)]
+splatcaller = """[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+[Obsolete("used by generated code", true)]
 public static object CallHelper%(size)d(CallSite<Func<CallSite, object%(ts)s>> site, object[] args) {
     return site.Target(site%(args)s);
 }
@@ -444,13 +445,13 @@ def gen_void_matchcaller_targets(cw):
 
 def main():
     return generate(
+        ("SplatCallSite call helpers", gen_splatsite),
         ("Func Types", gen_func_types),
         ("Action Types", gen_action_types),
         ("UpdateAndExecute Methods", gen_update_targets),
         ("Delegate Action Types", gen_delegate_action),
         ("Delegate Func Types", gen_delegate_func),
         ("Maximum Delegate Arity", gen_max_delegate_arity),
-        ("SplatCallSite call helpers", gen_splatsite),
 # outer ring generators
         ("Delegate Microsoft Scripting Action Types", gen_delegate_action),
         ("Delegate Microsoft Scripting Scripting Func Types", gen_delegate_func),

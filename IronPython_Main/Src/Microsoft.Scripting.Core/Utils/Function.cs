@@ -179,7 +179,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="TResult">The type of the return value of the method that this delegate encapsulates.</typeparam>
     /// <param name="arg1">The first parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg2">The second parameter of the method that this delegate encapsulates.</param>
@@ -189,7 +189,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <returns>The return value of the method that this delegate encapsulates.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public delegate TResult Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9);
@@ -205,7 +205,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="TResult">The type of the return value of the method that this delegate encapsulates.</typeparam>
     /// <param name="arg1">The first parameter of the method that this delegate encapsulates.</param>
@@ -216,7 +216,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <returns>The return value of the method that this delegate encapsulates.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
@@ -233,7 +233,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="TResult">The type of the return value of the method that this delegate encapsulates.</typeparam>
@@ -245,7 +245,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <returns>The return value of the method that this delegate encapsulates.</returns>
@@ -263,7 +263,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T12">The type of the twelfth parameter of the method that this delegate encapsulates.</typeparam>
@@ -276,7 +276,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg12">The twelfth parameter of the method that this delegate encapsulates.</param>
@@ -295,7 +295,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T12">The type of the twelfth parameter of the method that this delegate encapsulates.</typeparam>
@@ -309,7 +309,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg12">The twelfth parameter of the method that this delegate encapsulates.</param>
@@ -329,7 +329,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T12">The type of the twelfth parameter of the method that this delegate encapsulates.</typeparam>
@@ -344,7 +344,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg12">The twelfth parameter of the method that this delegate encapsulates.</param>
@@ -365,7 +365,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T12">The type of the twelfth parameter of the method that this delegate encapsulates.</typeparam>
@@ -381,7 +381,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg12">The twelfth parameter of the method that this delegate encapsulates.</param>
@@ -403,7 +403,7 @@ namespace Microsoft {
     /// <typeparam name="T6">The type of the sixth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T7">The type of the seventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T8">The type of the eighth parameter of the method that this delegate encapsulates.</typeparam>
-    /// <typeparam name="T9">The type of the nineth parameter of the method that this delegate encapsulates.</typeparam>
+    /// <typeparam name="T9">The type of the ninth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T10">The type of the tenth parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T11">The type of the eleventh parameter of the method that this delegate encapsulates.</typeparam>
     /// <typeparam name="T12">The type of the twelfth parameter of the method that this delegate encapsulates.</typeparam>
@@ -420,7 +420,7 @@ namespace Microsoft {
     /// <param name="arg6">The sixth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg7">The seventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg8">The eighth parameter of the method that this delegate encapsulates.</param>
-    /// <param name="arg9">The nineth parameter of the method that this delegate encapsulates.</param>
+    /// <param name="arg9">The ninth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg10">The tenth parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg11">The eleventh parameter of the method that this delegate encapsulates.</param>
     /// <param name="arg12">The twelfth parameter of the method that this delegate encapsulates.</param>

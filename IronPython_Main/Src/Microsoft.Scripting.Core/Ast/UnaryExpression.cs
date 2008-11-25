@@ -491,7 +491,7 @@ namespace Microsoft.Linq.Expressions {
         //CONFORMING
         public static UnaryExpression ArrayLength(Expression array) {
             ContractUtils.RequiresNotNull(array, "array");
-            if (!array.Type.IsArray || !TypeUtils.AreAssignable(typeof(Array), array.Type)) {
+            if (!array.Type.IsArray || !typeof(Array).IsAssignableFrom(array.Type)) {
                 throw Error.ArgumentMustBeArray();
             }
             if (array.Type.GetArrayRank() != 1) {

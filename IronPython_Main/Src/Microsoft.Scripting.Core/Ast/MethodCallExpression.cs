@@ -671,9 +671,9 @@ namespace Microsoft.Linq.Expressions {
 
         private static void ValidateStaticOrInstanceMethod(Expression instance, MethodInfo method) {
             if (method.IsStatic) {
-                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr);
+                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullInstance);
             } else {
-                ContractUtils.Requires(instance != null, "method", Strings.OnlyStaticMethodsHaveNullExpr);
+                ContractUtils.Requires(instance != null, "method", Strings.OnlyStaticMethodsHaveNullInstance);
                 RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }
@@ -749,7 +749,7 @@ namespace Microsoft.Linq.Expressions {
             }
             TypeUtils.ValidateType(pType);
             if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
-                if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
+                if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && pType.IsAssignableFrom(arg.GetType())) {
                     arg = Expression.Quote(arg);
                 } else {
                     // TODO: this is for LinqV1 compat, can we just have one exception?
@@ -822,7 +822,7 @@ namespace Microsoft.Linq.Expressions {
                     pType = pType.GetElementType();
                 }
                 if (!TypeUtils.AreReferenceAssignable(pType, argType) &&
-                    !(TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType()))) {
+                    !(TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && pType.IsAssignableFrom(arg.GetType()))) {
                     return false;
                 }
             }

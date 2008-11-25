@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
-using Microsoft.Scripting.ComInterop;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -1000,7 +999,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in ComBinder.GetDynamicMemberNames(o)) {
+                    foreach (string name in Microsoft.Scripting.ComInterop.ComBinder.GetDynamicMemberNames(o)) {
                         if (!res.Contains(name)) {
                             res.AddNoLock(name);
                         }
