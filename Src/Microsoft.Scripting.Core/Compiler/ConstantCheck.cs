@@ -132,31 +132,46 @@ namespace Microsoft.Linq.Expressions {
         /// The result of this function must be equivalent to IsInst, or
         /// null.
         /// </summary>
-        internal static AnalyzeTypeIsResult AnalyzeTypeIs(Expression expression, Type testType) {
-            // Extensive testing showed that Type.IsAssignableFrom,
-            // Type.IsInstanceOf, and the isinst instruction were all
-            // equivalent when used against a live object
-
-            Type objectType = expression.Type;
+        private static AnalyzeTypeIsResult AnalyzeTypeIs(Expression operand, Type testType) {
+            Type operandType = operand.Type;
 
             // Oddly, we allow void operands
             // TODO: this is the LinqV1 behavior of TypeIs, seems bad
-            if (objectType == typeof(void)) {
+            if (operandType == typeof(void)) {
                 return AnalyzeTypeIsResult.KnownFalse;
             }
 
-            // See if we can statically assign...
-            if (testType.IsAssignableFrom(objectType)) {
-                if (objectType.IsValueType && !objectType.IsNullableType()) {
+            //
+            // Type comparisons treat nullable types as if they were the
+            // underlying type. The reason is when you box a nullable it
+            // becomes a boxed value of the underlying type, or null.
+            //
+            Type nnOperandType = operandType.GetNonNullableType();
+            Type nnTestType = testType.GetNonNullableType();
+
+            //
+            // See if we can determine the answer based on the static types
+            //
+            // Extensive testing showed that Type.IsAssignableFrom,
+            // Type.IsInstanceOfType, and the isinst instruction were all
+            // equivalent when used against a live object
+            //
+            if (nnTestType.IsAssignableFrom(nnOperandType)) {
+                // If the operand is a value type (other than nullable), we
+                // know the result is always true.
+                if (operandType.IsValueType && !operandType.IsNullableType()) {
                     return AnalyzeTypeIsResult.KnownTrue;
                 }
+
                 // For reference/nullable types, we need to compare to null at runtime
                 return AnalyzeTypeIsResult.KnownAssignable;
             }
 
+            //
             // If we couldn't statically assign and the type is sealed, no
             // value at runtime can make isinst succeed
-            if (objectType.IsSealed) {
+            //
+            if (nnOperandType.IsSealed) {
                 return AnalyzeTypeIsResult.KnownFalse;
             }
 

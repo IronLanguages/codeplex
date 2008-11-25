@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Utils {
         internal const MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
 
         //CONFORMING
-        internal static Type GetNonNullableType(Type type) {
+        internal static Type GetNonNullableType(this Type type) {
             if (IsNullableType(type)) {
                 return type.GetGenericArguments()[0];
             }
@@ -155,31 +155,12 @@ namespace Microsoft.Scripting.Utils {
             if (dest == src) {
                 return true;
             }
-            if (!dest.IsValueType && !src.IsValueType && AreAssignable(dest, src)) {
+            if (!dest.IsValueType && !src.IsValueType && dest.IsAssignableFrom(src)) {
                 return true;
             }
             return false;
         }
-        //CONFORMING
-        internal static bool AreAssignable(Type dest, Type src) {
-            if (dest == src) {
-                return true;
-            }
-            if (dest.IsAssignableFrom(src)) {
-                return true;
-            }
-            if (dest.IsArray && src.IsArray && dest.GetArrayRank() == src.GetArrayRank() && AreReferenceAssignable(dest.GetElementType(), src.GetElementType())) {
-                return true;
-            }
-            if (src.IsArray && dest.IsGenericType &&
-                (dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IEnumerable<>)
-                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.IList<>)
-                || dest.GetGenericTypeDefinition() == typeof(System.Collections.Generic.ICollection<>))
-                && dest.GetGenericArguments()[0] == src.GetElementType()) {
-                return true;
-            }
-            return false;
-        }
+
         //CONFORMING
         // Checks if the type is a valid target for an instance call
         internal static bool IsValidInstanceType(MemberInfo member, Type instanceType) {
@@ -217,11 +198,11 @@ namespace Microsoft.Scripting.Utils {
             Type nnSourceType = GetNonNullableType(source);
             Type nnDestType = GetNonNullableType(dest);
             // Down conversion
-            if (AreAssignable(nnSourceType, nnDestType)) {
+            if (nnSourceType.IsAssignableFrom(nnDestType)) {
                 return true;
             }
             // Up conversion
-            if (AreAssignable(nnDestType, nnSourceType)) {
+            if (nnDestType.IsAssignableFrom(nnSourceType)) {
                 return true;
             }
             // Interface conversion
@@ -551,7 +532,7 @@ namespace Microsoft.Scripting.Utils {
 
         //CONFORMING
         private static bool IsImplicitReferenceConversion(Type source, Type destination) {
-            return AreAssignable(destination, source);
+            return destination.IsAssignableFrom(source);
         }
 
         //CONFORMING
@@ -697,43 +678,5 @@ namespace Microsoft.Scripting.Utils {
         internal static Type GetTypeForBinding(object obj) {
             return obj == null ? Null.Type : obj.GetType();
         }
-
-        /// <summary>
-        /// Simply returns a Type[] from calling GetTypeForBinding on each element
-        /// </summary>
-        internal static Type[] GetTypesForBinding(IEnumerable<object> args) {
-            return args.Select(a => GetTypeForBinding(a)).ToArray();
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        internal static IEnumerable<Type> LoadTypesFromAssembly(Assembly asm) {
-            try {
-                return asm.GetExportedTypes();
-            } catch (NotSupportedException) {
-                // GetExportedTypes does not work with dynamic assemblies
-            } catch (Exception) {
-                // Some type loads may cause exceptions. Unfortunately, there is no way to ask GetExportedTypes
-                // for just the list of types that we successfully loaded.
-            }
-
-            return GetAllTypesFromAssembly(asm).Where(t => t != null && t.IsPublic);
-        }
-
-        private static Type[] GetAllTypesFromAssembly(Assembly asm) {
-#if SILVERLIGHT // ReflectionTypeLoadException
-            try {
-                return asm.GetTypes();
-            } catch (Exception) {
-                return Type.EmptyTypes;
-            }
-#else
-            try {
-                return asm.GetTypes();
-            } catch (ReflectionTypeLoadException rtlException) {
-                return rtlException.Types;
-            }
-#endif
-        }
-
     }
 }

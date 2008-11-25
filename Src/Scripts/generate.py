@@ -31,7 +31,8 @@ root_dir = get_parent_directory(sys.prefix, 2)
 source_directories = [
     root_dir + "\\Languages\\IronPython",
     root_dir + "\\Runtime",
-    root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\Microsoft\\Scripting"
+    root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\Microsoft\\Scripting",
+    root_dir + "\\..\\..\\ndp\\fx\\src\\DynamicCom",
 ]
 
 START = "#region Generated %s"

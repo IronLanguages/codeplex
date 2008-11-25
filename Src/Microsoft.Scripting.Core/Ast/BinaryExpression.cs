@@ -904,7 +904,7 @@ namespace Microsoft.Linq.Expressions {
             }
 
             Type delegateType = conversion.Type;
-            Debug.Assert(TypeUtils.AreAssignable(typeof(System.Delegate), delegateType) && delegateType != typeof(System.Delegate));
+            Debug.Assert(typeof(System.Delegate).IsAssignableFrom(delegateType) && delegateType != typeof(System.Delegate));
             MethodInfo method = delegateType.GetMethod("Invoke");
             if (method.ReturnType == typeof(void))
                 throw Error.UserDefinedOperatorMustNotBeVoid(conversion);

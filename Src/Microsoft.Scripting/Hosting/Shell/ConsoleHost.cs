@@ -37,6 +37,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private ScriptRuntime _runtime;
         private ScriptEngine _engine;
         internal OptionsParser _languageOptionsParser;
+        private IConsole _console;
+        private CommandLine _commandLine;
 
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
@@ -45,6 +47,8 @@ namespace Microsoft.Scripting.Hosting.Shell {
         public ScriptRuntime Runtime { get { return _runtime; } protected set { _runtime = value; } }
         protected int ExitCode { get { return _exitCode; } set { _exitCode = value; } }
         protected ConsoleHostOptionsParser ConsoleHostOptionsParser { get { return _optionsParser; } set { _optionsParser = value; } }
+        protected IConsole ConsoleIO { get { return _console; } set { _console = value; } }
+        protected CommandLine CommandLine { get { return _commandLine; } }
 
         protected ConsoleHost() {
         }
@@ -129,7 +133,6 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         protected virtual IConsole CreateConsole(ScriptEngine engine, CommandLine commandLine, ConsoleOptions options) {
-            ContractUtils.RequiresNotNull(commandLine, "commandLine");
             ContractUtils.RequiresNotNull(options, "options");
 
             if (options.TabCompletion) {
@@ -147,6 +150,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
         }
 
         #endregion
+
+        /// <summary>
+        /// Request (from another thread) the console REPL loop to terminate
+        /// </summary>
+        /// <param name="exitCode">The caller can specify the exitCode corresponding to the event triggering
+        /// the termination. This will be returned from CommandLine.Run</param>
+        public virtual void Terminate(int exitCode) {
+            _commandLine.Terminate(exitCode);
+        }
 
         /// <summary>
         /// To be called from entry point.
@@ -351,7 +363,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
         private int RunCommandLine() {
             Debug.Assert(_engine != null);
 
-            CommandLine commandLine = CreateCommandLine();
+            _commandLine = CreateCommandLine();
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
             if (consoleOptions.PrintVersionAndExit) {
@@ -367,13 +379,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
                 return 0;
             }
 
-            IConsole console = CreateConsole(Engine, commandLine, consoleOptions);
+            if (_console == null) {
+                _console = CreateConsole(Engine, _commandLine, consoleOptions);
+            }
 
             int exitCode = 0;
             try {
                 if (consoleOptions.HandleExceptions) {
                     try {
-                        exitCode = commandLine.Run(Engine, console, consoleOptions);
+                        exitCode = _commandLine.Run(Engine, _console, consoleOptions);
                     } catch (Exception e) {
                         if (CommandLine.IsFatalException(e)) {
                             // Some exceptions are too dangerous to try to catch
@@ -383,7 +397,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
                         exitCode = 1;
                     }
                 } else {
-                    exitCode = commandLine.Run(Engine, console, consoleOptions);
+                    exitCode = _commandLine.Run(Engine, _console, consoleOptions);
                 }
             } finally {
                 try {

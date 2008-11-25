@@ -84,7 +84,7 @@ namespace Microsoft.Linq.Expressions {
             Type delegateType = expression.Type;
             if (delegateType == typeof(Delegate)) {
                 throw Error.ExpressionTypeNotInvocable(delegateType);
-            } else if (!TypeUtils.AreAssignable(typeof(Delegate), expression.Type)) {
+            } else if (!typeof(Delegate).IsAssignableFrom(expression.Type)) {
                 Type exprType = TypeUtils.FindGenericType(typeof(Expression<>), expression.Type);
                 if (exprType == null) {
                     throw Error.ExpressionTypeNotInvocable(expression.Type);

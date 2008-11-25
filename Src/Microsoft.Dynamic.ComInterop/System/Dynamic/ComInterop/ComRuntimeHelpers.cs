@@ -686,42 +686,6 @@ namespace Microsoft.Scripting.ComInterop {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass")] // TODO: fix
         [DllImport("oleaut32.dll", PreserveSig = false)]
         internal static extern void VariantClear(IntPtr variant);
-
-        [System.Runtime.Versioning.ResourceExposure(System.Runtime.Versioning.ResourceScope.Machine)]
-        [System.Runtime.Versioning.ResourceConsumption(System.Runtime.Versioning.ResourceScope.Machine, System.Runtime.Versioning.ResourceScope.Machine)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass")] // TODO: fix
-        [DllImport("oleaut32.dll", PreserveSig = false)]
-        internal static extern ComTypes.ITypeLib LoadRegTypeLib(ref Guid clsid, short majorVersion, short minorVersion, int lcid);
-    }
-}
-
-namespace Microsoft.Runtime.CompilerServices {
-    public partial class RuntimeOps {
-        private static IntPtr _NullInterfaceId;
-
-        // TODO: Can we just stackalloc this value inside the Invoke stub?
-        // (That would be preferrable as long as it doesn't regress perf)
-        // The JIT should inline this
-        [Obsolete("do not use this property", true)]
-        public static IntPtr NullInterfaceId {
-            get { return _NullInterfaceId; }
-        }
-        
-        internal static void EnsureNullInterfaceId() {
-            if (_NullInterfaceId == IntPtr.Zero) {
-                int size = Marshal.SizeOf(Guid.Empty);
-                IntPtr ptr = Marshal.AllocHGlobal(size);
-                for (int i = 0; i < size; i++) {
-                    Marshal.WriteByte(ptr, i, 0);
-                }
-                // If the field is still uninitialized, swap it
-                IntPtr original = Interlocked.CompareExchange(ref _NullInterfaceId, ptr, IntPtr.Zero);
-                if (original != IntPtr.Zero) {
-                    // If we lost the race, free our allocated memory
-                    Marshal.FreeHGlobal(ptr);
-                }
-            }
-        }
     }
 }
 

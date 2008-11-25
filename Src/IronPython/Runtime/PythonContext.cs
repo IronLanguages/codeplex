@@ -17,13 +17,13 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting.Binders;
 using System.IO;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Binders;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -962,7 +962,7 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT // AssemblyResolve, files, path
         private bool TryLoadAssemblyFromFileWithPath(string path, out Assembly res) {
-            if (File.Exists(path)) {
+            if (File.Exists(path) && Path.IsPathRooted(path)) {
                 try {
                     res = Assembly.LoadFile(path);
                     if (res != null) return true;

@@ -281,7 +281,6 @@ namespace Microsoft.Scripting.Binders {
 
         public static MetaObject CreateThrow(MetaObject target, MetaObject[] args, Type exception, params Expression[] exceptionArgs) {
             ContractUtils.RequiresNotNull(target, "target");
-            ContractUtils.RequiresNotNull(args, "args");
             ContractUtils.RequiresNotNull(exception, "exception");
 
             Type[] argTypes = exceptionArgs != null ? exceptionArgs.Map((arg) => arg.Type) : Type.EmptyTypes;

@@ -113,12 +113,12 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(field, "field");
 
             if (field.IsStatic) {
-                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullExpr);
+                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticFieldsHaveNullInstance);
             } else {
-                ContractUtils.Requires(expression != null, "field", Strings.OnlyStaticFieldsHaveNullExpr);
+                ContractUtils.Requires(expression != null, "field", Strings.OnlyStaticFieldsHaveNullInstance);
                 RequiresCanRead(expression, "expression");
                 if (!TypeUtils.AreReferenceAssignable(field.DeclaringType, expression.Type)) {
-                    throw Error.FieldNotDefinedForType(field, expression.Type);
+                    throw Error.FieldInfoNotDefinedForType(field.DeclaringType, field.Name, expression.Type);
                 }
             }
             return MemberExpression.Make(expression, field);
@@ -198,9 +198,9 @@ namespace Microsoft.Linq.Expressions {
             }
 
             if (mi.IsStatic) {
-                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullExpr); 
+                ContractUtils.Requires(expression == null, "expression", Strings.OnlyStaticPropertiesHaveNullInstance); 
             } else {
-                ContractUtils.Requires(expression != null, "property", Strings.OnlyStaticPropertiesHaveNullExpr);
+                ContractUtils.Requires(expression != null, "property", Strings.OnlyStaticPropertiesHaveNullInstance);
                 RequiresCanRead(expression, "expression");
                 if (!TypeUtils.IsValidInstanceType(property, expression.Type)) {
                     throw Error.PropertyNotDefinedForType(property, expression.Type);

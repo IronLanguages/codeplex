@@ -383,9 +383,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitDynamicExpression(Expression expr) {
             var node = (DynamicExpression)expr;
 
-            Type siteType = typeof(CallSite<>).MakeGenericType(node.DelegateType);
-            // TODO: is it worthwhile to lazy initialize CallSites?
-            CallSite site = DynamicSiteHelpers.MakeSite(node.Binder, siteType);
+            
+            // TODO: is it worthwhile to lazy initialize the CallSites?
+            var site = CallSite.Create(node.DelegateType, node.Binder);
+            Type siteType = site.GetType();
 
             var invoke = node.DelegateType.GetMethod("Invoke");
 

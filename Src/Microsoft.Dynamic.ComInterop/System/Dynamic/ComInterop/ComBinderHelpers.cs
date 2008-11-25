@@ -17,21 +17,35 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting.Binders;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Binders;
-using Microsoft.Scripting.Utils;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
     internal static class ComBinderHelpers {
+
+        internal static bool PreferPut(Type type) {
+            Debug.Assert(type != null);
+
+            if (type.IsValueType || type.IsArray) return true;
+
+            if (type == typeof(String) ||
+                type == typeof(DBNull) ||
+                type == typeof(System.Reflection.Missing) ||
+                type == typeof(CurrencyWrapper)) {
+
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         internal static bool IsStrongBoxArg(MetaObject o) {
             if (o.IsByRef) return false;
 
@@ -45,12 +59,14 @@ namespace Microsoft.Scripting.ComInterop {
             var restrictions = target.Restrictions.Merge(Restrictions.Combine(args));
 
             Expression[] argExpressions = new Expression[args.Length + 1];
-            Type[] signatureTypes = new Type[args.Length + 1];
+            Type[] signatureTypes = new Type[args.Length + 3]; // args + CallSite, target, returnType
+
+            signatureTypes[0] = typeof(CallSite);
 
             //TODO: we are not restricting on target type here, but in theory we could. 
             //It is a tradeoff between rule reuse and higher polymorphism of the site. 
             argExpressions[0] = target.Expression;
-            signatureTypes[0] = target.Expression.Type;
+            signatureTypes[1] = target.Expression.Type;
 
             for (int i = 0; i < args.Length; i++) {
                 MetaObject currArgument = args[i];
@@ -67,19 +83,19 @@ namespace Microsoft.Scripting.ComInterop {
                     );
 
                     argExpressions[i + 1] = boxedValueAccessor;
-                    signatureTypes[i + 1] = boxedValueAccessor.Type.MakeByRefType();
+                    signatureTypes[i + 2] = boxedValueAccessor.Type.MakeByRefType();
                 } else {
                     argExpressions[i + 1] = currArgument.Expression;
-                    signatureTypes[i + 1] = currArgument.Expression.Type;
+                    signatureTypes[i + 2] = currArgument.Expression.Type;
                 }
             }
 
-            // TODO: we should really be using the same delegate as the CallSite
-            Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(signatureTypes, typeof(object));
+            // Last signatureType is the return value
+            signatureTypes[signatureTypes.Length - 1] = typeof(object);
 
             return new MetaObject(
                 Expression.MakeDynamic(
-                    delegateType,
+                    Expression.GetDelegateType(signatureTypes),
                     action,
                     argExpressions
                 ),

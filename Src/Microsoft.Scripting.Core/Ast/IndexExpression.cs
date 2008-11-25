@@ -204,9 +204,9 @@ namespace Microsoft.Linq.Expressions {
             ValidateMethodInfo(method);
             ContractUtils.Requires((method.CallingConvention & CallingConventions.VarArgs) == 0, "method", Strings.AccessorsCannotHaveVarArgs);            
             if (method.IsStatic) {
-                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullExpr); 
+                ContractUtils.Requires(instance == null, "instance", Strings.OnlyStaticMethodsHaveNullInstance); 
             } else {
-                ContractUtils.Requires(instance != null, "method", Strings.OnlyStaticMethodsHaveNullExpr);
+                ContractUtils.Requires(instance != null, "method", Strings.OnlyStaticMethodsHaveNullInstance);
                 RequiresCanRead(instance, "instance");
                 ValidateCallInstanceType(instance.Type, method);
             }
@@ -230,7 +230,7 @@ namespace Microsoft.Linq.Expressions {
                     TypeUtils.ValidateType(pType);
 
                     if (!TypeUtils.AreReferenceAssignable(pType, arg.Type)) {
-                        if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && TypeUtils.AreAssignable(pType, arg.GetType())) {
+                        if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && pType.IsAssignableFrom(arg.GetType())) {
                             arg = Expression.Quote(arg);
                         } else {
                             throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);

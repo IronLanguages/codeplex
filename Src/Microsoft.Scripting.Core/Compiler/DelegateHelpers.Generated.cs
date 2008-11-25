@@ -61,6 +61,31 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
+
+        /// <summary>
+        /// Finds a delegate type using the types in the array. 
+        /// We use the cache to avoid copying the array, and to cache the
+        /// created delegate type
+        /// </summary>
+        internal static Type MakeDelegateType(Type[] types) {
+            lock (_DelegateCache) {
+                TypeInfo curTypeInfo = _DelegateCache;
+
+                // arguments & return type
+                for (int i = 0; i < types.Length; i++) {
+                    curTypeInfo = NextTypeInfo(types[i], curTypeInfo);
+                }
+
+                // see if we have the delegate already
+                if (curTypeInfo.DelegateType == null) {
+                    // clone because MakeCustomDelegate can hold onto the array.
+                    curTypeInfo.DelegateType = MakeDelegate((Type[])types.Clone());
+                }
+
+                return curTypeInfo.DelegateType;
+            }
+        }
+
         /// <summary>
         /// Finds a delegate type for a CallSite using the types in the ReadOnlyCollection of Expression. 
         /// 
@@ -139,40 +164,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return curTypeInfo.DelegateType;
             }
         }
-
-        internal static Type MakeDeferredSiteDelegate(Type[] types, Type returnType) {
-            lock (_DelegateCache) {
-                TypeInfo curTypeInfo = _DelegateCache;
-
-                // CallSite
-                curTypeInfo = NextTypeInfo(typeof(CallSite), curTypeInfo);
-
-                // arguments
-                for (int i = 0; i < types.Length; i++) {
-                    curTypeInfo = NextTypeInfo(types[i], curTypeInfo);
-                }
-
-                // return type
-                curTypeInfo = NextTypeInfo(returnType, curTypeInfo);
-
-                // see if we have the delegate already
-                if (curTypeInfo.DelegateType == null) {
-                    // nope, go ahead and create it and spend the
-                    // cost of creating the array.
-                    Type[] paramTypes = new Type[types.Length + 2];
-                    paramTypes[0] = typeof(CallSite);
-                    paramTypes[paramTypes.Length - 1] = returnType;
-                    for (int i = 0; i < types.Length; i++) {
-                        paramTypes[i + 1] = types[i];
-                    }
-
-                    curTypeInfo.DelegateType = MakeDelegate(paramTypes);
-                }
-
-                return curTypeInfo.DelegateType;
-            }
-        }
-
 
         internal static TypeInfo NextTypeInfo(Type initialArg) {
             lock (_DelegateCache) {

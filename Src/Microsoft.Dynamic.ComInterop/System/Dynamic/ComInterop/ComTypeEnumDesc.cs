@@ -15,30 +15,22 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT // ComObject
 
-using System.Diagnostics;
 using Microsoft.Linq.Expressions;
+using System.Runtime.InteropServices;
+using Microsoft.Scripting.Binders;
+using System.Globalization;
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
-
-    internal sealed class ReturnBuilder {
-        private readonly Type _returnType;
-
-        /// <summary>
-        /// Creates a ReturnBuilder
-        /// </summary>
-        /// <param name="returnType">the type the ReturnBuilder will leave on the stack</param>
-        internal ReturnBuilder(Type returnType) {
-            Debug.Assert(returnType != null);
-
-            _returnType = returnType;
+    internal sealed class ComTypeEnumDesc : ComTypeDesc {
+        public override string ToString() {
+            return String.Format(CultureInfo.CurrentCulture, "<enum '{0}'>", TypeName);
         }
 
-        internal Type ReturnType {
-            get {
-                return _returnType;
-            }
+        internal ComTypeEnumDesc(ComTypes.ITypeInfo typeInfo) :
+            base(typeInfo) {
         }
     }
 }

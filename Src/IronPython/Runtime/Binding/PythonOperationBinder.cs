@@ -15,7 +15,6 @@
 
 using System; using Microsoft;
 using Microsoft.Scripting.Binders;
-using Microsoft.Scripting.ComInterop;
 using Microsoft.Linq.Expressions;
 
 using Microsoft.Scripting.Actions;
@@ -101,7 +100,7 @@ namespace IronPython.Runtime.Binding {
 
             public override MetaObject FallbackSetIndex(MetaObject target, MetaObject[] indexes, MetaObject value, MetaObject errorSuggestion) {
 #if !SILVERLIGHT
-                if (ComBinder.TryBindSetIndex(this, ref target, indexes, value)) {
+                if (Microsoft.Scripting.ComInterop.ComBinder.TryBindSetIndex(this, ref target, indexes, value)) {
                     return target;
                 }
 #endif                
@@ -123,7 +122,7 @@ namespace IronPython.Runtime.Binding {
 
             public override MetaObject FallbackGetIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion) {
 #if !SILVERLIGHT
-                if (ComBinder.TryBindGetIndex(this, ref target, indexes)) {
+                if (Microsoft.Scripting.ComInterop.ComBinder.TryBindGetIndex(this, ref target, indexes)) {
                     return target;
                 }
 #endif

@@ -109,7 +109,7 @@ namespace Microsoft.Linq.Expressions {
                 RequiresCanRead(expr, "initializers");
 
                 if (!TypeUtils.AreReferenceAssignable(type, expr.Type)) {
-                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && TypeUtils.AreAssignable(type, expr.GetType())) {
+                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && type.IsAssignableFrom(expr.GetType())) {
                         expr = Expression.Quote(expr);
                     } else {
                         throw Error.ExpressionTypeCannotInitializeArrayType(expr.Type, type);
@@ -163,7 +163,16 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return NewArrayExpression.Make(ExpressionType.NewArrayBounds, type.MakeArrayType(dimensions), bounds.ToReadOnly());
+            Type arrayType;
+            if (dimensions == 1) {
+                //To get a vector, need call Type.MakeArrayType(). 
+                //Type.MakeArrayType(1) gives a non-vector array, which will cause type check error.
+                arrayType = type.MakeArrayType();
+            } else {
+                arrayType = type.MakeArrayType(dimensions);
+            }
+
+            return NewArrayExpression.Make(ExpressionType.NewArrayBounds, arrayType, bounds.ToReadOnly());
         }
 
         #endregion

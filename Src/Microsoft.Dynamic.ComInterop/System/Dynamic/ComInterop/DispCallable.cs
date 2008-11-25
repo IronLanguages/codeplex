@@ -36,7 +36,6 @@ namespace Microsoft.Scripting.ComInterop {
             _methodDesc = methodDesc;
         }
 
-        [Confined]
         public override string ToString() {
             return String.Format(CultureInfo.CurrentCulture, "<bound dispmethod {0}>", _methodDesc.Name);
         }

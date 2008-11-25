@@ -67,7 +67,7 @@ namespace Microsoft.Linq.Expressions {
 
         //CONFORMING
         private static void ValidateListInitArgs(Type listType, ReadOnlyCollection<ElementInit> initializers) {
-            if (!TypeUtils.AreAssignable(typeof(IEnumerable), listType)) {
+            if (!typeof(IEnumerable).IsAssignableFrom(listType)) {
                 throw Error.TypeNotIEnumerable(listType);
             }
             for (int i = 0, n = initializers.Count; i < n; i++) {

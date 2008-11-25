@@ -24,9 +24,12 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.ComInterop {
-    // First attempt at simple splatting call site helper
+
+    // TODO: this entire class should go away.
+    // Instead we should be using a dynamic convert action to get a delegate
     internal sealed partial class SplatCallSite {
         internal delegate object SplatCaller(object[] args);
 
@@ -36,10 +39,6 @@ namespace Microsoft.Scripting.ComInterop {
 
         public SplatCallSite(CallSiteBinder binder) {
             _binder = binder;
-        }
-
-        public CallSiteBinder Binder {
-            get { return _binder; }
         }
 
         public object Invoke(object[] args) {
@@ -56,8 +55,8 @@ namespace Microsoft.Scripting.ComInterop {
         private SplatCaller MakeCaller(int args) {
             MethodInfo mi = GetType().GetMethod("CallHelper" + args);
             if (mi != null) {
-                Type siteType = mi.GetParametersCached()[0].ParameterType;
-                CallSite site = DynamicSiteHelpers.MakeSite(_binder, siteType);
+                Type delegateType = mi.GetParameters()[0].ParameterType.GetGenericArguments()[0];
+                CallSite site = CallSite.Create(delegateType, _binder);
                 return (SplatCaller)Delegate.CreateDelegate(typeof(SplatCaller), site, mi);
             }
             return MakeBigCaller(args);
@@ -76,10 +75,19 @@ namespace Microsoft.Scripting.ComInterop {
         /// <returns>a SplatCaller delegate.</returns>
         private SplatCaller MakeBigCaller(int args) {
             // Get the dynamic site type
-            Type siteDelegateType = DynamicSiteHelpers.MakeCallSiteDelegate(Helpers.RepeatedArray(typeof(object), args + 1));
-            Type siteType = typeof(CallSite<>).MakeGenericType(new Type[] { siteDelegateType });
+            var siteDelegateTypeArgs = new Type[args + 2];
+            siteDelegateTypeArgs[0] = typeof(CallSite);
+            for (int i = 1, n = siteDelegateTypeArgs.Length; i < n;  i++) {
+                siteDelegateTypeArgs[i] = typeof(object);
+            }
+            Type siteDelegateType = Expression.GetDelegateType(siteDelegateTypeArgs);
 
-            DynamicILGen gen = Snippets.Shared.CreateDynamicMethod("_stub_SplatCaller", typeof(object), new Type[] { siteType, typeof(object[]) }, false);
+            // Create the callsite and get its type
+            CallSite callSite = CallSite.Create(siteDelegateType, _binder);
+            Type siteType = callSite.GetType();
+
+            var method = new DynamicMethod("_stub_SplatCaller", typeof(object), new Type[] { siteType, typeof(object[]) }, true);
+            var gen = method.GetILGenerator();
             
             // Emit the site's target
             gen.Emit(OpCodes.Ldarg_0);
@@ -96,12 +104,11 @@ namespace Microsoft.Scripting.ComInterop {
             }
             
             // Invoke the target
-            gen.EmitCall(siteDelegateType.GetMethod("Invoke"));
+            gen.Emit(OpCodes.Callvirt, siteDelegateType.GetMethod("Invoke"));
             gen.Emit(OpCodes.Ret);
 
-            // Create the delegate and callsite
-            CallSite callSite = DynamicSiteHelpers.MakeSite(_binder, siteType);
-            return gen.Finish().CreateDelegate<SplatCaller>(callSite);
+            // Create the delegate
+            return method.CreateDelegate<SplatCaller>(callSite);
         }
     }
 }

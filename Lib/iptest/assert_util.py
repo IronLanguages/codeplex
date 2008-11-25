@@ -209,6 +209,9 @@ def AreNotEqual(a, b):
 def AssertContains(containing_string, substring):
     Assert(substring in containing_string, "%s should be in %s" % (substring, containing_string))
 
+def AssertDoesNotContain(containing_string, substring):
+    Assert(not substring in containing_string, "%s should not be in %s" % (substring, containing_string))
+
 def SequencesAreEqual(a, b, m=None):
     Assert(len(a) == len(b), m or 'sequence lengths differ: expected %d, but found %d' % (len(b), len(a)))
     for i in xrange(len(a)):

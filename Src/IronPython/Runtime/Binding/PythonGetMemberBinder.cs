@@ -17,7 +17,6 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Binders;
-using Microsoft.Scripting.ComInterop;
 using Microsoft.Linq.Expressions;
 
 using Microsoft.Scripting.Actions;
@@ -235,7 +234,7 @@ namespace IronPython.Runtime.Binding {
 
         public override MetaObject FallbackGetMember(MetaObject self, MetaObject onBindingError) {
 #if !SILVERLIGHT
-            if (ComBinder.TryBindGetMember(this, ref self)) {
+            if (Microsoft.Scripting.ComInterop.ComBinder.TryBindGetMember(this, ref self)) {
                 return self;
             }
 #endif

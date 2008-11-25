@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.ComInterop {
             Expression[] explicitArgExprs = _args.Map(a => a.Expression);
             _totalExplicitArgs = explicitArgTypes.Length;
 
-            _varEnumSelector = new VarEnumSelector(typeof(object), marshalArgTypes);
+            _varEnumSelector = new VarEnumSelector(marshalArgTypes);
 
             // We already tested the instance, so no need to test it again
             for (int i = 0; i < explicitArgTypes.Length; i++) {

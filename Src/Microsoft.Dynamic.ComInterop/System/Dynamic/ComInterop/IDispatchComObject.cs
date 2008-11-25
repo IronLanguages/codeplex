@@ -292,6 +292,39 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        internal bool TryGetPropertySetterExplicit(string name, out ComMethodDesc method, Type limitType) {
+            EnsureScanDefinedMethods();
+
+            // TODO: We have a thread-safety issue here right now
+            // TODO: since we are mutating _funcs array
+            // TODO: The workaround is to use Hashtable (which is thread-safe
+            // TODO: on read operations) to fetch the value out.
+            int dispId;
+            int hresult = GetIDsOfNames(_dispatchObject, name, out dispId);
+
+            if (hresult == ComHresults.S_OK) {
+                // we do not know whether we have put or putref here
+                // and we will not guess and pretend we found both.
+                ComMethodDesc put = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT);
+                _comTypeDesc.Puts.Add(name, put);
+
+                ComMethodDesc putref = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF);
+                _comTypeDesc.PutRefs.Add(name, putref);
+
+                if (ComBinderHelpers.PreferPut(limitType)) {
+                    method = put;
+                } else {
+                    method = putref;
+                }
+                return true;
+            } else if (hresult == ComHresults.DISP_E_UNKNOWNNAME) {
+                method = null;
+                return false;
+            } else {
+                throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
+            }
+        }
+
         internal override IEnumerable<string> MemberNames {
             get {
                 EnsureScanDefinedMethods();
@@ -375,7 +408,7 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
 
-            ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo, null);
+            ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo);
 
             ComTypes.ITypeInfo classTypeInfo = null;
             Dictionary<string, ComEventDesc> events = null;
@@ -522,13 +555,13 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
 
-            ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo, null);
+            ComTypeDesc typeDesc = ComTypeDesc.FromITypeInfo(typeInfo);
 
             ComMethodDesc getItem = null;
             ComMethodDesc setItem = null;
             Dictionary<string, ComMethodDesc> funcs = new Dictionary<string, ComMethodDesc>(typeAttr.cFuncs);
-            List<ComMethodDesc> put = new List<ComMethodDesc>();
-            List<ComMethodDesc> putref = new List<ComMethodDesc>();
+            Dictionary<string, ComMethodDesc> puts = new Dictionary<string, ComMethodDesc>();
+            Dictionary<string, ComMethodDesc> putrefs = new Dictionary<string, ComMethodDesc>();
             Set<int> usedDispIds = new Set<int>();
 
             for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
@@ -546,11 +579,11 @@ namespace Microsoft.Scripting.ComInterop {
                     ComMethodDesc method = new ComMethodDesc(typeInfo, funcDesc);
 
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0) {
-                        put.Add(method);
+                        puts.Add(method.Name, method);
                         continue;
                     }
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
-                        putref.Add(method);
+                        putrefs.Add(method.Name, method);
                         continue;
                     }
 
@@ -575,13 +608,8 @@ namespace Microsoft.Scripting.ComInterop {
                 }
             }
 
-            ProcessPut(funcs, put, usedDispIds, ref setItem);
-            ProcessPut(funcs, putref, usedDispIds, ref setItem);
-
-            Dictionary<string, ComMethodDesc> puts = new Dictionary<string, ComMethodDesc>();
-
-            AddPuts(puts, putref);
-            AddPuts(puts, put);
+            ProcessPut(funcs, puts, usedDispIds, ref setItem);
+            ProcessPut(funcs, putrefs, usedDispIds, ref setItem);
 
             lock (_CacheComTypeDesc) {
                 ComTypeDesc cachedTypeDesc;
@@ -593,19 +621,14 @@ namespace Microsoft.Scripting.ComInterop {
                 }
                 _comTypeDesc.Funcs = funcs;
                 _comTypeDesc.Puts = puts;
+                _comTypeDesc.PutRefs = putrefs;
                 _comTypeDesc.GetItem = getItem;
                 _comTypeDesc.SetItem = setItem;
             }
         }
 
-        private static void AddPuts(Dictionary<string, ComMethodDesc> puts, List<ComMethodDesc> put) {
-            foreach (var p in put) {
-                puts[p.Name] = p;
-            }
-        }
-
-        private static void ProcessPut(Dictionary<string, ComMethodDesc> funcs, List<ComMethodDesc> methods, Set<int> usedDispIds, ref ComMethodDesc setItem) {
-            foreach (ComMethodDesc method in methods) {
+        private static void ProcessPut(Dictionary<string, ComMethodDesc> funcs, Dictionary<string, ComMethodDesc> methods, Set<int> usedDispIds, ref ComMethodDesc setItem) {
+            foreach (ComMethodDesc method in methods.Values) {
                 if (!usedDispIds.Contains(method.DispId)) {
                     funcs.Add(method.Name, method);
                     usedDispIds.Add(method.DispId);
@@ -619,9 +642,16 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        internal bool TryGetPropertySetter(string name, out ComMethodDesc method) {
+        internal bool TryGetPropertySetter(string name, out ComMethodDesc method, Type limitType) {
             EnsureScanDefinedMethods();
-            return _comTypeDesc.Puts.TryGetValue(name, out method);
+
+            if (ComBinderHelpers.PreferPut(limitType)) {
+                return _comTypeDesc.Puts.TryGetValue(name, out method) ||
+                    _comTypeDesc.PutRefs.TryGetValue(name, out method);
+            } else {
+                return _comTypeDesc.PutRefs.TryGetValue(name, out method) ||
+                    _comTypeDesc.Puts.TryGetValue(name, out method);
+            }
         }
 
         internal bool TryGetEventHandler(string name, out ComEventDesc @event) {

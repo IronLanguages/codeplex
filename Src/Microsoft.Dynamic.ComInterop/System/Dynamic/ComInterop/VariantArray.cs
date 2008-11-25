@@ -25,6 +25,7 @@ using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Security;
 
 namespace Microsoft.Scripting.ComInterop {
 
@@ -92,15 +93,37 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
-        // TODO: generate internal members
         private static Type CreateCustomType(int size) {
             var attrs = TypeAttributes.NotPublic | TypeAttributes.SequentialLayout;
-            AssemblyGen asm = Snippets.Shared.GetAssembly(false, false);
-            TypeBuilder type = asm.DefineType("VariantArray" + size, typeof(ValueType), attrs, true);
+            TypeBuilder type = DynamicModule.DefineType("VariantArray" + size, attrs, typeof(ValueType));
             for (int i = 0; i < size; i++) {
                 type.DefineField("Element" + i, typeof(Variant), FieldAttributes.Public);
             }
             return type.CreateType();
+        }
+
+        private static readonly object _lock = new object();
+        private static ModuleBuilder _dynamicModule;
+        private static ModuleBuilder DynamicModule {
+            get {
+                if (_dynamicModule != null) {
+                    return _dynamicModule;
+                }
+                lock (_lock) {
+                    if (_dynamicModule == null) {
+                        // mark the assembly transparent so that it works in partial trust:
+                        var attributes = new[] { 
+                            new CustomAttributeBuilder(typeof(SecurityTransparentAttribute).GetConstructor(Type.EmptyTypes), new object[0])
+                        };
+
+                        string name = typeof(VariantArray).Namespace + ".DynamicAssembly";
+                        var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run, attributes);
+                        assembly.DefineVersionInfoResource();
+                        _dynamicModule = assembly.DefineDynamicModule(name);
+                    }
+                    return _dynamicModule;
+                }
+            }
         }
     }
 }

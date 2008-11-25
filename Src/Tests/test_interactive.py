@@ -809,9 +809,9 @@ def get_process_ids(ipi):
     Assert(remoteRuntimeProcessId.isdigit(), "remoteRuntimeProcessId is '%s'" % remoteRuntimeProcessId)
     return consoleProcessId, int(remoteRuntimeProcessId)
 
-def start_remote_console():
+def start_remote_console(args = ""):
     inputScript = testpath.test_inputs_dir + "\\RemoteConsole.py"
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\" -X:ExceptionDetail " + args)
     AreEqual(ipi.Start(), True)
     return ipi
 
@@ -857,11 +857,10 @@ def test_remote_server_restart():
     runtimeProcess.WaitForExit()
     # The Process.Exited event is fired asynchronously, and might take sometime to fire. 
     # Hence, we need to block for a known marker
-    ipi.EatToMarker("Remote runtime exited")
+    ipi.EatToMarker("Remote runtime terminated")
 
-    # Since the ThreadAbortException is deferred, it actually shows up after pressing Enter
+    # We need to press Enter to nudge the old console out of the ReadLine...
     restartMessage = ipi.ExecuteLine("", True)
-    AssertContains(restartMessage, "Press Enter")
     ipi.ReadError()
     
     consoleProcessId2, remoteRuntimeProcessId2 = get_process_ids(ipi)
@@ -878,7 +877,12 @@ def test_remote_console_exception():
     AssertContains(zeroDivisionErrorOutput, "ZeroDivisionError")
     ipi.End()
 
-def test_remote_abort_command():
+def test_remote_startup_script():
+    ipi = start_remote_console("-i " + testpath.test_inputs_dir + "\\simpleCommand.py")
+    AreEqual(ipi.ExecuteLine("x"), "1")
+    ipi.End()
+
+def get_abort_command_output():
     ipi = start_remote_console()
     ipi.ExecuteLine("import System")
     
@@ -889,9 +893,21 @@ def test_remote_abort_command():
     ipi.ExecuteLine         ("")
 
     result = ipi.ExecuteLine("Hang()", True)
-    AssertContains(result, "KeyboardInterrupt")
-
     ipi.End()
+    return result
+
+def test_remote_abort_command():
+    for i in xrange(10):
+        output = get_abort_command_output()
+        if "KeyboardInterrupt" in output:
+            AssertDoesNotContain(output, "Thread was being aborted.") # ThreadAbortException
+            return
+        else:
+            # Rarely, under stress conditions, ThreadAbortException leaks through.
+            # Keep retrying until we actually get KeyboardInterrupt
+            AssertContains(output, "Thread was being aborted.") # ThreadAbortException
+            continue
+    Assert(False, "KeyboardInterrupt not thrown. Only KeyboardInterrupt was thrown")
 
 #------------------------------------------------------------------------------
 

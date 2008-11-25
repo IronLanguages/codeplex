@@ -57,19 +57,19 @@ namespace Microsoft.Linq.Expressions {
         public override Expression Reduce() {
             if (CanReduce) {
                 return ReduceTypeEqual();
-            } else {
-                return this;
             }
+            return this;
         }
 
-        #region "Reduce TypeEqual"
+        #region Reduce TypeEqual
 
         private Expression ReduceTypeEqual() {
             Type cType = Expression.Type;
             
-            // value types (including Void). Can perform test right now.
-            if (cType.IsValueType) {
-                return EvalAndReturnConst(cType == _typeOperand);
+            // For value types (including Void, but not nullables), we can
+            // determine the result now
+            if (cType.IsValueType && !cType.IsNullableType()) {
+                return Expression.Block(Expression, Expression.Constant(cType == _typeOperand));
             }
 
             // Can check the value right now for constants.
@@ -77,39 +77,24 @@ namespace Microsoft.Linq.Expressions {
                 return ReduceConstantTypeEqual();
             }
 
-            // if LHS type is sealed and of the same type it will match if value is not null
+            // If the operand type is a sealed reference type or a nullable
+            // type, it will match if value is not null
             if (cType.IsSealed && (cType == _typeOperand)) {
-                return Expression.NotEqual(Expression, Expression.Constant(null));
+                return Expression.NotEqual(Expression, Expression.Constant(null, Expression.Type));
             }
 
             // expression is a ByVal parameter. Can safely reevaluate.
-            if (Expression.NodeType == ExpressionType.Parameter) {
-                ParameterExpression pe = Expression as ParameterExpression;
-                if (!pe.IsByRef) {
-                    return ByValParameterTypeEqual(pe);
-                }
+            var parameter = Expression as ParameterExpression;
+            if (parameter != null && !parameter.IsByRef) {
+                return ByValParameterTypeEqual(parameter);
             }
-            
-            // ==== general case
-            // need a temp to avoid LHS reevaluation.
-            ParameterExpression temp = Variable(
-                typeof(Object),
-                "TypeEqualLHS"
-            );
 
+            // Create a temp so we only evaluate the left side once
+            parameter = Parameter(typeof(object), null);
             return Expression.Block(
-                new ParameterExpression[] { temp },
-                Expression.Assign(temp, Expression),
-                ByValParameterTypeEqual(temp)
-            );
-        }
-
-        // evaluates the expression and returns a const 
-        // this is used where we already know the result.
-        private Expression EvalAndReturnConst(bool value) {
-            return Block(
-                Expression,
-                Expression.Constant(value)
+                new[] { parameter },
+                Expression.Assign(parameter, Helpers.Convert(Expression, typeof(object))),
+                ByValParameterTypeEqual(parameter)
             );
         }
 
@@ -123,8 +108,7 @@ namespace Microsoft.Linq.Expressions {
                         typeof(object).GetMethod("GetType")
                     ),
                     Expression.Constant(_typeOperand)
-                ),
-                null
+                )
             );
         }
 
@@ -133,10 +117,10 @@ namespace Microsoft.Linq.Expressions {
             //TypeEqual(null, T) always returns false.
             if (ce.Value == null) {
                 return Expression.Constant(false);
+            } else if (_typeOperand.IsNullableType()) {
+                return Expression.Constant(_typeOperand == ce.Type);
             } else {
-                return Expression.Constant(
-                    _typeOperand == ce.Value.GetType()
-                );
+                return Expression.Constant(_typeOperand == ce.Value.GetType());
             }
         }
 
@@ -160,6 +144,16 @@ namespace Microsoft.Linq.Expressions {
             return new TypeBinaryExpression(expression, type, ExpressionType.TypeIs);
         }
 
+        /// <summary>
+        /// Creates an Expression that compares run-time type identity. It is
+        /// roughly equivalent to a tree that does this:
+        ///     obj != null &amp;&amp; obj.GetType() == type
+        ///     
+        /// If you want to check for "null" use Expression.Equal
+        /// </summary>
+        /// <param name="expression">The operand.</param>
+        /// <param name="type">The type to check for at run-time.</param>
+        /// <returns>A new Expression that performs a type equality check.</returns>
         public static TypeBinaryExpression TypeEqual(Expression expression, Type type) {
             RequiresCanRead(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
@@ -167,6 +161,5 @@ namespace Microsoft.Linq.Expressions {
 
             return new TypeBinaryExpression(expression, type, ExpressionType.TypeEqual);
         }
-
     }
 }

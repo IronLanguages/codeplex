@@ -184,12 +184,16 @@ def gen_expr_factory(cw, source):
 def gen_expr_factory_core(cw):
     gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\System\\Linq\\Expressions\\System.Linq.Expressions.txt")
 
+def gen_expr_factory_com(cw):
+    gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\DynamicCom\\System\\Dynamic\\ComInterop\\System.Dynamic.ComInterop.txt")
+
 def gen_expr_factory_scripting(cw):
     gen_expr_factory(cw, generate.root_dir + "\\Runtime\\Microsoft.Scripting\\Microsoft.Scripting.txt")
 
 def main():
     return generate.generate(
         ("Exception Factory", gen_expr_factory_core),
+        ("Com Exception Factory", gen_expr_factory_com),
         ("Microsoft.Scripting Exception Factory", gen_expr_factory_scripting),
     )
 

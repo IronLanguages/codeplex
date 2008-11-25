@@ -95,9 +95,6 @@ namespace Microsoft.Scripting.Binders {
                 case ExpressionType.PowerAssign:
                 case ExpressionType.RightShiftAssign:
                 case ExpressionType.SubtractAssign:
-                case ExpressionType.AddAssignChecked:
-                case ExpressionType.MultiplyAssignChecked:
-                case ExpressionType.SubtractAssignChecked:
 
                 // *** END GENERATED CODE ***
 

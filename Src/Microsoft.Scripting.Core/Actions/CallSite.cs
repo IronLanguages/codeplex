@@ -53,6 +53,10 @@ namespace Microsoft.Runtime.CompilerServices {
     /// of this type.
     /// </summary>
     public abstract class CallSite {
+
+        // Cache of CallSite constructors for a given delegate type
+        private static CacheDict<Type, Func<CallSiteBinder, CallSite>> _SiteCtors;
+                
         /// <summary>
         /// The Binder responsible for binding operations at this call site.
         /// This binder is invoked by the UpdateAndExecute below if all Level 0,
@@ -71,6 +75,32 @@ namespace Microsoft.Runtime.CompilerServices {
         public CallSiteBinder Binder {
             get { return _binder; }
         }
+
+        /// <summary>
+        /// Creates a CallSite with the given delegate type and binder.
+        /// </summary>
+        /// <param name="delegateType">The CallSite delegate type.</param>
+        /// <param name="binder">The CallSite binder.</param>
+        /// <returns>The new CallSite.</returns>
+        public static CallSite Create(Type delegateType, CallSiteBinder binder) {
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(binder, "binder");
+            ContractUtils.Requires(delegateType.IsSubclassOf(typeof(Delegate)), "delegateType", Strings.TypeMustBeDerivedFromSystemDelegate);
+
+            if (_SiteCtors == null) {
+                // It's okay to just set this, worst case we're just throwing away some data
+                _SiteCtors = new CacheDict<Type, Func<CallSiteBinder, CallSite>>(100);
+            }
+            Func<CallSiteBinder, CallSite> ctor;
+            lock (_SiteCtors) {
+                if (!_SiteCtors.TryGetValue(delegateType, out ctor)) {
+                    MethodInfo method = typeof(CallSite<>).MakeGenericType(delegateType).GetMethod("Create");
+                    ctor = (Func<CallSiteBinder, CallSite>)Delegate.CreateDelegate(typeof(Func<CallSiteBinder, CallSite>), method);
+                    _SiteCtors.Add(delegateType, ctor);
+                }
+            }
+            return ctor(binder);
+        }
     }
 
     /// <summary>
@@ -79,7 +109,7 @@ namespace Microsoft.Runtime.CompilerServices {
     /// <typeparam name="T">The delegate type.</typeparam>
     public sealed partial class CallSite<T> : CallSite where T : class {
         /// <summary>
-        /// The update delegate. Called when the dynamic site experiences cache miss
+        /// The update delegate. Called when the dynamic site experiences cache miss.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
@@ -92,7 +122,7 @@ namespace Microsoft.Runtime.CompilerServices {
         public T Target;
 
         /// <summary>
-        /// The Level 1 cache - a history of the dynamic site
+        /// The Level 1 cache - a history of the dynamic site.
         /// </summary>
         internal RuleSet<T> Rules;
 

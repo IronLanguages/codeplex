@@ -124,7 +124,7 @@ namespace Microsoft.Linq.Expressions {
             if (!TypeUtils.AreReferenceAssignable(expectedType, value.Type)) {
                 // C# autoquotes return values, so we'll do that here
                 if (TypeUtils.IsSameOrSubclass(typeof(Expression), expectedType) &&
-                    TypeUtils.AreAssignable(expectedType, value.GetType())) {
+                    expectedType.IsAssignableFrom(value.GetType())) {
                     value = Expression.Quote(value);
                 }
                 throw Error.ExpressionTypeDoesNotMatchLabel(value.Type, expectedType);

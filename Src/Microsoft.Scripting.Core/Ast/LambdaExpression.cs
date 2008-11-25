@@ -283,7 +283,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(delegateType, "delegateType");
             RequiresCanRead(body, "body");
 
-            if (!TypeUtils.AreAssignable(typeof(Delegate), delegateType) || delegateType == typeof(Delegate)) {
+            if (!typeof(Delegate).IsAssignableFrom(delegateType) || delegateType == typeof(Delegate)) {
                 throw Error.LambdaTypeMustBeDerivedFromSystemDelegate();
             }
 
@@ -320,7 +320,7 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.IncorrectNumberOfLambdaDeclarationParameters();
             }
             if (mi.ReturnType != typeof(void) && !TypeUtils.AreReferenceAssignable(mi.ReturnType, body.Type)) {
-                if (TypeUtils.IsSameOrSubclass(typeof(Expression), mi.ReturnType) && TypeUtils.AreAssignable(mi.ReturnType, body.GetType())) {
+                if (TypeUtils.IsSameOrSubclass(typeof(Expression), mi.ReturnType) && mi.ReturnType.IsAssignableFrom(body.GetType())) {
                     body = Expression.Quote(body);
                 } else {
                     throw Error.ExpressionTypeDoesNotMatchReturn(body.Type, mi.ReturnType);
@@ -346,6 +346,21 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.IncorrectNumberOfTypeArgsForAction();
             }
             return result;
+        }
+
+        /// <summary>
+        /// Gets a Func or Action corresponding to the given type arguments. If
+        /// no Func or Action is large enough, it will generate a custom
+        /// delegate type.
+        /// 
+        /// As with Func, the last argument is the return type. It can be set
+        /// to System.Void to produce a an Action.
+        /// </summary>
+        /// <param name="typeArgs">The type arguments of the delegate.</param>
+        /// <returns>The delegate type.</returns>
+        public static Type GetDelegateType(params Type[] typeArgs) {
+            ContractUtils.RequiresNotEmpty(typeArgs, "typeArgs");
+            return DelegateHelpers.MakeDelegateType(typeArgs);
         }
     }
 }

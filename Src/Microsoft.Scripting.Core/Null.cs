@@ -16,14 +16,13 @@ using System; using Microsoft;
 
 
 namespace Microsoft.Scripting {
-    // 
     /// <summary>
-    /// Gives us a concrete Type object to represent null's to allow for more uniform
-    /// handling of methods that expect a Type or Type[].  This type can also be used by
-    /// languages that support methods on null objects by adding extension methods with a
-    /// Null/None this.
+    /// Represents a type of a null value.
     /// </summary>
     public sealed class Null {
+        /// <summary>
+        /// The type of null value.
+        /// </summary>
         public static readonly Type Type = typeof(Null);
 
         /// <summary>

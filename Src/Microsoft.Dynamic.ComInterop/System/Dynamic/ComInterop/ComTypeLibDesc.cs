@@ -34,7 +34,6 @@ namespace Microsoft.Scripting.ComInterop {
         LinkedList<ComTypeClassDesc> _classes;
         Dictionary<string, ComTypeEnumDesc> _enums;
         string _typeLibName;
-        ComTypes.TYPELIBATTR _typeLibAttributes;
 
         private static Dictionary<Guid, ComTypeLibDesc> _CachedTypeLibDesc = new Dictionary<Guid, ComTypeLibDesc>();
 
@@ -60,7 +59,6 @@ namespace Microsoft.Scripting.ComInterop {
             typeLibDesc = new ComTypeLibDesc();
 
             typeLibDesc._typeLibName = ComRuntimeHelpers.GetNameOfLib(typeLib);
-            typeLibDesc._typeLibAttributes = typeLibAttr;
 
             int countTypes = typeLib.GetTypeInfoCount();
             for (int i = 0; i < countTypes; i++) {
@@ -70,11 +68,11 @@ namespace Microsoft.Scripting.ComInterop {
                 ComTypes.ITypeInfo typeInfo;
                 if (typeKind == ComTypes.TYPEKIND.TKIND_COCLASS) {
                     typeLib.GetTypeInfo(i, out typeInfo);
-                    ComTypeClassDesc classDesc = new ComTypeClassDesc(typeInfo, typeLibDesc);
+                    ComTypeClassDesc classDesc = new ComTypeClassDesc(typeInfo);
                     typeLibDesc._classes.AddLast(classDesc);
                 } else if (typeKind == ComTypes.TYPEKIND.TKIND_ENUM) {
                     typeLib.GetTypeInfo(i, out typeInfo);
-                    ComTypeEnumDesc enumDesc = new ComTypeEnumDesc(typeInfo, typeLibDesc);
+                    ComTypeEnumDesc enumDesc = new ComTypeEnumDesc(typeInfo);
                     typeLibDesc._enums.Add(enumDesc.TypeName, enumDesc);
                 }
             }
@@ -85,64 +83,6 @@ namespace Microsoft.Scripting.ComInterop {
             }
 
             return typeLibDesc;
-        }
-
-        internal object GetTypeLibObjectDesc(string member) {
-            foreach (ComTypeClassDesc coclass in _classes) {
-                if (member == coclass.TypeName) {
-                    return coclass;
-                }
-            }
-
-            ComTypeEnumDesc enumDesc;
-            if (_enums != null && _enums.TryGetValue(member, out enumDesc) == true)
-                return enumDesc;
-
-            return null;
-        }
-
-        internal string[] GetMemberNames() {
-            string[] retval = new string[_enums.Count + _classes.Count];
-            int i = 0;
-
-            foreach (ComTypeClassDesc coclass in _classes) {
-                retval[i++] = coclass.TypeName;
-            }
-
-            foreach (KeyValuePair<string, ComTypeEnumDesc> enumDesc in _enums) {
-                retval[i++] = enumDesc.Key;
-            }
-
-            return retval;
-        }
-
-        internal bool HasMember(string member) {
-            foreach (ComTypeClassDesc coclass in _classes) {
-                if (member == coclass.TypeName) {
-                    return true;
-                }
-            }
-
-            if (_enums.ContainsKey(member) == true)
-                return true;
-
-            return false;
-        }
-
-        public Guid Guid {
-            get { return _typeLibAttributes.guid; }
-        }
-
-        public short VersionMajor {
-            get { return _typeLibAttributes.wMajorVerNum; }
-        }
-
-        public short VersionMinor {
-            get { return _typeLibAttributes.wMinorVerNum; }
-        }
-
-        public string Name {
-            get { return _typeLibName; }
         }
 
         internal ComTypeClassDesc GetCoClassForInterface(string itfName) {

@@ -120,7 +120,7 @@ namespace Microsoft.Linq.Expressions {
             if (value == null && type.IsValueType && !TypeUtils.IsNullableType(type)) {
                 throw Error.ArgumentTypesMustMatch();
             }
-            if (value != null && !TypeUtils.AreAssignable(type, value.GetType())) {
+            if (value != null && !type.IsAssignableFrom(value.GetType())) {
                 throw Error.ArgumentTypesMustMatch();
             }
             return ConstantExpression.Make(value, type);

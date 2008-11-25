@@ -18,14 +18,14 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Microsoft.Scripting.Utils {
+namespace Microsoft.Scripting.ComInterop {
 
     /// <summary>
     /// Dictionary[TKey, TValue] is not thread-safe in the face of concurrent reads and writes. SynchronizedDictionary
     /// provides a thread-safe implementation. It holds onto a Dictionary[TKey, TValue] instead of inheriting from
     /// it so that users who need to do manual synchronization can access the underlying Dictionary[TKey, TValue].
     /// </summary>
-    internal class SynchronizedDictionary<TKey, TValue> :
+    internal sealed class SynchronizedDictionary<TKey, TValue> :
         IDictionary<TKey, TValue>,
         ICollection<KeyValuePair<TKey, TValue>>,
         IEnumerable<KeyValuePair<TKey, TValue>> {

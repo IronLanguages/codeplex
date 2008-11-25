@@ -129,6 +129,9 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        // TODO: we should be throwing a different exception here
+        // COMException sounds right but it has a specific meaning to the
+        // runtime
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         internal static ComTypes.TYPEATTR GetTypeAttrForTypeInfo(ComTypes.ITypeInfo typeInfo) {
             IntPtr pAttrs = IntPtr.Zero;
@@ -146,6 +149,9 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        // TODO: we should be throwing a different exception here
+        // COMException sounds right but it has a specific meaning to the
+        // runtime
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         internal static ComTypes.TYPELIBATTR GetTypeAttrForTypeLib(ComTypes.ITypeLib typeLib) {
             IntPtr pAttrs = IntPtr.Zero;

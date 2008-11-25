@@ -26,7 +26,8 @@ using Microsoft.Scripting.Generation;
 using System.Reflection;
 
 namespace Microsoft.Scripting.Actions {
-    internal static partial class DynamicSiteHelpers {
+    // TODO: replace this class with calls to LambdaExpression.GetDelegateType
+    public static class DynamicSiteHelpers {
 
         private static readonly Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
 
@@ -42,17 +43,17 @@ namespace Microsoft.Scripting.Actions {
 
         private static readonly Type[] _DelegateCtorSignature = new Type[] { typeof(object), typeof(IntPtr) };
 
-        public static Type MakeCallSiteType(params Type[] types) {
+        internal static Type MakeCallSiteType(params Type[] types) {
             return typeof(CallSite<>).MakeGenericType(MakeCallSiteDelegate(types));
         }
         // TODO: do we need this helper?
         // if so, should it live on Expression?
-        public static Type MakeCallSiteDelegate(params Type[] types) {
+        internal static Type MakeCallSiteDelegate(params Type[] types) {
             Debug.Assert(types != null);
             return MakeDelegate(types.AddFirst(typeof(CallSite)));
         }
 
-        public static CallSite MakeSite(CallSiteBinder binder, Type siteType) {
+        internal static CallSite MakeSite(CallSiteBinder binder, Type siteType) {
             CreateSite ctor;
             lock (_siteCtors) {
                 if (!_siteCtors.TryGetValue(siteType, out ctor)) {
@@ -64,12 +65,16 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private static Type MakeDelegate(Type[] types) {
-            Debug.Assert(types != null && types.Length > 0);
+            return GetStandardDelegateType(types) ?? MakeCustomDelegate(types);
+        }
+
+        public static Type GetStandardDelegateType(Type[] types) {
+            ContractUtils.RequiresNotEmpty(types, "types");
 
             // Can only used predefined delegates if we have no byref types and
             // the arity is small enough to fit in Func<...> or Action<...>
             if (types.Length > MaximumArity || Any(types, t => t.IsByRef)) {
-                return MakeCustomDelegate(types);
+                return null;
             }
 
             Type result;
