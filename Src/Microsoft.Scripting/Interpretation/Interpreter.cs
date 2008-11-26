@@ -1166,8 +1166,14 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            DefaultExpression node = (DefaultExpression)expr;
-            return ControlFlow.NextStatement;
+            Type type = expr.Type;
+            if (type == typeof(void)) {
+                return ControlFlow.NextStatement;
+            } else if (type.IsValueType) {
+                return Activator.CreateInstance(type);
+            } else {
+                return null;
+            }
         }
 
         /// <summary>

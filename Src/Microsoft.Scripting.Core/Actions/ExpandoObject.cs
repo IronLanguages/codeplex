@@ -195,7 +195,7 @@ namespace Microsoft.Scripting.Binders {
                 Expression target;
                 if (index == -1) {
                     // the key does not exist, report a MissingMemberException
-                    target = Expression.Convert(
+                    target = Helpers.Convert(
                         Expression.Throw(
                             Expression.New(
                                 typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
@@ -243,7 +243,7 @@ namespace Microsoft.Scripting.Binders {
                         new MetaObject[] { this, value },
                         klass,
                         originalClass,
-                        Expression.Convert(
+                        Helpers.Convert(
                             Expression.Call(
                                 typeof(RuntimeOps).GetMethod(methodName),
                                 GetLimitedSelf(),
@@ -277,7 +277,7 @@ namespace Microsoft.Scripting.Binders {
                         new MetaObject[] { this }, 
                         klass, 
                         originalClass,
-                        Expression.Convert(
+                        Helpers.Convert(
                             Expression.Call(
                                 typeof(RuntimeOps).GetMethod(methodName),
                                 GetLimitedSelf(),

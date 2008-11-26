@@ -400,8 +400,8 @@ namespace Microsoft.Runtime.CompilerServices {
 
             var checkOriginalRule = IfThen(
                 Expression.Equal(
-                    Expression.Convert(startingTarget, typeof(object)), 
-                    Expression.Convert(ruleTarget, typeof(object))
+                    Helpers.Convert(startingTarget, typeof(object)), 
+                    Helpers.Convert(ruleTarget, typeof(object))
                 ),
                 Expression.Assign(originalRule, rule)
             );

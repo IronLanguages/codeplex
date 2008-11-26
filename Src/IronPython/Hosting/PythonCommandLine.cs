@@ -68,7 +68,7 @@ namespace IronPython.Hosting {
 
         private static string GetVersionString() {
             return String.Format("{0} ({1}) on .NET {2}",
-                                PythonContext.IronPythonDisplayName,
+                                "IronPython 2.x",
                                 PythonContext.GetPythonVersion().ToString(),
                                 Environment.Version);
         }

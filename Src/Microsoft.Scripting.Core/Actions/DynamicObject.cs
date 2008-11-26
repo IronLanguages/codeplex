@@ -417,7 +417,7 @@ namespace Microsoft.Scripting.Binders {
                                 callArgs
                             ),
                             result,
-                            Expression.Convert(fallbackResult.Expression, typeof(object))
+                            Helpers.Convert(fallbackResult.Expression, typeof(object))
                         )
                     ),
                     GetRestrictions().Merge(fallbackResult.Restrictions)
@@ -469,7 +469,7 @@ namespace Microsoft.Scripting.Binders {
                                 callArgs
                             ),
                             result,
-                            Expression.Convert(fallbackResult.Expression, typeof(object))
+                            Helpers.Convert(fallbackResult.Expression, typeof(object))
                         )
                     ),
                     GetRestrictions().Merge(fallbackResult.Restrictions)
@@ -511,7 +511,7 @@ namespace Microsoft.Scripting.Binders {
                             args.AddFirst(Constant(binder))
                         ),
                         Expression.Constant(null),
-                        Expression.Convert(fallbackResult.Expression, typeof(object))
+                        Helpers.Convert(fallbackResult.Expression, typeof(object))
                     ),
                     GetRestrictions().Merge(fallbackResult.Restrictions)
                 );

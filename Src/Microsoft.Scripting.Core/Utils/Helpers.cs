@@ -31,6 +31,9 @@ namespace Microsoft.Scripting.Utils {
             if (expression.Type == type) {
                 return expression;
             }
+            if (expression.Type == typeof(void)) {
+                return Expression.Block(expression, Expression.Default(type));
+            }
             return Expression.Convert(expression, type);
         }
 
