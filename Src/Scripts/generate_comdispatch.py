@@ -174,18 +174,48 @@ variantTypes = [
         setStatements=["_typeUnion._unionTypes._date = value.ToOADate();"]),
     VariantType('BSTR', "String", 
         unmanagedRepresentationType="IntPtr",
-        getStatements=["return (string)Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
-        setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"]),
+        getStatements=[
+                "if (_typeUnion._unionTypes._bstr != IntPtr.Zero) {",
+                "    return Marshal.PtrToStringBSTR(_typeUnion._unionTypes._bstr);",
+                "} else {",
+                "    return null;",
+                "}"
+        ],
+        setStatements=[
+                "if (value != null) {",
+                "   Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));",
+                "}"
+        ]),
     VariantType("UNKNOWN", "Object", 
         isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
-        getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._unknown);"],
-        setStatements=["_typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);"]),
+        getStatements=[
+                "if (_typeUnion._unionTypes._dispatch != IntPtr.Zero) {",
+                "    return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._unknown);",
+                "} else {",
+                "    return null;",
+                "}"
+        ],
+        setStatements=[
+                "if (value != null) {",
+                "   _typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);",
+                "}"
+        ]),
     VariantType("DISPATCH", "Object", 
         isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
-        getStatements=["return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._dispatch);"],
-        setStatements=["_typeUnion._unionTypes._dispatch = Marshal.GetIDispatchForObject(value);"]),
+        getStatements=[
+                "if (_typeUnion._unionTypes._dispatch != IntPtr.Zero) {",
+                "    return Marshal.GetObjectForIUnknown(_typeUnion._unionTypes._dispatch);",
+                "} else {",
+                "    return null;",
+                "}"
+        ],
+        setStatements=[
+                "if (value != null) {",
+                "   _typeUnion._unionTypes._unknown = Marshal.GetIDispatchForObject(value);",
+                "}"
+        ]),
     VariantType("VARIANT", "Object", 
         emitAccessors=False,
         isPrimitiveType=False,
