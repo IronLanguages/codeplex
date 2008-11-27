@@ -43,7 +43,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override Type GetExpressionType() {
-            return typeof(void);
+            if (_body == null) {
+                return typeof(void);
+            }
+            return _body.Type;
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -103,6 +106,7 @@ namespace Microsoft.Linq.Expressions {
 
             var @catch = handlers.ToReadOnly();
             ContractUtils.RequiresNotNullItems(@catch, "handlers");
+            ValidateTryAndCatchHaveSameType(body, @catch);
 
             if (fault != null) {
                 if (@finally != null || @catch.Count > 0) {
@@ -116,6 +120,26 @@ namespace Microsoft.Linq.Expressions {
             }
 
             return new TryExpression(body, @finally, fault, @catch);
+        }
+
+        //Validate that the body of the try expression must have the same type as the body of every try block.
+        private static void ValidateTryAndCatchHaveSameType(Expression tryBody, ReadOnlyCollection<CatchBlock> handlers) {
+            if (tryBody == null || tryBody.Type == typeof(void)) {
+                //The body of every try block must be null or have void type.
+                foreach (CatchBlock cb in handlers) {
+                    if (cb.Body != null && cb.Body.Type != typeof(void)) {
+                        throw Error.BodyOfCatchMustHaveSameTypeAsBodyOfTry();
+                    }
+                }
+            } else {
+                //Body of every catch must have the same type of body of try.
+                Type type = tryBody.Type;
+                foreach (CatchBlock cb in handlers) {
+                    if (cb.Body == null || cb.Body.Type != type) {
+                        throw Error.BodyOfCatchMustHaveSameTypeAsBodyOfTry();
+                    }
+                }
+            }
         }
     }
 

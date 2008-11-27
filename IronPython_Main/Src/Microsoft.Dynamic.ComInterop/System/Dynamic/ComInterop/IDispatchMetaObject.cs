@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.ComInterop {
                     IDispatchRestriction(),
                     Expression.Constant(methodDesc),
                     Expression.Property(
-                        Expression.Convert(Expression, typeof(IDispatchComObject)),
+                        Helpers.Convert(Expression, typeof(IDispatchComObject)),
                         typeof(IDispatchComObject).GetProperty("DispatchObject")
                     ),
                     methodDesc
@@ -156,7 +156,7 @@ namespace Microsoft.Scripting.ComInterop {
                 new ParameterExpression[] { callable },
                 Expression.Condition(
                     Expression.Call(
-                        Expression.Convert(Expression, typeof(IDispatchComObject)),
+                        Helpers.Convert(Expression, typeof(IDispatchComObject)),
                         typeof(IDispatchComObject).GetMethod(method),
                         callable
                     ),
@@ -231,7 +231,7 @@ namespace Microsoft.Scripting.ComInterop {
                 Restrictions.GetExpressionRestriction(
                     Expression.Equal(
                         Expression.Property(
-                            Expression.Convert(@this, typeof(IDispatchComObject)),
+                            Helpers.Convert(@this, typeof(IDispatchComObject)),
                             typeof(IDispatchComObject).GetProperty("ComTypeDesc")
                         ),
                         Expression.Constant(_wrapperType)

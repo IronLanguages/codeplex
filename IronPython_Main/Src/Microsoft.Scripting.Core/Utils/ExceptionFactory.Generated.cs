@@ -439,6 +439,15 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Body of catch must have the same type as body of try."
+        /// </summary>
+        internal static string BodyOfCatchMustHaveSameTypeAsBodyOfTry {
+            get {
+                return "Body of catch must have the same type as body of try.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "User-defined operator method '{0}' must be static."
         /// </summary>
         internal static string UserDefinedOperatorMustBeStatic(object p0) {
@@ -1305,6 +1314,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception TryMustHaveCatchFinallyOrFault() {
             return new ArgumentException(Strings.TryMustHaveCatchFinallyOrFault);
+        }
+
+        /// <summary>
+        /// ArgumentException with message like "Body of catch must have the same type as body of try."
+        /// </summary>
+        internal static Exception BodyOfCatchMustHaveSameTypeAsBodyOfTry() {
+            return new ArgumentException(Strings.BodyOfCatchMustHaveSameTypeAsBodyOfTry);
         }
 
         /// <summary>

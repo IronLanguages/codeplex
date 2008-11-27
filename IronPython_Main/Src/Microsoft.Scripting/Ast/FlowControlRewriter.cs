@@ -224,7 +224,7 @@ namespace Microsoft.Scripting.Ast {
 
             var all = Expression.Variable(typeof(Exception), "$exception");
             if (@finally != null) {
-                handlers = new[] { Expression.Catch(all.Type, Expression.Empty()) };
+                handlers = new[] { Expression.Catch(all.Type, Expression.Default(node.Type)) };
                 @finally = Expression.Block(
                     @finally,
                     Expression.Condition(

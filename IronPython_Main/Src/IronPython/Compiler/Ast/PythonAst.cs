@@ -201,7 +201,7 @@ namespace IronPython.Compiler.Ast {
                     ).Catch(
                         typeof(Exception),
                         Ast.Call(AstGenerator.GetHelperMethod("RemoveModule"), AstUtils.CodeContext(), Ast.Constant(pco.ModuleName), tmp),
-                        Ast.Rethrow()
+                        Ast.Rethrow(ag.Block.Body.Type)
                     );
                 }
             }

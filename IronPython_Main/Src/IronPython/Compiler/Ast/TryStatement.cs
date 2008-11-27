@@ -130,7 +130,8 @@ namespace IronPython.Compiler.Ast {
                         ).Catch(exception,
                             Ast.Assign(runElse, Ast.Constant(false)),
                             @catch,
-                            Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
+                            Ast.Assign(ag.LineNumberUpdated, lineUpdated),           // restore existing line updated after exception handler completes
+                            Ast.Default(body.Type)
                         ),
                         AstUtils.IfThen(runElse,
                             @else
@@ -152,7 +153,8 @@ namespace IronPython.Compiler.Ast {
                         body
                     ).Catch(exception,
                         @catch,
-                        Ast.Assign(ag.LineNumberUpdated, lineUpdated)           // restore existing line updated after exception handler completes
+                        Ast.Assign(ag.LineNumberUpdated, lineUpdated),           // restore existing line updated after exception handler completes
+                        Ast.Default(body.Type)
                     );
             } else {
                 result = body;
@@ -206,7 +208,7 @@ namespace IronPython.Compiler.Ast {
                             Ast.Assign(noNestedException, Ast.Constant(false)),
                             Ast.Constant(true)
                         ),
-                        Ast.Empty()
+                        Ast.Default(body.Type)
                     )
                 ).Finally(
                     // if we had an exception save the line # that was last executing during the try
