@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class DeleteMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;

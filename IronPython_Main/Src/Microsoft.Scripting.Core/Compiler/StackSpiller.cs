@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {

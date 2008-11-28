@@ -22,7 +22,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     /// <summary>
     /// This uses linear search to find a rule.  Clearly that doesn't scale super well.
     /// We will address this in the future.

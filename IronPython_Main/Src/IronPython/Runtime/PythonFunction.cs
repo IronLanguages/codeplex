@@ -20,7 +20,6 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Binders;
 using System.Text;
 using System.Threading;
 using IronPython.Runtime.Operations;

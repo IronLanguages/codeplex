@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Binders;
 using System.Threading;
 
 using Microsoft.Scripting.Actions;

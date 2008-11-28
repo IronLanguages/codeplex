@@ -19,7 +19,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Runtime.CompilerServices {

@@ -21,7 +21,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class DeleteIndexBinder : MetaObjectBinder {
         private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
 

@@ -17,7 +17,7 @@ using System; using Microsoft;
 
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;

@@ -19,7 +19,7 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
@@ -420,7 +420,6 @@ namespace Microsoft.Scripting.ComInterop {
             } else if ((classTypeInfo = GetCoClassTypeInfo(this.RuntimeCallableWrapper, typeInfo)) == null) {
                 // no class info found - this object may support events
                 // but we could not discover those
-                Debug.Assert(false, "object support IConnectionPoint but no class info found");
                 events = ComTypeDesc.EmptyEvents;
             } else {
                 events = new Dictionary<string, ComEventDesc>();

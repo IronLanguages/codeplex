@@ -20,7 +20,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public class MetaObject {
         private readonly Expression _expression;
         private readonly Restrictions _restrictions;

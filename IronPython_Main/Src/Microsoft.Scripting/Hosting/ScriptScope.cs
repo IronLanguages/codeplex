@@ -20,7 +20,7 @@ using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;

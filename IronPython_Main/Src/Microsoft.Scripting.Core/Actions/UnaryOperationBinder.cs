@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class UnaryOperationBinder : MetaObjectBinder {
         private ExpressionType _operation;
 

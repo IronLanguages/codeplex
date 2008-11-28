@@ -23,7 +23,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
@@ -1161,7 +1160,7 @@ namespace Microsoft.Scripting.Interpretation {
             return ControlFlow.Goto(node.Target, value);
         }
 
-        private static object InterpretEmptyExpression(InterpreterState state, Expression expr) {
+        private static object InterpretDefaultExpression(InterpreterState state, Expression expr) {
             if (state.CurrentYield != null) {
                 return ControlFlow.NextForYield;
             }

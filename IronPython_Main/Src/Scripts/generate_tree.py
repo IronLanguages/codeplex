@@ -87,7 +87,7 @@ expressions = [
     Expression("DebugInfo",             "DebugInfoExpression"),
     Expression("Decrement",             "UnaryExpression",                 interop = True),
     Expression("Dynamic",               "DynamicExpression"),
-    Expression("Default",               "EmptyExpression"),
+    Expression("Default",               "DefaultExpression"),
     Expression("Extension",             "ExtensionExpression"),
     Expression("Goto",                  "GotoExpression"),
     Expression("Increment",             "UnaryExpression",                 interop = True),

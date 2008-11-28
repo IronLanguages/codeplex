@@ -16,7 +16,6 @@
 using System; using Microsoft;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Binders;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;

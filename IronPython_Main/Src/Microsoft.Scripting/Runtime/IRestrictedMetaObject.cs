@@ -16,7 +16,7 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>

@@ -16,7 +16,7 @@
 #if !SILVERLIGHT
 
 using System; using Microsoft;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;

@@ -24,7 +24,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class MetaObjectBinder : CallSiteBinder {
 
         #region Standard Binder Kinds

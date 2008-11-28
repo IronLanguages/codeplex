@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class ConvertBinder : MetaObjectBinder {
         private readonly Type _type;
         private readonly bool _explicit;

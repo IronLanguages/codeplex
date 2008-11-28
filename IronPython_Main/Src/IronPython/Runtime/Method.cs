@@ -19,9 +19,8 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Binders;
-
 using Microsoft.Scripting;
+
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;

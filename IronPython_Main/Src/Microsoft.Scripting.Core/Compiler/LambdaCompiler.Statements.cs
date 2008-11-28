@@ -69,7 +69,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private void EmitEmptyExpression(Expression expr) {
+        private void EmitDefaultExpression(Expression expr) {
             var node = (DefaultExpression)expr;
             if (node.Type != typeof(void)) {
                 // emit default(T)
