@@ -8,7 +8,5 @@
 // "In Project Suppression File". 
 // You do not need to add suppressions to this file manually. 
 
-// TODO: probably most of our types in Microsoft.Scripting.Binders will end up in
-// Microsoft.Scripting
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Scope = "member", Target = "Microsoft.Scripting.Binders.DynamicObject.#Microsoft.Scripting.Binders.IDynamicObject.GetMetaObject(Microsoft.Linq.Expressions.Expression)")]
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Scope = "member", Target = "Microsoft.Scripting.DynamicObject.#Microsoft.Scripting.IDynamicObject.GetMetaObject(Microsoft.Linq.Expressions.Expression)")]

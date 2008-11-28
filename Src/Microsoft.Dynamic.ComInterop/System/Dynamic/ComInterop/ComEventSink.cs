@@ -23,7 +23,7 @@ using System.Globalization;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 

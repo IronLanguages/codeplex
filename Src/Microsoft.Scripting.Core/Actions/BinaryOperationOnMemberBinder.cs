@@ -19,7 +19,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     /// <summary>
     /// A Binder that is responsible for runtime binding of operation:
     /// a.b (op)= c

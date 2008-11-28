@@ -25,7 +25,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Handles auto-templating of rules.  There are three important actions this performs:
     ///     1. Detects if templating is possible between two rules

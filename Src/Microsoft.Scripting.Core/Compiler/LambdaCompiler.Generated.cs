@@ -187,7 +187,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitDynamicExpression(node);
                     break;
                 case ExpressionType.Default:
-                    EmitEmptyExpression(node);
+                    EmitDefaultExpression(node);
                     break;
                 case ExpressionType.Extension:
                     EmitExtensionExpression(node);

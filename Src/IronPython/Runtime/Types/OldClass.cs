@@ -18,10 +18,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Linq.Expressions;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using System.Threading;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

@@ -18,7 +18,7 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {

@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public abstract class GetMemberBinder : MetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;

@@ -22,10 +22,10 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Simple type which implements IDynamicObject to support getting/setting/deleting members
     /// at runtime.

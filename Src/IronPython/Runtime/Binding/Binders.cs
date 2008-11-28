@@ -16,7 +16,7 @@
 using System; using Microsoft;
 using System.Collections.ObjectModel;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;

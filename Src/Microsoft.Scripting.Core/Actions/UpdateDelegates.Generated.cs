@@ -20,7 +20,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using System.Threading;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     internal static partial class UpdateDelegates {
 
         /// <summary>

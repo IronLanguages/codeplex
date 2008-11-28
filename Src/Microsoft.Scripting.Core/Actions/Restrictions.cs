@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     public sealed class Restrictions {
         private class Restriction {
             internal enum RestrictionKind {

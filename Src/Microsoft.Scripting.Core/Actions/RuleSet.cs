@@ -20,7 +20,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
 
     /// <summary>
     /// A RuleSet is a collection of rules to apply to the objects at a DynamicSite.  Each Rule also

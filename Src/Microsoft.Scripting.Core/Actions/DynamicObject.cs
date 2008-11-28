@@ -19,7 +19,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Binders {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Provides a simple class that can be inherited from to create an object with dynamic behavior
     /// at runtime.  Subclasses can override the various binder methods (GetMember, SetMember, Call, etc...)

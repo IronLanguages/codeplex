@@ -14,9 +14,8 @@
 * ***************************************************************************/
 
 using System; using Microsoft;
-using Microsoft.Scripting.Binders;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;

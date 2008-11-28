@@ -16,7 +16,7 @@ using System; using Microsoft;
 
 
 using System.Diagnostics;
-using Microsoft.Scripting.Binders;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
