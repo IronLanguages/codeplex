@@ -37,6 +37,7 @@ namespace Microsoft.Scripting.ComInterop {
 
             if (type == typeof(String) ||
                 type == typeof(DBNull) ||
+                type == typeof(Null) ||
                 type == typeof(System.Reflection.Missing) ||
                 type == typeof(CurrencyWrapper)) {
 
@@ -53,7 +54,7 @@ namespace Microsoft.Scripting.ComInterop {
             return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);
         }
 
-        internal static MetaObject RewriteStrongBoxAsRef(CallSiteBinder action, MetaObject target, MetaObject[] args) {
+        internal static MetaObject RewriteStrongBoxAsRef(CallSiteBinder action, MetaObject target, MetaObject[] args, bool hasRhs) {
             Debug.Assert(action != null && target != null && args != null);
 
             var restrictions = target.Restrictions.Merge(Restrictions.Combine(args));
@@ -68,7 +69,16 @@ namespace Microsoft.Scripting.ComInterop {
             argExpressions[0] = target.Expression;
             signatureTypes[1] = target.Expression.Type;
 
-            for (int i = 0; i < args.Length; i++) {
+            int argsToProcess = args.Length;
+
+            if (hasRhs) {
+                MetaObject rhsArgument = args[args.Length - 1];
+                argExpressions[args.Length] = rhsArgument.Expression;
+                signatureTypes[args.Length + 1] = rhsArgument.Expression.Type;
+                argsToProcess--;
+            }
+
+            for (int i = 0; i < argsToProcess; i++) {
                 MetaObject currArgument = args[i];
                 if (IsStrongBoxArg(currArgument)) {
                     restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(currArgument.Expression, currArgument.LimitType));
@@ -89,7 +99,7 @@ namespace Microsoft.Scripting.ComInterop {
                     signatureTypes[i + 2] = currArgument.Expression.Type;
                 }
             }
-
+            
             // Last signatureType is the return value
             signatureTypes[signatureTypes.Length - 1] = typeof(object);
 

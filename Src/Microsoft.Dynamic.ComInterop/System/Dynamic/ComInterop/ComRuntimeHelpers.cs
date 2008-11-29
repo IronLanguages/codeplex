@@ -238,8 +238,8 @@ namespace Microsoft.Scripting.ComInterop {
             return new BoundDispEvent(rcw, sourceIid, dispid);
         }
 
-        public static DispCallable CreateDispCallable(IDispatch dispatch, ComMethodDesc method) {
-            return new DispCallable(dispatch, method);
+        public static DispCallable CreateDispCallable(IDispatchComObject dispatch, ComMethodDesc method) {
+            return new DispCallable(dispatch, method.Name, method.DispId);
         }
     }
 

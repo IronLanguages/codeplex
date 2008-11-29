@@ -336,8 +336,6 @@ namespace Microsoft.Scripting.ComInterop {
                 return new VariantBuilder(elementVarEnum | VarEnum.VT_BYREF, argBuilder);
             }
 
-            Debug.Assert(!(argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)), "should not have StrongBox here");
-
             VarEnum varEnum = GetComType(ref argumentType);
             argBuilder = GetByValArgBuilder(argumentType, ref varEnum);
 

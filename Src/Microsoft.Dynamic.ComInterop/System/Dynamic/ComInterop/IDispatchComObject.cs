@@ -104,9 +104,6 @@ namespace Microsoft.Scripting.ComInterop {
         private ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
 
-        private DispCallable _getter, _setter;
-
-
         internal IDispatchComObject(IDispatch rcw)
             : base(rcw) {
             _dispatchObject = rcw;
@@ -167,16 +164,17 @@ namespace Microsoft.Scripting.ComInterop {
             return hresult;
         }
 
-        public bool TryGetGetItem(out DispCallable value) {
-            if (_getter != null) {
-                value = _getter;
+        public bool TryGetGetItem(out ComMethodDesc value) {
+            ComMethodDesc methodDesc = _comTypeDesc.GetItem;
+            if (methodDesc != null) {
+                value = methodDesc;
                 return true;
             }
 
             return SlowTryGetGetItem(out value);
         }
 
-        private bool SlowTryGetGetItem(out DispCallable value) {
+        private bool SlowTryGetGetItem(out ComMethodDesc value) {
             EnsureScanDefinedMethods();
 
             ComMethodDesc methodDesc = _comTypeDesc.GetItem;
@@ -194,31 +192,30 @@ namespace Microsoft.Scripting.ComInterop {
                     return false;
                 } else if (hresult != ComHresults.S_OK) {
                     throw Error.CouldNotGetDispId(name, string.Format(CultureInfo.InvariantCulture, "0x{1:X})", hresult));
+                } else if (dispId != ComDispIds.DISPID_VALUE) {
+                    value = null;
+                    return false;
                 }
 
-                methodDesc = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYGET);
-                _comTypeDesc.GetItem = methodDesc;
+                _comTypeDesc.EnsureGetItem(new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYGET));
+                methodDesc = _comTypeDesc.GetItem;
             }
 
-            Interlocked.CompareExchange(
-                ref _getter,
-                new DispCallable(_dispatchObject, methodDesc),
-                null);
-
-            value = _getter;
+            value = methodDesc;
             return true;
         }
 
-        public bool TryGetSetItem(out DispCallable value) {
-            if (_setter != null) {
-                value = _setter;
+        public bool TryGetSetItem(out ComMethodDesc value) {
+            ComMethodDesc methodDesc = _comTypeDesc.SetItem;
+            if (methodDesc != null) {
+                value = methodDesc;
                 return true;
             }
 
             return SlowTryGetSetItem(out value);
         }
 
-        public bool SlowTryGetSetItem(out DispCallable value) {
+        public bool SlowTryGetSetItem(out ComMethodDesc value) {
             EnsureScanDefinedMethods();
 
             ComMethodDesc methodDesc = _comTypeDesc.SetItem;
@@ -241,16 +238,11 @@ namespace Microsoft.Scripting.ComInterop {
                     return false;
                 }
 
-                methodDesc = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT);
-                _comTypeDesc.SetItem = methodDesc;
+                _comTypeDesc.EnsureSetItem(new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT));
+                methodDesc = _comTypeDesc.SetItem;
             }
 
-            Interlocked.CompareExchange(
-                            ref _setter,
-                            new DispCallable(_dispatchObject, methodDesc),
-                            null);
-
-            value = _setter;
+            value = methodDesc;
             return true;
         }
 
@@ -365,7 +357,7 @@ namespace Microsoft.Scripting.ComInterop {
 
         MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
             EnsureScanDefinedMethods();
-            return new IDispatchMetaObject(parameter, _comTypeDesc, this);
+            return new IDispatchMetaObject(parameter, this);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
@@ -621,8 +613,8 @@ namespace Microsoft.Scripting.ComInterop {
                 _comTypeDesc.Funcs = funcs;
                 _comTypeDesc.Puts = puts;
                 _comTypeDesc.PutRefs = putrefs;
-                _comTypeDesc.GetItem = getItem;
-                _comTypeDesc.SetItem = setItem;
+                _comTypeDesc.EnsureGetItem(getItem);
+                _comTypeDesc.EnsureSetItem(setItem);
             }
         }
 
