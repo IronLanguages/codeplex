@@ -133,7 +133,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 for (int i = 0; i < args.Length; i++) {
                     MetaObject mo = args[i];
                     Type paramType = mo.Expression.Type;
-                    if (mo.IsByRef) {
+                    if (IsByRef(mo)) {
                         paramType = paramType.MakeByRefType();
                     }
                     curTypeInfo = NextTypeInfo(paramType, curTypeInfo);
@@ -152,7 +152,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     for (int i = 0; i < args.Length; i++) {
                         MetaObject mo = args[i];
                         Type paramType = mo.Expression.Type;
-                        if (mo.IsByRef) {
+                        if (IsByRef(mo)) {
                             paramType = paramType.MakeByRefType();
                         }
                         paramTypes[i + 1] = paramType;
@@ -163,6 +163,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 return curTypeInfo.DelegateType;
             }
+        }
+
+        private static bool IsByRef(MetaObject mo) {
+            ParameterExpression pe = mo.Expression as ParameterExpression;
+            return pe != null && pe.IsByRef;
         }
 
         internal static TypeInfo NextTypeInfo(Type initialArg) {

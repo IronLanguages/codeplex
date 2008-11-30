@@ -47,8 +47,15 @@ namespace Microsoft.Scripting.ComInterop {
             }
         }
 
+        internal static bool IsByRef(MetaObject mo) {
+            ParameterExpression pe = mo.Expression as ParameterExpression;
+            return pe != null && pe.IsByRef;
+        }
+
         internal static bool IsStrongBoxArg(MetaObject o) {
-            if (o.IsByRef) return false;
+            if (IsByRef(o)) {
+                return false;
+            }
 
             Type t = o.LimitType;
             return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);

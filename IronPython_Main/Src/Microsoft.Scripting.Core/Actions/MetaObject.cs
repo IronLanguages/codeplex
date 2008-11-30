@@ -102,13 +102,6 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public bool IsByRef {
-            get {
-                ParameterExpression pe = _expression as ParameterExpression;
-                return pe != null && pe.IsByRef;
-            }
-        }
-
         public virtual MetaObject BindConvert(ConvertBinder binder) {
             ContractUtils.RequiresNotNull(binder, "binder");
             return binder.FallbackConvert(this);
