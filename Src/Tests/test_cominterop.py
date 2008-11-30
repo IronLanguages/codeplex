@@ -26,14 +26,4 @@ try:
 except:
     failed = 1
 
-#------------------------------------------------------------------------------
-#Re-run everything under w/o -X:PreferComInteropAssembly
-from iptest.cominterop_util import preferComDispatch, is_pywin32, AreEqual
-from iptest.process_util    import launch_ironpython_changing_extensions
-if not preferComDispatch and not is_pywin32:
-    print
-    print "#" * 80
-    print "Re-running %s w/o '-X:PreferComInteropAssembly' mode." % (__file__)
-    AreEqual(launch_ironpython_changing_extensions(__file__, remove=["-X:PreferComInteropAssembly"]), 0)
-    
 sys.exit(failed)

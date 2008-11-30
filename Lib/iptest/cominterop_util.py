@@ -757,17 +757,7 @@ def run_pkg_helper(filename, ns_name=None, exclude_list = []):
         print ""
 
 #------------------------------------------------------------------------------
-RERUN_UNDER_PREFERCOMDISPATCH = ["cominterop\\apps\\msagent.py"]
-
 def run_com_test(name, file):
     run_test(name)
-    
-    #Run this test with PreferComDispatch as well
-    if not preferComDispatch and sys.platform!="win32" and file.lower() in RERUN_UNDER_PREFERCOMDISPATCH:
-        print
-        print "#" * 80
-        print "Re-running %s under w/o '-X:PreferComInteropAssembly' mode." % (file)
-        AreEqual(launch_ironpython_changing_extensions(file, remove=["-X:PreferComInteropAssembly"]), 0)
-    
     genPeverifyInteropAsm(file)
     

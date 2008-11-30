@@ -121,8 +121,8 @@ namespace Microsoft.Scripting.ComInterop {
 
         private static Type MarshalType(MetaObject mo) {
             Type marshalType = mo.LimitType;
-            if (mo.IsByRef) {
-                // None just means that no value was supplied.
+            if (ComBinderHelpers.IsByRef(mo)) {
+                // Null just means that null was supplied.
                 if (marshalType == typeof(Null)) {
                     marshalType = mo.Expression.Type;
                 }
