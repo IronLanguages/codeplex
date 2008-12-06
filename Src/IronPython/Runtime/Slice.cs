@@ -152,7 +152,7 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Gets the indicies for the deprecated __getslice__, __setslice__, __delslice__ functions
+        /// Gets the indices for the deprecated __getslice__, __setslice__, __delslice__ functions
         /// 
         /// This form is deprecated in favor of using __getitem__ w/ a slice object as an index.  This
         /// form also has subtly different mechanisms for fixing the slice index before calling the function.

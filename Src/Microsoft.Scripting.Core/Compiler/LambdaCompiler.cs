@@ -129,12 +129,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             get { return _ilg; }
         }
 
-        private bool IsDynamicMethod {
-            get {
-                return _method is DynamicMethod;
-            }
-        }
-
         internal ReadOnlyCollection<ParameterExpression> Parameters {
             get { return _lambda.Parameters; }
         }

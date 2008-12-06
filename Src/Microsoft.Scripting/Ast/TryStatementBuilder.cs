@@ -121,18 +121,48 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static implicit operator Expression(TryStatementBuilder builder) {
-            return ToStatement(builder);
+            ContractUtils.RequiresNotNull(builder, "builder");
+            return builder.ToExpression();
         }
 
-        public static Expression ToStatement(TryStatementBuilder builder) {
-            ContractUtils.RequiresNotNull(builder, "builder");
-            var result = Expression.MakeTry(
-                builder._try,
-                builder._finally,
-                builder._fault,
-                builder._catchBlocks
-            );
-            if (result.Finally != null || result.Fault != null) {
+        public Expression ToExpression() {
+
+            //
+            // We can't emit a real filter or fault because they don't
+            // work in DynamicMethods. Instead we do a simple transformation:
+            //   fault -> catch (Exception) { ...; rethrow }
+            //   filter -> catch (ExceptionType) { if (!filter) rethrow; ... }
+            //
+            // Note that the filter transformation is not quite equivalent to
+            // real CLR semantics, but it's what IronPython and IronRuby
+            // expect. If we get CLR support we'll switch over to real filter
+            // and fault blocks.
+            //
+
+            var handlers = new List<CatchBlock>(_catchBlocks);
+            for (int i = 0, n = handlers.Count; i < n ; i++) {
+                CatchBlock handler = handlers[i];
+                if (handler.Filter != null) {
+                    handlers[i] = Expression.MakeCatchBlock(
+                        handler.Test,
+                        handler.Variable,
+                        Expression.Condition(
+                            handler.Filter,
+                            handler.Body,
+                            Expression.Rethrow(handler.Body.Type)
+                        ),
+                        null
+                    );
+                }
+            }
+
+            if (_fault != null) {
+                ContractUtils.Requires(handlers.Count == 0, "fault cannot be used with catch or finally clauses");
+                handlers.Add(Expression.Catch(typeof(Exception), Expression.Block(_fault, Expression.Rethrow(_try.Type))));
+            }
+
+            var result = Expression.MakeTry(_try, _finally, null, handlers);
+            if (_finally != null) {
                 return Utils.FinallyFlowControl(result);
             }
             return result;

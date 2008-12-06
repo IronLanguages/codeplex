@@ -139,7 +139,7 @@ def test_byte():
 
 def test_byte_typeerrror():
     for val in typeErrorTrigger("BYTE"):
-        AssertError(TypeError, com_obj.mByte, val)
+        AssertError(ValueError, com_obj.mByte, val)
         
 def test_byte_overflowerror():
     for val in overflowErrorTrigger("BYTE"):
@@ -152,7 +152,7 @@ def test_bstr():
 
 def test_bstr_typeerrror():
     for val in typeErrorTrigger("BSTR"):
-        AssertError(TypeError, com_obj.mBstr, val)
+        AssertError(ValueError, com_obj.mBstr, val)
 
 def test_bstr_overflowerror():
     for val in overflowErrorTrigger("BSTR"):
@@ -165,7 +165,7 @@ def test_char():
 
 def test_char_typeerrror():
     for val in typeErrorTrigger("CHAR"):
-        AssertError(TypeError, com_obj.mChar, val)
+        AssertError(ValueError, com_obj.mChar, val)
 
 def test_char_overflowerror():
     for val in overflowErrorTrigger("CHAR"):
@@ -185,7 +185,7 @@ def test_float():
 
 def test_float_typeerrror():
     for val in typeErrorTrigger("FLOAT"):
-        AssertError(TypeError, com_obj.mFloat, val)
+        AssertError(ValueError, com_obj.mFloat, val)
 
 def test_float_overflowerror():
     for val in overflowErrorTrigger("FLOAT"):
@@ -202,7 +202,7 @@ def test_double():
 
 def test_double_typeerrror():
     for val in typeErrorTrigger("DOUBLE"):
-        AssertError(TypeError, com_obj.mDouble, val)
+        AssertError(ValueError, com_obj.mDouble, val)
 
 def test_double_overflowerror():
     for val in overflowErrorTrigger("DOUBLE"):
@@ -216,7 +216,7 @@ def test_ushort():
 
 def test_ushort_typeerrror():
     for val in typeErrorTrigger("USHORT"):
-        AssertError(TypeError, com_obj.mUShort, val)
+        AssertError(ValueError, com_obj.mUShort, val)
 
 def test_ushort_overflowerror():
     for val in overflowErrorTrigger("USHORT"):
@@ -230,7 +230,7 @@ def test_ulong():
 
 def test_ulong_typeerrror():
     for val in typeErrorTrigger("ULONG"):
-        AssertError(TypeError, com_obj.mUlong, val)
+        AssertError(ValueError, com_obj.mUlong, val)
 
 def test_ulong_overflowerror():
     for val in overflowErrorTrigger("ULONG"):
@@ -244,7 +244,7 @@ def test_ulonglong():
 
 def test_ulonglong_typeerrror():
     for val in typeErrorTrigger("ULONGLONG"):
-        AssertError(TypeError, com_obj.mULongLong, val)
+        AssertError(ValueError, com_obj.mULongLong, val)
 
 def test_ulonglong_overflowerror():
     for val in overflowErrorTrigger("ULONGLONG"):
@@ -258,7 +258,7 @@ def test_short():
 
 def test_short_typeerrror():
     for val in typeErrorTrigger("SHORT"):
-        AssertError(TypeError, com_obj.mShort, val)
+        AssertError(ValueError, com_obj.mShort, val)
 
 def test_short_overflowerror():
     for val in overflowErrorTrigger("SHORT"):
@@ -272,7 +272,7 @@ def test_long():
 
 def test_long_typeerrror():
     for val in typeErrorTrigger("LONG"):
-        AssertError(TypeError, com_obj.mLong, val)
+        AssertError(ValueError, com_obj.mLong, val)
 
 def test_long_overflowerror():
     for val in overflowErrorTrigger("LONG"):
@@ -286,7 +286,7 @@ def test_longlong():
 
 def test_longlong_typeerrror():
     for val in typeErrorTrigger("LONGLONG"):
-        AssertError(TypeError, com_obj.mLongLong, val)
+        AssertError(ValueError, com_obj.mLongLong, val)
 
 def test_longlong_overflowerror():
     for val in overflowErrorTrigger("LONGLONG"):
@@ -327,7 +327,7 @@ def test_interface_types_typerror():
     
     for val in test_cases:
         AssertError(TypeError, com_obj.mIDispatch, val)
-        AssertError(TypeError, com_obj.mIUnknown, val)
+        AreEqual(com_obj.mIUnknown(val), val)
 
 
 ###############################################################################

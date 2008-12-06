@@ -89,7 +89,7 @@ class FileConsole(object):
     def GetCodeForStatement(self, codeText, statement):
         decoratorStart, decoratorLength = -1, 0
         if isinstance(statement, FunctionDefinition):            
-            if (statement.Decorators != None and statement.Decorators.Count != 0):
+            if (statement.Decorators != None and len(statement.Decorators) != 0):
                 decoratorStart = min([x.Start.Index for x in statement.Decorators])                
                 decoratorLength = statement.Start.Index - decoratorStart                
         return codeText.Substring( statement.Start.Index if decoratorStart == -1 else decoratorStart, statement.Span.Length + decoratorLength)

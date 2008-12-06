@@ -237,7 +237,7 @@ namespace Microsoft.Scripting.Hosting.Shell {
             }
 
             if (_saveAssemblies) {
-                Snippets.SetSaveAssemblies(_assembliesDir);
+                Snippets.SetSaveAssemblies(true, _assembliesDir);
             }
         }
 

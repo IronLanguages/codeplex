@@ -1309,8 +1309,8 @@ namespace IronPython.Runtime {
 
         #region IDynamicObject Members
 
-        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
-            return new Binding.MetaPythonFunction(parameter, Restrictions.Empty, this);
+        DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaPythonFunction(parameter, BindingRestrictions.Empty, this);
         }
 
         #endregion

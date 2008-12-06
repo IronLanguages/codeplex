@@ -806,7 +806,7 @@ namespace IronPython.Runtime {
                 if (genTo == IListOfTType) {
                     return IListOfObjectType.IsAssignableFrom(fromType);
                 } else if (genTo == NullableOfTType) {
-                    if (fromType == typeof(Null) || CanConvertFrom(fromType, toType.GetGenericArguments()[0], allowNarrowing)) {
+                    if (fromType == typeof(DynamicNull) || CanConvertFrom(fromType, toType.GetGenericArguments()[0], allowNarrowing)) {
                         return true;
                     }                
                 } else if (genTo == IDictOfTType) {

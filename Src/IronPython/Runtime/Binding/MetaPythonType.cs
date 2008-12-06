@@ -23,16 +23,16 @@ namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     partial class MetaPythonType : MetaPythonObject {
-        public MetaPythonType(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonType/*!*/ value)
-            : base(expression, Restrictions.Empty, value) {
+        public MetaPythonType(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, PythonType/*!*/ value)
+            : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
-        public override MetaObject BindCreateInstance(CreateInstanceBinder create, params MetaObject[] args) {
+        public override DynamicMetaObject BindCreateInstance(CreateInstanceBinder create, params DynamicMetaObject[] args) {
             return InvokeWorker(create, args, Ast.Constant(BinderState.GetBinderState(create).Context));
         }
 
-        public override MetaObject BindConvert(ConvertBinder/*!*/ conversion) {
+        public override DynamicMetaObject BindConvert(ConvertBinder/*!*/ conversion) {
             if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.Type, Restrict(Value.GetType()));
             }

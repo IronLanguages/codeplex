@@ -264,7 +264,7 @@ namespace IronPython.Runtime.Types {
         }
 
         internal override object CreateInstance(CodeContext context, object[] args, string[] names) {
-            return PythonOps.CallWithKeywordArgs(context, Type.Ctor, ArrayUtils.Insert(Type, args), names);
+            return PythonOps.CallWithKeywordArgs(context, Type.Ctor, args, names);
         }
     }
 }

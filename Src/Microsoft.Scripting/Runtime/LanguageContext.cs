@@ -467,8 +467,8 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Object Operations Support
 
-        internal static MetaObject ErrorMetaObject(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
-            return onBindingError ?? MetaObject.CreateThrow(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
+        internal static DynamicMetaObject ErrorMetaObject(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
+            return onBindingError ?? DynamicMetaObject.CreateThrow(target, args, typeof(NotImplementedException), ArrayUtils.EmptyObjects);
         }
 
         public virtual UnaryOperationBinder CreateUnaryOperationBinder(ExpressionType operation) {
@@ -480,7 +480,7 @@ namespace Microsoft.Scripting.Runtime {
                 : base(operation) {
             }
 
-            public override MetaObject FallbackUnaryOperation(MetaObject target, MetaObject errorSuggestion) {
+            public override DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target, DynamicMetaObject errorSuggestion) {
                 return ErrorMetaObject(target, new[] { target }, errorSuggestion);
             }
             
@@ -498,7 +498,7 @@ namespace Microsoft.Scripting.Runtime {
                 : base(operation) {
             }
 
-            public override MetaObject FallbackBinaryOperation(MetaObject target, MetaObject arg, MetaObject errorSuggestion) {
+            public override DynamicMetaObject FallbackBinaryOperation(DynamicMetaObject target, DynamicMetaObject arg, DynamicMetaObject errorSuggestion) {
                 return ErrorMetaObject(target, new[] { target, arg }, errorSuggestion);
             }
 
@@ -513,7 +513,7 @@ namespace Microsoft.Scripting.Runtime {
                 : base(operation) {
             }
 
-            public override MetaObject FallbackOperation(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackOperation(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 
@@ -532,18 +532,18 @@ namespace Microsoft.Scripting.Runtime {
                 : base(type, @explicit) {
             }
 
-            public override MetaObject FallbackConvert(MetaObject self, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackConvert(DynamicMetaObject self, DynamicMetaObject onBindingError) {
                 if (Type.IsAssignableFrom(self.LimitType)) {
-                    return new MetaObject(
+                    return new DynamicMetaObject(
                         self.Expression,
-                        Restrictions.GetTypeRestriction(self.Expression, self.LimitType)
+                        BindingRestrictions.GetTypeRestriction(self.Expression, self.LimitType)
                     );
                 }
 
                 return onBindingError ??
-                    MetaObject.CreateThrow(
+                    DynamicMetaObject.CreateThrow(
                         self,
-                        MetaObject.EmptyMetaObjects,
+                        DynamicMetaObject.EmptyMetaObjects,
                         typeof(ArgumentTypeException),
                         String.Format("Expected {0}, got {1}", Type.FullName, self.LimitType.FullName)
                     );
@@ -563,8 +563,8 @@ namespace Microsoft.Scripting.Runtime {
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject FallbackGetMember(MetaObject self, MetaObject onBindingError) {
-                return ErrorMetaObject(self, MetaObject.EmptyMetaObjects, onBindingError);
+            public override DynamicMetaObject FallbackGetMember(DynamicMetaObject self, DynamicMetaObject onBindingError) {
+                return ErrorMetaObject(self, DynamicMetaObject.EmptyMetaObjects, onBindingError);
             }
 
             public override object CacheIdentity {
@@ -581,8 +581,8 @@ namespace Microsoft.Scripting.Runtime {
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject FallbackSetMember(MetaObject self, MetaObject value, MetaObject onBindingError) {
-                return ErrorMetaObject(self, new MetaObject[] { value }, onBindingError);
+            public override DynamicMetaObject FallbackSetMember(DynamicMetaObject self, DynamicMetaObject value, DynamicMetaObject onBindingError) {
+                return ErrorMetaObject(self, new DynamicMetaObject[] { value }, onBindingError);
             }
 
             public override object CacheIdentity {
@@ -599,8 +599,8 @@ namespace Microsoft.Scripting.Runtime {
                 : base(name, ignoreCase) {
             }
 
-            public override MetaObject FallbackDeleteMember(MetaObject self, MetaObject onBindingError) {
-                return ErrorMetaObject(self, MetaObject.EmptyMetaObjects, onBindingError);
+            public override DynamicMetaObject FallbackDeleteMember(DynamicMetaObject self, DynamicMetaObject onBindingError) {
+                return ErrorMetaObject(self, DynamicMetaObject.EmptyMetaObjects, onBindingError);
             }
 
             public override object CacheIdentity {
@@ -617,11 +617,11 @@ namespace Microsoft.Scripting.Runtime {
                 : base(name, ignoreCase, arguments) {
             }
 
-            public override MetaObject FallbackInvokeMember(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
-            public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
@@ -639,7 +639,7 @@ namespace Microsoft.Scripting.Runtime {
                 : base(arguments) {
             }
 
-            public override MetaObject FallbackInvoke(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 
@@ -657,7 +657,7 @@ namespace Microsoft.Scripting.Runtime {
                 : base(arguments) {
             }
 
-            public override MetaObject FallbackCreateInstance(MetaObject target, MetaObject[] args, MetaObject onBindingError) {
+            public override DynamicMetaObject FallbackCreateInstance(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args, onBindingError);
             }
 

@@ -197,6 +197,18 @@ namespace IronPython.Runtime {
             }
         }
 
+        public static PythonType bytes {
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(typeof(Bytes));
+            }
+        }
+
+        public static PythonType bytearray {
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(typeof(ByteArray));
+            }
+        }
+
         [Documentation("callable(object) -> bool\n\nReturn whether the object is callable (i.e., some kind of function).")]
         public static bool callable(CodeContext/*!*/ context, object o) {
             return PythonOps.IsCallable(context, o);
@@ -528,6 +540,29 @@ namespace IronPython.Runtime {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(double));
             }
+        }
+
+        public static string format(CodeContext/*!*/ context, object argValue, [DefaultParameterValue("")]string formatSpec) {
+            object res, formatMethod;
+            OldInstance oi = argValue as OldInstance;
+            if (oi != null && oi.TryGetBoundCustomMember(context, SymbolTable.StringToId("__format__"), out formatMethod)) {
+                res = PythonOps.CallWithContext(context, formatMethod, formatSpec);
+            } else {
+                // call __format__ with the format spec (__format__ is defined on object, so this always succeeds)
+                PythonTypeOps.TryInvokeBinaryOperator(
+                    context,
+                    argValue,
+                    formatSpec,
+                    SymbolTable.StringToId("__format__"),
+                    out res);
+            }
+
+            string strRes = res as string;
+            if (strRes == null) {
+                throw PythonOps.TypeError("{0}.__format__ must return string or unicode, not {1}", PythonTypeOps.GetName(argValue), PythonTypeOps.GetName(res));
+            }
+
+            return strRes;
         }
 
         public static object getattr(CodeContext/*!*/ context, object o, string name) {
@@ -1287,6 +1322,95 @@ namespace IronPython.Runtime {
             }
         }
 
+        public static void print(CodeContext/*!*/ context, params object[] args) {
+            print(context, " ", "\n", null, args);
+        }
+
+        public static void print(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection kwargs, params object[] args) {
+            object sep = AttrCollectionPop(kwargs, "sep", " ");
+            if (sep != null && !(sep is string)) {
+                throw PythonOps.TypeError("sep must be None or str, not {0}", DynamicHelpers.GetPythonType(sep));
+            }
+
+            object end = AttrCollectionPop(kwargs, "end", "\n");
+            if (sep != null && !(sep is string)) {
+                throw PythonOps.TypeError("end must be None or str, not {0}", DynamicHelpers.GetPythonType(end));
+            }
+
+            object file = AttrCollectionPop(kwargs, "file", null);
+
+            if (kwargs.Count != 0) {
+                throw PythonOps.TypeError(
+                    "'{0}' is an invalid keyword argument for this function", 
+                    SymbolTable.IdToString(new List<SymbolId>(kwargs.SymbolAttributes.Keys)[0])
+                );
+            }
+
+            print(context, (string)sep ?? " ", (string)end ?? "\n", file, args);
+        }
+
+        private static object AttrCollectionPop(IAttributesCollection kwargs, string name, object defaultValue) {
+            object res;
+            if (kwargs.TryGetValue(SymbolTable.StringToId(name), out res)) {
+                kwargs.Remove(SymbolTable.StringToId(name));
+            } else {
+                res = defaultValue;
+            }
+            return res;
+        }
+
+        private static void print(CodeContext/*!*/ context, string/*!*/ sep, string/*!*/ end, object file, object[]/*!*/ args) {
+            PythonContext pc = PythonContext.GetContext(context);
+
+            if (file == null) {
+                file = pc.SystemStandardOut;
+            }
+            if (file == null) {
+                throw PythonOps.RuntimeError("lost sys.std_out");
+            }
+
+            PythonFile pf = file as PythonFile;
+
+            for (int i = 0; i < args.Length; i++) {
+                string text = PythonOps.ToString(context, args[i]);
+
+                if (pf != null) {
+                    pf.write(text);
+                } else {
+                    pc.WriteCallSite.Target(
+                        pc.WriteCallSite,
+                        context,
+                        PythonOps.GetBoundAttr(context, file, Symbols.ConsoleWrite),
+                        text
+                    );
+                }
+
+                if (i != args.Length - 1) {
+                    if (pf != null) {
+                        pf.write(sep);
+                    } else {
+                        pc.WriteCallSite.Target(
+                            pc.WriteCallSite,
+                            context,
+                            PythonOps.GetBoundAttr(context, file, Symbols.ConsoleWrite),
+                            sep
+                        );
+                    }
+                }
+            }
+
+            if (pf != null) {
+                pf.write(end);
+            } else {
+                pc.WriteCallSite.Target(
+                    pc.WriteCallSite,
+                    context,
+                    PythonOps.GetBoundAttr(context, file, Symbols.ConsoleWrite),
+                    end
+                );
+            }
+        }
+
         public static PythonType property {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(PythonProperty));
@@ -1671,13 +1795,13 @@ namespace IronPython.Runtime {
             PythonCompilerOptions pco;
             if (inheritContext) {
                 PythonModule pm = (PythonModule)context.GlobalScope.GetExtension(context.LanguageContext.ContextId);
-                if (pm != null && pm.TrueDivision) {
-                    pco = new PythonCompilerOptions(true);
+                if (pm != null) {
+                    pco = new PythonCompilerOptions(pm.LanguageFeatures);
                 } else {
-                    pco = new PythonCompilerOptions(false);
+                    pco = new PythonCompilerOptions(PythonLanguageFeatures.Default);
                 }
             } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
-                pco = new PythonCompilerOptions(true);
+                pco = new PythonCompilerOptions(PythonLanguageFeatures.TrueDivision);
             } else {
                 pco = DefaultContext.DefaultPythonContext.GetPythonCompilerOptions();
             }

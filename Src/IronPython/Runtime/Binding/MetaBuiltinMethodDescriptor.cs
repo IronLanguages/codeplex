@@ -30,14 +30,14 @@ using Ast = Microsoft.Linq.Expressions.Expression;
 namespace IronPython.Runtime.Binding {
 
     class MetaBuiltinMethodDescriptor : MetaPythonObject, IPythonInvokable {
-        public MetaBuiltinMethodDescriptor(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinMethodDescriptor/*!*/ value)
-            : base(expression, Restrictions.Empty, value) {
+        public MetaBuiltinMethodDescriptor(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, BuiltinMethodDescriptor/*!*/ value)
+            : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public DynamicMetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -45,17 +45,17 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params DynamicMetaObject/*!*/[]/*!*/ args) {
             // TODO: Context should come from BuiltinFunction
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
         [Obsolete]
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
+        public override DynamicMetaObject BindOperation(OperationBinder action, DynamicMetaObject[] args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return PythonProtocol.MakeCallSignatureOperation(this, Value.Template.Targets);
@@ -68,12 +68,12 @@ namespace IronPython.Runtime.Binding {
 
         #region Invoke Implementation
 
-        private MetaObject/*!*/ InvokeWorker(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[] args) {
+        private DynamicMetaObject/*!*/ InvokeWorker(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
-            Restrictions selfRestrict = Restrictions.GetInstanceRestriction(Expression, Value).Merge(Restrictions);
+            BindingRestrictions selfRestrict = BindingRestrictions.GetInstanceRestriction(Expression, Value).Merge(Restrictions);
 
             selfRestrict = selfRestrict.Merge(
-                Restrictions.GetExpressionRestriction(
+                BindingRestrictions.GetExpressionRestriction(
                     MakeFunctionTest(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("GetBuiltinMethodDescriptorTemplate"),
@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Binding {
 
             BinderState state = BinderState.GetBinderState(call);
 
-            MetaObject res = state.Binder.CallMethod(
+            DynamicMetaObject res = state.Binder.CallMethod(
                 new ParameterBinderWithCodeContext(state.Binder, codeContext),
                 Value.Template.Targets,
                 args,
@@ -111,7 +111,7 @@ namespace IronPython.Runtime.Binding {
 
 
             if (target.Method != null && (target.Method.IsFamily || target.Method.IsFamilyOrAssembly)) {
-                res = new MetaObject(
+                res = new DynamicMetaObject(
                     BindingHelpers.TypeErrorForProtectedMember(
                         target.Method.DeclaringType,
                         target.Method.Name
@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Binding {
                 );
             } else if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
                 // Binary Operators return NotImplemented on failure.
-                res = new MetaObject(
+                res = new DynamicMetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),
                     res.Restrictions
                 );

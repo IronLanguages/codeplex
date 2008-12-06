@@ -24,7 +24,7 @@ namespace Microsoft.Scripting {
     /// A Binder that is responsible for runtime binding of operation:
     /// a.b (op)= c
     /// </summary>
-    public abstract class UnaryOperationOnMemberBinder : MetaObjectBinder {
+    public abstract class UnaryOperationOnMemberBinder : DynamicMetaObjectBinder {
         private readonly ExpressionType _operation;
         private readonly string _name;
         private readonly bool _ignoreCase;
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="target">Target of the operation.</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public MetaObject FallbackUnaryOperation(MetaObject target) {
+        public DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target) {
             return FallbackUnaryOperation(target);
         }
 
@@ -95,7 +95,7 @@ namespace Microsoft.Scripting {
         /// <param name="target">Target of the operation.</param>
         /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding result.</returns>
-        public abstract MetaObject FallbackUnaryOperation(MetaObject target, MetaObject errorSuggestion);
+        public abstract DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target, DynamicMetaObject errorSuggestion);
 
         /// <summary>
         /// Implements a binding logic for the operation. This is called by the target when
@@ -103,7 +103,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="target">Target of the operation.</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public MetaObject FallbackUnaryOperationOnMember(MetaObject target) {
+        public DynamicMetaObject FallbackUnaryOperationOnMember(DynamicMetaObject target) {
             return FallbackUnaryOperationOnMember(target, null);
         }
 
@@ -116,9 +116,9 @@ namespace Microsoft.Scripting {
         /// object recommends the language to use if the language cannot bind.
         /// This allows the target meta object to participate in the error handling process.</param>
         /// <returns>MetaObject representing the binding.</returns>
-        public abstract MetaObject FallbackUnaryOperationOnMember(MetaObject target, MetaObject errorSuggestion);
+        public abstract DynamicMetaObject FallbackUnaryOperationOnMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion);
 
-        public sealed override MetaObject Bind(MetaObject target, params MetaObject[] args) {
+        public sealed override DynamicMetaObject Bind(DynamicMetaObject target, params DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(args == null || args.Length == 0, "args");
 

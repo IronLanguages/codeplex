@@ -30,16 +30,16 @@ namespace IronPython.Runtime.Binding {
     /// branch must be added.
     /// </summary>
     class ConditionalBuilder {
-        private readonly MetaObjectBinder/*!*/ _action;
+        private readonly DynamicMetaObjectBinder/*!*/ _action;
         private readonly List<Expression/*!*/>/*!*/ _conditions = new List<Expression>();
         private readonly List<Expression/*!*/>/*!*/ _bodies = new List<Expression>();
         private readonly List<ParameterExpression/*!*/>/*!*/ _variables = new List<ParameterExpression>();
         private Expression _body;
         private bool _testCoercionRecursionCheck;
-        private Restrictions/*!*/ _restrictions = Restrictions.Empty;
+        private BindingRestrictions/*!*/ _restrictions = BindingRestrictions.Empty;
         private ParameterExpression _compareRetBool;
 
-        public ConditionalBuilder(MetaObjectBinder/*!*/ action) {
+        public ConditionalBuilder(DynamicMetaObjectBinder/*!*/ action) {
             _action = action;
         }
 
@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public Restrictions Restrictions {
+        public BindingRestrictions Restrictions {
             get {
                 return _restrictions;
             }
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public MetaObjectBinder/*!*/ Action {
+        public DynamicMetaObjectBinder/*!*/ Action {
             get {
                 return _action;
             }
@@ -132,14 +132,14 @@ namespace IronPython.Runtime.Binding {
         /// Gets the resulting meta object for the full body.  FinishCondition
         /// must have been called.
         /// </summary>
-        public MetaObject/*!*/ GetMetaObject(params MetaObject/*!*/[]/*!*/ types) {
+        public DynamicMetaObject/*!*/ GetMetaObject(params DynamicMetaObject/*!*/[]/*!*/ types) {
             if (_body == null) {
                 throw new InvalidOperationException("FinishCondition not called before GetMetaObject");
             }
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                 _body,
-                Restrictions.Combine(types)
+                BindingRestrictions.Combine(types)
             );
         }
 

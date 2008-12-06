@@ -161,6 +161,34 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.Repr(context, o);
         }
 
+        public static string __format__(CodeContext/*!*/ context, object self, [NotNull]string/*!*/ formatSpec) {
+            string text = PythonOps.ToString(context, self);
+
+            StringFormatSpec spec = StringFormatSpec.FromString(formatSpec);
+
+            if (spec.Type != null && spec.Type != 's') {
+                throw PythonOps.ValueError("Unknown conversion type {0}", spec.Type.Value.ToString());
+            } else if (spec.Sign != null) {
+                throw PythonOps.ValueError("Sign not allowed in string format specifier");
+            } else if (spec.Alignment == '=') {
+                throw PythonOps.ValueError("'=' alignment not allowed in string format specifier");
+            }
+
+            // apply precision to shorten the string first
+            if (spec.Precision != null) {
+                int precision = spec.Precision.Value;
+                if (text.Length > precision) {
+                    text = text.Substring(0, precision);
+                }
+            }
+
+            // then apply the minimum width & padding
+            text = spec.AlignText(text);
+
+            // finally return the text
+            return text;
+        }
+
         #region Pickle helpers
 
         // This is a dynamically-initialized property rather than a statically-initialized field

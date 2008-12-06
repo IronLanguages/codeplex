@@ -159,11 +159,11 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public static MetaObjectBinder/*!*/ BinaryOperationRetBool(BinderState/*!*/ state, string operatorName) {
+        public static DynamicMetaObjectBinder/*!*/ BinaryOperationRetBool(BinderState/*!*/ state, string operatorName) {
             return BinaryOperationRetType(state, operatorName, typeof(bool));
         }
 
-        public static MetaObjectBinder/*!*/ BinaryOperationRetType(BinderState/*!*/ state, string operatorName, Type retType) {
+        public static DynamicMetaObjectBinder/*!*/ BinaryOperationRetType(BinderState/*!*/ state, string operatorName, Type retType) {
             return new ComboBinder(
                 new BinderMappingInfo(
                     new PythonOperationBinder(
@@ -180,7 +180,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public static MetaObjectBinder/*!*/ InvokeAndConvert(BinderState/*!*/ state, int argCount, Type retType) {
+        public static DynamicMetaObjectBinder/*!*/ InvokeAndConvert(BinderState/*!*/ state, int argCount, Type retType) {
             // +2 for the target object and CodeContext which InvokeBinder recevies
             ParameterMappingInfo[] args = new ParameterMappingInfo[argCount + 2];   
             for (int i = 0; i < argCount + 2; i++) {

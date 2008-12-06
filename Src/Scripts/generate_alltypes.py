@@ -444,9 +444,7 @@ def gen_header(cw, ty):
 def gen_type(cw, ty):
     cw.kws.update(ty.get_dict())
     extra = ""
-    if ty.name in ['Int32', 'Double', 'BigInteger', 'Complex64', 'Single']:
-        extra = "partial "
-    cw.enter_block("public static %(extra)sclass %(type)sOps", extra=extra)
+    cw.enter_block("public static partial %(extra)sclass %(type)sOps", extra=extra)
     gen_header(cw, ty)
     gen_unaryops(cw, ty)
     gen_binaryops(cw, ty)

@@ -17,8 +17,12 @@ using System; using Microsoft;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Binding;
+using IronPython.Compiler;
 
 namespace IronPython.Runtime {
+    /// <summary>
+    /// TODO: Unify w/ PythonLanguageFeatures
+    /// </summary>
     [Flags]
     public enum ModuleOptions {
         None = 0,
@@ -32,14 +36,13 @@ namespace IronPython.Runtime {
         ModuleBuiltins  = 0x0080,
         ExecOrEvalCode  = 0x0100,
         SkipFirstLine   = 0x0200,
+        PrintFunction   = 0x0400,
     }
 
     public class PythonModule : ScopeExtension {
-        private bool _trueDivision;
+        private PythonLanguageFeatures _features; 
         private bool _isPythonCreatedModule;
         private bool _showCls;
-        private bool _withStatement;
-        private bool _absoluteImports;
         private BinderState _binderState;
 
         internal PythonModule(Scope scope)
@@ -53,35 +56,68 @@ namespace IronPython.Runtime {
             : base(scope) {
             Assert.NotNull(module);
 
-            _trueDivision = module._trueDivision;
-            _withStatement = module._withStatement;
-            _isPythonCreatedModule = module._isPythonCreatedModule;              
+            _features = module.LanguageFeatures;
         }
 
         public bool TrueDivision {
             get {
-                return _trueDivision;
+                return (_features & PythonLanguageFeatures.TrueDivision) != 0;
             }
             set {
-                _trueDivision = value;
+                if (value) {
+                    _features |= PythonLanguageFeatures.TrueDivision;
+                } else {
+                    _features &= ~PythonLanguageFeatures.TrueDivision;
+                }
             }
         }
 
         public bool AllowWithStatement {
             get {
-                return _withStatement;
+                return (_features & PythonLanguageFeatures.AllowWithStatement) != 0;
             }
             set {
-                _withStatement = value;
+                if (value) {
+                    _features |= PythonLanguageFeatures.AllowWithStatement;
+                } else {
+                    _features &= ~PythonLanguageFeatures.AllowWithStatement;
+                }
             }
+
         }
 
         public bool AbsoluteImports {
             get {
-                return _absoluteImports;
+                return (_features & PythonLanguageFeatures.AbsoluteImports) != 0;
             }
             set {
-                _absoluteImports = value;
+                if (value) {
+                    _features |= PythonLanguageFeatures.AbsoluteImports;
+                } else {
+                    _features &= ~PythonLanguageFeatures.AbsoluteImports;
+                }
+            }
+        }
+
+        public bool PrintFunction {
+            get {
+                return (_features & PythonLanguageFeatures.PrintFunction) != 0;
+            }
+            set {
+                if (value) {
+                    _features |= PythonLanguageFeatures.PrintFunction;
+                } else {
+                    _features &= ~PythonLanguageFeatures.PrintFunction;
+                }
+            }
+        }
+
+        internal PythonLanguageFeatures LanguageFeatures {
+            get {
+                return _features;
+            }
+            set {
+                _features = value;
             }
         }
 
@@ -114,8 +150,8 @@ namespace IronPython.Runtime {
 
         protected override void ModuleReloading() {
             base.ModuleReloading();
+            _features = PythonLanguageFeatures.Default;
             _showCls = false;
-            _trueDivision = false;
         }
 
         internal object GetName() {

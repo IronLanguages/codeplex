@@ -28,7 +28,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
-    class PythonGetMemberBinder : MetaObjectBinder, IPythonSite, IExpressionSerializable {
+    class PythonGetMemberBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;
         private readonly GetMemberOptions _options;
         private readonly string _name;
@@ -52,12 +52,12 @@ namespace IronPython.Runtime.Binding {
         /// this includes unsplatting any keyword / position arguments.  Finally if it's just a plain
         /// old .NET type we use the default binder which supports CallSignatures.
         /// </summary>
-        public override MetaObject/*!*/ Bind(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ Bind(DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             Debug.Assert(args.Length == 1);
             Debug.Assert(args[0].LimitType == typeof(CodeContext));
 
             // we don't have CodeContext if an IDO falls back to us when we ask them to produce the Call
-            MetaObject cc = args[0];
+            DynamicMetaObject cc = args[0];
             IPythonGetable icc = target as IPythonGetable;
 
             if (icc != null) {
@@ -77,8 +77,8 @@ namespace IronPython.Runtime.Binding {
             return Fallback(target, cc.Expression);
         }
 
-        private MetaObject GetForeignObject(MetaObject self) {
-            return new MetaObject(
+        private DynamicMetaObject GetForeignObject(DynamicMetaObject self) {
+            return new DynamicMetaObject(
                 Expression.Dynamic(
                     new CompatibilityGetMember(_state, Name),
                     typeof(object),
@@ -90,12 +90,12 @@ namespace IronPython.Runtime.Binding {
 
         #endregion
 
-        public MetaObject/*!*/ Fallback(MetaObject/*!*/ self, Expression/*!*/ codeContext) {
+        public DynamicMetaObject/*!*/ Fallback(DynamicMetaObject/*!*/ self, Expression/*!*/ codeContext) {
             // Python always provides an extra arg to GetMember to flow the context.
             return FallbackWorker(self, codeContext, Name, _options, this);
         }
 
-        internal static MetaObject FallbackWorker(MetaObject/*!*/ self, Expression/*!*/ codeContext, string name, GetMemberOptions options, MetaObjectBinder action) {
+        internal static DynamicMetaObject FallbackWorker(DynamicMetaObject/*!*/ self, Expression/*!*/ codeContext, string name, GetMemberOptions options, DynamicMetaObjectBinder action) {
             if (self.NeedsDeferral()) {
                 return action.Defer(self);
             }
@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Binding {
             bool isNoThrow = ((options & GetMemberOptions.IsNoThrow) != 0) ? true : false;
             Type limitType = self.LimitType;
 
-            if (limitType == typeof(Null) || PythonBinder.IsPythonType(limitType)) {
+            if (limitType == typeof(DynamicNull) || PythonBinder.IsPythonType(limitType)) {
                 // look up in the PythonType so that we can 
                 // get our custom method names (e.g. string.startswith)            
                 PythonType argType = DynamicHelpers.GetPythonTypeFromType(limitType);
@@ -111,7 +111,7 @@ namespace IronPython.Runtime.Binding {
                 // if the name is defined in the CLS context but not the normal context then
                 // we will hide it.                
                 if (argType.IsHiddenMember(name)) {
-                    MetaObject baseRes = BinderState.GetBinderState(action).Binder.GetMember(
+                    DynamicMetaObject baseRes = BinderState.GetBinderState(action).Binder.GetMember(
                         name,
                         self,
                         codeContext,
@@ -125,15 +125,15 @@ namespace IronPython.Runtime.Binding {
 
             if (self.LimitType == typeof(OldInstance)) {
                 if ((options & GetMemberOptions.IsNoThrow) != 0) {
-                    return new MetaObject(
+                    return new DynamicMetaObject(
                         Ast.Field(
                             null,
                             typeof(OperationFailed).GetField("Value")
                         ),
-                        self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
+                        self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
                     );
                 } else {
-                    return new MetaObject(
+                    return new DynamicMetaObject(
                         Ast.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("AttributeError"),
@@ -145,7 +145,7 @@ namespace IronPython.Runtime.Binding {
                                 )
                             )
                         ),
-                        self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
+                        self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
                     );
                 }
             }
@@ -153,7 +153,7 @@ namespace IronPython.Runtime.Binding {
             return BinderState.GetBinderState(action).Binder.GetMember(name, self, codeContext, isNoThrow);
         }
 
-        private static Expression/*!*/ GetFailureExpression(Type/*!*/ limitType, string name, bool isNoThrow, MetaObjectBinder action) {
+        private static Expression/*!*/ GetFailureExpression(Type/*!*/ limitType, string name, bool isNoThrow, DynamicMetaObjectBinder action) {
             return isNoThrow ?
                 Ast.Field(null, typeof(OperationFailed).GetField("Value")) :
                 DefaultBinder.MakeError(
@@ -231,10 +231,11 @@ namespace IronPython.Runtime.Binding {
             _state = binder;
         }
 
-        public override MetaObject FallbackGetMember(MetaObject self, MetaObject onBindingError) {
+        public override DynamicMetaObject FallbackGetMember(DynamicMetaObject self, DynamicMetaObject onBindingError) {
 #if !SILVERLIGHT
-            if (Microsoft.Scripting.ComInterop.ComBinder.TryBindGetMember(this, ref self)) {
-                return self;
+            DynamicMetaObject com;
+            if (Microsoft.Scripting.ComBinder.TryBindGetMember(this, self, out com)) {
+                return com;
             }
 #endif
             return PythonGetMemberBinder.FallbackWorker(self, BinderState.GetCodeContext(this), Name, GetMemberOptions.None, this);

@@ -51,14 +51,14 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override MetaObject FallbackConvert(MetaObject self, MetaObject onBindingError) {
+        public override DynamicMetaObject FallbackConvert(DynamicMetaObject self, DynamicMetaObject onBindingError) {
             if (self.NeedsDeferral()) {
                 return Defer(self);
             }
 
             Type type = Type;
 
-            MetaObject res = null;
+            DynamicMetaObject res = null;
             switch (Type.GetTypeCode(type)) {
                 case TypeCode.Boolean:
                     res = MakeToBoolConversion(self);
@@ -84,12 +84,12 @@ namespace IronPython.Runtime.Binding {
                     } else if (type == typeof(IEnumerable)) {
                         if (self.LimitType == typeof(string)) {
                             // replace strings normal enumeration with our own which returns strings instead of chars.
-                            res = new MetaObject(
+                            res = new DynamicMetaObject(
                                 Ast.Call(
                                     typeof(StringOps).GetMethod("ConvertToIEnumerable"),
                                     AstUtils.Convert(self.Expression, typeof(string))
                                 ),
-                                Restrictions.GetTypeRestriction(self.Expression, typeof(string))
+                                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(string))
                             );
                         } else if (!typeof(IEnumerable).IsAssignableFrom(self.LimitType) && IsIndexless(self)) {
                             res = PythonProtocol.ConvertToIEnumerable(this, self.Restrict(self.LimitType));
@@ -108,7 +108,7 @@ namespace IronPython.Runtime.Binding {
                 // numeric type to enum, this is ok if the value is zero
                 object value = Activator.CreateInstance(type);
 
-                return new MetaObject(
+                return new DynamicMetaObject(
                     Ast.Condition(
                         Ast.Equal(
                             AstUtils.Convert(self.Expression, Enum.GetUnderlyingType(type)),
@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Binding {
                             AstUtils.Convert(self.Expression, typeof(object))
                         )
                     ),
-                    self.Restrictions.Merge(Restrictions.GetTypeRestriction(self.Expression, self.LimitType)),
+                    self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, self.LimitType)),
                     value
                 );
             }
@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Binding {
             return res ?? Binder.Binder.ConvertTo(Type, ResultKind, self);
         }
 
-        private static bool IsIndexless(MetaObject/*!*/ arg) {
+        private static bool IsIndexless(DynamicMetaObject/*!*/ arg) {
             return arg.LimitType != typeof(OldInstance) &&
                 arg.LimitType != typeof(BuiltinFunction) &&
                 arg.LimitType != typeof(BuiltinMethodDescriptor);
@@ -159,13 +159,13 @@ namespace IronPython.Runtime.Binding {
 
         #region Conversion Logic
 
-        private MetaObject TryToGenericInterfaceConversion(MetaObject/*!*/ self, Type/*!*/ toType, Type/*!*/ fromType, Type/*!*/ wrapperType) {
+        private DynamicMetaObject TryToGenericInterfaceConversion(DynamicMetaObject/*!*/ self, Type/*!*/ toType, Type/*!*/ fromType, Type/*!*/ wrapperType) {
             if (fromType.IsAssignableFrom(CompilerHelpers.GetType(self.Value))) {
                 Type making = wrapperType.MakeGenericType(toType.GetGenericArguments());
 
                 self = self.Restrict(CompilerHelpers.GetType(self.Value));
 
-                return new MetaObject(
+                return new DynamicMetaObject(
                     Ast.New(
                         making.GetConstructor(new Type[] { fromType }),
                         AstUtils.Convert(
@@ -179,10 +179,10 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        private MetaObject/*!*/ MakeToArrayConversion(MetaObject/*!*/ self, Type/*!*/ toType) {
+        private DynamicMetaObject/*!*/ MakeToArrayConversion(DynamicMetaObject/*!*/ self, Type/*!*/ toType) {
             self = self.Restrict(typeof(PythonTuple));
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("ConvertTupleToArray").MakeGenericMethod(toType.GetElementType()),
                     self.Expression
@@ -191,8 +191,8 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private MetaObject TryToCharConversion(MetaObject/*!*/ self) {
-            MetaObject res;
+        private DynamicMetaObject TryToCharConversion(DynamicMetaObject/*!*/ self) {
+            DynamicMetaObject res;
             // we have an implicit conversion to char if the
             // string length == 1, but we can only represent
             // this is implicit via a rule.
@@ -226,16 +226,16 @@ namespace IronPython.Runtime.Binding {
                 );
 
                 if (strVal.Length == 1) {
-                    res = new MetaObject(
+                    res = new DynamicMetaObject(
                         Ast.Call(
                             AstUtils.Convert(strExpr, typeof(string)),
                             typeof(string).GetMethod("get_Chars"),
                             Ast.Constant(0)
                         ),
-                        self.Restrictions.Merge(Restrictions.GetExpressionRestriction(Ast.Equal(getLen, Ast.Constant(1))))
+                        self.Restrictions.Merge(BindingRestrictions.GetExpressionRestriction(Ast.Equal(getLen, Ast.Constant(1))))
                     );
                 } else {
-                    res = new MetaObject(
+                    res = new DynamicMetaObject(
                         Ast.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("TypeError"),
@@ -243,7 +243,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.NewArrayInit(typeof(object), self.Expression)
                             )
                         ),
-                        self.Restrictions.Merge(Restrictions.GetExpressionRestriction(Ast.NotEqual(getLen, Ast.Constant(1))))
+                        self.Restrictions.Merge(BindingRestrictions.GetExpressionRestriction(Ast.NotEqual(getLen, Ast.Constant(1))))
                     );
                 }
             } else {
@@ -254,8 +254,8 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private MetaObject/*!*/ MakeToBoolConversion(MetaObject/*!*/ self) {
-            MetaObject res = null;
+        private DynamicMetaObject/*!*/ MakeToBoolConversion(DynamicMetaObject/*!*/ self) {
+            DynamicMetaObject res = null;
             if (self.NeedsDeferral()) {
                 res = Defer(self);
             } else {
@@ -263,7 +263,7 @@ namespace IronPython.Runtime.Binding {
                     self = self.Restrict(self.RuntimeType);
                 } 
 
-                if (self.LimitType == typeof(Null)) {
+                if (self.LimitType == typeof(DynamicNull)) {
                     // None has no __nonzero__ and no __len__ but it's always false
                     res = MakeNoneToBoolConversion(self);
                 } else if (self.LimitType == typeof(bool)) {
@@ -282,7 +282,7 @@ namespace IronPython.Runtime.Binding {
                     // __len__.  The fallback is handled by our ConvertTo site binder.
                     return
                         PythonProtocol.ConvertToBool(this, self) ??
-                        new MetaObject(
+                        new DynamicMetaObject(
                             Ast.Constant(true),
                             self.Restrictions
                         );
@@ -292,18 +292,18 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private static MetaObject/*!*/ MakeNoneToBoolConversion(MetaObject/*!*/ self) {
+        private static DynamicMetaObject/*!*/ MakeNoneToBoolConversion(DynamicMetaObject/*!*/ self) {
             // null is never true
-            return new MetaObject(
+            return new DynamicMetaObject(
                 Ast.Constant(false),
                 self.Restrictions
             );
         }
 
-        private static MetaObject/*!*/ MakePrimitiveToBoolComparison(MetaObject/*!*/ self) {
+        private static DynamicMetaObject/*!*/ MakePrimitiveToBoolComparison(DynamicMetaObject/*!*/ self) {
             object zeroVal = Activator.CreateInstance(self.LimitType);
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                 Ast.NotEqual(
                     Ast.Constant(zeroVal),
                     self.Expression
@@ -312,8 +312,8 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static MetaObject/*!*/ MakeStrongBoxToBoolConversionError(MetaObject/*!*/ self) {
-            return new MetaObject(
+        private static DynamicMetaObject/*!*/ MakeStrongBoxToBoolConversionError(DynamicMetaObject/*!*/ self) {
+            return new DynamicMetaObject(
                 Ast.Throw(
                     Ast.Call(
                         typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),

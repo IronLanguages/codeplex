@@ -333,8 +333,8 @@ namespace IronPython.Runtime.Types {
 
         #region IDynamicObject Members
 
-        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
-            return new Binding.MetaBuiltinFunction(parameter, Restrictions.Empty, this);
+        DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaBuiltinFunction(parameter, BindingRestrictions.Empty, this);
         }
 
         #endregion

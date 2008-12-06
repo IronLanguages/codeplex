@@ -488,6 +488,10 @@ namespace IronPython.Runtime.Operations {
         }
 #endif
 
+        public static string Format(IFormattable formattable, string format) {
+            return formattable.ToString(format, null);
+        }
+
         internal static void CheckInitArgs(CodeContext context, IAttributesCollection dict, object[] args, PythonType pt) {
             PythonTypeSlot dts;
             object initObj;

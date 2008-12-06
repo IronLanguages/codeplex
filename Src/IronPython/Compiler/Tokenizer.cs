@@ -24,6 +24,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Math;
+using System.Collections.Generic;
 
 namespace IronPython.Compiler {
 
@@ -32,57 +34,63 @@ namespace IronPython.Compiler {
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Tokenizer")]
     public sealed partial class Tokenizer : TokenizerService { 
-        private const int EOF = -1;
-        private const int MaxIndent = 80;
-
-        private const int DefaultBufferCapacity = 1024;
-
-        [Serializable] 
-        private struct State {
-            // indentation state
-            public int[] Indent;
-            public int IndentLevel;
-            public int PendingDedents;
-            public int PendingNewlines;
-
-            // TODO: remember incomplete tokens
-
-            // Indentation state used only when we're reporting on inconsistent identation format.
-            public StringBuilder[] IndentFormat;
-
-            // grouping state
-            public int ParenLevel, BraceLevel, BracketLevel;
-
-            public State(State state) {
-                Indent = (int[])state.Indent.Clone();
-                PendingNewlines = state.PendingNewlines;
-                BracketLevel = state.BraceLevel;
-                ParenLevel = state.ParenLevel;
-                BraceLevel = state.BraceLevel;
-                PendingDedents = state.PendingDedents;
-                IndentLevel = state.IndentLevel;
-                IndentFormat = (state.IndentFormat != null) ? (StringBuilder[])state.IndentFormat.Clone() : null;
-            }
-
-            public State(object dummy) {
-                Indent = new int[MaxIndent]; // TODO
-                PendingNewlines = 1;
-                BracketLevel = ParenLevel = BraceLevel = PendingDedents = IndentLevel = 0;
-                IndentFormat = null;
-            }
-        }
-
         private State _state;
-
-        // tokenizer properties:
-        private readonly bool _verbatim, _dontImplyDedent;
+        private readonly bool _verbatim, _dontImplyDedent, _python26;
         private bool _disableLineFeedLineSeparator;
         private SourceUnit _sourceUnit;
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
         private Severity _indentationInconsistencySeverity;
-        private bool _endContinues;
+        private bool _endContinues, _printFunction;
 
+        private const int EOF = -1;
+        private const int MaxIndent = 80;
+        private const int DefaultBufferCapacity = 1024;
+
+        public Tokenizer()
+            : this(ErrorSink.Null, true) {
+        }
+
+        public Tokenizer(ErrorSink errorSink)
+            : this(errorSink, false) {
+        }
+
+        [Obsolete("Use the overload that takes a PythonCompilerOptions instead")]
+        public Tokenizer(ErrorSink errorSink, bool verbatim)
+            : this(errorSink, verbatim, true) {
+        }
+
+        [Obsolete("Use the overload that takes a PythonCompilerOptions instead")]
+        public Tokenizer(ErrorSink errorSink, bool verbatim, bool dontImplyDedent) {
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+
+            _errors = errorSink;
+            _verbatim = verbatim;
+            _state = new State(null);
+            _dontImplyDedent = dontImplyDedent;
+        }
+
+        public Tokenizer(ErrorSink errorSink, PythonCompilerOptions options) {
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(options, "options");
+
+            _errors = errorSink;
+            _verbatim = options.Verbatim;
+            _state = new State(null);
+            _dontImplyDedent = options.DontImplyDedent;
+            _printFunction = options.PrintFunction;
+            _python26 = options.Python26;
+        }
+
+        /// <summary>
+        /// Used to support legacy CreateParser API.
+        /// </summary>
+        internal Tokenizer(ErrorSink errorSink, PythonCompilerOptions options, bool verbatim)
+            : this(errorSink, options) {
+
+            _verbatim = verbatim || options.Verbatim;
+        }
+        
         // TODO:
         public override bool IsRestartable {
             get { return false; }
@@ -145,31 +153,7 @@ namespace IronPython.Compiler {
             get {
                 return new SourceSpan(TokenStart, TokenEnd);
             }
-        }
-
-        public Tokenizer() 
-            : this(ErrorSink.Null, true) {
-        }
-
-        public Tokenizer(ErrorSink errorSink)
-            : this(errorSink, false) {
-        }
-
-        public Tokenizer(ErrorSink errorSink, bool verbatim)
-            : this(errorSink, verbatim, true) {
-        }
-
-        public Tokenizer(ErrorSink errorSink, bool verbatim, bool dontImplyDedent) {
-            ContractUtils.RequiresNotNull(errorSink, "errorSink");
-
-            _errors = errorSink;
-            _verbatim = verbatim;
-            _state = new State(null);
-            _sourceUnit = null;
-            _buffer = null;
-            _dontImplyDedent = dontImplyDedent;
-            _disableLineFeedLineSeparator = false;
-        }
+        }        
 
         public void Initialize(SourceUnit sourceUnit) {
             ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
@@ -292,6 +276,19 @@ namespace IronPython.Compiler {
             return true;
         }
 
+        internal string GetTokenString() {
+            return _buffer.GetTokenString();
+        }
+
+        internal bool PrintFunction {
+            get {
+                return _printFunction;
+            }
+            set {
+                _printFunction = value;
+            }
+        }
+
         private bool NextChar(int ch) {
             return _buffer.Read(ch);
         }
@@ -362,13 +359,19 @@ namespace IronPython.Compiler {
                         }
                     
                     case '\"': case '\'':
-                        return ReadString((char)ch, false, false);
+                        return ReadString((char)ch, false, false, false);
 
                     case 'u': case 'U':
                         return ReadNameOrUnicodeString();
 
                     case 'r': case 'R':
                         return ReadNameOrRawString();
+                    case 'b': case 'B':
+                        if (_python26) {
+                            return ReadNameOrBytes();
+                        }
+
+                        goto default;
 
                     case '_':
                         return ReadName();
@@ -448,19 +451,30 @@ namespace IronPython.Compiler {
         }
 
         private Token ReadNameOrUnicodeString() {
-            if (NextChar('\"')) return ReadString('\"', false, true);
-            if (NextChar('\'')) return ReadString('\'', false, true);
+            if (NextChar('\"')) return ReadString('\"', false, true, false);
+            if (NextChar('\'')) return ReadString('\'', false, true, false);
             if (NextChar('r') || NextChar('R')) {
-                if (NextChar('\"')) return ReadString('\"', true, true);
-                if (NextChar('\'')) return ReadString('\'', true, true);
+                if (NextChar('\"')) return ReadString('\"', true, true, false);
+                if (NextChar('\'')) return ReadString('\'', true, true, false);
+                _buffer.Back();
+            }
+            return ReadName();
+        }
+
+        private Token ReadNameOrBytes() {
+            if (NextChar('\"')) return ReadString('\"', false, false, true);
+            if (NextChar('\'')) return ReadString('\'', false, false, true);
+            if (NextChar('r') || NextChar('R')) {
+                if (NextChar('\"')) return ReadString('\"', true, false, true);
+                if (NextChar('\'')) return ReadString('\'', true, false, true);
                 _buffer.Back();
             }
             return ReadName();
         }
 
         private Token ReadNameOrRawString() {
-            if (NextChar('\"')) return ReadString('\"', true, false);
-            if (NextChar('\'')) return ReadString('\'', true, false);
+            if (NextChar('\"')) return ReadString('\"', true, false, false);
+            if (NextChar('\'')) return ReadString('\'', true, false, false);
             return ReadName();
         }
 
@@ -492,7 +506,7 @@ namespace IronPython.Compiler {
             return Char.IsLetterOrDigit((char)ch) || ch == '_';
         }
 
-        private Token ReadString(char quote, bool isRaw, bool isUni) {
+        private Token ReadString(char quote, bool isRaw, bool isUni, bool isBytes) {
             int sadd = 0;
             bool isTriple = false;
 
@@ -509,11 +523,12 @@ namespace IronPython.Compiler {
 
             if (isRaw) sadd++;
             if (isUni) sadd++;
+            if (isBytes) sadd++;
 
-            return ContinueString(quote, isRaw, isUni, isTriple, sadd);
+            return ContinueString(quote, isRaw, isUni, isBytes, isTriple, sadd);
         }
 
-        private Token ContinueString(char quote, bool isRaw, bool isUnicode, bool isTriple, int startAdd) {
+        private Token ContinueString(char quote, bool isRaw, bool isUnicode, bool isBytes, bool isTriple, int startAdd) {
             bool complete = true;
             bool multi_line = false;
             int end_add = 0;
@@ -612,11 +627,25 @@ namespace IronPython.Compiler {
                 contents = contents.Replace("\r\n", "\n").Replace("\r", "\n");
             }
 
-            contents = LiteralParser.ParseString(contents, isRaw, isUnicode, complete);
-            if (complete) {
-                return new ConstantValueToken(contents);
+
+            if (!isBytes) {
+                contents = LiteralParser.ParseString(contents, isRaw, isUnicode, complete);
+                if (complete) {
+                    return new ConstantValueToken(contents);
+                } else {
+                    return new IncompleteStringToken(contents, quote == '\'', isRaw, isUnicode, isTriple);
+                }
             } else {
-                return new IncompleteStringToken(contents, quote == '\'', isRaw, isUnicode, isTriple);
+                List<byte> data = LiteralParser.ParseBytes(contents, isRaw, complete);
+                if (complete) {
+                    if (data.Count == 0) {
+                        return new ConstantValueToken(Bytes.Empty);
+                    }
+
+                    return new ConstantValueToken(new Bytes(data));
+                } else {
+                    return new IncompleteStringToken(data, quote == '\'', isRaw, false, isTriple);
+                }
             }
         }
 
@@ -632,6 +661,8 @@ namespace IronPython.Compiler {
             if (start == '0') {
                 if (NextChar('x') || NextChar('X')) {
                     return ReadHexNumber();
+                } else if (_python26 && (NextChar('b') || NextChar('B'))) {
+                    return ReadBinaryNumber();
                 }
                 b = 8;
             }
@@ -668,6 +699,44 @@ namespace IronPython.Compiler {
 
                         // TODO: parse in place
                         return new ConstantValueToken(ParseInteger(_buffer.GetTokenString(), b));
+                }
+            }
+        }
+
+        private Token ReadBinaryNumber() {
+            int bits = 0;
+            int iVal = 0;
+            BigInteger bigInt = null;
+            while (true) {
+                int ch = NextChar();
+                switch(ch) {
+                    case '0':
+                        if (iVal != 0) {
+                            // ignore leading 0's...
+                            goto case '1';
+                        }
+                        break;
+                    case '1':
+                        bits++;
+                        if (bits == 32) {
+                            bigInt = (BigInteger)iVal;
+                        }
+
+                        if (bits >= 32) {
+                            bigInt = (bigInt << 1) | (ch - '0');
+                        } else {
+                            iVal = iVal << 1 | (ch - '0');
+                        }
+                        break;
+                    case 'l': case 'L':
+                        _buffer.MarkSingleLineTokenEnd();
+
+                        return new ConstantValueToken(bigInt ?? ((BigInteger)iVal));
+                    default:
+                        _buffer.Back();
+                        _buffer.MarkSingleLineTokenEnd();
+
+                        return new ConstantValueToken((object)bigInt ?? (object)iVal);
                 }
             }
         }
@@ -769,7 +838,11 @@ namespace IronPython.Compiler {
             if (name == Symbols.None) return Tokens.NoneToken;
 
             Token result;
-            if (Tokens.Keywords.TryGetValue(name, out result)) return result;
+            if (Tokens.Keywords.TryGetValue(name, out result)) {
+                if (result != Tokens.KeywordPrintToken || !_printFunction) {
+                    return result;
+                }
+            }
 
             return new NameToken(name);
         }
@@ -1027,6 +1100,41 @@ namespace IronPython.Compiler {
         [Conditional("DUMP_TOKENS")]
         private void DumpToken(Token token) {
             Console.WriteLine("{0} `{1}`", token.Kind, token.Image.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t"));
+        }
+
+        [Serializable]
+        private struct State {
+            // indentation state
+            public int[] Indent;
+            public int IndentLevel;
+            public int PendingDedents;
+            public int PendingNewlines;
+
+            // TODO: remember incomplete tokens
+
+            // Indentation state used only when we're reporting on inconsistent identation format.
+            public StringBuilder[] IndentFormat;
+
+            // grouping state
+            public int ParenLevel, BraceLevel, BracketLevel;
+
+            public State(State state) {
+                Indent = (int[])state.Indent.Clone();
+                PendingNewlines = state.PendingNewlines;
+                BracketLevel = state.BraceLevel;
+                ParenLevel = state.ParenLevel;
+                BraceLevel = state.BraceLevel;
+                PendingDedents = state.PendingDedents;
+                IndentLevel = state.IndentLevel;
+                IndentFormat = (state.IndentFormat != null) ? (StringBuilder[])state.IndentFormat.Clone() : null;
+            }
+
+            public State(object dummy) {
+                Indent = new int[MaxIndent]; // TODO
+                PendingNewlines = 1;
+                BracketLevel = ParenLevel = BraceLevel = PendingDedents = IndentLevel = 0;
+                IndentFormat = null;
+            }
         }
     }
 }

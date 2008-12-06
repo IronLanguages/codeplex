@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// Succeeds if the MetaObject is a BuiltinFunction or BuiltinMethodDescriptor.
         /// </summary>
-        internal static bool TryGetStaticFunction(BinderState/*!*/ state, SymbolId op, MetaObject/*!*/ mo, out BuiltinFunction function) {
+        internal static bool TryGetStaticFunction(BinderState/*!*/ state, SymbolId op, DynamicMetaObject/*!*/ mo, out BuiltinFunction function) {
             PythonType type = MetaPythonObject.GetPythonType(mo);
             function = null;
             if (op != SymbolId.Empty) {
@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
-        internal static bool IsNoThrow(MetaObjectBinder action) {
+        internal static bool IsNoThrow(DynamicMetaObjectBinder action) {
             PythonGetMemberBinder gmb = action as PythonGetMemberBinder;
             if (gmb != null) {
                 return gmb.IsNoThrow;
@@ -61,11 +61,11 @@ namespace IronPython.Runtime.Binding {
             return false;
         }
 
-        internal static MetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, MetaObjectBinder/*!*/ action, MetaObject/*!*/ res, Expression/*!*/ failure) {
+        internal static DynamicMetaObject/*!*/ FilterShowCls(Expression/*!*/ codeContext, DynamicMetaObjectBinder/*!*/ action, DynamicMetaObject/*!*/ res, Expression/*!*/ failure) {
             if (action is IPythonSite) {
                 Type resType = BindingHelpers.GetCompatibleType(res.Expression.Type, failure.Type);
 
-                return new MetaObject(
+                return new DynamicMetaObject(
                     Ast.Condition(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("IsClsVisible"),
@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         /// <param name="action"></param>
         /// <returns></returns>
-        internal static CallSignature GetCallSignature(MetaObjectBinder/*!*/ action) {
+        internal static CallSignature GetCallSignature(DynamicMetaObjectBinder/*!*/ action) {
             // Python'so own InvokeBinder which has a real sig
             PythonInvokeBinder pib = action as PythonInvokeBinder;
             if (pib != null) {
@@ -132,12 +132,12 @@ namespace IronPython.Runtime.Binding {
         /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
-        internal static MetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        internal static DynamicMetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             if (args[0].NeedsDeferral()) {
                 return action.Defer(args);
             }
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                 Invoke(
                     BinderState.GetCodeContext(action),
                     BinderState.GetBinderState(action),
@@ -151,10 +151,10 @@ namespace IronPython.Runtime.Binding {
                             action.Name,
                             args[0].Expression
                         ),
-                        MetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
+                        DynamicMetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
                     )
                 ),
-                Restrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
+                BindingRestrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
             );
         }
 
@@ -163,12 +163,12 @@ namespace IronPython.Runtime.Binding {
         /// we shouldn't be returning Python members (e.g. object.__repr__) to non-Python callers.  This
         /// can go away as soon as all of the classes implement the full fidelity of the protocol
         /// </summary>
-        internal static MetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal static DynamicMetaObject/*!*/ GenericCall(InvokeMemberBinder/*!*/ action, DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args) {
             if (target.NeedsDeferral()) {
                 return action.Defer(args);
             }
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                 Invoke(
                     BinderState.GetCodeContext(action),
                     BinderState.GetBinderState(action),
@@ -182,10 +182,10 @@ namespace IronPython.Runtime.Binding {
                             action.Name,
                             target.Expression
                         ),
-                        MetaObject.GetExpressions(args)
+                        DynamicMetaObject.GetExpressions(args)
                     )
                 ),
-                Restrictions.Combine(args).Merge(target.Restrict(target.LimitType).Restrictions)
+                BindingRestrictions.Combine(args).Merge(target.Restrict(target.LimitType).Restrictions)
             );
         }
 
@@ -228,7 +228,7 @@ namespace IronPython.Runtime.Binding {
         /// Determines if the type associated with the first MetaObject is a subclass of the
         /// type associated with the second MetaObject.
         /// </summary>
-        internal static bool IsSubclassOf(MetaObject/*!*/ xType, MetaObject/*!*/ yType) {
+        internal static bool IsSubclassOf(DynamicMetaObject/*!*/ xType, DynamicMetaObject/*!*/ yType) {
             PythonType x = MetaPythonObject.GetPythonType(xType);
             PythonType y = MetaPythonObject.GetPythonType(yType);
             return x.IsSubclassOf(y);
@@ -244,11 +244,11 @@ namespace IronPython.Runtime.Binding {
             return o as BuiltinFunction;
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaObjectBinder/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, params ParameterExpression[] temps) {
+        internal static DynamicMetaObject/*!*/ AddDynamicTestAndDefer(DynamicMetaObjectBinder/*!*/ operation, DynamicMetaObject/*!*/ res, DynamicMetaObject/*!*/[] args, ValidationInfo typeTest, params ParameterExpression[] temps) {
             return AddDynamicTestAndDefer(operation, res, args, typeTest, null, temps);
         }
 
-        internal static MetaObject/*!*/ AddDynamicTestAndDefer(MetaObjectBinder/*!*/ operation, MetaObject/*!*/ res, MetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params ParameterExpression[] temps) {
+        internal static DynamicMetaObject/*!*/ AddDynamicTestAndDefer(DynamicMetaObjectBinder/*!*/ operation, DynamicMetaObject/*!*/ res, DynamicMetaObject/*!*/[] args, ValidationInfo typeTest, Type deferType, params ParameterExpression[] temps) {
             if (typeTest != null) {
                 if (typeTest.Test != null) {
                     // add the test and a validator if persent
@@ -259,7 +259,7 @@ namespace IronPython.Runtime.Binding {
 
                     Type bestType = BindingHelpers.GetCompatibleType(defer.Type, res.Expression.Type);
 
-                    res = new MetaObject(
+                    res = new DynamicMetaObject(
                         Ast.Condition(
                             typeTest.Test,
                             AstUtils.Convert(res.Expression, bestType),
@@ -270,13 +270,13 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else if (typeTest.Validator != null) {
                     // just add the validator
-                    res = new MetaObject(res.Expression, res.Restrictions); // , typeTest.Validator
+                    res = new DynamicMetaObject(res.Expression, res.Restrictions); // , typeTest.Validator
                 }
             } 
             
             if (temps.Length > 0) {
                 // finally add the scoped variables
-                res = new MetaObject(
+                res = new DynamicMetaObject(
                     Ast.Block(temps, res.Expression),
                     res.Restrictions,
                     null
@@ -286,7 +286,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
         
-        internal static Expression MakeTypeTests(params MetaObject/*!*/[] args) {
+        internal static Expression MakeTypeTests(params DynamicMetaObject/*!*/[] args) {
             Expression typeTest = null;
 
             for (int i = 0; i < args.Length; i++) {
@@ -329,7 +329,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public static ValidationInfo GetValidationInfo(MetaObject metaSelf, params MetaObject[] args) {
+        public static ValidationInfo GetValidationInfo(DynamicMetaObject metaSelf, params DynamicMetaObject[] args) {
             Func<bool> validation = null;
             Expression typeTest = null;
             if (metaSelf != null) {
@@ -430,7 +430,7 @@ namespace IronPython.Runtime.Binding {
         /// Helper to do fallback for Invoke's so we can handle both StandardAction and Python's 
         /// InvokeBinder.
         /// </summary>
-        internal static MetaObject/*!*/ InvokeFallback(MetaObjectBinder/*!*/ action, Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal static DynamicMetaObject/*!*/ InvokeFallback(DynamicMetaObjectBinder/*!*/ action, Expression codeContext, DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args) {
             InvokeBinder act = action as InvokeBinder;
             if (act != null) {
                 return act.FallbackInvoke(target, args);
@@ -457,8 +457,8 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        internal static MetaObject/*!*/ TypeErrorGenericMethod(Type/*!*/ type, string/*!*/ name, Restrictions/*!*/ restrictions) {
-            return new MetaObject(
+        internal static DynamicMetaObject/*!*/ TypeErrorGenericMethod(Type/*!*/ type, string/*!*/ name, BindingRestrictions/*!*/ restrictions) {
+            return new DynamicMetaObject(
                 Ast.Throw(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("TypeErrorForGenericMethod"),

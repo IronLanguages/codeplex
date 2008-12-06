@@ -39,7 +39,7 @@ namespace IronPython.Modules {
 
         internal static void EnsureLocaleInitialized(PythonContext context) {
             if (!context.HasModuleState(_localeKey)) {
-                context.SetModuleState(_localeKey, new LocaleInfo());
+                context.SetModuleState(_localeKey, new LocaleInfo(context));
             }
         }
 
@@ -113,22 +113,37 @@ Currently returns the string unmodified")]
         }
 
         internal class LocaleInfo {
-            public LocaleInfo() {
-                Collate = CultureInfo.InvariantCulture;
-                CType = CultureInfo.InvariantCulture;
-                Time = CultureInfo.InvariantCulture;
-                Monetary = CultureInfo.InvariantCulture;
-                Numeric = CultureInfo.InvariantCulture;
+            private readonly PythonContext _context;
+            private PythonDictionary conv;
+
+            public LocaleInfo(PythonContext context) {
+                _context = context;
             }
 
-            public CultureInfo Collate;
-            public CultureInfo CType;
-            public CultureInfo Time;
+            public CultureInfo Collate {
+                get { return _context.CollateCulture; }
+                set { _context.CollateCulture = value; }
+            }
 
-            public CultureInfo Monetary;
-            public CultureInfo Numeric;
+            public CultureInfo CType {
+                get { return _context.CTypeCulture; }
+                set { _context.CTypeCulture= value; }
+            }
+            
+            public CultureInfo Time {
+                get { return _context.TimeCulture; }
+                set { _context.TimeCulture = value; }
+            }
 
-            private PythonDictionary conv;
+            public CultureInfo Monetary {
+                get { return _context.MonetaryCulture; }
+                set { _context.MonetaryCulture = value; }
+            }
+            
+            public CultureInfo Numeric {
+                get { return _context.NumericCulture; }
+                set { _context.NumericCulture = value; }
+            }
 
             public override string ToString() {
                 return base.ToString();
@@ -200,7 +215,7 @@ Currently returns the string unmodified")]
                 if (culture == CultureInfo.InvariantCulture) {
                     return "C";
                 }
-
+                
                 return culture.Name.Replace('-', '_');
             }
 

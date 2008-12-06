@@ -128,9 +128,9 @@
     <Compile Include="Actions\GetMemberBinder.cs" />
     <Compile Include="Actions\IDynamicObject.cs" />
     <Compile Include="Actions\InvokeBinder.cs" />
-    <Compile Include="Actions\MetaObject.cs" />
-    <Compile Include="Actions\MetaObjectBinder.cs" />
-    <Compile Include="Actions\Restrictions.cs" />
+    <Compile Include="Actions\DynamicMetaObject.cs" />
+    <Compile Include="Actions\DynamicMetaObjectBinder.cs" />
+    <Compile Include="Actions\BindingRestrictions.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\SetIndexBinder.cs" />
@@ -237,7 +237,7 @@
     <Compile Include="Utils\ReferenceEqualityComparer.cs" />
     <Compile Include="Utils\StrongBox.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
-    <Compile Include="Null.cs" />
+    <Compile Include="DynamicNull.cs" />
     <Compile Include="Stubs.cs" />
   </ItemGroup>
   <ItemGroup>

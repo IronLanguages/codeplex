@@ -36,19 +36,19 @@ using AstUtils = Microsoft.Scripting.Ast.Utils;
 namespace IronPython.Runtime.Binding {
 
     class MetaBuiltinFunction : MetaPythonObject, IPythonInvokable {
-        public MetaBuiltinFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, BuiltinFunction/*!*/ value)
-            : base(expression, Restrictions.Empty, value) {
+        public MetaBuiltinFunction(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, BuiltinFunction/*!*/ value)
+            : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params DynamicMetaObject/*!*/[]/*!*/ args) {
             // TODO: Context should come from BuiltinFunction
             return InvokeWorker(call, BinderState.GetCodeContext(call), args);
         }
 
-        public override MetaObject BindConvert(ConvertBinder/*!*/ conversion) {
+        public override DynamicMetaObject BindConvert(ConvertBinder/*!*/ conversion) {
             if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(BuiltinFunction)));
             }
@@ -56,7 +56,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         [Obsolete]
-        public override MetaObject BindOperation(OperationBinder action, MetaObject[] args) {
+        public override DynamicMetaObject BindOperation(OperationBinder action, DynamicMetaObject[] args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return PythonProtocol.MakeCallSignatureOperation(this, Value.Targets);
@@ -69,7 +69,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public DynamicMetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, codeContext, args);
         }
 
@@ -77,7 +77,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Invoke Implementation
 
-        private MetaObject/*!*/ InvokeWorker(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private DynamicMetaObject/*!*/ InvokeWorker(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[]/*!*/ args) {
             if (this.NeedsDeferral()) {
                 return call.Defer(ArrayUtils.Insert(this, args));
             }
@@ -95,11 +95,11 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private MetaObject/*!*/ MakeSelflessCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private DynamicMetaObject/*!*/ MakeSelflessCall(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[]/*!*/ args) {
             // just check if it's the same built-in function.  Because built-in fucntions are
             // immutable the identity check will suffice.  Because built-in functions are uncollectible
             // anyway we don't use the typical InstanceRestriction.
-            Restrictions selfRestrict = Restrictions.GetExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
+            BindingRestrictions selfRestrict = BindingRestrictions.GetExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
 
             if (Value.IsOnlyGeneric) {
                 return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Name, selfRestrict);
@@ -111,7 +111,7 @@ namespace IronPython.Runtime.Binding {
 
             BindingTarget target;
             var binder = BinderState.GetBinderState(call).Binder;
-            MetaObject res = binder.CallMethod(
+            DynamicMetaObject res = binder.CallMethod(
                 new ParameterBinderWithCodeContext(binder, codeContext),
                 Value.Targets,
                 args,
@@ -127,7 +127,7 @@ namespace IronPython.Runtime.Binding {
 
             if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
                 // Binary Operators return NotImplemented on failure.
-                res = new MetaObject(
+                res = new DynamicMetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),
                     res.Restrictions
                 );
@@ -141,7 +141,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private MetaObject/*!*/ MakeSelfCall(MetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, MetaObject/*!*/[]/*!*/ args) {
+        private DynamicMetaObject/*!*/ MakeSelfCall(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[]/*!*/ args) {
             CallSignature signature = BindingHelpers.GetCallSignature(call);
 
             Expression instance = Ast.Property(
@@ -152,16 +152,16 @@ namespace IronPython.Runtime.Binding {
                 typeof(BuiltinFunction).GetProperty("__self__")
             );
 
-            MetaObject self = GetInstance(
+            DynamicMetaObject self = GetInstance(
                 instance,
                 CompilerHelpers.GetType(Value.__self__),
                 Restrictions.Merge(
-                    Restrictions.GetTypeRestriction(
+                    BindingRestrictions.GetTypeRestriction(
                         Expression,
                         typeof(BuiltinFunction)
                     )
                 ).Merge(
-                    Restrictions.GetExpressionRestriction(
+                    BindingRestrictions.GetExpressionRestriction(
                         Value.MakeBoundFunctionTest(
                             AstUtils.Convert(Expression, typeof(BuiltinFunction))
                         )
@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Binding {
                 )
             );
 
-            MetaObject res;
+            DynamicMetaObject res;
             BinderState state = BinderState.GetBinderState(call);
             BindingTarget target;
             var mc = new ParameterBinderWithCodeContext(state.Binder, codeContext);
@@ -206,7 +206,7 @@ namespace IronPython.Runtime.Binding {
 
             if (Value.IsBinaryOperator && args.Length == 1 && res.Expression.NodeType == ExpressionType.Throw) { // 1 bound function + 1 arg
                 // binary operators return NotImplemented on a failure to call them
-                res = new MetaObject(
+                res = new DynamicMetaObject(
                     Ast.Property(null, typeof(PythonOps), "NotImplemented"),
                     res.Restrictions
                 );
@@ -220,11 +220,11 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private MetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType, Restrictions/*!*/ restrictions) {
+        private DynamicMetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType, BindingRestrictions/*!*/ restrictions) {
             Assert.NotNull(instance, testType);
             object instanceValue = Value.__self__;
 
-            restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(instance, testType));
+            restrictions = restrictions.Merge(BindingRestrictions.GetTypeRestriction(instance, testType));
 
             // cast the instance to the correct type
             if (CompilerHelpers.IsStrongBox(instanceValue)) {
@@ -266,7 +266,7 @@ namespace IronPython.Runtime.Binding {
                 // a method on the Enum class though - so we cast to Enum instead.
                 instance = Ast.Convert(instance, typeof(Enum));
             }
-            return new MetaObject(
+            return new DynamicMetaObject(
                 instance,
                 restrictions,
                 instanceValue

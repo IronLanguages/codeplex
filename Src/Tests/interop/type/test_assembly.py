@@ -49,8 +49,8 @@ def test_type():
     mscorlib = Assembly.Load("mscorlib")
     Assert("Assembly" in repr(mscorlib))  
 
-    AreEqual(len(dir(Assembly)), 62)
-    AreEqual(len(dir(AssemblyBuilder)), 75)   
+    AreEqual(len(dir(Assembly)), 63)
+    AreEqual(len(dir(AssemblyBuilder)), 76)   
     
 #####################################################################################
 run_test(__name__)

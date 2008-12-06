@@ -416,7 +416,7 @@ namespace IronPython.Runtime {
 
         public virtual object this[Slice slice] {
             get {
-                if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
+                if (slice == null) throw PythonOps.TypeError("list indices must be integer or slice, not None");
 
                 int start, stop, step;
                 slice.indices(_size, out start, out stop, out step);
@@ -442,7 +442,7 @@ namespace IronPython.Runtime {
                 }
             }
             set {
-                if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
+                if (slice == null) throw PythonOps.TypeError("list indices must be integer or slice, not None");
 
                 if (slice.step != null) {
                     // try to assign back to self: make a copy first
@@ -558,11 +558,11 @@ namespace IronPython.Runtime {
         }
 
         public void __delitem__(Slice slice) {
-            if (slice == null) throw PythonOps.TypeError("list indicies must be integers or slices");
+            if (slice == null) throw PythonOps.TypeError("list indices must be integers or slices");
 
             lock (this) {
                 int start, stop, step;
-                // slice is sealed, indicies can't be user code...
+                // slice is sealed, indices can't be user code...
                 slice.indices(_size, out start, out stop, out step);
 
                 if (step > 0 && (start >= stop)) return;
@@ -1001,7 +1001,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            // use the resulting indicies to
+            // use the resulting indices to
             // extract the order.
             object[] newData = new object[len];
             int start = lists[0];

@@ -31,6 +31,7 @@ namespace IronPython.Compiler.Ast {
         private readonly SymbolId _name;
         private readonly Statement _body;
         private readonly Expression[] _bases;
+        private IList<Expression> _decorators;
 
         private PythonVariable _variable;           // Variable corresponding to the class name
         private PythonVariable _modVariable;        // Variable for the the __module__ (module name)
@@ -58,6 +59,15 @@ namespace IronPython.Compiler.Ast {
 
         public Statement Body {
             get { return _body; }
+        }
+
+        public IList<Expression> Decorators {
+            get {
+                return _decorators;
+            }
+            set {
+                _decorators = value;
+            }
         }
 
         internal PythonVariable Variable {
@@ -161,11 +171,18 @@ namespace IronPython.Compiler.Ast {
                 lambda
             );
 
+            classDef = ag.AddDecorators(classDef, _decorators);
+
             return ag.AddDebugInfo(AstUtils.Assign(_variable.Variable, classDef), new SourceSpan(Start, Header));
         }
 
         public override void Walk(PythonWalker walker) {
             if (walker.Walk(this)) {
+                if (_decorators != null) {
+                    foreach (Expression decorator in _decorators) {
+                        decorator.Walk(walker);
+                    }
+                }
                 if (_bases != null) {
                     foreach (Expression b in _bases) {
                         b.Walk(walker);

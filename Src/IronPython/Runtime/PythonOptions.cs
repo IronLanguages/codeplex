@@ -39,6 +39,7 @@ namespace IronPython {
         private readonly PythonDivisionOptions _division;
         private readonly bool _stripDocStrings;
         private readonly bool _optimize;
+        private readonly Version _version;
 
         public ReadOnlyCollection<string>/*!*/ Arguments {
             get { return _arguments; }
@@ -86,6 +87,12 @@ namespace IronPython {
         public PythonOptions() 
             : this(null) {
         }
+
+        public Version PythonVersion {
+            get {
+                return _version;
+            }
+        }
     
         public PythonOptions(IDictionary<string, object> options) 
             : base(options) {
@@ -98,6 +105,24 @@ namespace IronPython {
             _division = GetOption(options, "DivisionOptions", PythonDivisionOptions.Old);
             _recursionLimit = GetOption(options, "RecursionLimit", Int32.MaxValue);
             _indentationInconsistencySeverity = GetOption(options, "IndentationInconsistencySeverity", Severity.Ignore);
+            object value;
+
+            
+            if (options != null && options.TryGetValue("PythonVersion", out value)) {
+                if (value is Version) {
+                    _version = (Version)value;
+                } else if (value is string) {
+                    _version = new Version((string)value);
+                } else {
+                    throw new ArgumentException("Expected string or Version for PythonVersion");
+                }
+
+                if (_version != new Version(2, 5) && _version != new Version(2, 6)) {
+                    throw new ArgumentException("Expected Version to be 2.5 or 2.6");
+                }
+            } else {
+                _version = new Version(2, 5);
+            }
         }
     }
 }

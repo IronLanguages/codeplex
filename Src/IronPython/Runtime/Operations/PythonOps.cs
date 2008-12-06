@@ -998,7 +998,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
                 if (o != null && ComOps.IsComObject(o)) {
-                    foreach (string name in Microsoft.Scripting.ComInterop.ComBinder.GetDynamicMemberNames(o)) {
+                    foreach (string name in Microsoft.Scripting.ComBinder.GetDynamicMemberNames(o)) {
                         if (!res.Contains(name)) {
                             res.AddNoLock(name);
                         }
@@ -2797,7 +2797,7 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        public static MetaObjectBinder MakeListCallAction(int count) {
+        public static DynamicMetaObjectBinder MakeListCallAction(int count) {
             Argument[] infos = CompilerHelpers.MakeRepeatedArray(Argument.Simple, count);
             infos[count - 1] = new Argument(ArgumentType.List);
 
@@ -2807,7 +2807,7 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        public static MetaObjectBinder MakeSimpleCallAction(int count) {
+        public static DynamicMetaObjectBinder MakeSimpleCallAction(int count) {
             return new PythonInvokeBinder(
                 DefaultContext.DefaultPythonContext.DefaultBinderState,
                 new CallSignature(CompilerHelpers.MakeRepeatedArray(Argument.Simple, count))
@@ -3036,15 +3036,7 @@ namespace IronPython.Runtime.Operations {
 
         public static void ModuleStarted(CodeContext/*!*/ context, object binderState, PythonLanguageFeatures features) {
             PythonModule scopeExtension = (PythonModule)context.LanguageContext.EnsureScopeExtension(context.Scope.ModuleScope);
-            if ((features & PythonLanguageFeatures.AbsoluteImports) != 0) {
-                scopeExtension.AbsoluteImports = true;
-            }
-            if ((features & PythonLanguageFeatures.AllowWithStatement) != 0) {
-                scopeExtension.AllowWithStatement = true;
-            }
-            if ((features & PythonLanguageFeatures.TrueDivision) != 0) {
-                scopeExtension.TrueDivision = true;
-            }
+            scopeExtension.LanguageFeatures |= features;
 
             BinderState state = binderState as BinderState;
             if (state != null) {
@@ -3127,27 +3119,27 @@ namespace IronPython.Runtime.Operations {
             return pm.BinderState;
         }
 
-        public static MetaObjectBinder MakeInvokeAction(CodeContext/*!*/ context, CallSignature signature) {
+        public static DynamicMetaObjectBinder MakeInvokeAction(CodeContext/*!*/ context, CallSignature signature) {
             return new PythonInvokeBinder(GetBinderState(context), signature);
         }
 
-        public static MetaObjectBinder MakeGetAction(CodeContext/*!*/ context, string name, bool isNoThrow) {
+        public static DynamicMetaObjectBinder MakeGetAction(CodeContext/*!*/ context, string name, bool isNoThrow) {
             return new PythonGetMemberBinder(GetBinderState(context), name, isNoThrow);
         }
 
-        public static MetaObjectBinder MakeSetAction(CodeContext/*!*/ context, string name) {
+        public static DynamicMetaObjectBinder MakeSetAction(CodeContext/*!*/ context, string name) {
             return new PythonSetMemberBinder(GetBinderState(context), name);
         }
 
-        public static MetaObjectBinder MakeDeleteAction(CodeContext/*!*/ context, string name) {
+        public static DynamicMetaObjectBinder MakeDeleteAction(CodeContext/*!*/ context, string name) {
             return new PythonDeleteMemberBinder(GetBinderState(context), name);
         }
 
-        public static MetaObjectBinder MakeConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
+        public static DynamicMetaObjectBinder MakeConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
             return new ConversionBinder(GetBinderState(context), type, kind);
         }
 
-        public static MetaObjectBinder MakeOperationAction(CodeContext/*!*/ context, string operationName) {
+        public static DynamicMetaObjectBinder MakeOperationAction(CodeContext/*!*/ context, string operationName) {
             return new PythonOperationBinder(GetBinderState(context), operationName);
         }
 

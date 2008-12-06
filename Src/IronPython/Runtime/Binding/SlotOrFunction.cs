@@ -39,18 +39,18 @@ namespace IronPython.Runtime.Binding {
     /// </summary>
     sealed class SlotOrFunction {
         private readonly BindingTarget _function;
-        private readonly MetaObject/*!*/ _target;
-        public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new MetaObject(Ast.Empty(), Restrictions.Empty));
+        private readonly DynamicMetaObject/*!*/ _target;
+        public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new DynamicMetaObject(Ast.Empty(), BindingRestrictions.Empty));
 
         private SlotOrFunction() {
         }
 
-        public SlotOrFunction(BindingTarget/*!*/ function, MetaObject/*!*/ target) {
+        public SlotOrFunction(BindingTarget/*!*/ function, DynamicMetaObject/*!*/ target) {
             _target = target;
             _function = function;
         }
 
-        public SlotOrFunction(MetaObject/*!*/ target) {
+        public SlotOrFunction(DynamicMetaObject/*!*/ target) {
             _target = target;
         }
 
@@ -94,7 +94,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public MetaObject/*!*/ Target {
+        public DynamicMetaObject/*!*/ Target {
             get {
                 return _target;
             }
@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
-        public static SlotOrFunction/*!*/ GetSlotOrFunction(BinderState/*!*/ state, SymbolId op, params MetaObject[] types) {
+        public static SlotOrFunction/*!*/ GetSlotOrFunction(BinderState/*!*/ state, SymbolId op, params DynamicMetaObject[] types) {
             PythonTypeSlot slot;
             SlotOrFunction res;
             if (TryGetBinder(state, types, op, SymbolId.Empty, out res)) {
@@ -143,7 +143,7 @@ namespace IronPython.Runtime.Binding {
                     args[i - 1] = types[i].Expression;
                 }
                 return new SlotOrFunction(
-                    new MetaObject(
+                    new DynamicMetaObject(
                         Ast.Block(
                             new ParameterExpression[] { tmp },
                             MetaPythonObject.MakeTryGetTypeMember(
@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Binding {
                                 )
                             )
                         ),
-                        Restrictions.Combine(types).Merge(Restrictions.GetTypeRestriction(types[0].Expression, types[0].LimitType))
+                        BindingRestrictions.Combine(types).Merge(BindingRestrictions.GetTypeRestriction(types[0].Expression, types[0].LimitType))
                     )
                 );
             }
@@ -177,7 +177,7 @@ namespace IronPython.Runtime.Binding {
             return SlotOrFunction.Empty;
         }
 
-        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res) {
+        internal static bool TryGetBinder(BinderState/*!*/ state, DynamicMetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res) {
             PythonType declType;
             return TryGetBinder(state, types, op, rop, out res, out declType);
         }
@@ -191,10 +191,10 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// TODO: Remove rop
         /// </summary>
-        internal static bool TryGetBinder(BinderState/*!*/ state, MetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res, out PythonType declaringType) {
+        internal static bool TryGetBinder(BinderState/*!*/ state, DynamicMetaObject/*!*/[]/*!*/ types, SymbolId op, SymbolId rop, out SlotOrFunction/*!*/ res, out PythonType declaringType) {
             declaringType = null;
 
-            MetaObject xType = types[0];
+            DynamicMetaObject xType = types[0];
             BuiltinFunction xBf;
             if (!BindingHelpers.TryGetStaticFunction(state, op, xType, out xBf)) {
                 res = SlotOrFunction.Empty;
@@ -204,8 +204,8 @@ namespace IronPython.Runtime.Binding {
             xBf = CheckAlwaysNotImplemented(xBf);
 
             BindingTarget bt;
-            MetaObject binder;
-            MetaObject yType = null;
+            DynamicMetaObject binder;
+            DynamicMetaObject yType = null;
             BuiltinFunction yBf = null;
 
             if (types.Length > 1) {
@@ -237,7 +237,7 @@ namespace IronPython.Runtime.Binding {
                         yBf.Targets,
                         types,
                         new CallSignature(types.Length),
-                        Restrictions.Empty,
+                        BindingRestrictions.Empty,
                         PythonNarrowing.None,
                         PythonNarrowing.BinaryOperator,
                         out bt
@@ -251,7 +251,7 @@ namespace IronPython.Runtime.Binding {
                         xBf.Targets,
                         types,
                         new CallSignature(types.Length),
-                        Restrictions.Empty,
+                        BindingRestrictions.Empty,
                         PythonNarrowing.None,
                         PythonNarrowing.BinaryOperator,
                         out bt
@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Binding {
                         targets.ToArray(),
                         types,
                         new CallSignature(types.Length),
-                        Restrictions.Empty,
+                        BindingRestrictions.Empty,
                         PythonNarrowing.None,
                         PythonNarrowing.BinaryOperator,
                         out bt

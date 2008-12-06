@@ -185,7 +185,7 @@ def gen_expr_factory_core(cw):
     gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\System\\Linq\\Expressions\\System.Linq.Expressions.txt")
 
 def gen_expr_factory_com(cw):
-    gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\DynamicCom\\System\\Dynamic\\ComInterop\\System.Dynamic.ComInterop.txt")
+    gen_expr_factory(cw, generate.root_dir + "\\..\\..\\ndp\\fx\\src\\Dynamic\\System\\Dynamic\\System.Dynamic.txt")
 
 def gen_expr_factory_scripting(cw):
     gen_expr_factory(cw, generate.root_dir + "\\Runtime\\Microsoft.Scripting\\Microsoft.Scripting.txt")

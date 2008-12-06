@@ -14,10 +14,17 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
-using IronPython.Runtime.Types;
+using System.Runtime.InteropServices;
+using System.Text;
+
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Types;
+
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
@@ -124,6 +131,25 @@ namespace IronPython.Runtime.Operations {
             }
 
             return LiteralParser.ParseIntegerSign(s, radix);
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, IList<byte> s) {
+            if (cls == TypeCache.Int32) {
+                object value;
+                IPythonObject po = s as IPythonObject;
+                if (po != null &&
+                    PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, po, Symbols.ConvertToInt, out value)) {
+                    return value;
+                }
+
+                return FastNew(context, StringOps.FromByteArray(s));
+            }
+
+            ValidateType(cls);
+
+            // derived int creation...
+            return cls.CreateInstance(context, FastNew(context, StringOps.FromByteArray(s)));
         }
 
         internal static string TrimRadix(string s) {
@@ -367,6 +393,153 @@ namespace IronPython.Runtime.Operations {
                 return PythonTuple.MakeTuple(x, val);
             }
             return NotImplementedType.Value;
+        }
+
+        public static string __format__(CodeContext/*!*/ context, int self, [NotNull]string/*!*/ formatSpec) {
+            StringFormatSpec spec = StringFormatSpec.FromString(formatSpec);
+
+            if (spec.Precision != null) {
+                throw PythonOps.ValueError("Precision not allowed in integer format specifier");
+            }
+
+            string digits;
+            switch (spec.Type) {
+                case 'n':
+                    CultureInfo culture = PythonContext.GetContext(context).NumericCulture;
+
+                    if (culture == CultureInfo.InvariantCulture) {
+                        // invariant culture maps to CPython's C culture, which doesn't
+                        // include any formatting info.
+                        goto case 'd';
+                    }
+
+                    digits = self.ToString("N0", PythonContext.GetContext(context).NumericCulture);
+                    break;
+                case null:
+                case 'd':
+                    digits = self.ToString("D", CultureInfo.InvariantCulture);
+                    break;
+                case '%': digits = self.ToString("0.000000%", CultureInfo.InvariantCulture); break;
+                case 'e': digits = self.ToString("0.000000e+00", CultureInfo.InvariantCulture); break;
+                case 'E': digits = self.ToString("0.000000E+00", CultureInfo.InvariantCulture); break;
+                case 'f': digits = self.ToString("##########.000000", CultureInfo.InvariantCulture); break;
+                case 'F': digits = self.ToString("##########.000000", CultureInfo.InvariantCulture); break;
+                case 'g':
+                    if (self >= 1000000 || self <= -1000000) {
+                        digits = self.ToString("0.#####e+00", CultureInfo.InvariantCulture);
+                    } else {
+                        digits = self.ToString(CultureInfo.InvariantCulture);
+                    }
+                    break;
+                case 'G':
+                    if (self >= 1000000 || self <= -1000000) {
+                        digits = self.ToString("0.#####E+00", CultureInfo.InvariantCulture);
+                    } else {
+                        digits = self.ToString(CultureInfo.InvariantCulture);
+                    }
+                    break;
+                case 'X':
+                    if (self != Int32.MinValue) {
+                        int val = self;
+                        if (self < 0) {
+                            val = -self;
+                        }
+                        digits = val.ToString("X", CultureInfo.InvariantCulture);
+                    } else {
+                        digits = "80000000";
+                    }
+
+                    if (spec.IncludeType) {
+                        digits = "0X" + digits;
+                    }
+                    break;
+                case 'x':
+                    if (self != Int32.MinValue) {
+                        int val = self;
+                        if (self < 0) {
+                            val = -self;
+                        }
+                        digits = val.ToString("x", CultureInfo.InvariantCulture);
+                    } else {
+                        digits = "80000000";
+                    }
+
+                    if (spec.IncludeType) {
+                        digits = "0x" + digits;
+                    }
+                    break;
+                case 'b': // binary
+                    if (self == 0) {
+                        digits = "0";
+                    } else if (self != Int32.MinValue) {
+                        StringBuilder sbb = new StringBuilder();
+
+                        int val = self;
+                        if (self < 0) {
+                            val = -self;
+                        }
+
+                        for (int i = 31; i >= 0; i--) {
+                            if ((val & (1 << i)) != 0) {
+                                sbb.Append('1');
+                            } else if (sbb.Length != 0) {
+                                sbb.Append('0');
+                            }
+                        }
+                        digits = sbb.ToString();
+                    } else {
+                        digits = "10000000000000000000000000000000";
+                    }
+
+                    if (spec.IncludeType) {
+                        digits = "0b" + digits;
+                    }
+                    break;
+                case 'c': // single char
+                    if (spec.Sign != null) {
+                        throw PythonOps.ValueError("Sign not allowed with integer format specifier 'c'");
+                    }
+                    
+                    if (self < Char.MinValue || self > Char.MaxValue) {
+                        throw PythonOps.OverflowError("%c arg not in range(0x10000)");
+                    }
+
+                    digits = Builtin.chr(self);
+                    break;
+                case 'o': // octal
+                    if (self == 0) {
+                        digits = "0";
+                    } else if (self != Int32.MinValue) {
+                        int val = self;
+                        if (self < 0) {
+                            val = -self;
+                        }
+
+                        StringBuilder sbo = new StringBuilder();
+                        for (int i = 30; i >= 0; i -= 3) {
+                            char value = (char)('0' + (val >> i & 0x07));
+                            if (value != '0' || sbo.Length > 0) {
+                                sbo.Append(value);
+                            }
+                        }
+                        digits = sbo.ToString();
+                    } else {
+                        digits = "20000000000";
+                    }
+                    
+                    if (spec.IncludeType) {
+                        digits = "0o" + digits;
+                    }
+                    break;
+                default:
+                    throw PythonOps.ValueError("Unknown conversion type {0}", spec.Type.ToString());
+            }
+
+            if (self < 0 && digits[0] == '-') {
+                digits = digits.Substring(1);
+            }
+
+            return spec.AlignNumericText(digits, self == 0, self > 0);
         }
 
         public static string/*!*/ __repr__(int self) {

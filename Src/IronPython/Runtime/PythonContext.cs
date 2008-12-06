@@ -39,6 +39,7 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using PyAst = IronPython.Compiler.Ast;
+using System.Globalization;
 
 namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
@@ -126,6 +127,7 @@ namespace IronPython.Runtime {
         private CommandDispatcher _commandDispatcher; // can be null
         private ClrModule.ReferencesList _referencesList;
         private string _floatFormat, _doubleFormat;
+        private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -212,6 +214,8 @@ namespace IronPython.Runtime {
                 // If so, we will not look up sys.path for module loads
             }
 #endif
+
+            _collateCulture = _ctypeCulture = _timeCulture = _monetaryCulture = _numericCulture = CultureInfo.InvariantCulture;
         }
 
         public override LanguageOptions/*!*/ Options {
@@ -823,10 +827,12 @@ namespace IronPython.Runtime {
             }
 
             PythonModule module = CreatePythonModule(fileName, scope, options);
-            module.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
+            module.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;            
             module.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
             module.AllowWithStatement = (options & ModuleOptions.WithStatement) != 0;
             module.AbsoluteImports = (options & ModuleOptions.AbsoluteImports) != 0;
+            module.PrintFunction = (options & ModuleOptions.PrintFunction) != 0;
+            
             module.IsPythonCreatedModule = true;
 
             if ((options & ModuleOptions.Initialize) != 0) {
@@ -1311,7 +1317,17 @@ namespace IronPython.Runtime {
         }
 
         internal PythonCompilerOptions GetPythonCompilerOptions() {
-            return new PythonCompilerOptions(PythonOptions.DivisionOptions == PythonDivisionOptions.New);
+            PythonLanguageFeatures features = PythonLanguageFeatures.Default;
+
+            if (PythonOptions.DivisionOptions == PythonDivisionOptions.New) {
+                features |= PythonLanguageFeatures.TrueDivision;
+            }
+
+            if (PythonOptions.PythonVersion == new Version(2, 6)) {
+                features |= PythonLanguageFeatures.Python26;
+            }
+
+            return new PythonCompilerOptions(features);
         }
 
         public override CompilerOptions GetCompilerOptions() {
@@ -1321,15 +1337,11 @@ namespace IronPython.Runtime {
         public override CompilerOptions/*!*/ GetCompilerOptions(Scope/*!*/ scope) {
             Assert.NotNull(scope);
 
-            PythonModule module = GetPythonModule(scope);
+            PythonCompilerOptions res = GetPythonCompilerOptions();
 
-            PythonCompilerOptions res = new PythonCompilerOptions();
+            PythonModule module = GetPythonModule(scope);
             if (module != null) {
-                res.TrueDivision = module.TrueDivision;
-                res.AllowWithStatement = module.AllowWithStatement;
-                res.AbsoluteImports = module.AbsoluteImports;
-            } else {
-                res.TrueDivision = PythonOptions.DivisionOptions == PythonDivisionOptions.New;
+                res.LanguageFeatures |= module.LanguageFeatures;
             }
 
             return res;
@@ -2585,6 +2597,31 @@ namespace IronPython.Runtime {
 
                 return _referencesList;
             }
+        }
+
+        internal CultureInfo CollateCulture {
+            get { return _collateCulture; }
+            set { _collateCulture = value; }
+        }
+
+        internal CultureInfo CTypeCulture {
+            get { return _ctypeCulture; }
+            set { _ctypeCulture = value; }
+        }
+
+        internal CultureInfo TimeCulture {
+            get { return _timeCulture; }
+            set { _timeCulture = value; }
+        }
+
+        internal CultureInfo MonetaryCulture {
+            get { return _monetaryCulture; }
+            set { _monetaryCulture = value; }
+        }
+
+        internal CultureInfo NumericCulture {
+            get { return _numericCulture; }
+            set { _numericCulture = value; }
         }
 
         #region Command Dispatching

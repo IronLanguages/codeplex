@@ -376,8 +376,8 @@ namespace IronPython.Runtime.Exceptions {
         
             #region IDynamicObject Members
 
-            MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
-                return new Binding.MetaUserObject(parameter, Restrictions.Empty, null, this);
+            DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+                return new Binding.MetaUserObject(parameter, BindingRestrictions.Empty, null, this);
             }
 
             #endregion

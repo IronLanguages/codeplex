@@ -165,10 +165,12 @@ namespace Microsoft.Scripting {
                     Type elementType = TypeUtils.GetConstantType(node.Type);
 
                     Func<object, int, object> ctor;
-                    if (!_templateCtors.TryGetValue(elementType, out ctor)) {
-                        MethodInfo genMethod = typeof(TemplatedValue<>).MakeGenericType(new Type[] { elementType }).GetMethod("Make", BindingFlags.NonPublic | BindingFlags.Static);
-                        _templateCtors[elementType] = ctor = (Func<object, int, object>)genMethod.CreateDelegate(typeof(Func<object, int, object>)); ;
-                    } 
+                    lock (_templateCtors) {
+                        if (!_templateCtors.TryGetValue(elementType, out ctor)) {
+                            MethodInfo genMethod = typeof(TemplatedValue<>).MakeGenericType(new Type[] { elementType }).GetMethod("Make", BindingFlags.NonPublic | BindingFlags.Static);
+                            _templateCtors[elementType] = ctor = (Func<object, int, object>)genMethod.CreateDelegate(typeof(Func<object, int, object>)); ;
+                        }
+                    }
                     
                     object constVal = ctor(value, index);                    
 

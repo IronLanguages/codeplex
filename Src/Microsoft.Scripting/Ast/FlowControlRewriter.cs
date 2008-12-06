@@ -311,7 +311,7 @@ namespace Microsoft.Scripting.Ast {
             foreach (var e in node.Expressions) {
                 var label = e as LabelExpression;
                 if (label != null) {
-                    VisitLabelTarget(label.Label);
+                    VisitLabelTarget(label.Target);
                 }
             }
             return base.VisitBlock(node);

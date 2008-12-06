@@ -343,19 +343,7 @@ namespace IronPython.Compiler.Ast {
                 )
             );
 
-            // add decorators
-            if (_decorators != null) {
-                for (int i = _decorators.Count - 1; i >= 0; i--) {
-                    Expression decorator = _decorators[i];
-                    ret = Binders.Invoke(
-                        ag.BinderState,
-                        typeof(object),
-                        new CallSignature(1),
-                        ag.Transform(decorator),
-                        ret
-                    );
-                }
-            }
+            ret = ag.AddDecorators(ret, _decorators);
 
             return ret;
         }

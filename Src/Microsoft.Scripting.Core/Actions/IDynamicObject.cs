@@ -19,6 +19,6 @@ using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting {
     public interface IDynamicObject {
-        MetaObject GetMetaObject(Expression parameter);
+        DynamicMetaObject GetMetaObject(Expression parameter);
     }
 }

@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Generation {
             return Path.Combine(dir, filename);
         }
 
-        public static void SetSaveAssemblies(string directory) {
+        public static void SetSaveAssemblies(bool enable, string directory) {
             //Set SaveAssemblies on for inner ring by calling Microsoft.Linq.Expressions.Compiler.Snippets.SetSaveAssemblies via Reflection.
             Assembly core = typeof(Microsoft.Linq.Expressions.Expression).Assembly;
             Type snippets = core.GetType("Microsoft.Linq.Expressions.Compiler.Snippets");
@@ -106,14 +106,14 @@ namespace Microsoft.Scripting.Generation {
                 MethodInfo configSaveAssemblies = snippets.GetMethod("SetSaveAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
                 //The method may not exist.
                 if (configSaveAssemblies != null) {
-                    string[] coreAssemblyLocations = (string[])configSaveAssemblies.Invoke(null, new object[] { directory });
+                    string[] coreAssemblyLocations = (string[])configSaveAssemblies.Invoke(null, new object[] { enable, directory });
                 }
             }
-            Shared.ConfigureSaveAssemblies(directory);
+            Shared.ConfigureSaveAssemblies(enable, directory);
         }
 
-        private void ConfigureSaveAssemblies(string directory) {
-            _saveSnippets = true;
+        private void ConfigureSaveAssemblies(bool enable, string directory) {
+            _saveSnippets = enable;
             _snippetsDirectory = directory;
         }
 

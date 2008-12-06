@@ -33,14 +33,14 @@ namespace IronPython.Runtime.Binding {
     using AstUtils = Microsoft.Scripting.Ast.Utils;
     
     class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
-        public MetaPythonFunction(Expression/*!*/ expression, Restrictions/*!*/ restrictions, PythonFunction/*!*/ value)
-            : base(expression, Restrictions.Empty, value) {
+        public MetaPythonFunction(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, PythonFunction/*!*/ value)
+            : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public DynamicMetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(pythonInvoke, this, args).MakeMetaObject();
         }
 
@@ -48,15 +48,15 @@ namespace IronPython.Runtime.Binding {
         
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params DynamicMetaObject/*!*/[]/*!*/ args) {
             return new FunctionBinderHelper(call, this, args).MakeMetaObject();
         }
 
-        public override MetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {
+        public override DynamicMetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {
             if (conversion.Type.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(PythonFunction)));
             }
@@ -64,7 +64,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         [Obsolete]
-        public override MetaObject/*!*/ BindOperation(OperationBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindOperation(OperationBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             switch (action.Operation) {
                 case StandardOperators.CallSignatures:
                     return MakeCallSignatureRule(this);
@@ -95,9 +95,9 @@ namespace IronPython.Runtime.Binding {
         /// <typeparam name="T"></typeparam>
         class FunctionBinderHelper {
             private readonly MetaPythonFunction/*!*/ _func;         // the meta object for the function we're calling
-            private readonly MetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
-            private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
-            private readonly MetaObjectBinder/*!*/ _call;               // the signature for the method call
+            private readonly DynamicMetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
+            private readonly DynamicMetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
+            private readonly DynamicMetaObjectBinder/*!*/ _call;               // the signature for the method call
 
             private List<ParameterExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
             private ParameterExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
@@ -109,7 +109,7 @@ namespace IronPython.Runtime.Binding {
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(MetaObjectBinder/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
+            public FunctionBinderHelper(DynamicMetaObjectBinder/*!*/ call, MetaPythonFunction/*!*/ function, DynamicMetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
                 _args = args;
@@ -123,10 +123,10 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            public MetaObject/*!*/ MakeMetaObject() {
+            public DynamicMetaObject/*!*/ MakeMetaObject() {
                 Expression[] invokeArgs = GetArgumentsForRule();
-                Restrictions restrict = _func.Restrictions.Merge(GetRestrictions().Merge(Restrictions.Combine(_args)));
-                MetaObject res;
+                BindingRestrictions restrict = _func.Restrictions.Merge(GetRestrictions().Merge(BindingRestrictions.Combine(_args)));
+                DynamicMetaObject res;
 
                 if (invokeArgs != null) {
                     // successful call
@@ -139,16 +139,16 @@ namespace IronPython.Runtime.Binding {
                         );
                     }
 
-                    res = new MetaObject(
+                    res = new DynamicMetaObject(
                         target,
                         restrict
                     );
                 } else if (_error != null) {
                     // custom error generated while figuring out the call
-                    res = new MetaObject(_error, restrict);
+                    res = new DynamicMetaObject(_error, restrict);
                 } else {
                     // generic error
-                    res = new MetaObject(
+                    res = new DynamicMetaObject(
                         Ast.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod(Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "FunctionBadArgumentError"),
@@ -180,7 +180,7 @@ namespace IronPython.Runtime.Binding {
             /// <summary>
             /// Makes the test for our rule.
             /// </summary>
-            private Restrictions/*!*/ GetRestrictions() {
+            private BindingRestrictions/*!*/ GetRestrictions() {
                 if (!Signature.HasKeywordArgument()) {
                     return GetSimpleRestriction();
                 }
@@ -191,7 +191,7 @@ namespace IronPython.Runtime.Binding {
             /// <summary>
             /// Makes the test when we just have simple positional arguments.
             /// </summary>
-            private Restrictions/*!*/ GetSimpleRestriction() {
+            private BindingRestrictions/*!*/ GetSimpleRestriction() {
                 _deferTest = Ast.Equal(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("FunctionGetCompatibility"),
@@ -200,10 +200,10 @@ namespace IronPython.Runtime.Binding {
                     Ast.Constant(_func.Value.FunctionCompatibility)
                 );
 
-                return Restrictions.GetTypeRestriction(
+                return BindingRestrictions.GetTypeRestriction(
                     _func.Expression, typeof(PythonFunction)
                 ).Merge(
-                    Restrictions.GetTypeRestriction(
+                    BindingRestrictions.GetTypeRestriction(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("FunctionGetTarget"),
                             Ast.Convert(_func.Expression, typeof(PythonFunction))
@@ -217,9 +217,9 @@ namespace IronPython.Runtime.Binding {
             /// Makes the test when we have a keyword argument call or splatting.
             /// </summary>
             /// <returns></returns>
-            private Restrictions/*!*/ GetComplexRestriction() {
+            private BindingRestrictions/*!*/ GetComplexRestriction() {
                 if (_extractedKeyword) {
-                    return Restrictions.GetInstanceRestriction(_func.Expression, _func.Value);
+                    return BindingRestrictions.GetInstanceRestriction(_func.Expression, _func.Value);
                 }
 
                 return GetSimpleRestriction();
@@ -652,7 +652,7 @@ namespace IronPython.Runtime.Binding {
             /// Called when the user is expanding a dictionary - we copy the user
             /// dictionary and verify that it contains only valid string names.
             /// </summary>
-            private MetaObject/*!*/ MakeDictionaryCopy(MetaObject/*!*/ userDict) {
+            private DynamicMetaObject/*!*/ MakeDictionaryCopy(DynamicMetaObject/*!*/ userDict) {
                 Debug.Assert(_dict == null);
 
                 userDict = userDict.Restrict(userDict.LimitType);
@@ -909,8 +909,8 @@ namespace IronPython.Runtime.Binding {
 
         #region Operations
 
-        private MetaObject/*!*/ MakeCallSignatureRule(MetaObject self) {
-            return new MetaObject(
+        private DynamicMetaObject/*!*/ MakeCallSignatureRule(DynamicMetaObject self) {
+            return new DynamicMetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("GetFunctionSignature"),
                     AstUtils.Convert(
@@ -918,14 +918,14 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonFunction)
                     )
                 ),
-                Restrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
+                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 
-        private MetaObject MakeIsCallableRule(MetaObject/*!*/ self) {
-            return new MetaObject(
+        private DynamicMetaObject MakeIsCallableRule(DynamicMetaObject/*!*/ self) {
+            return new DynamicMetaObject(
                 Ast.Constant(true),
-                Restrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
+                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 
