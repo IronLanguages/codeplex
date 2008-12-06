@@ -19,7 +19,7 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
-    public abstract class GetMemberBinder : MetaObjectBinder {
+    public abstract class GetMemberBinder : DynamicMetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
 
@@ -42,13 +42,13 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public MetaObject FallbackGetMember(MetaObject target) {
+        public DynamicMetaObject FallbackGetMember(DynamicMetaObject target) {
             return FallbackGetMember(target, null);
         }
 
-        public abstract MetaObject FallbackGetMember(MetaObject target, MetaObject errorSuggestion);
+        public abstract DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion);
 
-        public sealed override MetaObject Bind(MetaObject target, params MetaObject[] args) {
+        public sealed override DynamicMetaObject Bind(DynamicMetaObject target, params DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(args.Length == 0);
 

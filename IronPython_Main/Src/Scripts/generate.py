@@ -32,7 +32,7 @@ source_directories = [
     root_dir + "\\Languages\\IronPython",
     root_dir + "\\Runtime",
     root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\Microsoft\\Scripting",
-    root_dir + "\\..\\..\\ndp\\fx\\src\\DynamicCom",
+    root_dir + "\\..\\..\\ndp\\fx\\src\\Dynamic",
 ]
 
 START = "#region Generated %s"

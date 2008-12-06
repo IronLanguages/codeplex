@@ -171,7 +171,7 @@ namespace Microsoft.Scripting {
         
         #region IDynamicObject Members
 
-        MetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+        DynamicMetaObject IDynamicObject.GetMetaObject(Expression parameter) {
             return new MetaExpando(parameter, this);
         }
 
@@ -179,12 +179,12 @@ namespace Microsoft.Scripting {
 
         #region MetaExpando
 
-        private class MetaExpando : MetaObject {
+        private class MetaExpando : DynamicMetaObject {
             public MetaExpando(Expression expression, ExpandoObject value)
-                : base(expression, Restrictions.Empty, value) {
+                : base(expression, BindingRestrictions.Empty, value) {
             }
 
-            public override MetaObject BindGetMember(GetMemberBinder binder) {
+            public override DynamicMetaObject BindGetMember(GetMemberBinder binder) {
                 ContractUtils.RequiresNotNull(binder, "binder");
 
                 ExpandoClass klass = Value.Class;
@@ -214,10 +214,10 @@ namespace Microsoft.Scripting {
                 }
 
                 // add the dynamic test for the target
-                return new MetaObject(
+                return new DynamicMetaObject(
                     AddDynamicTestAndDefer(
                         binder,
-                        new MetaObject[] { this },
+                        new DynamicMetaObject[] { this },
                         klass,
                         null,
                         target
@@ -226,7 +226,7 @@ namespace Microsoft.Scripting {
                 );
             }
 
-            public override MetaObject BindSetMember(SetMemberBinder binder, MetaObject value) {
+            public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value) {
                 ContractUtils.RequiresNotNull(binder, "binder");
                 ContractUtils.RequiresNotNull(value, "value");
 
@@ -237,10 +237,10 @@ namespace Microsoft.Scripting {
 
                 string methodName = binder.IgnoreCase ? "ExpandoSetValueIgnoreCase" : "ExpandoSetValue";
 
-                return new MetaObject(
+                return new DynamicMetaObject(
                     AddDynamicTestAndDefer(
                         binder,
-                        new MetaObject[] { this, value },
+                        new DynamicMetaObject[] { this, value },
                         klass,
                         originalClass,
                         Helpers.Convert(
@@ -261,7 +261,7 @@ namespace Microsoft.Scripting {
                 );
             }
 
-            public override MetaObject BindDeleteMember(DeleteMemberBinder binder) {
+            public override DynamicMetaObject BindDeleteMember(DeleteMemberBinder binder) {
                 ContractUtils.RequiresNotNull(binder, "binder");
 
                 ExpandoClass klass;
@@ -271,10 +271,10 @@ namespace Microsoft.Scripting {
 
                 string methodName = binder.IgnoreCase ? "ExpandoDeleteValueIgnoreCase" : "ExpandoDeleteValue";
 
-                return new MetaObject(
+                return new DynamicMetaObject(
                     AddDynamicTestAndDefer(
                         binder, 
-                        new MetaObject[] { this }, 
+                        new DynamicMetaObject[] { this }, 
                         klass, 
                         originalClass,
                         Helpers.Convert(
@@ -299,7 +299,7 @@ namespace Microsoft.Scripting {
             /// Adds a dynamic test which checks if the version has changed.  The test is only necessary for
             /// performance as the methods will do the correct thing if called with an incorrect version.
             /// </summary>
-            private Expression AddDynamicTestAndDefer(MetaObjectBinder binder, MetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
+            private Expression AddDynamicTestAndDefer(DynamicMetaObjectBinder binder, DynamicMetaObject[] args, ExpandoClass klass, ExpandoClass originalClass, Expression ifTestSucceeds) {
                 if (originalClass != null) {
                     // we are accessing a member which has not yet been defined on this class.
                     // We force a class promotion after the type check.  If the class changes the 
@@ -369,10 +369,10 @@ namespace Microsoft.Scripting {
             /// Returns a Restrictions object which includes our current restrictions merged
             /// with a restriction limiting our type
             /// </summary>
-            private Restrictions GetRestrictions() {
-                Debug.Assert(Restrictions == Restrictions.Empty, "We don't merge, restrictions are always empty");
+            private BindingRestrictions GetRestrictions() {
+                Debug.Assert(Restrictions == BindingRestrictions.Empty, "We don't merge, restrictions are always empty");
 
-                return Restrictions.GetTypeRestriction(Expression, LimitType);
+                return BindingRestrictions.GetTypeRestriction(Expression, LimitType);
             }
 
             public new ExpandoObject Value {

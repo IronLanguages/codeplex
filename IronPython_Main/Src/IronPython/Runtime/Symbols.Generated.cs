@@ -511,6 +511,8 @@ namespace IronPython.Runtime {
         private static SymbolId _ThisArgument;
         private static SymbolId _Index;
         private static SymbolId _AbsoluteImport;
+        private static SymbolId _PrintFunction;
+        private static SymbolId _UnicodeLiterals;
         ///<summary>Symbol for '__neg__'</summary> 
         public static SymbolId OperatorNegate {
             get {
@@ -1258,6 +1260,20 @@ namespace IronPython.Runtime {
             get {
                 if (_AbsoluteImport == SymbolId.Empty) _AbsoluteImport = MakeSymbolId("absolute_import");
                 return _AbsoluteImport;
+            }
+        }
+        ///<summary>Symbol for 'print_function'</summary> 
+        public static SymbolId PrintFunction {
+            get {
+                if (_PrintFunction == SymbolId.Empty) _PrintFunction = MakeSymbolId("print_function");
+                return _PrintFunction;
+            }
+        }
+        ///<summary>Symbol for 'unicode_literals'</summary> 
+        public static SymbolId UnicodeLiterals {
+            get {
+                if (_UnicodeLiterals == SymbolId.Empty) _UnicodeLiterals = MakeSymbolId("unicode_literals");
+                return _UnicodeLiterals;
             }
         }
 

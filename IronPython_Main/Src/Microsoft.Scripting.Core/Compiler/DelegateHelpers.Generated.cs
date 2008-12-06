@@ -122,7 +122,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// We take the array of MetaObject explicitly to avoid allocating memory (an array of types) on
         /// lookup of delegate types.
         /// </summary>
-        internal static Type MakeDeferredSiteDelegate(MetaObject[] args, Type returnType) {
+        internal static Type MakeDeferredSiteDelegate(DynamicMetaObject[] args, Type returnType) {
             lock (_DelegateCache) {
                 TypeInfo curTypeInfo = _DelegateCache;
 
@@ -131,7 +131,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
                 // arguments
                 for (int i = 0; i < args.Length; i++) {
-                    MetaObject mo = args[i];
+                    DynamicMetaObject mo = args[i];
                     Type paramType = mo.Expression.Type;
                     if (IsByRef(mo)) {
                         paramType = paramType.MakeByRefType();
@@ -150,7 +150,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     paramTypes[0] = typeof(CallSite);
                     paramTypes[paramTypes.Length - 1] = returnType;
                     for (int i = 0; i < args.Length; i++) {
-                        MetaObject mo = args[i];
+                        DynamicMetaObject mo = args[i];
                         Type paramType = mo.Expression.Type;
                         if (IsByRef(mo)) {
                             paramType = paramType.MakeByRefType();
@@ -165,7 +165,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        private static bool IsByRef(MetaObject mo) {
+        private static bool IsByRef(DynamicMetaObject mo) {
             ParameterExpression pe = mo.Expression as ParameterExpression;
             return pe != null && pe.IsByRef;
         }

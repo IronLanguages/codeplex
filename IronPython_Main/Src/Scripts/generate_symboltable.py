@@ -143,6 +143,8 @@ fieldList = [
     ('this', 'ThisArgument'),
     ('__index__', 'Index'),
     ('absolute_import', 'AbsoluteImport'),
+    ('print_function', 'PrintFunction'),
+    ('unicode_literals', 'UnicodeLiterals'),
     ]
 
 def generate_symbols(cw):

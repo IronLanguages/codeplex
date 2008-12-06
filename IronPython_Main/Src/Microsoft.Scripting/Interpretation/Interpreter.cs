@@ -740,7 +740,7 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            var metaAction = node.Binder as MetaObjectBinder;
+            var metaAction = node.Binder as DynamicMetaObjectBinder;
             if (metaAction != null) {
                 return InterpretMetaAction(state, metaAction, node, args);
             }
@@ -752,7 +752,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         private const int SiteCompileThreshold = 2;
 
-        private static object InterpretMetaAction(InterpreterState state, MetaObjectBinder action, DynamicExpression node, object[] argValues) {
+        private static object InterpretMetaAction(InterpreterState state, DynamicMetaObjectBinder action, DynamicExpression node, object[] argValues) {
             var callSites = state.LambdaState.ScriptCode.CallSites;
             CallSiteInfo callSiteInfo;
 
@@ -778,19 +778,19 @@ namespace Microsoft.Scripting.Interpretation {
                 throw new InvalidOperationException();
             }
 
-            MetaObject[] args = MetaObject.EmptyMetaObjects;
+            DynamicMetaObject[] args = DynamicMetaObject.EmptyMetaObjects;
             if (argValues.Length != 1) {
-                args = new MetaObject[argValues.Length - 1];
+                args = new DynamicMetaObject[argValues.Length - 1];
                 for (int i = 0; i < args.Length; i++) {
-                    args[i] = MetaObject.ObjectToMetaObject(
+                    args[i] = DynamicMetaObject.ObjectToMetaObject(
                         argValues[i + 1],
                         Expression.Constant(argValues[i + 1])
                     );
                 }
             }
 
-            MetaObject binding = action.Bind(
-                MetaObject.ObjectToMetaObject(
+            DynamicMetaObject binding = action.Bind(
+                DynamicMetaObject.ObjectToMetaObject(
                     argValues[0],
                     Expression.Constant(argValues[0])
                 ),
@@ -809,7 +809,7 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         [Conditional("DEBUG")]
-        private static void AssertTrueRestrictions(InterpreterState state, MetaObject binding) {
+        private static void AssertTrueRestrictions(InterpreterState state, DynamicMetaObject binding) {
             var test = binding.Restrictions.ToExpression();
             var result = Interpret(state, test);
             Debug.Assert(result is bool && (bool)result);
@@ -1185,7 +1185,7 @@ namespace Microsoft.Scripting.Interpretation {
             if (node.DefaultValue != null) {
                 res = Interpret(state, node.DefaultValue);
                 var cf = res as ControlFlow;
-                if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Label) {
+                if (cf != null && cf.Kind == ControlFlowKind.Goto && cf.Label == node.Target) {
                     res = cf.Value;
                 }
             }
@@ -1258,7 +1258,7 @@ namespace Microsoft.Scripting.Interpretation {
                                     // Is the goto within the block?
                                     for (int target = 0; target < count; target++) {
                                         LabelExpression le = expressions[target] as LabelExpression;
-                                        if (le != null && le.Label == cf.Label) {
+                                        if (le != null && le.Target == cf.Label) {
                                             // Reset to execute the code from after the label
                                             // We are going to the label and since label is at the end of the
                                             // expression, set to target and we'll advance below.
@@ -1483,7 +1483,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretGeneratorExpression(InterpreterState state, GeneratorExpression generator) {
             // Fast path for object
-            if (generator.Label.Type == typeof(object)) {
+            if (generator.Target.Type == typeof(object)) {
                 return InterpretGenerator<object>(state, generator);
             }
 
@@ -1491,7 +1491,7 @@ namespace Microsoft.Scripting.Interpretation {
             return ReflectedCaller.Create(
                 typeof(Interpreter).GetMethod(
                     "InterpretGenerator", BindingFlags.NonPublic | BindingFlags.Static
-                ).MakeGenericMethod(generator.Label.Type)
+                ).MakeGenericMethod(generator.Target.Type)
             ).Invoke(state, generator);
         }
 

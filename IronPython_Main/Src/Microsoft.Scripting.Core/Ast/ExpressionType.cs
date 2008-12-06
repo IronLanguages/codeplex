@@ -106,6 +106,7 @@ namespace Microsoft.Linq.Expressions {
         PostIncrementAssign,
         PostDecrementAssign,
         TypeEqual,
+        OnesComplement,
 
         // *** END GENERATED CODE ***
 

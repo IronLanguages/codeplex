@@ -640,7 +640,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             Result expression = RewriteExpression(node.DefaultValue, stack);
             if (expression.Action != RewriteAction.None) {
-                expr = Expression.Label(node.Label, expression.Node);
+                expr = Expression.Label(node.Target, expression.Node);
             }
             return new Result(expression.Action, expr);
         }

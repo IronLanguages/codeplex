@@ -602,5 +602,23 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(_generatorParameter == null);
             _generatorParameter = Block.CreateHiddenParameter("$generator", typeof(PythonGenerator));
         }
+
+        internal MSAst.Expression AddDecorators(MSAst.Expression ret, IList<Expression> decorators) {
+            // add decorators
+            if (decorators != null) {
+                for (int i = decorators.Count - 1; i >= 0; i--) {
+                    Expression decorator = decorators[i];
+                    ret = Binders.Invoke(
+                        BinderState,
+                        typeof(object),
+                        new CallSignature(1),
+                        Transform(decorator),
+                        ret
+                    );
+                }
+            }
+            return ret;
+        }
+
     }
 }

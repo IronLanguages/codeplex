@@ -42,7 +42,7 @@ namespace IronPython.Runtime.Binding {
             _state = state;
         }
 
-        public override MetaObject/*!*/ FallbackInvoke(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override DynamicMetaObject/*!*/ FallbackInvoke(DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args, DynamicMetaObject onBindingError) {
             if (target.IsDynamicObject) {
                 // try creating an instance...
                 return target.BindCreateInstance(
@@ -50,11 +50,17 @@ namespace IronPython.Runtime.Binding {
                     args
                 );
             }
+#if !SILVERLIGHT
+            DynamicMetaObject com;
+            if (Microsoft.Scripting.ComBinder.TryBindInvoke(this, target, args, out com)) {
+                return com;
+            }
+#endif
 
             return InvokeFallback(target, args, BindingHelpers.ArgumentArrayToSignature(Arguments));
         }
 
-        internal MetaObject/*!*/ InvokeFallback(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args, CallSignature sig) {
+        internal DynamicMetaObject/*!*/ InvokeFallback(DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args, CallSignature sig) {
             var parameterBinder = new ParameterBinderWithCodeContext(Binder.Binder, Expression.Constant(_state.Context));
             return PythonProtocol.Call(this, target, args) ??
                Binder.Binder.Create(sig, parameterBinder, target, args) ??

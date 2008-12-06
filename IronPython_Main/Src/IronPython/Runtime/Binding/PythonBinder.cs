@@ -391,7 +391,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.MethodGroup:
                     return ReturnMethodGroup((MethodGroup)memberTracker);
                 case TrackerTypes.Constructor:
-                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type, privateBinding);
+                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type, privateBinding, true);
                     object val;
                     if (PythonTypeOps.IsDefaultNew(ctors)) {
                         if (IsPythonType(type)) {
@@ -400,7 +400,7 @@ namespace IronPython.Runtime.Binding {
                             val = InstanceOps.NewCls;
                         }
                     } else {
-                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, CompilerHelpers.GetConstructors(type, privateBinding));
+                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, ctors);
                     }
 
                     return Ast.Constant(val);
@@ -702,7 +702,7 @@ namespace IronPython.Runtime.Binding {
             res[typeof(Complex64)] = new ExtensionTypeInfo(typeof(ComplexOps), "complex");
 
             // DLR types
-            res[typeof(Null)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
+            res[typeof(DynamicNull)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
             res[typeof(BaseSymbolDictionary)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(IAttributesCollection)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(NamespaceTracker)] = new ExtensionTypeInfo(typeof(ReflectedPackageOps), "namespace#");

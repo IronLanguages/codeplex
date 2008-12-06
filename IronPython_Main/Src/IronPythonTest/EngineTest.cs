@@ -562,6 +562,30 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
             AreEqual(d(2), 2 * 100);
         }
 
+        public void ScenarioCallableClassToDelegate() {
+            ScriptSource src = _pe.CreateScriptSourceFromString(@"
+class Test(object):
+    def __call__(self):
+        return 42
+
+inst = Test()
+
+class TestOC:
+    def __call__(self):
+        return 42
+
+instOC = TestOC()
+", SourceCodeKind.Statements);
+            ScriptScope scope = _pe.CreateScope();
+            src.Execute(scope);
+
+            Func<int> t = scope.GetVariable<Func<int>>("inst");
+            AreEqual(42, t());
+
+            t = scope.GetVariable<Func<int>>("instOC");
+            AreEqual(42, t());
+        }
+
 #if !SILVERLIGHT
         // ExecuteFile
         public void ScenarioExecuteFile() {

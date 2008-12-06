@@ -91,7 +91,7 @@ namespace Microsoft.Scripting {
         }
 
         private static StringComparison GetStringComparison(bool ignoreCase) {
-            return ignoreCase ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture;
+            return ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         }
 
         /// <summary>

@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
             _condition = condition;
         }
 
-        public MetaObject/*!*/ AddWarning(Expression/*!*/ codeContext, MetaObject/*!*/ result) {
+        public DynamicMetaObject/*!*/ AddWarning(Expression/*!*/ codeContext, DynamicMetaObject/*!*/ result) {
             Expression warn = Expression.Call(
                 typeof(PythonOps).GetMethod("Warn"),
                 codeContext,
@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Binding {
                 warn = Expression.Condition(_condition, warn, Expression.Empty());
             }
 
-            return new MetaObject(
+            return new DynamicMetaObject(
                     Expression.Block(
                     warn,
                     result.Expression

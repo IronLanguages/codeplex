@@ -216,6 +216,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Unbox:
                     result = RewriteUnaryExpression(node, stack);
                     break;
+                case ExpressionType.OnesComplement:
+                    result = RewriteUnaryExpression(node, stack);
+                    break;
                 case ExpressionType.AddAssign:
                 case ExpressionType.AndAssign:
                 case ExpressionType.DivideAssign:

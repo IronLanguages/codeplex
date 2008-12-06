@@ -32,7 +32,7 @@ namespace IronPython.Runtime.Binding {
     /// 
     /// When a foreign object is encountered the arguments are expanded into normal position/keyword arguments.
     /// </summary>
-    class PythonInvokeBinder : MetaObjectBinder, IPythonSite, IExpressionSerializable {
+    class PythonInvokeBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;
         private readonly CallSignature _signature;
 
@@ -50,11 +50,11 @@ namespace IronPython.Runtime.Binding {
         /// this includes unsplatting any keyword / position arguments.  Finally if it's just a plain
         /// old .NET type we use the default binder which supports CallSignatures.
         /// </summary>
-        public override MetaObject/*!*/ Bind(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ Bind(DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             Debug.Assert(args.Length > 0);
 
-            MetaObject cc = target;
-            MetaObject actualTarget = args[0];
+            DynamicMetaObject cc = target;
+            DynamicMetaObject actualTarget = args[0];
             args = ArrayUtils.RemoveFirst(args);
 
             Debug.Assert(cc.LimitType == typeof(CodeContext));
@@ -62,7 +62,7 @@ namespace IronPython.Runtime.Binding {
             return BindWorker(cc, actualTarget, args);
         }
 
-        private MetaObject BindWorker(MetaObject/*!*/ context, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        private DynamicMetaObject BindWorker(DynamicMetaObject/*!*/ context, DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             // we don't have CodeContext if an IDO falls back to us when we ask them to produce the Call
             IPythonInvokable icc = target as IPythonInvokable;
 
@@ -77,6 +77,11 @@ namespace IronPython.Runtime.Binding {
             } else if (target.IsDynamicObject) {
                 return InvokeForeignObject(target, args);
             }
+#if !SILVERLIGHT
+            else if (ComOps.IsComObject(target.Value)) {
+                return InvokeForeignObject(target, args);
+            }
+#endif
 
             return Fallback(context.Expression, target, args);
         }
@@ -85,7 +90,7 @@ namespace IronPython.Runtime.Binding {
         /// Fallback - performs the default binding operation if the object isn't recognized
         /// as being invokable.
         /// </summary>
-        internal MetaObject/*!*/ Fallback(Expression codeContext, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal DynamicMetaObject/*!*/ Fallback(Expression codeContext, DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args) {
             if (target.NeedsDeferral()) {
                 return Defer(args);
             }
@@ -142,25 +147,25 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Creates a nested dynamic site which uses the unpacked arguments.
         /// </summary>
-        protected MetaObject InvokeForeignObject(MetaObject target, MetaObject[] args) {
+        protected DynamicMetaObject InvokeForeignObject(DynamicMetaObject target, DynamicMetaObject[] args) {
             // need to unpack any dict / list arguments...
             List<ArgumentInfo> newArgs;
             List<Expression> metaArgs;
             Expression test;
-            Restrictions restrictions;
+            BindingRestrictions restrictions;
             TranslateArguments(target, args, out newArgs, out metaArgs, out test, out restrictions);
 
             Debug.Assert(metaArgs.Count > 0);
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 this,
-                new MetaObject(
+                new DynamicMetaObject(
                     Expression.Dynamic(
                         new CompatibilityInvokeBinder(_state, newArgs.ToArray()),
                         typeof(object),
                         metaArgs.ToArray()
                     ),
-                    restrictions.Merge(Restrictions.GetTypeRestriction(target.Expression, target.LimitType))
+                    restrictions.Merge(BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType))
                 ),
                 args,
                 new ValidationInfo(test, null)
@@ -171,7 +176,7 @@ namespace IronPython.Runtime.Binding {
         /// Translates our CallSignature into a DLR Argument list and gives the simple MetaObject's which are extracted
         /// from the tuple or dictionary parameters being splatted.
         /// </summary>
-        private void TranslateArguments(MetaObject target, MetaObject/*!*/[]/*!*/ args, out List<ArgumentInfo/*!*/>/*!*/ newArgs, out List<Expression/*!*/>/*!*/ metaArgs, out Expression test, out Restrictions restrictions) {
+        private void TranslateArguments(DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args, out List<ArgumentInfo/*!*/>/*!*/ newArgs, out List<Expression/*!*/>/*!*/ metaArgs, out Expression test, out BindingRestrictions restrictions) {
             Argument[] argInfo = _signature.GetArgumentInfos();
 
             newArgs = new List<ArgumentInfo>();
@@ -179,7 +184,7 @@ namespace IronPython.Runtime.Binding {
             metaArgs.Add(target.Expression);
             Expression splatArgTest = null;
             Expression splatKwArgTest = null;
-            restrictions = Restrictions.Empty;
+            restrictions = BindingRestrictions.Empty;
 
             for (int i = 0; i < argInfo.Length; i++) {
                 Argument ai = argInfo[i];
@@ -203,7 +208,7 @@ namespace IronPython.Runtime.Binding {
                             );
                         }
 
-                        restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(args[i].Expression, args[i].LimitType));
+                        restrictions = restrictions.Merge(BindingRestrictions.GetTypeRestriction(args[i].Expression, args[i].LimitType));
                         splatKwArgTest = Expression.Call(
                             typeof(PythonOps).GetMethod("CheckDictionaryMembers"),
                             AstUtils.Convert(args[i].Expression, typeof(IAttributesCollection)),
@@ -228,7 +233,7 @@ namespace IronPython.Runtime.Binding {
                             );
                         }
 
-                        restrictions = restrictions.Merge(Restrictions.GetTypeRestriction(args[i].Expression, args[i].LimitType));
+                        restrictions = restrictions.Merge(BindingRestrictions.GetTypeRestriction(args[i].Expression, args[i].LimitType));
                         break;
                     case ArgumentType.Named:
                         newArgs.Add(Expression.NamedArg(SymbolTable.IdToString(ai.Name)));

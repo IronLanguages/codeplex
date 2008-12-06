@@ -120,6 +120,9 @@ namespace IronPython.Hosting {
                 case "-X:MTA":
                     ConsoleOptions.IsMta = true;
                     break;
+                case "-X:Python26":
+                    LanguageSetup.Options["PythonVersion"] = new Version(2, 6);
+                    break;
 
                 case "-X:Debug":
                     RuntimeSetup.DebugMode = true;
@@ -178,6 +181,7 @@ namespace IronPython.Hosting {
 
                 { "-X:MaxRecursion",        "Set the maximum recursion level" },
                 { "-X:MTA",                 "Run in multithreaded apartment" },
+                { "-X:Python26",            "Enable Python 2.6 features" },
             };
 
             // Append the Python-specific options and the standard options

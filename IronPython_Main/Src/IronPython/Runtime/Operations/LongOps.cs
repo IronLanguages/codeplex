@@ -14,13 +14,19 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using IronPython.Runtime.Types;
+using System.Runtime.InteropServices;
+using System.Text;
+
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -37,6 +43,22 @@ namespace IronPython.Runtime.Operations {
                 BigInteger res = ParseBigIntegerSign(s, radix);
                 return cls.CreateInstance(context, res);
             }
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, IList<byte> s) {
+            if (cls == TypeCache.BigInteger) {
+                object value;
+                IPythonObject po = s as IPythonObject;
+                if (po != null &&
+                    PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, po, Symbols.ConvertToLong, out value)) {
+                    return value;
+                }
+
+                return ParseBigIntegerSign(StringOps.FromByteArray(s), 10);
+            }
+
+            return cls.CreateInstance(context, ParseBigIntegerSign(StringOps.FromByteArray(s), 10));
         }
 
         private static BigInteger ParseBigIntegerSign(string s, int radix) {
@@ -527,6 +549,216 @@ namespace IronPython.Runtime.Operations {
         [PythonHidden]
         public static float ToFloat(BigInteger/*!*/ self) {
             return checked((float)self.ToFloat64());
+        }
+
+        public static string/*!*/ __format__(CodeContext/*!*/ context, BigInteger/*!*/ self, [NotNull]string/*!*/ formatSpec) {
+            StringFormatSpec spec = StringFormatSpec.FromString(formatSpec);
+
+            if (spec.Precision != null) {
+                throw PythonOps.ValueError("Precision not allowed in integer format specifier");
+            }
+
+            BigInteger val = self;
+            if (self < 0) {
+                val = -self;
+            }
+            string digits;
+            
+            switch (spec.Type) {
+                case 'n':
+                    CultureInfo culture = PythonContext.GetContext(context).NumericCulture;
+
+                    if (culture == CultureInfo.InvariantCulture) {
+                        // invariant culture maps to CPython's C culture, which doesn't
+                        // include any formatting info.
+                        goto case 'd';
+                    }
+
+                    digits = ToCultureString(val, PythonContext.GetContext(context).NumericCulture);
+                    break;
+                case null:
+                case 'd':
+                    digits = val.ToString();
+                    break;
+                case '%': digits = val.ToString() + "00.000000%"; break;
+                case 'e': digits = ToExponent(val, true, 6, 7); break;
+                case 'E': digits = ToExponent(val, false, 6, 7); break;
+                case 'f': digits = val.ToString() + ".000000"; break;
+                case 'F': digits = val.ToString() + ".000000"; break;
+                case 'g':
+                    if (val >= 1000000) {
+                        digits = ToExponent(val, true, 0, 6);
+                    } else {
+                        digits = val.ToString();
+                    }
+                    break;
+                case 'G':                    
+                    if (val >= 1000000) {
+                        digits = ToExponent(val, false, 0, 6);
+                    } else {
+                        digits = val.ToString();
+                    }
+                    break;
+                case 'X':
+                    digits = ToDigits(val, 16, false);
+                    
+                    if (spec.IncludeType) {
+                        digits = "0X" + digits;
+                    }
+                    break;
+                case 'x':                    
+                    digits = ToDigits(val, 16, true);
+
+                    if (spec.IncludeType) {
+                        digits = "0x" + digits;
+                    }
+                    break;
+                case 'b': // binary                    
+                    digits = ToDigits(val, 2, false);
+                    
+                    if (spec.IncludeType) {
+                        digits = "0b" + digits;
+                    }
+                    break;
+                case 'c': // single char
+                    int iVal;
+                    if (spec.Sign != null) {
+                        throw PythonOps.ValueError("Sign not allowed with integer format specifier 'c'");
+                    } else if (!self.AsInt32(out iVal)) {
+                        throw PythonOps.OverflowError("long int too large to convert to int");
+                    } else if(iVal < Char.MinValue || iVal > Char.MaxValue) {
+                        throw PythonOps.OverflowError("%c arg not in range(0x10000)");
+                    }
+
+                    digits = Builtin.chr(iVal);
+                    break;
+                case 'o': // octal                    
+                    digits = ToDigits(val, 8, false);
+
+                    if (spec.IncludeType) {
+                        digits = "0o" + digits;
+                    }
+                    break;
+                default:
+                    throw PythonOps.ValueError("Unknown conversion type {0}", spec.Type.ToString());
+            }
+
+            Debug.Assert(digits[0] != '-');
+
+            return spec.AlignNumericText(digits, self.IsZero(), self.IsPositive());
+        }
+
+        private static string/*!*/ ToCultureString(BigInteger/*!*/ val, CultureInfo/*!*/ ci) {
+            string digits;
+            string separator = ci.NumberFormat.NumberGroupSeparator;
+            int[] separatorLocations = ci.NumberFormat.NumberGroupSizes;
+            digits = val.ToString();
+
+            if (separatorLocations.Length > 0) {
+                StringBuilder res = new StringBuilder(digits);
+
+                int curGroup = 0, curDigit = digits.Length - 1;
+                while (curDigit > 0) {
+                    // insert the seperator
+                    curDigit -= separatorLocations[curGroup];
+                    if (curDigit >= 0) {
+                        res.Insert(curDigit + 1, separator);
+                    }
+
+                    // advance the group
+                    if (curGroup + 1 < separatorLocations.Length) {
+                        if (separatorLocations[curGroup + 1] == 0) {
+                            // last value doesn't propagate
+                            break;
+                        }
+
+                        curGroup++;
+                    }
+                }
+
+                digits = res.ToString();
+            }
+
+            return digits;
+        }
+
+        private static string/*!*/ ToExponent(BigInteger/*!*/ self, bool lower, int minPrecision, int maxPrecision) {
+            Debug.Assert(minPrecision <= maxPrecision);
+
+            // get all the digits
+            string digits = self.ToString();
+
+            StringBuilder tmp = new StringBuilder();
+            tmp.Append(digits[0]);
+            
+            for (int i = 1; i < maxPrecision && i < digits.Length; i++) {
+                // append if we have a significant digit or if we are forcing a minimum precision
+                if (digits[i] != '0' || i <= minPrecision) {
+                    if (tmp.Length == 1) {
+                        // first time we've appended, add the decimal point now
+                        tmp.Append('.');
+                    }
+
+                    while (i > tmp.Length - 1) {
+                        // add any digits that we skipped before
+                        tmp.Append('0');
+                    }
+
+                    // round up last digit if necessary
+                    if (i == maxPrecision - 1 && i != digits.Length - 1 && digits[i + 1] >= '5') {
+                        tmp.Append((char)(digits[i] + 1));
+                    } else {
+                        tmp.Append(digits[i]);
+                    }
+                }
+            }
+
+            if (digits.Length <= minPrecision) {
+                if (tmp.Length == 1) {
+                    // first time we've appended, add the decimal point now
+                    tmp.Append('.');
+                }
+
+                while (minPrecision >= tmp.Length - 1) {
+                    tmp.Append('0');
+                }
+            }
+
+            tmp.Append(lower ? "e+" : "E+");
+            int digitCnt = digits.Length - 1;
+            if (digitCnt < 10) {
+                tmp.Append('0');
+                tmp.Append((char)('0' + digitCnt));
+            } else {
+                tmp.Append(digitCnt.ToString());
+            }
+
+            digits = tmp.ToString();
+            return digits;
+        }
+
+        private static string/*!*/ ToDigits(BigInteger/*!*/ val, int radix, bool lower) {
+            if (val.IsZero()) {
+                return "0";
+            }
+
+            StringBuilder str = new StringBuilder();
+
+            while (val != 0) {
+                int digit = (int)(val % radix);
+                if (digit < 10) str.Append((char)((digit) + '0'));
+                else if (lower) str.Append((char)((digit - 10) + 'a'));
+                else str.Append((char)((digit - 10) + 'A'));
+
+                val /= radix;
+            }
+
+            StringBuilder res = new StringBuilder(str.Length);
+            for (int i = str.Length - 1; i >= 0; i--) {
+                res.Append(str[i]);
+            }
+            
+            return res.ToString();
         }
     }
 }

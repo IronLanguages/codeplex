@@ -35,15 +35,15 @@ namespace IronPython.Runtime.Binding {
             _state = state;
         }
 
-        public override MetaObject/*!*/ FallbackOperation(MetaObject target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override DynamicMetaObject/*!*/ FallbackOperation(DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args, DynamicMetaObject onBindingError) {
             // TODO: until we use the real GetIndex and SetIndex binders, we
             // need to do this for COM interop
             if (Operation == "GetItem") {
                 return target.BindGetIndex(new GetIndexAdapter(this), args);
             }            
             if (Operation == "SetItem") {
-                MetaObject[] indexes = ArrayUtils.RemoveLast(args);
-                MetaObject value = args[args.Length - 1];
+                DynamicMetaObject[] indexes = ArrayUtils.RemoveLast(args);
+                DynamicMetaObject value = args[args.Length - 1];
                 return target.BindSetIndex(new SetIndexAdapter(this), indexes, value);
             }
             return PythonProtocol.Operation(this, ArrayUtils.Insert(target, args));
@@ -98,10 +98,11 @@ namespace IronPython.Runtime.Binding {
                 _opBinder = opBinder;
             }
 
-            public override MetaObject FallbackSetIndex(MetaObject target, MetaObject[] indexes, MetaObject value, MetaObject errorSuggestion) {
+            public override DynamicMetaObject FallbackSetIndex(DynamicMetaObject target, DynamicMetaObject[] indexes, DynamicMetaObject value, DynamicMetaObject errorSuggestion) {
 #if !SILVERLIGHT
-                if (Microsoft.Scripting.ComInterop.ComBinder.TryBindSetIndex(this, ref target, indexes, value)) {
-                    return target;
+                DynamicMetaObject com;
+                if (Microsoft.Scripting.ComBinder.TryBindSetIndex(this, target, indexes, value, out com)) {
+                    return com;
                 }
 #endif                
                 return PythonProtocol.Operation(_opBinder, ArrayUtils.Append(ArrayUtils.Insert(target, indexes), value));
@@ -120,10 +121,11 @@ namespace IronPython.Runtime.Binding {
                 _opBinder = opBinder;
             }
 
-            public override MetaObject FallbackGetIndex(MetaObject target, MetaObject[] indexes, MetaObject errorSuggestion) {
+            public override DynamicMetaObject FallbackGetIndex(DynamicMetaObject target, DynamicMetaObject[] indexes, DynamicMetaObject errorSuggestion) {
 #if !SILVERLIGHT
-                if (Microsoft.Scripting.ComInterop.ComBinder.TryBindGetIndex(this, ref target, indexes)) {
-                    return target;
+                DynamicMetaObject com;
+                if (Microsoft.Scripting.ComBinder.TryBindGetIndex(this, target, indexes, out com)) {
+                    return com;
                 }
 #endif
                 return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, indexes));

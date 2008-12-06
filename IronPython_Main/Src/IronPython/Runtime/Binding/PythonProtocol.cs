@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Binding {
         /// protocol methods.  This code is shared between both our fallback for a site and our MetaObject
         /// for user defined objects.
         /// </summary>
-        internal static MetaObject ConvertToBool(ConvertBinder/*!*/ conversion, MetaObject/*!*/ self) {
+        internal static DynamicMetaObject ConvertToBool(ConvertBinder/*!*/ conversion, DynamicMetaObject/*!*/ self) {
             Assert.NotNull(conversion, self);
 
             SlotOrFunction sf = SlotOrFunction.GetSlotOrFunction(
@@ -56,7 +56,7 @@ namespace IronPython.Runtime.Binding {
 
             if (sf.Success) {
                 if (sf.Target.Expression.Type != typeof(bool)) {
-                    return new MetaObject(
+                    return new DynamicMetaObject(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("ThrowingConvertToNonZero"),
                             sf.Target.Expression
@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Binding {
                 self);
 
             if (sf.Success) {
-                return new MetaObject(
+                return new DynamicMetaObject(
                     GetConvertByLengthBody(
                         BinderState.GetBinderState(conversion),
                         sf.Target.Expression
@@ -109,7 +109,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.NotEqual(callAsInt, Ast.Constant(0));
         }
 
-        internal static MetaObject ConvertToIEnumerable(ConvertBinder/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
+        internal static DynamicMetaObject ConvertToIEnumerable(ConvertBinder/*!*/ conversion, DynamicMetaObject/*!*/ metaUserObject) {
             PythonType pt = MetaPythonObject.GetPythonType(metaUserObject);
             CodeContext context = BinderState.GetBinderState(conversion).Context;
             PythonTypeSlot pts;
@@ -123,7 +123,7 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        internal static MetaObject ConvertToIEnumerator(ConvertBinder/*!*/ conversion, MetaObject/*!*/ metaUserObject) {
+        internal static DynamicMetaObject ConvertToIEnumerator(ConvertBinder/*!*/ conversion, DynamicMetaObject/*!*/ metaUserObject) {
             PythonType pt = MetaPythonObject.GetPythonType(metaUserObject);
             CodeContext context = BinderState.GetBinderState(conversion).Context;
             PythonTypeSlot pts;
@@ -137,8 +137,8 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        private static MetaObject/*!*/ MakeIterRule(MetaObject/*!*/ self, string methodName) {            
-            return new MetaObject(
+        private static DynamicMetaObject/*!*/ MakeIterRule(DynamicMetaObject/*!*/ self, string methodName) {            
+            return new DynamicMetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod(methodName),
                     AstUtils.Convert(self.Expression, typeof(object))
@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Binding {
 
         #region Calls
 
-        internal static MetaObject Call(MetaObjectBinder/*!*/ call, MetaObject target, MetaObject/*!*/[]/*!*/ args) {
+        internal static DynamicMetaObject Call(DynamicMetaObjectBinder/*!*/ call, DynamicMetaObject target, DynamicMetaObject/*!*/[]/*!*/ args) {
             Assert.NotNull(call, args);
             Assert.NotNullItems(args);
 
@@ -159,7 +159,7 @@ namespace IronPython.Runtime.Binding {
                 return call.Defer(ArrayUtils.Insert(target, args));
             }
 
-            foreach (MetaObject mo in args) {
+            foreach (DynamicMetaObject mo in args) {
                 if (mo.NeedsDeferral()) {
                     RestrictTypes(args);
 
@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            MetaObject self = target.Restrict(target.LimitType);
+            DynamicMetaObject self = target.Restrict(target.LimitType);
 
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(null, target);
             PythonType pt = DynamicHelpers.GetPythonType(target.Value);
@@ -190,7 +190,7 @@ namespace IronPython.Runtime.Binding {
                         GetPythonType(self),
                         AstUtils.Convert(body, typeof(object))
                     ), 
-                    MetaObject.GetExpressions(args)
+                    DynamicMetaObject.GetExpressions(args)
                 );
 
                 body = Ast.Dynamic(
@@ -204,7 +204,7 @@ namespace IronPython.Runtime.Binding {
 
                 return BindingHelpers.AddDynamicTestAndDefer(
                     call,
-                    new MetaObject(body, self.Restrictions.Merge(Restrictions.Combine(args))),
+                    new DynamicMetaObject(body, self.Restrictions.Merge(BindingRestrictions.Combine(args))),
                     args,
                     valInfo
                 );
@@ -213,7 +213,7 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        private static Expression/*!*/ GetPythonType(MetaObject/*!*/ self) {
+        private static Expression/*!*/ GetPythonType(DynamicMetaObject/*!*/ self) {
             Assert.NotNull(self);
 
             PythonType pt = DynamicHelpers.GetPythonType(self.Value);
@@ -227,7 +227,7 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static Expression/*!*/ GetCallError(MetaObject/*!*/ self) {
+        private static Expression/*!*/ GetCallError(DynamicMetaObject/*!*/ self) {
             Assert.NotNull(self);
 
             return Ast.Throw(

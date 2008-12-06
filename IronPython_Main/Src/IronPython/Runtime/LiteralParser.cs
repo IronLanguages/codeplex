@@ -17,7 +17,8 @@ using System; using Microsoft;
 using System.Diagnostics;
 using System.Text;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Math; 
+using Microsoft.Scripting.Math;
+using System.Collections.Generic; 
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -130,6 +131,82 @@ namespace IronPython.Runtime {
                 return buf.ToString(3, buf.Length - 3);
 
             return buf.ToString();
+        }
+
+        public static List<byte> ParseBytes(string text, bool isRaw, bool complete) {
+            Debug.Assert(text != null);
+
+            //PERFORMANCE-ISSUE ??? maybe optimize for the 0-escapes case
+            List<byte> buf = new List<byte>(text.Length);
+
+            int i = 0;
+            int l = text.Length;
+            int val;
+            while (i < l) {
+                char ch = text[i++];
+                if (!isRaw && ch == '\\') {
+                    if (i >= l) {
+                        if (!complete) {
+                            break;
+                        } else {
+                            throw PythonOps.ValueError("Trailing \\ in string");
+                        }
+                    }
+                    ch = text[i++];
+                    switch (ch) {
+                        case 'a': buf.Add((byte)'\a'); continue;
+                        case 'b': buf.Add((byte)'\b'); continue;
+                        case 'f': buf.Add((byte)'\f'); continue;
+                        case 'n': buf.Add((byte)'\n'); continue;
+                        case 'r': buf.Add((byte)'\r'); continue;
+                        case 't': buf.Add((byte)'\t'); continue;
+                        case 'v': buf.Add((byte)'\v'); continue;
+                        case '\\': buf.Add((byte)'\\'); continue;
+                        case '\'': buf.Add((byte)'\''); continue;
+                        case '\"': buf.Add((byte)'\"'); continue;
+                        case '\r': if (i < l && text[i] == '\n') i++; continue;
+                        case '\n': continue;
+                        case 'x': //hex
+                            if (!TryParseInt(text, i, 2, 16, out val)) {
+                                goto default;
+                            }
+                            buf.Add((byte)val);
+                            i += 2;
+                            continue;
+                        case '0':
+                        case '1':
+                        case '2':
+                        case '3':
+                        case '4':
+                        case '5':
+                        case '6':
+                        case '7': {
+                                int onechar;
+                                val = ch - '0';
+                                if (i < l && HexValue(text[i], out onechar) && onechar < 8) {
+                                    val = val * 8 + onechar;
+                                    i++;
+                                    if (i < l && HexValue(text[i], out onechar) && onechar < 8) {
+                                        val = val * 8 + onechar;
+                                        i++;
+                                    }
+                                }
+                            }
+
+                            buf.Add((byte)val);
+                            continue;
+                        default:
+                            buf.Add((byte)'\\');
+                            buf.Add((byte)ch);
+                            continue;
+                    }
+                    
+                } else {
+                    buf.Add((byte)ch);
+                }
+            }            
+
+            return buf;
         }
 
         private static bool HexValue(char ch, out int value) {

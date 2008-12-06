@@ -111,12 +111,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
 #if MICROSOFT_SCRIPTING_CORE
         // NOTE: this method is called through reflection from Microsoft.Scripting
-        internal static void SetSaveAssemblies(string directory) {
-            Shared.ConfigureSaveAssemblies(directory);
+        internal static void SetSaveAssemblies(bool enable, string directory) {
+            Shared.ConfigureSaveAssemblies(enable, directory);
         }
 
-        private void ConfigureSaveAssemblies(string directory) {
-            _saveSnippets = true;
+        private void ConfigureSaveAssemblies(bool enable, string directory) {
+            _saveSnippets = enable;
             _snippetsDirectory = directory;
         }
         

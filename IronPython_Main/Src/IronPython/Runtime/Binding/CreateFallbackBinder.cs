@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Binding {
             _fallback = realFallback;
         }
 
-        public override MetaObject/*!*/ FallbackCreateInstance(MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args, MetaObject onBindingError) {
+        public override DynamicMetaObject/*!*/ FallbackCreateInstance(DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args, DynamicMetaObject onBindingError) {
             return _fallback.InvokeFallback(target, args, BindingHelpers.GetCallSignature(this));
         }
 

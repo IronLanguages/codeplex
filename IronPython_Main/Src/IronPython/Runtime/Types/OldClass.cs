@@ -571,8 +571,8 @@ namespace IronPython.Runtime.Types {
 
         #region IDynamicObject Members
 
-        MetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
-            return new Binding.MetaOldClass(parameter, Restrictions.Empty, this);
+        DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaOldClass(parameter, BindingRestrictions.Empty, this);
         }
 
         #endregion

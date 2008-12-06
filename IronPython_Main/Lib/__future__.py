@@ -17,3 +17,5 @@ division=1
 with_statement=1
 generators=1
 absolute_import=1
+print_function=1
+unicode_literals=1

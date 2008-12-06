@@ -88,8 +88,8 @@ namespace IronPython.Runtime.Operations {
             PythonCalls.Call(callable, eventValue);
         }
 
-        public static MetaObject/*!*/ GetMetaObjectHelper(IPythonObject self, Expression/*!*/ parameter, MetaObject baseMetaObject) {
-            return new Binding.MetaUserObject(parameter, Restrictions.Empty, baseMetaObject, self);
+        public static DynamicMetaObject/*!*/ GetMetaObjectHelper(IPythonObject self, Expression/*!*/ parameter, DynamicMetaObject baseMetaObject) {
+            return new Binding.MetaUserObject(parameter, BindingRestrictions.Empty, baseMetaObject, self);
         }
 
         public static bool TryGetMixedNewStyleOldStyleSlot(CodeContext context, object instance, SymbolId name, out object value) {

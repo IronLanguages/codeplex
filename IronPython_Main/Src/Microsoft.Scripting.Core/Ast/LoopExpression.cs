@@ -18,14 +18,14 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    /// <summary>
+    /// Represents an infinite loop. It can be exited with "break"
+    /// </summary>
     public sealed class LoopExpression : Expression {
         private readonly Expression _body;
         private readonly LabelTarget _break;
         private readonly LabelTarget _continue;
 
-        /// <summary>
-        /// Null test means infinite loop.
-        /// </summary>
         internal LoopExpression(Expression body, LabelTarget @break, LabelTarget @continue) {
             _body = body;
             _break = @break;
@@ -33,7 +33,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         protected override Type GetExpressionType() {
-            return typeof(void);
+            return _break == null ? typeof(void) : _break.Type;
         }
 
         protected override ExpressionType GetNodeKind() {
@@ -72,8 +72,6 @@ namespace Microsoft.Linq.Expressions {
 
         public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) {
             RequiresCanRead(body, "body");
-            // TODO: lift the restriction on break, and allow loops to have non-void type
-            ContractUtils.Requires(@break == null || @break.Type == typeof(void), "break", Strings.LabelTypeMustBeVoid);
             ContractUtils.Requires(@continue == null || @continue.Type == typeof(void), "continue", Strings.LabelTypeMustBeVoid);
             return new LoopExpression(body, @break, @continue);
         }

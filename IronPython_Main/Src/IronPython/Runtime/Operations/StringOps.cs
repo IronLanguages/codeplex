@@ -256,6 +256,15 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, Extensible<double> @object) {
+            if (cls == TypeCache.String) {
+                return FastNew(context, @object);
+            } else {
+                return cls.CreateInstance(context, @object);
+            }
+        }
+
+        [StaticExtensionMethod]
         public static object __new__(CodeContext/*!*/ context, PythonType cls, float @object) {
             if (cls == TypeCache.String) {
                 return SingleOps.__str__(context, @object);
@@ -292,6 +301,10 @@ namespace IronPython.Runtime.Operations {
             return s.IndexOf(item) != -1;
         }
 
+        public static string __format__(string self, string formatSpec) {
+            return self;
+        }
+
         public static int __len__(string s) {
             return s.Length;
         }
@@ -308,7 +321,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static string GetItem(string s, Slice slice) {
-            if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
+            if (slice == null) throw PythonOps.TypeError("string indices must be slices or integers");
             int start, stop, step;
             slice.indices(s.Length, out start, out stop, out step);
             if (step == 1) {
@@ -1063,6 +1076,33 @@ namespace IronPython.Runtime.Operations {
             }
             return ret.ToString();
         }
+
+        public static string/*!*/ format(CodeContext/*!*/ context, string format_string, params object[] args) {
+            return NewStringFormatter.FormatString(
+                PythonContext.GetContext(context),
+                format_string,
+                PythonTuple.MakeTuple(args),
+                new PythonDictionary()
+            );
+        }
+
+        public static string/*!*/ format(CodeContext/*!*/ context, string format_string, [ParamDictionary]IAttributesCollection kwargs, params object[] args) {
+            return NewStringFormatter.FormatString(
+                PythonContext.GetContext(context),
+                format_string,
+                PythonTuple.MakeTuple(args),
+                kwargs
+            );
+        }
+
+        public static IEnumerable<PythonTuple>/*!*/ _formatter_parser(this string/*!*/ self) {
+            return NewStringFormatter.GetFormatInfo(self);
+        }
+
+        public static PythonTuple/*!*/ _formatter_field_name_split(this string/*!*/ self) {
+            return NewStringFormatter.GetFieldNameInfo(self);
+        }
+
         #endregion
 
         #region operators
@@ -1286,24 +1326,24 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        internal static string FromByteArray(byte[] bytes) {
-            return FromByteArray(bytes, bytes.Length);
+        internal static string FromByteArray(IList<byte> bytes) {
+            return FromByteArray(bytes, bytes.Count);
         }
 
 
-        internal static string FromByteArray(byte[]preamble, byte[] bytes) {
-            char[] chars = new char[preamble.Length + bytes.Length];
+        internal static string FromByteArray(byte[]preamble, IList<byte> bytes) {
+            char[] chars = new char[preamble.Length + bytes.Count];
             for (int i = 0; i < preamble.Length; i++) {
                 chars[i] = (char)preamble[i];
             }
-            for (int i = 0; i < bytes.Length; i++) {
+            for (int i = 0; i < bytes.Count; i++) {
                 chars[i + preamble.Length] = (char)bytes[i];
             }
             return new String(chars);
         }
 
-        internal static string FromByteArray(byte[] bytes, int maxBytes) {
-            int bytesToCopy = Math.Min(bytes.Length, maxBytes);
+        internal static string FromByteArray(IList<byte> bytes, int maxBytes) {
+            int bytesToCopy = Math.Min(bytes.Count, maxBytes);
             StringBuilder b = new StringBuilder(bytesToCopy);
             for (int i = 0; i < bytesToCopy; i++) {
                 b.Append((char)bytes[i]);
@@ -1368,10 +1408,9 @@ namespace IronPython.Runtime.Operations {
 
         private static string Reverse(string s) {
             if (s.Length == 0 || s.Length == 1) return s;
-            char[] chars = s.ToCharArray();
             char[] rchars = new char[s.Length];
             for (int i = s.Length - 1, j = 0; i >= 0; i--, j++) {
-                rchars[j] = chars[i];
+                rchars[j] = s[i];
             }
             return new string(rchars);
         }
@@ -2022,7 +2061,7 @@ namespace IronPython.Runtime.Operations {
                 yield return ScriptingRuntimeHelpers.CharToString(str[i]);
             }
         }
-
+        
         #endregion
 
         #region  Unicode Encode/Decode Fallback Support

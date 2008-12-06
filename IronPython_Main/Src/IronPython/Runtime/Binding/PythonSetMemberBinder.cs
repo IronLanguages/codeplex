@@ -37,13 +37,14 @@ namespace IronPython.Runtime.Binding {
             _state = binder;
         }
 
-        public override MetaObject FallbackSetMember(MetaObject self, MetaObject value, MetaObject onBindingError) {
+        public override DynamicMetaObject FallbackSetMember(DynamicMetaObject self, DynamicMetaObject value, DynamicMetaObject onBindingError) {
             if (self.NeedsDeferral()) {
                 return Defer(self, value);
             }
 #if !SILVERLIGHT
-            if (Microsoft.Scripting.ComInterop.ComBinder.TryBindSetMember(this, ref self, value)) {
-                return self;
+            DynamicMetaObject com;
+            if (Microsoft.Scripting.ComBinder.TryBindSetMember(this, self, value, out com)) {
+                return com;
             }
 #endif
             return Binder.Binder.SetMember(Name, self, value, Ast.Constant(Binder.Context));

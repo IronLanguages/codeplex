@@ -24,6 +24,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Math;
 
 namespace IronPython.Compiler {
 
@@ -74,10 +75,15 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonOptions options) {
-            return CreateParser(context, options, false);
+            return CreateParserWorker(context, options, false);
         }
 
+        [Obsolete("pass verbatim via PythonCompilerOptions in PythonOptions")]
         public static Parser CreateParser(CompilerContext context, PythonOptions options, bool verbatim) {
+            return CreateParserWorker(context, options, verbatim);
+        }
+
+        private static Parser CreateParserWorker(CompilerContext context, PythonOptions options, bool verbatim) {
             ContractUtils.RequiresNotNull(context, "context");
             ContractUtils.RequiresNotNull(options, "options");
 
@@ -99,7 +105,7 @@ namespace IronPython.Compiler {
                 throw;
             }
 
-            Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim, compilerOptions.DontImplyDedent);
+            Tokenizer tokenizer = new Tokenizer(context.Errors, compilerOptions, verbatim);
             tokenizer.Initialize(null, reader, context.SourceUnit, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
@@ -135,7 +141,9 @@ namespace IronPython.Compiler {
         }
 
         private bool AllowWithStatement {
-            get { return (_languageFeatures & PythonLanguageFeatures.AllowWithStatement) == PythonLanguageFeatures.AllowWithStatement; }
+            get { return Python26 ||
+                        (_languageFeatures & PythonLanguageFeatures.AllowWithStatement) == PythonLanguageFeatures.AllowWithStatement; 
+            }
         }
 
         private bool TrueDivision {
@@ -144,6 +152,14 @@ namespace IronPython.Compiler {
 
         private bool AbsoluteImports {
             get { return (_languageFeatures & PythonLanguageFeatures.AbsoluteImports) == PythonLanguageFeatures.AbsoluteImports; }
+        }
+
+        private bool Python26 {
+            get { return (_languageFeatures & PythonLanguageFeatures.Python26) == PythonLanguageFeatures.Python26; }
+        }
+
+        private bool PrintFunction {
+            get { return (_languageFeatures & PythonLanguageFeatures.PrintFunction) == PythonLanguageFeatures.PrintFunction; }
         }
 
         public void Reset(SourceUnit sourceUnit, PythonLanguageFeatures languageFeatures) {
@@ -237,6 +253,15 @@ namespace IronPython.Compiler {
 
         private bool MaybeEat(TokenKind kind) {
             if (PeekToken().Kind == kind) {
+                NextToken();
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        private bool MaybeEat(SymbolId id) {
+            if (PeekName(id)) {
                 NextToken();
                 return true;
             } else {
@@ -589,7 +614,7 @@ namespace IronPython.Compiler {
                 case TokenKind.KeywordTry:
                     return ParseTryStatement();
                 case TokenKind.At:
-                    return ParseDecoratedFuncDef();
+                    return ParseDecorated();
                 case TokenKind.KeywordDef:
                     return ParseFuncDef();
                 case TokenKind.KeywordClass:
@@ -990,6 +1015,11 @@ namespace IronPython.Compiler {
                         _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
                     } else if (name == Symbols.AbsoluteImport) {
                         _languageFeatures |= PythonLanguageFeatures.AbsoluteImports;
+                    } else if (name == Symbols.PrintFunction && Python26) {
+                        _languageFeatures |= PythonLanguageFeatures.PrintFunction;
+                        _tokenizer.PrintFunction = true;
+                    } else if (name == Symbols.UnicodeLiterals && Python26) {
+                        // nop for us, just ignore it...
                     } else if (name == Symbols.NestedScopes) {
                     } else if (name == Symbols.Generators) {
                     } else {
@@ -1213,13 +1243,34 @@ namespace IronPython.Compiler {
         }
 
         // funcdef: [decorators] 'def' NAME parameters ':' suite
+        // 2.6: 
+        //  decorated: decorators (classdef | funcdef)
         // this gets called with "@" look-ahead
-        private FunctionDefinition ParseDecoratedFuncDef() {
+        private Statement ParseDecorated() {
             List<Expression> decorators = ParseDecorators();
-            FunctionDefinition fnc = ParseFuncDef();
-            fnc.Decorators = decorators;
 
-            return fnc;
+            Statement res;
+
+            if (Python26) {
+                if (PeekToken() == Tokens.KeywordDefToken) {
+                    FunctionDefinition fnc = ParseFuncDef();
+                    fnc.Decorators = decorators.ToArray();
+                    res = fnc;
+                } else if (PeekToken() == Tokens.KeywordClassToken) {
+                    ClassDefinition cls = ParseClassDef();
+                    cls.Decorators = decorators.ToArray();
+                    res = cls;
+                } else {
+                    res = new EmptyStatement();
+                    ReportSyntaxError("expected class or def");
+                }
+            } else {
+                FunctionDefinition fnc = ParseFuncDef();
+                fnc.Decorators = decorators.ToArray();
+                res = fnc;
+            }
+
+            return res;
         }
 
         // funcdef: [decorators] 'def' NAME parameters ':' suite
@@ -1641,6 +1692,7 @@ namespace IronPython.Compiler {
         }
 
         //except_clause: 'except' [expression [',' expression]]
+        //2.6: except_clause: 'except' [expression [(',' or 'as') expression]]
         private TryStatementHandler ParseTryStmtHandler() {
             Eat(TokenKind.KeywordExcept);
 
@@ -1654,7 +1706,7 @@ namespace IronPython.Compiler {
             Expression test1 = null, test2 = null;
             if (PeekToken().Kind != TokenKind.Colon) {
                 test1 = ParseExpression();
-                if (MaybeEat(TokenKind.Comma)) {
+                if (MaybeEat(TokenKind.Comma) || (Python26 && MaybeEat(Symbols.As))) {
                     test2 = ParseExpression();
                 }
             }
@@ -1858,12 +1910,20 @@ namespace IronPython.Compiler {
 
         private Expression FinishUnaryNegate() {
             // Special case to ensure that System.Int32.MinValue is an int and not a BigInteger
-            if (PeekToken().Kind == TokenKind.Constant) {
-                string tokenString;
-                if (_tokenizer.TryGetTokenString(10, out tokenString)) {
-                    if (tokenString.Equals("2147483648") || tokenString.Equals("0x80000000") || tokenString.Equals("0X80000000")) {
+            if (PeekToken().Kind == TokenKind.Constant) {                
+                Token t = PeekToken();
+                
+                BigInteger bi = t.Value as BigInteger;
+                uint iVal;
+                if (!Object.ReferenceEquals(bi, null) && bi.AsUInt32(out iVal) && iVal == 0x80000000) {
+                    string tokenString = _tokenizer.GetTokenString(); ;
+                    Debug.Assert(tokenString.Length > 0);
+
+                    if (tokenString[tokenString.Length - 1] != 'L' &&
+                        tokenString[tokenString.Length - 1] != 'l') {
                         NextToken();
                         return new ConstantExpression(-2147483648);
+
                     }
                 }
             }
@@ -1918,6 +1978,11 @@ namespace IronPython.Compiler {
                     string cvs = cv as string;
                     if (cvs != null) {
                         cv = FinishStringPlus(cvs);
+                    } else {
+                        Bytes bytes = cv as Bytes;
+                        if (bytes != null) {
+                            cv = FinishBytesPlus(bytes);
+                        }
                     }
                     
                     ret = new ConstantExpression(cv);
@@ -1940,6 +2005,26 @@ namespace IronPython.Compiler {
                     string cvs;
                     if ((cvs = t.Value as String) != null) {
                         s += cvs;
+                        NextToken();
+                        t = PeekToken();
+                        continue;
+                    } else {
+                        ReportSyntaxError("invalid syntax");
+                    }
+                }
+                break;
+            }
+            return s;
+        }
+
+        private Bytes FinishBytesPlus(Bytes s) {
+            Token t = PeekToken();
+            List<byte> res = new List<byte>(s);
+            while (true) {
+                if (t is ConstantValueToken) {
+                    Bytes cvs;
+                    if ((cvs = t.Value as Bytes) != null) {
+                        s = s + cvs;
                         NextToken();
                         t = PeekToken();
                         continue;
@@ -2741,7 +2826,7 @@ namespace IronPython.Compiler {
                     }
                     hasKeywordDict = true; extraArgs++;
                 } else {
-                    if (hasArgsTuple || hasKeywordDict) {
+                    if ((!Python26 && hasArgsTuple) || hasKeywordDict) {
                         ReportSyntaxError(IronPython.Resources.KeywordOutOfSequence);
                     }
                     keywordCount++;

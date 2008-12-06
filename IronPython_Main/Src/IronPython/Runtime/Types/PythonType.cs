@@ -501,7 +501,7 @@ namespace IronPython.Runtime.Types {
 
         internal bool IsNull {
             get {
-                return UnderlyingSystemType == typeof(Null);
+                return UnderlyingSystemType == typeof(DynamicNull);
             }
         }
 
@@ -1690,11 +1690,7 @@ namespace IronPython.Runtime.Types {
             if (_ctor == null) {
                 AddSystemConstructors();
                 if (_ctor == null) {
-#if SILVERLIGHT
-                    throw new MissingMethodException(Name + ".ctor");
-#else
-                    throw new MissingMethodException(Name, ".ctor");
-#endif
+                    throw PythonOps.TypeError(_underlyingSystemType.FullName + " does not define any public constructors.");
                 }
             }
         }
@@ -1831,8 +1827,8 @@ namespace IronPython.Runtime.Types {
         #region IDynamicObject Members
 
         [PythonHidden]
-        public MetaObject/*!*/ GetMetaObject(Expression/*!*/ parameter) {
-            return new Binding.MetaPythonType(parameter, Restrictions.Empty, this);
+        public DynamicMetaObject/*!*/ GetMetaObject(Expression/*!*/ parameter) {
+            return new Binding.MetaPythonType(parameter, BindingRestrictions.Empty, this);
         }
 
         #endregion

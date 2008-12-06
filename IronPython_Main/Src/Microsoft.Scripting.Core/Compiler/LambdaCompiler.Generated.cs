@@ -222,6 +222,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Unbox:
                     EmitUnboxUnaryExpression(node);
                     break;
+                case ExpressionType.OnesComplement:
+                    EmitUnaryExpression(node);
+                    break;
 
                 // *** END GENERATED CODE ***
 

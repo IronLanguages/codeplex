@@ -236,7 +236,7 @@ namespace IronPython.Runtime.Types {
 
         public static PythonType Null {
             get {
-                if (nullType == null) nullType = DynamicHelpers.GetPythonTypeFromType(typeof(Null));
+                if (nullType == null) nullType = DynamicHelpers.GetPythonTypeFromType(typeof(DynamicNull));
                 return nullType;
             }
         }

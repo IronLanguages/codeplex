@@ -30,14 +30,14 @@ using AstUtils = Microsoft.Scripting.Ast.Utils;
 namespace IronPython.Runtime.Binding {
 
     class MetaMethod : MetaPythonObject, IPythonInvokable {
-        public MetaMethod(Expression/*!*/ expression, Restrictions/*!*/ restrictions, Method/*!*/ value)
-            : base(expression, Restrictions.Empty, value) {
+        public MetaMethod(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, Method/*!*/ value)
+            : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
         }
 
         #region IPythonInvokable Members
 
-        public MetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
+        public DynamicMetaObject/*!*/ Invoke(PythonInvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(pythonInvoke, args);
         }
 
@@ -45,15 +45,15 @@ namespace IronPython.Runtime.Binding {
 
         #region MetaObject Overrides
 
-        public override MetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             return BindingHelpers.GenericCall(action, this, args);
         }
 
-        public override MetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ callAction, params MetaObject/*!*/[]/*!*/ args) {
+        public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ callAction, params DynamicMetaObject/*!*/[]/*!*/ args) {
             return InvokeWorker(callAction, args);
         }
 
-        public override MetaObject BindConvert(ConvertBinder action) {
+        public override DynamicMetaObject BindConvert(ConvertBinder action) {
             if (action.Type.IsSubclassOf(typeof(Delegate))) {
                 return MakeDelegateTarget(action, action.Type, Restrict(typeof(Method)));
             }
@@ -65,18 +65,18 @@ namespace IronPython.Runtime.Binding {
 
         #region Invoke Implementation
 
-        private MetaObject InvokeWorker(MetaObjectBinder/*!*/ callAction, MetaObject/*!*/[] args) {
+        private DynamicMetaObject InvokeWorker(DynamicMetaObjectBinder/*!*/ callAction, DynamicMetaObject/*!*/[] args) {
             CallSignature signature = BindingHelpers.GetCallSignature(callAction);
-            MetaObject self = Restrict(typeof(Method));
-            Restrictions restrictions = self.Restrictions;
+            DynamicMetaObject self = Restrict(typeof(Method));
+            BindingRestrictions restrictions = self.Restrictions;
 
-            MetaObject func = GetMetaFunction(self);
-            MetaObject call;
+            DynamicMetaObject func = GetMetaFunction(self);
+            DynamicMetaObject call;
 
             if (Value.im_self == null) {
                 // restrict to null self (Method is immutable so this is an invariant test)
                 restrictions = restrictions.Merge(
-                    Restrictions.GetExpressionRestriction(
+                    BindingRestrictions.GetExpressionRestriction(
                         Ast.Equal(
                             GetSelfExpression(self),
                             Ast.Constant(null)
@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Binding {
 
                 if (args.Length == 0) {
                     // this is an error, we pass null which will throw the normal error
-                    call = new MetaObject(
+                    call = new DynamicMetaObject(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("MethodCheckSelf"),
                             self.Expression,
@@ -96,7 +96,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else {
                     // this may or may not be an error
-                    call = new MetaObject(
+                    call = new DynamicMetaObject(
                         Ast.Block(
                             MakeCheckSelf(signature, args),
                             Ast.Dynamic(
@@ -105,10 +105,10 @@ namespace IronPython.Runtime.Binding {
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
                                 typeof(object),
-                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), MetaObject.GetExpressions(ArrayUtils.Insert(func, args)))
+                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicMetaObject.GetExpressions(ArrayUtils.Insert(func, args)))
                             )
                         ),
-                        Restrictions.Empty
+                        BindingRestrictions.Empty
                     );
                     /*call = func.Invoke(callAction, ArrayUtils.Insert(func, args));
                     call =  new MetaObject(
@@ -126,7 +126,7 @@ namespace IronPython.Runtime.Binding {
             } else {
                 // restrict to non-null self (Method is immutable so this is an invariant test)
                 restrictions = restrictions.Merge(
-                    Restrictions.GetExpressionRestriction(
+                    BindingRestrictions.GetExpressionRestriction(
                         Ast.NotEqual(
                             GetSelfExpression(self),
                             Ast.Constant(null)
@@ -134,21 +134,21 @@ namespace IronPython.Runtime.Binding {
                     )
                 );
 
-                MetaObject im_self = GetMetaSelf(self);
-                MetaObject[] newArgs = ArrayUtils.Insert(func, im_self, args);
+                DynamicMetaObject im_self = GetMetaSelf(self);
+                DynamicMetaObject[] newArgs = ArrayUtils.Insert(func, im_self, args);
                 CallSignature newSig = new CallSignature(ArrayUtils.Insert(new Argument(ArgumentType.Simple), signature.GetArgumentInfos()));
 
 
-                call = new MetaObject(
+                call = new DynamicMetaObject(
                     Ast.Dynamic(
                         new PythonInvokeBinder(
                             BinderState.GetBinderState(callAction),
                             newSig
                         ),
                         typeof(object),
-                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), MetaObject.GetExpressions(newArgs))
+                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicMetaObject.GetExpressions(newArgs))
                     ),
-                    Restrictions.Empty
+                    BindingRestrictions.Empty
                 );
 
                 /*
@@ -162,13 +162,13 @@ namespace IronPython.Runtime.Binding {
             }
 
             if (call.HasValue) {
-                return new MetaObject(
+                return new DynamicMetaObject(
                     call.Expression,
                     restrictions.Merge(call.Restrictions),
                     call.Value
                 );
             } else {
-                return new MetaObject(
+                return new DynamicMetaObject(
                     call.Expression,
                     restrictions.Merge(call.Restrictions)
                 );
@@ -179,20 +179,20 @@ namespace IronPython.Runtime.Binding {
 
         #region Helpers
 
-        private MetaObject GetMetaSelf(MetaObject/*!*/ self) {
-            MetaObject func;
+        private DynamicMetaObject GetMetaSelf(DynamicMetaObject/*!*/ self) {
+            DynamicMetaObject func;
 
             IDynamicObject ido = Value.im_self as IDynamicObject;
             if (ido != null) {
                 func = ido.GetMetaObject(GetSelfExpression(self));
             } else if (Value.im_self == null) {
-                func = new MetaObject(
+                func = new DynamicMetaObject(
                     GetSelfExpression(self),
-                    Restrictions.Empty);
+                    BindingRestrictions.Empty);
             } else {
-                func = new MetaObject(
+                func = new DynamicMetaObject(
                     GetSelfExpression(self),
-                    Restrictions.Empty,
+                    BindingRestrictions.Empty,
                     Value.im_self
                 );
             }
@@ -200,28 +200,28 @@ namespace IronPython.Runtime.Binding {
             return func;
         }
         
-        private MetaObject/*!*/ GetMetaFunction(MetaObject/*!*/ self) {
-            MetaObject func;
+        private DynamicMetaObject/*!*/ GetMetaFunction(DynamicMetaObject/*!*/ self) {
+            DynamicMetaObject func;
             IDynamicObject ido = Value.im_func as IDynamicObject;
             if (ido != null) {
                 func = ido.GetMetaObject(GetFunctionExpression(self));
             } else {
-                func = new MetaObject(
+                func = new DynamicMetaObject(
                     GetFunctionExpression(self),
-                    Restrictions.Empty
+                    BindingRestrictions.Empty
                 );
             }
             return func;
         }
 
-        private static MemberExpression GetFunctionExpression(MetaObject self) {
+        private static MemberExpression GetFunctionExpression(DynamicMetaObject self) {
             return Ast.Property(
                 self.Expression,
                 typeof(Method).GetProperty("im_func")
             );
         }
 
-        private static MemberExpression GetSelfExpression(MetaObject self) {
+        private static MemberExpression GetSelfExpression(DynamicMetaObject self) {
             return Ast.Property(
                 self.Expression,
                 typeof(Method).GetProperty("im_self")
@@ -234,7 +234,7 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        private Expression/*!*/ MakeCheckSelf(CallSignature signature, MetaObject/*!*/[]/*!*/ args) {
+        private Expression/*!*/ MakeCheckSelf(CallSignature signature, DynamicMetaObject/*!*/[]/*!*/ args) {
             ArgumentType firstArgKind = signature.GetArgumentKind(0);
 
             Expression res;

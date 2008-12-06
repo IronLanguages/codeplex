@@ -143,5 +143,15 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.Requires(!string.IsNullOrEmpty(name), "name");
             return new NamedArgumentInfo(name);
         }
+
+        /// <summary>
+        /// Returns a new PositionalArgumentInfo that represents a positional by ref argument in the dynamic binding process.
+        /// </summary>
+        /// <param name="position">A position of the argument in the call signature.</param>
+        /// <returns>The new PositionalArgumentInfo.</returns>
+        public static PositionalArgumentInfo ByRefArgument(int position) {
+            ContractUtils.Requires(position >= 0, "position", Strings.MustBePositive);
+            return new ByRefPositionalArgumentInfo(position);
+        }
     }
 }

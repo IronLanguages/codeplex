@@ -691,6 +691,9 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.PreDecrementAssign:
                     Out("--");
                     break;
+                case ExpressionType.OnesComplement:
+                    Out("~(");
+                    break;
                 default:
                     Out(node.NodeType.ToString());
                     Out("(");
@@ -760,7 +763,7 @@ namespace Microsoft.Linq.Expressions {
 
         protected internal override Expression VisitLabel(LabelExpression node) {
             Visit(node.DefaultValue);
-            DumpLabel(node.Label);
+            DumpLabel(node.Target);
             Out(":");
             return node;
         }
