@@ -1690,11 +1690,7 @@ namespace IronPython.Runtime.Types {
             if (_ctor == null) {
                 AddSystemConstructors();
                 if (_ctor == null) {
-#if SILVERLIGHT
-                    throw new MissingMethodException(Name + ".ctor");
-#else
-                    throw new MissingMethodException(Name, ".ctor");
-#endif
+                    throw PythonOps.TypeError(_underlyingSystemType.FullName + " does not define any public constructors.");
                 }
             }
         }

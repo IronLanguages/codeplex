@@ -182,6 +182,70 @@ def test_cp19678():
     AreEqual(iterCalled, True)
     AreEqual(getItemCalled, False)
 
+@skip("win32")
+def test_protected_ctor_inheritance_cp20021():
+    load_iron_python_test()
+    from IronPythonTest import (
+        ProtectedCtorTest, ProtectedCtorTest1, ProtectedCtorTest2, 
+        ProtectedCtorTest3, ProtectedCtorTest4,
+        ProtectedInternalCtorTest, ProtectedInternalCtorTest1, 
+        ProtectedInternalCtorTest2, ProtectedInternalCtorTest3, 
+        ProtectedInternalCtorTest4
+        
+    )
+    
+    # no number: 
+    protected = [ProtectedCtorTest, ProtectedCtorTest1, ProtectedCtorTest2, 
+                 ProtectedCtorTest3, ProtectedCtorTest4, ]
+    protected_internal = [ProtectedInternalCtorTest, ProtectedInternalCtorTest1,
+                          ProtectedInternalCtorTest2, ProtectedInternalCtorTest3, 
+                          ProtectedInternalCtorTest4, ]
+    
+    for zero, one, two, three, four in (protected, protected_internal):      
+        # calling protected ctors shouldn't work
+        AssertError(TypeError, zero)
+        AssertError(TypeError, zero.__new__)
+        
+        AssertError(TypeError, one, object())
+        AssertError(TypeError, one.__new__, object())
+        
+        AssertError(TypeError, two, object())
+        AssertError(TypeError, two.__new__, two, object())
+        AssertError(TypeError, two, object(), object())
+        AssertError(TypeError, two.__new__, two, object(), object())
+        
+        AssertError(TypeError, three)
+        AssertError(TypeError, three.__new__, three)
+        
+        three(object())
+        three.__new__(ProtectedCtorTest3, object())
+        
+        AssertError(TypeError, four, object())
+        AssertError(TypeError, four.__new__, four, object())
+        
+        four()
+        four.__new__(four)
+        
+        class myzero(zero):
+            def __new__(cls): return zero.__new__(cls)
+        class myone(one):
+            def __new__(cls): return one.__new__(cls, object())
+        class mytwo1(two):
+            def __new__(cls): return two.__new__(cls, object())
+        class mytwo2(two):
+            def __new__(cls): return two.__new__(cls, object(), object())
+        class mythree1(three):
+            def __new__(cls): return three.__new__(cls)
+        class mythree2(three):
+            def __new__(cls): return three.__new__(cls, object())
+        class myfour1(four):
+            def __new__(cls): return four.__new__(cls)
+        class myfour2(four):
+            def __new__(cls): return four.__new__(cls, object())
+
+        for cls in [myzero, myone, mytwo1, mytwo2, mythree1, mythree2, myfour1, myfour2]:
+            cls()
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

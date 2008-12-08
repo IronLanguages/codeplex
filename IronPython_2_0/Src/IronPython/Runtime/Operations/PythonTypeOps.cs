@@ -317,7 +317,7 @@ namespace IronPython.Runtime.Operations {
 
         private static BuiltinFunction GetConstructor(Type t, bool privateBinding) {
             BuiltinFunction ctorFunc = InstanceOps.NonDefaultNewInst;
-            MethodBase[] ctors = CompilerHelpers.GetConstructors(t, privateBinding);
+            MethodBase[] ctors = CompilerHelpers.GetConstructors(t, privateBinding, true);
 
             return GetConstructor(t, ctorFunc, ctors);
         }
@@ -460,9 +460,9 @@ namespace IronPython.Runtime.Operations {
             BuiltinFunction res = null;
 
             if (mems.Length != 0) {
+                FunctionType ft = funcType ?? GetMethodFunctionType(type, mems);
                 type = GetBaseDeclaringType(type, mems);
 
-                FunctionType ft = funcType ?? GetMethodFunctionType(type, mems);
                 BuiltinFunctionKey cache = new BuiltinFunctionKey(type, new ReflectionCache.MethodBaseCache(cacheName, GetNonBaseHelperMethodInfos(mems)), ft);
 
                 lock (_functions) {

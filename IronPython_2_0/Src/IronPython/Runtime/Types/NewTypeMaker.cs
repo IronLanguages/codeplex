@@ -489,8 +489,9 @@ namespace IronPython.Runtime.Types {
                                                     );
 
             foreach (ConstructorInfo ci in constructors) {
-                if (!(ci.IsPublic || ci.IsFamily)) continue;
-                OverrideConstructor(ci);
+                if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
+                    OverrideConstructor(ci);
+                }
             }
         }
 
@@ -673,11 +674,24 @@ namespace IronPython.Runtime.Types {
         internal static IList<MethodInfo> GetOverriddenMethods(Type type, string name) {
             lock (_overriddenMethods) {
                 Dictionary<string, List<MethodInfo>> methods;
-                if (_overriddenMethods.TryGetValue(type, out methods)) {
-                    List<MethodInfo> methodList;
-                    if (methods.TryGetValue(name, out methodList)) {
-                        return methodList;
+                List<MethodInfo> res = null;
+                Type curType = type;
+                while (curType != null) {
+                    if (_overriddenMethods.TryGetValue(curType, out methods)) {
+                        List<MethodInfo> methodList;
+                        if (methods.TryGetValue(name, out methodList)) {
+                            if (res == null) {
+                                res = methodList;
+                            } else {
+                                res = new List<MethodInfo>(res);
+                                res.AddRange(methodList);
+                            }
+                        }
                     }
+                    curType = curType.BaseType;
+                }
+                if (res != null) {
+                    return res;
                 }
             }
             return new MethodInfo[0];

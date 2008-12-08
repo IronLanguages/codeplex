@@ -656,7 +656,8 @@ namespace IronPython.Runtime.Types {
 
             // type has no Python __new__, just return the .NET constructors if they have
             // a custom new
-            MethodBase[] ctors = type.GetConstructors();
+            ConstructorInfo[] ctors = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);// CompilerHelpers.GetConstructors(type, binder.DomainManager.Configuration.PrivateBinding, true);
+            ctors = CompilerHelpers.FilterConstructorsToPublicAndProtected(ctors);
             if (!PythonTypeOps.IsDefaultNew(ctors)) {
                 return new MemberGroup(ctors);
             }

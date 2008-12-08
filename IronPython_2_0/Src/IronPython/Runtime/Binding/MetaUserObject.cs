@@ -134,6 +134,8 @@ namespace IronPython.Runtime.Binding {
                             return PythonProtocol.ConvertToIEnumerable(conversion, this);
                         } else if (type == typeof(IEnumerator)) {
                             return PythonProtocol.ConvertToIEnumerator(conversion, this);
+                        } else if (conversion.ToType.IsSubclassOf(typeof(Delegate))) {
+                            return MakeDelegateTarget(conversion, conversion.ToType, Restrict(Value.GetType()));
                         }
                         break;
                     case TypeCode.Int32:

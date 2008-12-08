@@ -586,6 +586,52 @@ namespace IronPythonTest {
         }
     }
 
+    public class ProtectedCtorTest {
+        protected ProtectedCtorTest() { }
+    }
+
+    public class ProtectedCtorTest1 {
+        protected ProtectedCtorTest1(object x) { }
+    }
+
+    public class ProtectedCtorTest2 {
+        protected ProtectedCtorTest2(object x) { }
+        protected ProtectedCtorTest2(object x, object y) { }
+    }
+
+    public class ProtectedCtorTest3 {
+        public ProtectedCtorTest3(object x) { }
+        protected ProtectedCtorTest3() { }
+    }
+
+    public class ProtectedCtorTest4 {
+        protected ProtectedCtorTest4(object x) { }
+        public ProtectedCtorTest4() { }
+    }
+
+    public class ProtectedInternalCtorTest {
+        protected internal ProtectedInternalCtorTest() { }
+    }
+
+    public class ProtectedInternalCtorTest1 {
+        protected internal ProtectedInternalCtorTest1(object x) { }
+    }
+
+    public class ProtectedInternalCtorTest2 {
+        protected internal ProtectedInternalCtorTest2(object x) { }
+        protected internal ProtectedInternalCtorTest2(object x, object y) { }
+    }
+
+    public class ProtectedInternalCtorTest3 {
+        public ProtectedInternalCtorTest3(object x) { }
+        protected internal ProtectedInternalCtorTest3() { }
+    }
+
+    public class ProtectedInternalCtorTest4 {
+        protected internal ProtectedInternalCtorTest4(object x) { }
+        public ProtectedInternalCtorTest4() { }
+    }
+
     public enum RtEnum { A, B }
     public struct RtStruct { public int F; public RtStruct(int arg) { F = arg; } }
     public class RtClass { public int F; public RtClass(int arg) { F = arg; } }

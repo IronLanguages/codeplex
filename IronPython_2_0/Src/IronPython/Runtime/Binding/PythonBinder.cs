@@ -393,7 +393,7 @@ namespace IronPython.Runtime.Binding {
                 case TrackerTypes.MethodGroup:
                     return ReturnMethodGroup((MethodGroup)memberTracker);
                 case TrackerTypes.Constructor:
-                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type, privateBinding);
+                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type, privateBinding, true);
                     object val;
                     if (PythonTypeOps.IsDefaultNew(ctors)) {
                         if (IsPythonType(type)) {
@@ -402,7 +402,7 @@ namespace IronPython.Runtime.Binding {
                             val = InstanceOps.NewCls;
                         }
                     } else {
-                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, CompilerHelpers.GetConstructors(type, privateBinding));
+                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, ctors);
                     }
 
                     return Ast.Constant(val);
