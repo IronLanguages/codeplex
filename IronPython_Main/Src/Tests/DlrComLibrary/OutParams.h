@@ -86,6 +86,33 @@ public:
 	STDMETHOD(mUShort)(USHORT a, USHORT* b);
 	STDMETHOD(mVariant)(VARIANT a, VARIANT* b);
 	STDMETHOD(mVariantBool)(VARIANT_BOOL a, VARIANT_BOOL* b);
+	STDMETHOD(mBOOL)(BOOL a, BOOL* b);
+	STDMETHOD(mUCHAR)(UCHAR a, UCHAR* b);
+	STDMETHOD(msmall)(small a, small* b);
+	STDMETHOD(mINT16)(INT16 a, INT16* b);
+	STDMETHOD(mINT64)(INT64 a, INT64* b);
+	STDMETHOD(mint)(int a, int* b);
+	STDMETHOD(m__int32)(__int32 a, __int32* b);
+	STDMETHOD(mUINT)(UINT a, UINT* b);
+	STDMETHOD(mUINT64)(UINT64 a, UINT64* b);
+	STDMETHOD(mHRESULT)(HRESULT a, HRESULT* b);
+	STDMETHOD(mINT8)(INT8 a, INT8* b);
+	STDMETHOD(mLPSTR)(LPSTR a, LPSTR* b);
+	STDMETHOD(mLPWSTR)(LPWSTR a, LPWSTR* b);
+	STDMETHOD(mPCHAR)(CHAR* a, CHAR** b);
+	STDMETHOD(mPwchar_t)(wchar_t* a, wchar_t** b);
+	STDMETHOD(mwchar_t)(wchar_t a, wchar_t* b);
+	STDMETHOD(mGUID)(GUID a, GUID* b);
+	STDMETHOD(mDECIMAL)(DECIMAL a, DECIMAL* b);
+	STDMETHOD(mCURRENCY)(CURRENCY a, CURRENCY* b);
+	STDMETHOD(mPIUnknown)(IUnknown* a, IUnknown** b);
+	STDMETHOD(mPITypeInfo)(ITypeInfo* a, ITypeInfo** b);
+	STDMETHOD(mVARIANT_BOOL)(VARIANT_BOOL a, VARIANT_BOOL* b);
+	STDMETHOD(mBstr1)(BSTR a, BSTR* b);
+	STDMETHOD(mVT_BOOL_CHAR)(VARIANT a, VARIANT* b);
+	STDMETHOD(mVT_INT_BSTR)(VARIANT a, VARIANT* b);
+	STDMETHOD(mVT_BSTR_LONG)(VARIANT a, VARIANT* b);
+    STDMETHOD(mDouble1)(DOUBLE a, DOUBLE* b);
 
 	static BOOL AllDestructed() { return s_cConstructed == s_cReleased; }
 

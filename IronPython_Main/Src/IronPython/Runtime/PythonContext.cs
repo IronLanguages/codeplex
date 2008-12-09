@@ -719,7 +719,7 @@ namespace IronPython.Runtime {
         }
 
         internal PythonModule GetPythonModule(Scope scope) {
-            return (PythonModule)GetScopeExtension(scope);
+            return (PythonModule)scope.GetExtension(ContextId);
         }
 
         internal PythonModule EnsurePythonModule(Scope scope) {
@@ -880,7 +880,7 @@ namespace IronPython.Runtime {
         internal PythonModule GetReloadableModule(Scope/*!*/ scope) {
             Assert.NotNull(scope);
 
-            PythonModule module = (PythonModule)GetScopeExtension(scope);
+            PythonModule module = (PythonModule)scope.GetExtension(ContextId);
 
             if (module == null || !module.IsPythonCreatedModule) {
                 throw PythonOps.TypeError("can only reload Python modules");
@@ -904,20 +904,20 @@ namespace IronPython.Runtime {
         /// Python's global scope includes looking at built-ins.  First check built-ins, and if
         /// not there then fallback to any DLR globals.
         /// </summary>
-        public override bool TryLookupGlobal(CodeContext context, SymbolId name, out object value) {
+        public override bool TryLookupGlobal(Scope scope, SymbolId name, out object value) {
             object builtins;
-            if (!context.GlobalScope.TryGetName(Symbols.Builtins, out builtins)) {
+            if (!scope.ModuleScope.TryGetName(Symbols.Builtins, out builtins)) {
                 value = null;
                 return false;
             }
 
-            Scope scope = builtins as Scope;
-            if (scope != null && scope.TryGetName(name, out value)) return true;
+            Scope builtinsScope = builtins as Scope;
+            if (builtinsScope != null && builtinsScope.TryGetName(name, out value)) return true;
 
             IAttributesCollection dict = builtins as IAttributesCollection;
             if (dict != null && dict.TryGetValue(name, out value)) return true;
 
-            return base.TryLookupGlobal(context, name, out value);
+            return base.TryLookupGlobal(scope, name, out value);
         }
 
         protected override Exception MissingName(SymbolId name) {
@@ -931,14 +931,6 @@ namespace IronPython.Runtime {
             }
 
             return res;
-        }
-
-        public override object Call(CodeContext context, object function, object[] args) {
-            return Call(function, args);
-        }
-
-        public override bool EqualReturnBool(CodeContext context, object x, object y) {
-            return PythonOps.EqualRetBool(context, x, y);
         }
 
         #region Assembly Loading

@@ -113,12 +113,14 @@ expressions = [
     Expression("AddAssignChecked",      "BinaryExpression",                reducible = True),
     Expression("MultiplyAssignChecked", "BinaryExpression",                reducible = True),
     Expression("SubtractAssignChecked", "BinaryExpression",                reducible = True),
-    Expression("PreIncrementAssign",    "UnaryExpression",                 reducible = True),
-    Expression("PreDecrementAssign",    "UnaryExpression",                 reducible = True),
-    Expression("PostIncrementAssign",   "UnaryExpression",                 reducible = True),
-    Expression("PostDecrementAssign",   "UnaryExpression",                 reducible = True),
+    Expression("PreIncrementAssign",    "UnaryExpression",                 interop = True, reducible = True),
+    Expression("PreDecrementAssign",    "UnaryExpression",                 interop = True, reducible = True),
+    Expression("PostIncrementAssign",   "UnaryExpression",                 interop = True, reducible = True),
+    Expression("PostDecrementAssign",   "UnaryExpression",                 interop = True, reducible = True),
     Expression("TypeEqual",             "TypeBinaryExpression",            reducible = True),
     Expression("OnesComplement",        "UnaryExpression",                 interop = True),
+    Expression("IsTrue",                "UnaryExpression",                 interop = True),
+    Expression("IsFalse",               "UnaryExpression",                 interop = True),
 ]
 
 def get_unique_types():

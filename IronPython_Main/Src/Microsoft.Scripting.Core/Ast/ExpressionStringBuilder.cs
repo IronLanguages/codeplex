@@ -319,7 +319,7 @@ namespace Microsoft.Linq.Expressions {
                 case '{': close = "}"; break;
                 case '[': close = "]"; break;
                 case '<': close = ">"; break;
-                default: throw Assert.Unreachable;
+                default: throw ContractUtils.Unreachable;
             }
             if (forceMultiline) {
                 Out(Flow.NewLine, close, Flow.Break);
@@ -403,7 +403,6 @@ namespace Microsoft.Linq.Expressions {
                     case ExpressionType.ExclusiveOrAssign: op = "^="; break;
                     case ExpressionType.Power: op = "^"; break;
                     case ExpressionType.PowerAssign: op = "**="; break;
-                    //TODO: need to handle conversion lambda
                     case ExpressionType.Coalesce: op = "??"; break;
 
                     default:

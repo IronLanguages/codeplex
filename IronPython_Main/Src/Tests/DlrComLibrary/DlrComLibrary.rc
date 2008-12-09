@@ -110,6 +110,10 @@ IDR_DLRUNIVERSALOBJ     REGISTRY                "DlrUniversalObj.rgs"
 IDR_SIMPLEERRORS        REGISTRY                "SimpleErrors.rgs"
 IDR_PROPERTIES          REGISTRY                "Properties.rgs"
 IDR_DISPEVENTS          REGISTRY                "DispEvents.rgs"
+IDR_NONDISPATCH         REGISTRY                "NonDispatch.rgs"
+IDR_NOTYPEINFO          REGISTRY                "NoTypeInfo.rgs"
+IDR_PROVIDESCLASSINFO   REGISTRY                "ProvidesClassInfo.rgs"
+IDR_HIDDENMEMBERS       REGISTRY                "HiddenMembers.rgs"
 
 /////////////////////////////////////////////////////////////////////////////
 //

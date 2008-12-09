@@ -71,7 +71,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual ReadOnlyCollection<Expression> GetOrMakeArguments() {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {
@@ -87,17 +87,17 @@ namespace Microsoft.Linq.Expressions {
         /// subclass of MethodCallExpression which is being used. 
         /// </summary>
         internal virtual MethodCallExpression Rewrite(Expression instance, IList<Expression> args) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         #region IArgumentProvider Members
 
         Expression IArgumentProvider.GetArgument(int index) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         int IArgumentProvider.ArgumentCount {
-            get { throw Assert.Unreachable; }
+            get { throw ContractUtils.Unreachable; }
         }
 
         #endregion
@@ -726,7 +726,7 @@ namespace Microsoft.Linq.Expressions {
 
         private static void ValidateArgumentCount(MethodBase method, ExpressionType nodeKind, int count, ParameterInfo[] pis) {
             if (pis.Length != count) {
-                // TODO: this is for LinqV1 compat, can we just have one exception?
+                // Throw the right error for the node we were given
                 switch (nodeKind) {
                     case ExpressionType.New:
                         throw Error.IncorrectNumberOfConstructorArguments();
@@ -736,7 +736,7 @@ namespace Microsoft.Linq.Expressions {
                     case ExpressionType.Call:
                         throw Error.IncorrectNumberOfMethodCallArguments(method);
                     default:
-                        throw Assert.Unreachable;
+                        throw ContractUtils.Unreachable;
                 }
             }
         }
@@ -752,7 +752,7 @@ namespace Microsoft.Linq.Expressions {
                 if (TypeUtils.IsSameOrSubclass(typeof(Expression), pType) && pType.IsAssignableFrom(arg.GetType())) {
                     arg = Expression.Quote(arg);
                 } else {
-                    // TODO: this is for LinqV1 compat, can we just have one exception?
+                    // Throw the right error for the node we were given
                     switch (nodeKind) {
                         case ExpressionType.New:
                             throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType);
@@ -762,7 +762,7 @@ namespace Microsoft.Linq.Expressions {
                         case ExpressionType.Call:
                             throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);
                         default:
-                            throw Assert.Unreachable;
+                            throw ContractUtils.Unreachable;
                     }
                 }
             }

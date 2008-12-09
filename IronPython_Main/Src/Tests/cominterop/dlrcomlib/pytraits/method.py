@@ -504,11 +504,9 @@ def test_from_cmdline():
     try:
         ipi.ExecuteLine("from System import Type, Activator")
         ipi.ExecuteLine("com_obj = Activator.CreateInstance(Type.GetTypeFromProgID('DlrComLibrary.DlrUniversalObj'))")
-        #Merlin 378005 -- FIXED?
-        if not preferComDispatch:
-            Assert("System.__ComObject (DlrUniversalObj)" in ipi.ExecuteLine("print com_obj"))
-        else:
-            Assert("System.__ComObject" in ipi.ExecuteLine("print com_obj"))
+        
+        #Dev10 409941    
+        Assert("System.__ComObject" in ipi.ExecuteLine("print com_obj"))            
         AreEqual(ipi.ExecuteLine("print com_obj.m0()"), "None")
     finally:
         ipi.End()

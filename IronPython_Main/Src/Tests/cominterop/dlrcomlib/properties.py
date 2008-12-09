@@ -53,6 +53,7 @@ def test_ref_properties():
     
     # if we call the putref by accident this will end up as 4.0, which is incorrect
     AreEqual(com_obj.PutAndPutRefProperty, 2.0)
+    
 
 #Verify that readonly and writeonly properties work as expected.
 def test_restricted_properties():
@@ -60,10 +61,16 @@ def test_restricted_properties():
     AssertError(StandardError, setattr, com_obj, "ReadOnlyProperty", "a")
 	
     com_obj.WriteOnlyProperty = DateTime.Now
-    AssertError(AttributeError, getattr, com_obj, "WriteOnlyProperty", skip=preferComDispatch, bugid="380813")
+
+    # Dev10 409979 - This should work (just return a dispmethod)
+    c = com_obj.WriteOnlyProperty
+    try:
+        com_obj.WriteOnlyProperty()
+        Fail('hi')
+    except AttributeError:
+        pass		
 
 #Validate behaviour of properties which take in parameters.
-@skip_comdispatch("Merlin 380822")
 def test_properties_param():
     com_obj.PropertyWithParam[20] = 42
     AreEqual(com_obj.PropertyWithParam[0], 62)
@@ -78,24 +85,23 @@ def test_properties_param():
     AreEqual(com_obj.PropertyWithTwoParams[0, 0], 6)
     AreEqual(com_obj.PropertyWithTwoParams[2,2], 2)
   
-@disabled("Merlin 381252")
 #Validate that one is able to call default properties with indexers.
 def test_default_property():
     com_obj[23] = True
     AreEqual(com_obj[23], True)
 
+# Dev10 410003 - not supported
 #Call the get_ and set_ methods of the properties.
-@skip_comdispatch("Merlin 381591")
-def test_propeties_as_methods():
-    for propName, val in test_sanity_types_data:
-        Assert(not hasattr(com_obj, "set_" + propName))
-        Assert(not hasattr(com_obj, "get_" + propName))
+#def test_propeties_as_methods():
+#    for propName, val in test_sanity_types_data:
+#        Assert(not hasattr(com_obj, "set_" + propName))
+#        Assert(not hasattr(com_obj, "get_" + propName))
     
-    AssertError(AttributeError, getattr, com_obj, "set_ReadOnlyProperty")
-    AssertError(AttributeError, getattr, com_obj, "get_WriteOnlyProperty")
+#    AssertError(AttributeError, getattr, com_obj, "set_ReadOnlyProperty")
+#    AssertError(AttributeError, getattr, com_obj, "get_WriteOnlyProperty")
     
-    com_obj.set_PropertyWithParam(20, 42)
-    AreEqual(com_obj.get_PropertyWithParam(0), 62)
+#    com_obj.set_PropertyWithParam(20, 42)
+#    AreEqual(com_obj.get_PropertyWithParam(0), 62)
         
 #------------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

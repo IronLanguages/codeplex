@@ -94,17 +94,16 @@ def test_ref_params():
     
 #Try passing null to methods which accept pointers. TypeError should be thrown for all except strings
 def test_passing_null():
-	#Merlin Bug 323996
-    if not preferComDispatch:
-        AreEqual(com_obj.mBstr(None), "a")
-        AssertError(TypeError, com_obj.mByte, None)
-        AssertError(TypeError, com_obj.mSingleRefParam, None) 
+	
+    AreEqual(com_obj.mBstr(None), None)
+    AreEqual(com_obj.mByte(None), None)
+    AreEqual(com_obj.mSingleRefParam(None), None)
+
+    b = StrongBox[object](None)
+    AssertError(ValueError, com_obj.mTwoRefParams, "a",b)
     
-        b = StrongBox[object](None)
-        AssertError(TypeError, com_obj.mTwoRefParams, "a",b)
-        
-        a = StrongBox[object](None)
-        AssertError(TypeError, com_obj.mTwoInOutParams, None, 3)
+    a = StrongBox[object](None)
+    AssertError(ValueError, com_obj.mTwoInOutParams, None, a)
 
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

@@ -16,6 +16,10 @@
 #define IDR_SIMPLEERRORS                111
 #define IDR_PROPERTIES                  112
 #define IDR_DISPEVENTS                  113
+#define IDR_NONDISPATCH                 114
+#define IDR_NOTYPEINFO                  115
+#define IDR_PROVIDESCLASSINFO           116
+#define IDR_HIDDENMEMBERS               117
 
 // Next default values for new objects
 // 
@@ -24,6 +28,6 @@
 #define _APS_NEXT_RESOURCE_VALUE        201
 #define _APS_NEXT_COMMAND_VALUE         32768
 #define _APS_NEXT_CONTROL_VALUE         201
-#define _APS_NEXT_SYMED_VALUE           114
+#define _APS_NEXT_SYMED_VALUE           118
 #endif
 #endif

@@ -59,6 +59,42 @@ public:
 	STDMETHOD(mIDispatch)(IDispatch** a);
 	STDMETHOD(mSingleRefParam)(DOUBLE* a);
 	STDMETHOD(mTwoRefParams)(BSTR* a, IDispatch** b);
+	STDMETHOD(mBOOL)(BOOL a, BOOL* b);
+	STDMETHOD(mCHAR)(CHAR a, CHAR* b);
+	STDMETHOD(mUCHAR)(UCHAR a, UCHAR* b);
+	STDMETHOD(msmall)(small a, small* b);
+	STDMETHOD(mFLOAT)(FLOAT a, FLOAT* b);
+	STDMETHOD(mSHORT)(SHORT a, SHORT* b);
+	STDMETHOD(mINT16)(INT16 a, INT16* b);
+	STDMETHOD(mINT64)(INT64 a, INT64* b);
+	STDMETHOD(mUSHORT)(USHORT a, USHORT* b);
+	STDMETHOD(mint)(int a, int* b);
+	STDMETHOD(m__int32)(__int32 a, __int32* b);
+	STDMETHOD(mUINT)(UINT a, UINT* b);
+	STDMETHOD(mLONG)(LONG a, LONG* b);
+	STDMETHOD(mULONG)(ULONG a, ULONG* b);
+	STDMETHOD(mUINT64)(UINT64 a, UINT64* b);
+	STDMETHOD(mHRESULT)(HRESULT a, HRESULT* b);
+	STDMETHOD(mINT8)(INT8 a, INT8* b);
+	STDMETHOD(mLPSTR)(LPSTR a, LPSTR* b);
+	STDMETHOD(mLPWSTR)(LPWSTR a, LPWSTR* b);
+	STDMETHOD(mPCHAR)(CHAR* a, CHAR** b);
+	STDMETHOD(mPwchar_t)(wchar_t* a, wchar_t** b);
+	STDMETHOD(mwchar_t)(wchar_t a, wchar_t* b);
+	STDMETHOD(mDATE)(DATE a, DATE* b);
+	STDMETHOD(mGUID)(GUID a, GUID* b);
+	STDMETHOD(mDECIMAL)(DECIMAL a, DECIMAL* b);
+	STDMETHOD(mCURRENCY)(CURRENCY a, CURRENCY* b);
+	STDMETHOD(mPIUnknown)(IUnknown* a, IUnknown** b);
+	STDMETHOD(mPIDispatch)(IDispatch* a, IDispatch** b);
+	STDMETHOD(mPITypeInfo)(ITypeInfo* a, ITypeInfo** b);
+	STDMETHOD(mDOUBLE1)(DOUBLE a, DOUBLE* b);
+	STDMETHOD(mVARIANT_BOOL)(VARIANT_BOOL a, VARIANT_BOOL* b);
+	STDMETHOD(mBstr1)(BSTR a, BSTR* b);
+	STDMETHOD(mVariant)(VARIANT a, VARIANT* b);
+	STDMETHOD(mVT_BOOL_CHAR)(VARIANT a, VARIANT* b);
+	STDMETHOD(mVT_INT_BSTR)(VARIANT a, VARIANT* b);
+	STDMETHOD(mVT_BSTR_LONG)(VARIANT a, VARIANT* b);
 
 	static BOOL AllDestructed() { return s_cConstructed == s_cReleased; }
 

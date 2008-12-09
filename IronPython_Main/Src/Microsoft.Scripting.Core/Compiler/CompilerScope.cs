@@ -187,13 +187,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 if (indexes.Count > 0) {
                     EmitGet(NearestHoistedLocals.SelfVariable);
                     lc.EmitConstantArray(indexes.ToArray());
-                    lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", new[] { typeof(object[]), typeof(long[]) }));
+                    lc.IL.Emit(OpCodes.Call, typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", new[] { typeof(object[]), typeof(long[]) }));
                     return;
                 }
             }
 
             // No visible variables
-            lc.IL.EmitCall(typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", Type.EmptyTypes));
+            lc.IL.Emit(OpCodes.Call, typeof(RuntimeOps).GetMethod("CreateRuntimeVariables", Type.EmptyTypes));
             return;
         }
 
@@ -307,7 +307,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     lc.EmitLambdaArgument(index);
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(new Type[] { v.Type }));
                 } else if (v == _hoistedLocals.ParentVariable) {
-                    // TODO: StrongBox is overkill for the parent pointer
                     // array[i] = new StrongBox<T>(closure.Locals);
                     ResolveVariable(v, _closureHoistedLocals).EmitLoad();
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(new Type[] { v.Type }));
@@ -349,8 +348,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             if (ReferenceCount == null) {
                 return false;
             }
-            // TODO: this caching is probably too aggressive in the face of
-            // conditionals
+            // This caching is too aggressive in the face of conditionals and
+            // switch. Also, it is too conservative for variables used inside
+            // of loops.
             int count;
             return ReferenceCount.TryGetValue(v, out count) && count > 2;
         }

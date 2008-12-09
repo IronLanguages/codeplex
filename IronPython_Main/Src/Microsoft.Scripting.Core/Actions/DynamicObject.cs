@@ -351,7 +351,7 @@ namespace Microsoft.Scripting {
 
             private delegate DynamicMetaObject Fallback(DynamicMetaObject errorSuggestion);
 
-            private readonly static Expression[] NoArgs = EmptyArray<Expression>.Instance;
+            private readonly static Expression[] NoArgs = new Expression[0];
 
             private static Expression[] GetArgs(params DynamicMetaObject[] args) {
                 Expression[] paramArgs = DynamicMetaObject.GetExpressions(args);

@@ -62,7 +62,6 @@ def test_optional_out_params():
         
 def test_optional_params_types():
     AreEqual('', com_obj.mOptionalStringParam(), runonly=preferComDispatch, bugid="323996")
-    AreEqual(None, com_obj.mOptionalStringParam(), skip=preferComDispatch)
     AreEqual(com_obj.mOptionalStringParam("a"), "a")    
     AreEqual(com_obj.mOptionalIntParam(3), 3)
     AreEqual(com_obj.mOptionalIntParam(), 0)

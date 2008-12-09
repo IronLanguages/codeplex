@@ -23,8 +23,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
     
     /// <summary>
     /// A simple hashset, built on Dictionary{K, V}
-    /// 
-    /// TODO: should remove this in favor of HashSet{T}
     /// </summary>
     internal sealed class Set<T> : ICollection<T> {
         private readonly Dictionary<T, object> _data;

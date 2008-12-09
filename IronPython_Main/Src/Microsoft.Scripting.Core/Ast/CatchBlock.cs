@@ -19,8 +19,6 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
 
-    // TODO: probably should not have Annotations, since it's part of TryExpression
-    // They can either go there on on the body
     public sealed class CatchBlock {
         private readonly Type _test;
         private readonly ParameterExpression _var;

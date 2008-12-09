@@ -370,7 +370,7 @@ namespace IronPython.Runtime.Types {
                     object key = copyOfHandlers[i].Key;
                     object value = copyOfHandlers[i].Value;
 
-                    if (context.LanguageContext.EqualReturnBool(context, key, callableObject)) {
+                    if (PythonOps.EqualRetBool(context, key, callableObject)) {
                         Delegate handler = (Delegate)value;
                         _handlers.RemoveAt(i);
                         return handler;
@@ -408,7 +408,7 @@ namespace IronPython.Runtime.Types {
                     object key = copyOfHandlers[i].Key.Target;
                     object value = copyOfHandlers[i].Value.Target;
 
-                    if (key != null && value != null && context.LanguageContext.EqualReturnBool(context, key, callableObject)) {
+                    if (key != null && value != null && PythonOps.EqualRetBool(context, key, callableObject)) {
                         Delegate handler = (Delegate)value;
                         _handlers.RemoveAt(i);
                         return handler;

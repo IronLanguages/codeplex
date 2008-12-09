@@ -45,7 +45,7 @@ com_obj = getRCWFromProgID(com_type_name)
 ###############################################################################
 ##COR EXCEPTIONS###############################################################
 
-from System import ApplicationException, ArgumentException, OverflowException
+from System import ApplicationException, ArgumentException, OverflowException,CannotUnloadAppDomainException
 from System import ArgumentOutOfRangeException, ArithmeticException
 from System import ArrayTypeMismatchException, BadImageFormatException 
 from System import DivideByZeroException, DuplicateWaitObjectException
@@ -58,7 +58,7 @@ from System import MulticastNotSupportedException, NotFiniteNumberException
 from System import NullReferenceException, OutOfMemoryException
 from System import RankException, StackOverflowException, SystemException
 from System import TypeInitializationException, MemberAccessException
-from System import NotImplementedException, ContextMarshalException
+from System import NotImplementedException, ContextMarshalException,NotSupportedException
 from System import TypeLoadException, IndexOutOfRangeException
 from System.IO import DirectoryNotFoundException, IOException
 from System.IO import EndOfStreamException, FileNotFoundException
@@ -109,7 +109,7 @@ cor_mapper = {
                 com_obj.genCorMissingMethod : MissingMethodException,
                 com_obj.genCorMulticastNotSupported : MulticastNotSupportedException,
                 com_obj.genCorNotFiniteNumber : NotFiniteNumberException,
-                com_obj.genCorNotSupported : SystemError,  
+                com_obj.genCorNotSupported : NotSupportedException,  
                 com_obj.genCorNullReference : NullReferenceException,
                 com_obj.genCorOutOfMemory : OutOfMemoryException,
                 com_obj.genCorOverflow : OverflowException,
@@ -133,6 +133,8 @@ cor_mapper = {
                 com_obj.genCorTypeLoad : TypeLoadException,
                 com_obj.genCorTypeInitialization : TypeInitializationException,
                 com_obj.genCorVerification : VerificationException,
+                com_obj.genMseeAppDomainUnloaded : CannotUnloadAppDomainException,
+                com_obj.genNTEFail : COMException,
                 }
 
 
@@ -186,9 +188,9 @@ error_mapper = {
 
 def test_error_exceptions():
     for meth in error_mapper.keys():
-        #Merlin 380314 - none of these actually throw an exception..
-        #AssertError(error_mapper[meth], meth)
-        meth()
+		#AssertError(error_mapper[meth], meth)
+        #Dev10 409945 - none of these actually throw an exception..            
+		meth()
 
 ###############################################################################
 ##MSEE EXCEPTIONS##############################################################
@@ -213,8 +215,7 @@ nte_mapper = {
 def test_nte_exceptions():
     for meth in nte_mapper.keys():
         AssertError(nte_mapper[meth], meth, skip=preferComDispatch)
-        AssertError(COMException, meth, 
-                    runonly=preferComDispatch, bugid="Merlin 380288") #Related to 324223    
+        AssertError(COMException, meth)
     
 ###############################################################################
 ##GENERIC EXCEPTIONS###########################################################

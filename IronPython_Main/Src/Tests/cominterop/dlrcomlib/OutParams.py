@@ -100,10 +100,9 @@ def test_sanity():
     AreEqual(strongVar.Value.WrappedObject, com_obj)    
     
     #Complex Types
-    if preferComDispatch:
-        strongVar = StrongBox[object](CurrencyWrapper(444))
-        com_obj.mCy(CurrencyWrapper(123), strongVar)
-        AreEqual(strongVar.Value.WrappedObject, 123)    
+    strongVar = StrongBox[object](CurrencyWrapper(444))
+    com_obj.mCy(CurrencyWrapper(123), strongVar)
+    AreEqual(strongVar.Value.WrappedObject, 123)    
     
     now = DateTime.Now
     AreEqual(str(callMethodWithStrongBox(com_obj.mDate, now, DateTime)), str(now))        
@@ -111,16 +110,12 @@ def test_sanity():
     AreEqual(callMethodWithStrongBox(com_obj.mVariant, Single(2.0), object), 2.0)    
 
 def test_negative():
-    AssertError(TypeError, com_obj.mDouble, Double.MaxValue, Double.MaxValue, skip=preferComDispatch) #Merlin 387378
-    if preferComDispatch:
-        com_obj.mDouble(Double.MaxValue, Double.MaxValue)
+        
+    com_obj.mDouble(Double.MaxValue, Double.MaxValue)
 
-    #When nothing is passed to the outparam, interopassembly mode returns the outparam as a return value while dispatch mode doesnt     
-    if not preferComDispatch:
-        AreEqual(com_obj.mDouble(Double.MaxValue), Double.MaxValue)
-    AssertError(StandardError, com_obj.mDouble, Double.MaxValue, runonly=preferComDispatch) #Merlin 387386
-    
-    AssertError(StandardError, com_obj.mCy, Decimal(0), runonly=preferComDispatch) 
+    #See Dev10 409981 for more info            
+    AssertError(StandardError, com_obj.mDouble, Double.MaxValue)     
+    AssertError(StandardError, com_obj.mCy, Decimal(0)) 
 
 #------------------------------------------------------------------------------
 def test_variant_bool():
@@ -148,10 +143,7 @@ def test_float():
         testhelper(com_obj.mFloat, Single, test_list, equality_func=AlmostEqual)
 
     #Min/Max float values
-    if not preferComDispatch:
-        Assert(str(callMethodWithStrongBox(com_obj.mFloat, -3.402823e+039, Single)), "-1.#INF") 
-        Assert(str(callMethodWithStrongBox(com_obj.mFloat, 3.402823e+039, Single)), "1.#INF")
-    AssertError(OverflowError, com_obj.mFloat, 3.402823e+039, runonly=preferComDispatch, bugid="373662")
+    AssertError(OverflowError, com_obj.mFloat, 3.402823e+039)
 
 #------------------------------------------------------------------------------
 def test_double():
@@ -163,39 +155,35 @@ def test_double():
     Assert(str(callMethodWithStrongBox(com_obj.mDouble, 1.797693134862313e309, float)), "1.#INF")
 
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374246")
 def test_ushort():
     for test_list in pythonToCOM("USHORT"):
         testhelper(com_obj.mUShort, UInt16, test_list)
         
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374246")
 def test_ulong():
     for test_list in pythonToCOM("ULONG"):
         testhelper(com_obj.mUlong, UInt32, test_list)
 
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374272")
+#@skip_comdispatch("Dev10 409933")
 def test_ulonglong():
-    for test_list in pythonToCOM("ULONGLONG"):
+    for test_list in pythonToCOM("ULONG"):  #Hack:  See bug on why we're using ULong instead of ULongLong
         testhelper(com_obj.mULongLong, UInt64, test_list)
 
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374246")
 def test_short():
     for test_list in pythonToCOM("SHORT"):
         testhelper(com_obj.mShort, Int16, test_list)
 
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374246")
 def test_long():
     for test_list in pythonToCOM("LONG"):
         testhelper(com_obj.mLong, int, test_list)
 
 #------------------------------------------------------------------------------
-@skip_comdispatch("Merlin 374257")
+#@skip_comdispatch("Dev10 409933")
 def test_longlong():
-    for test_list in pythonToCOM("LONGLONG"):
+    for test_list in pythonToCOM("LONG"): #Hack:  See bug on why we're using Long instead of LongLong
         testhelper(com_obj.mLongLong, Int64, test_list)
 
 #------------------------------------------------------------------------------

@@ -33,7 +33,11 @@ namespace Microsoft.Scripting {
             // Simplification ... for now just one kind of restriction rather than hierarchy.
             private readonly Expression _expression;
             private readonly Type _type;
-            private readonly object _instance;      // TODO: WeakRef ???
+
+            // We hold onto the instance here, but that's okay, because
+            // we're binding. Once we generate the instance test however, we 
+            // should store the instance as a WeakReference
+            private readonly object _instance;
 
             internal RestrictionKind Kind {
                 get { return _kind; }
@@ -146,7 +150,7 @@ namespace Microsoft.Scripting {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (expression.Type == type && type.IsSealedOrValueType()) {
+            if (expression.Type == type && type.IsSealed) {
                 return BindingRestrictions.Empty;
             }
 
@@ -178,7 +182,8 @@ namespace Microsoft.Scripting {
         }
 
         public Expression ToExpression() {
-            // TODO: Currently totally unoptimized and unordered
+            // We could optimize this better, e.g. common subexpression elimination
+            // But for now, it's good enough.
             Expression test = null;
             foreach (Restriction r in _restrictions) {
                 Expression one;
@@ -228,7 +233,7 @@ namespace Microsoft.Scripting {
             }
 
             return Expression.Equal(
-                expression, 
+                expression,
                 Expression.Property(
                     Expression.Constant(new WeakReference(value)),
                     typeof(WeakReference).GetProperty("Target")

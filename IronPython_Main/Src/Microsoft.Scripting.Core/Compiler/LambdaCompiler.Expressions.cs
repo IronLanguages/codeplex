@@ -164,7 +164,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LocalBuilder temp = null;
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Dup);
-                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
+                _ilg.Emit(OpCodes.Stloc, temp = GetLocal(node.Type));
             }
 
             EmitSetIndexCall(index, objectType);
@@ -172,7 +172,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Restore the value
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
+                FreeLocal(temp);
             }
         }
 
@@ -193,7 +193,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LocalBuilder temp = null;
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Dup);
-                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
+                _ilg.Emit(OpCodes.Stloc, temp = GetLocal(node.Type));
             }
 
             _ilg.EmitStoreElement(arrayIndex.Type);
@@ -201,7 +201,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Restore the value
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
+                FreeLocal(temp);
             }
         }
 
@@ -291,9 +291,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         //CONFORMING
-        // TODO: ILGen's EmitCall only does callvirt for the (virtual, ref)
-        // case. We should probably fix it to work like UseVirtual, so ETs have
-        // the same fail-fast behavior as C# when calling with a null instance
         private static bool UseVirtual(MethodInfo mi) {
             // There are two factors: is the method static, virtual or non-virtual instance?
             // And is the object ref or value?
@@ -381,9 +378,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         private void EmitDynamicExpression(Expression expr) {
             var node = (DynamicExpression)expr;
-
             
-            // TODO: is it worthwhile to lazy initialize the CallSites?
             var site = CallSite.Create(node.DelegateType, node.Binder);
             Type siteType = site.GetType();
 
@@ -399,7 +394,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldfld, siteType.GetField("Target"));
 
             List<WriteBack> wb = EmitArguments(invoke, new ArgumentPrepender(siteVar, node));
-            _ilg.EmitCall(invoke);
+            _ilg.Emit(OpCodes.Callvirt, invoke);
             EmitWriteBack(wb);
         }
 
@@ -414,11 +409,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             } else {
                 Debug.Assert(node.Arguments.Count == 0, "Node with arguments must have a constructor.");
                 Debug.Assert(node.Type.IsValueType, "Only value type may have constructor not set.");
-                LocalBuilder temp = _ilg.GetLocal(node.Type);
+                LocalBuilder temp = GetLocal(node.Type);
                 _ilg.Emit(OpCodes.Ldloca, temp);
                 _ilg.Emit(OpCodes.Initobj, node.Type);
                 _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
+                FreeLocal(temp);
             }
         }
 
@@ -483,11 +478,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // byref parameter. We already make this same tradeoff for
                 // hoisted variables, see ElementStorage.EmitStore
 
-                LocalBuilder value = _ilg.GetLocal(variable.Type);
+                LocalBuilder value = GetLocal(variable.Type);
                 _ilg.Emit(OpCodes.Stloc, value);
                 _scope.EmitGet(variable);
                 _ilg.Emit(OpCodes.Ldloc, value);
-                _ilg.FreeLocal(value);
+                FreeLocal(value);
                 _ilg.EmitStoreValueIndirect(variable.Type);
             } else {
                 _scope.EmitSet(variable);
@@ -552,7 +547,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             if (emitAs != EmitAs.Void) {
                 // save the value so we can return it
                 _ilg.Emit(OpCodes.Dup);
-                _ilg.Emit(OpCodes.Stloc, temp = _ilg.GetLocal(node.Type));
+                _ilg.Emit(OpCodes.Stloc, temp = GetLocal(node.Type));
             }
 
             switch (member.MemberType) {
@@ -568,7 +563,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             if (emitAs != EmitAs.Void) {
                 _ilg.Emit(OpCodes.Ldloc, temp);
-                _ilg.FreeLocal(temp);
+                FreeLocal(temp);
             }
         }
 
@@ -600,7 +595,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     EmitCall(objectType, ((PropertyInfo)member).GetGetMethod(true));
                     break;
                 default:
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
             }
         }
 
@@ -654,8 +649,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitExpression(node.Expression);
 
             // Clear the sequence point
-            // TODO: we should be smarter and only emit this if needed
-            // Annotations need to go away first though
             _ilg.MarkSequencePoint(symbolWriter, 0xfeefee, 0, 0xfeefee, 0);
             _ilg.Emit(OpCodes.Nop);
         }
@@ -879,11 +872,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _ilg.MarkLabel(exitNull);
                         if (resultType == TypeUtils.GetNullableType(mc.Type)) {
                             if (resultType.IsValueType) {
-                                LocalBuilder result = _ilg.GetLocal(resultType);
+                                LocalBuilder result = GetLocal(resultType);
                                 _ilg.Emit(OpCodes.Ldloca, result);
                                 _ilg.Emit(OpCodes.Initobj, resultType);
                                 _ilg.Emit(OpCodes.Ldloc, result);
-                                _ilg.FreeLocal(result);
+                                FreeLocal(result);
                             } else {
                                 _ilg.Emit(OpCodes.Ldnull);
                             }

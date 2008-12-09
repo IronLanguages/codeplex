@@ -18,16 +18,12 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
-using System.IO;
+using Microsoft.Scripting.Utils;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using System.Text;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -50,7 +46,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // DynamicMethod
         private readonly bool _dynamicMethod;
 
-        private readonly ILGen _ilg;
+        private readonly ILGenerator _ilg;
 
         // The TypeBuilder backing this method, if any
         private readonly TypeBuilder _typeBuilder;
@@ -84,6 +80,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // Runtime constants bound to the delegate
         private readonly BoundConstants _boundConstants;
 
+        // Free list of locals, so we reuse them rather than creating new ones
+        private readonly KeyedQueue<Type, LocalBuilder> _freeLocals = new KeyedQueue<Type, LocalBuilder>();
+
         private LambdaCompiler(
             AnalyzedTree tree,
             LambdaExpression lambda,
@@ -110,7 +109,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 throw Error.RtConstRequiresBundDelegate();
             }
 
-            _ilg = new ILGen(ilg);
+            _ilg = ilg;
 
             Debug.Assert(!emitDebugSymbols || _typeBuilder != null, "emitting debug symbols requires a TypeBuilder");
             _emitDebugSymbols = emitDebugSymbols;
@@ -125,7 +124,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return _method.ToString();
         }
 
-        internal ILGen IL {
+        internal ILGenerator IL {
             get { return _ilg; }
         }
 
@@ -184,9 +183,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         /// <summary>
-        /// Creates and returns a MethodBuilder
+        /// mutates the MethodBuilder parameter
         /// </summary>
-        internal static MethodBuilder CompileLambda(LambdaExpression lambda, TypeBuilder type, MethodAttributes attributes, bool emitDebugSymbols) {
+        internal static void CompileLambda(LambdaExpression lambda, MethodBuilder method, bool emitDebugSymbols) {
             // 1. Create signature
             List<Type> types;
             List<string> names;
@@ -201,9 +200,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LambdaCompiler c = CreateStaticCompiler(
                 tree,
                 lambda,
-                type,
-                lambda.Name ?? "lambda_method", // don't use generated name
-                attributes,
+                method,
                 returnType,
                 types,
                 names,
@@ -213,8 +210,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             // 4. Emit
             c.EmitLambdaBody(null);
-
-            return (MethodBuilder)c._method;
         }
 
         #endregion
@@ -228,17 +223,34 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return VariableBinder.Bind(lambda);
         }
 
+        internal LocalBuilder GetLocal(Type type) {
+            Debug.Assert(type != null);
+
+            LocalBuilder local;
+            if (_freeLocals.TryDequeue(type, out local)) {
+                Debug.Assert(type == local.LocalType);
+                return local;
+            }
+
+            return _ilg.DeclareLocal(type);
+        }
+
+        internal void FreeLocal(LocalBuilder local) {
+            if (local != null) {
+                _freeLocals.Enqueue(local.LocalType, local);
+            }
+        }
+
         internal LocalBuilder GetNamedLocal(Type type, string name) {
-            Assert.NotNull(type);
+            Debug.Assert(type != null);
 
             if (_emitDebugSymbols && name != null) {
                 LocalBuilder lb = _ilg.DeclareLocal(type);
-                // TODO: we need to set the lexical scope properly, so it can
-                // be freed and reused!
+                // If we set the lexical scope properly, we could free and reuse the local
                 lb.SetLocalSymInfo(name);
                 return lb;
             }
-            return _ilg.GetLocal(type);
+            return GetLocal(type);
         }
 
         internal void FreeNamedLocal(LocalBuilder local, string name) {
@@ -246,7 +258,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // local has a name, we can't free it
                 return;
             }
-            _ilg.FreeLocal(local);
+            FreeLocal(local);
         }
 
         /// <summary>
@@ -272,11 +284,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         internal void EmitClosureArgument() {
             Debug.Assert(HasClosure, "must have a Closure argument");
-
-            // TODO: this is for emitting into instance methods, but it's not
-            // used anymore (we always emit into static MethodBuilders or
-            // DynamicMethods, which are both static)
-            _ilg.EmitLoadArg(_method.IsStatic ? 0 : 1);
+            Debug.Assert(_method.IsStatic, "must be a static method");
+            _ilg.EmitLoadArg(0);
         }
 
         private MethodInfo CreateDelegateMethodInfo() {
@@ -316,9 +325,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             bool emitDebugSymbols,
             bool forceDynamic) {
 
-            Assert.NotEmpty(methodName);
-            Assert.NotNull(returnType);
-            Assert.NotNullItems(paramTypes);
+            Debug.Assert(!string.IsNullOrEmpty(methodName));
+            Debug.Assert(returnType != null);
 
             LambdaCompiler lc;
 
@@ -327,14 +335,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // 1) we want to dump all geneated IL to an assembly on disk (SaveSnippets on)
             // 2) the method is debuggable, i.e. DebugMode is on and a source unit is associated with the method
             //
-            if ((Snippets.Shared.SaveSnippets || emitDebugSymbols) && !forceDynamic) {
-                var typeBuilder = Snippets.Shared.DefineType(methodName, typeof(object), false, false, emitDebugSymbols);
+            if ((AssemblyGen.SaveAssemblies || emitDebugSymbols) && !forceDynamic) {
+                var typeBuilder = AssemblyGen.GetAssembly(emitDebugSymbols).DefinePublicType(methodName, typeof(object), false);
+                var mb = typeBuilder.DefineMethod(methodName, TypeUtils.PublicStatic, returnType, paramTypes.ToArray());
                 lc = CreateStaticCompiler(
                     tree,
                     lambda,
-                    typeBuilder,
-                    methodName,
-                    TypeUtils.PublicStatic,
+                    mb,
                     returnType,
                     paramTypes,
                     paramNames,
@@ -343,7 +350,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 );
             } else {
                 Type[] parameterTypes = paramTypes.AddFirst(typeof(Closure));
-                DynamicMethod target = Snippets.Shared.CreateDynamicMethod(methodName, returnType, parameterTypes);
+                DynamicMethod target = Helpers.CreateDynamicMethod(methodName, returnType, parameterTypes);
                 lc = new LambdaCompiler(
                     tree,
                     lambda,
@@ -365,16 +372,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private static LambdaCompiler CreateStaticCompiler(
             AnalyzedTree tree,
             LambdaExpression lambda,
-            TypeBuilder typeBuilder,
-            string name,
-            MethodAttributes attributes,
+            MethodBuilder method,
             Type retType,
             IList<Type> paramTypes,
             IList<string> paramNames,
             bool dynamicMethod,
             bool emitDebugSymbols) {
 
-            Assert.NotNull(name, retType);
+            Debug.Assert(retType != null);
 
             bool closure = tree.Scopes[lambda].NeedsClosure;
             Type[] parameterTypes;
@@ -384,13 +389,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 parameterTypes = paramTypes.ToArray();
             }
 
-            MethodBuilder mb = typeBuilder.DefineMethod(name, attributes, retType, parameterTypes);
+            method.SetReturnType(retType);
+            method.SetParameters(parameterTypes);
+            TypeBuilder typeBuilder = method.DeclaringType as TypeBuilder;
+            Debug.Assert(typeBuilder != null);
             LambdaCompiler lc = new LambdaCompiler(
                 tree,
                 lambda,
                 typeBuilder,
-                mb,
-                mb.GetILGenerator(),
+                method,
+                method.GetILGenerator(),
                 parameterTypes,
                 dynamicMethod,
                 emitDebugSymbols
@@ -400,7 +408,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 // parameters are index from 1, with closure argument we need to skip the first arg
                 int startIndex = (dynamicMethod || closure) ? 2 : 1;
                 for (int i = 0; i < paramNames.Count; i++) {
-                    mb.DefineParameter(i + startIndex, ParameterAttributes.None, paramNames[i]);
+                    method.DefineParameter(i + startIndex, ParameterAttributes.None, paramNames[i]);
                 }
             }
             return lc;
