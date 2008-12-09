@@ -16,12 +16,10 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions.Compiler;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
+using Microsoft.Linq.Expressions.Compiler;
 
 namespace Microsoft.Runtime.CompilerServices {
     public static partial class RuntimeOps {
@@ -55,7 +53,8 @@ namespace Microsoft.Runtime.CompilerServices {
             private readonly long[] _indexes;
 
             internal RuntimeVariableList(object[] data, long[] indexes) {
-                Assert.NotNull(data, indexes);
+                Debug.Assert(data != null);
+                Debug.Assert(indexes != null);
 
                 _data = data;
                 _indexes = indexes;

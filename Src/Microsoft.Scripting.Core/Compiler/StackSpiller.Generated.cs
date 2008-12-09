@@ -219,6 +219,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.OnesComplement:
                     result = RewriteUnaryExpression(node, stack);
                     break;
+                case ExpressionType.IsTrue:
+                    result = RewriteUnaryExpression(node, stack);
+                    break;
+                case ExpressionType.IsFalse:
+                    result = RewriteUnaryExpression(node, stack);
+                    break;
                 case ExpressionType.AddAssign:
                 case ExpressionType.AndAssign:
                 case ExpressionType.DivideAssign:
@@ -252,7 +258,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 #endregion
 
                 default:
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
             }
 
             VerifyRewrite(result, node);

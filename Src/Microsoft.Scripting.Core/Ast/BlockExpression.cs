@@ -62,21 +62,21 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual Expression GetExpression(int index) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         internal virtual int ExpressionCount {
             get {
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
         }
 
         internal virtual ReadOnlyCollection<Expression> GetOrMakeExpressions() {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         internal virtual ParameterExpression GetVariable(int index) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         internal virtual int VariableCount {
@@ -100,7 +100,7 @@ namespace Microsoft.Linq.Expressions {
         /// subclass of BlockExpression which is being used. 
         /// </summary>
         internal virtual BlockExpression Rewrite(IList<ParameterExpression> variables, Expression[] args) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         /// <summary>
@@ -449,11 +449,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public void Insert(int index, Expression item) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         public void RemoveAt(int index) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         public Expression this[int index] {
@@ -465,7 +465,7 @@ namespace Microsoft.Linq.Expressions {
                 return _block.GetExpression(index);
             }
             set {
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
         }
 
@@ -474,11 +474,11 @@ namespace Microsoft.Linq.Expressions {
         #region ICollection<Expression> Members
 
         public void Add(Expression item) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         public void Clear() {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         public bool Contains(Expression item) {
@@ -501,7 +501,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public bool Remove(Expression item) {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         #endregion

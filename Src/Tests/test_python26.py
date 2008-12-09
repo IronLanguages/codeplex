@@ -124,4 +124,14 @@ def test_print_function():
     finally:
         sys.stdout = oldout
 
+def test_deque():
+    import collections
+    
+    # make sure __init__ clears existing contents
+    x = collections.deque([6,7,8,9])
+    x.__init__(collections.deque([1,2,3]))
+    AreEqual(x, collections.deque([1,2,3]))
+    x.__init__()
+    AreEqual(x, collections.deque())
+
 run_test(__name__)

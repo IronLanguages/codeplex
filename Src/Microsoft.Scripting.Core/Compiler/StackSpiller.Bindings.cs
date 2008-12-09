@@ -82,7 +82,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                         return Expression.MemberBind(_binding.Member, new ReadOnlyCollection<MemberBinding>(newBindings));
                 }
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
 
             internal override Expression AsExpression(Expression target) {
@@ -150,7 +150,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         }
                         return Expression.ListBind(_binding.Member, new ReadOnlyCollection<ElementInit>(newInits));
                 }
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
 
             internal override Expression AsExpression(Expression target) {
@@ -200,7 +200,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     case RewriteAction.Copy:
                         return Expression.Bind(_binding.Member, _rhs);
                 }
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
 
             internal override Expression AsExpression(Expression target) {

@@ -95,6 +95,8 @@ namespace Microsoft.Scripting.Interpretation {
                 case ExpressionType.Try: return InterpretTryExpression(state, expr);
                 case ExpressionType.Unbox: return InterpretUnboxUnaryExpression(state, expr);
                 case ExpressionType.OnesComplement: return InterpretUnaryExpression(state, expr);
+                case ExpressionType.IsTrue: return InterpretUnaryExpression(state, expr);
+                case ExpressionType.IsFalse: return InterpretUnaryExpression(state, expr);
                 case ExpressionType.AddAssign:
                 case ExpressionType.AndAssign:
                 case ExpressionType.DivideAssign:

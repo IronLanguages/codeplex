@@ -149,8 +149,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private static bool ShouldCache(int refCount) {
-            // TODO: this caching is probably too aggressive in the face of
-            // conditionals
+            // This caching is too aggressive in the face of conditionals and
+            // switch. Also, it is too conservative for variables used inside
+            // of loops.
             return refCount > 2;
         }
 

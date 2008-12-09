@@ -59,7 +59,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual MemberInfo GetMember() {
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {

@@ -125,10 +125,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             switch (op) {
                 case ExpressionType.ArrayIndex:
                     if (rightIsNullable) {
-                        LocalBuilder loc = _ilg.GetLocal(rightType);
+                        LocalBuilder loc = GetLocal(rightType);
                         _ilg.Emit(OpCodes.Stloc, loc);
                         _ilg.Emit(OpCodes.Ldloca, loc);
-                        _ilg.FreeLocal(loc);
+                        FreeLocal(loc);
                         _ilg.EmitGetValue(rightType);
                     }
                     Type indexType = TypeUtils.GetNonNullableType(rightType);
@@ -318,19 +318,23 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        //this code is needed to make sure that we get overflow exception
         //
-        // TODO: we may not need this now that conversion of the result type is
-        // being handled correctly by EmitConvertArithmeticResult
+        // This code is needed to make sure that we get overflow exception
+        //
+        // We should not need to do this. Instead we should be emitting the
+        // correct Conv instructions, so the JIT can track types on the stack.
+        // EmitConvertArithmeticResult emits convs for results now, but it
+        // looks like we should be doing it loading constants as well.
+        //
         private void EmitOverflowHelper(Type leftType, Type rightType) {
-            LocalBuilder left = _ilg.GetLocal(leftType);
-            LocalBuilder right = _ilg.GetLocal(rightType);
+            LocalBuilder left = GetLocal(leftType);
+            LocalBuilder right = GetLocal(rightType);
             _ilg.Emit(OpCodes.Stloc, right);
             _ilg.Emit(OpCodes.Stloc, left);
             _ilg.Emit(OpCodes.Ldloc, left);
             _ilg.Emit(OpCodes.Ldloc, right);
-            _ilg.FreeLocal(left);
-            _ilg.FreeLocal(right);
+            FreeLocal(left);
+            FreeLocal(right);
         }
 
         //CONFORMING
@@ -389,7 +393,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.AndAlso:
                 case ExpressionType.OrElse:
                 default:
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
             }
         }
 
@@ -398,8 +402,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Debug.Assert(TypeUtils.IsNullableType(leftType));
 
             Label shortCircuit = _ilg.DefineLabel();
-            LocalBuilder locLeft = _ilg.GetLocal(leftType);
-            LocalBuilder locRight = _ilg.GetLocal(rightType);
+            LocalBuilder locLeft = GetLocal(leftType);
+            LocalBuilder locRight = GetLocal(rightType);
 
             // store values (reverse order since they are already on the stack)
             _ilg.Emit(OpCodes.Stloc, locRight);
@@ -473,8 +477,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.EmitGetValueOrDefault(rightType);
 
             //RELEASING locLeft locRight
-            _ilg.FreeLocal(locLeft);
-            _ilg.FreeLocal(locRight);
+            FreeLocal(locLeft);
+            FreeLocal(locRight);
 
             EmitBinaryOperator(
                 op,
@@ -512,9 +516,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             Label labIfNull = _ilg.DefineLabel();
             Label labEnd = _ilg.DefineLabel();
-            LocalBuilder locLeft = _ilg.GetLocal(leftType);
-            LocalBuilder locRight = _ilg.GetLocal(rightType);
-            LocalBuilder locResult = _ilg.GetLocal(resultType);
+            LocalBuilder locLeft = GetLocal(leftType);
+            LocalBuilder locRight = GetLocal(rightType);
+            LocalBuilder locResult = GetLocal(resultType);
 
             // store values (reverse order since they are already on the stack)
             _ilg.Emit(OpCodes.Stloc, locRight);
@@ -549,8 +553,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             //RELEASING locLeft locRight
-            _ilg.FreeLocal(locLeft);
-            _ilg.FreeLocal(locRight);
+            FreeLocal(locLeft);
+            FreeLocal(locRight);
 
             EmitBinaryOperator(op, TypeUtils.GetNonNullableType(leftType), TypeUtils.GetNonNullableType(rightType), TypeUtils.GetNonNullableType(resultType), false);
 
@@ -570,7 +574,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldloc, locResult);
 
             //RELEASING locResult
-            _ilg.FreeLocal(locResult);
+            FreeLocal(locResult);
         }
 
         //CONFORMING
@@ -583,8 +587,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Label labExit = _ilg.DefineLabel();
 
             // store values (reverse order since they are already on the stack)
-            LocalBuilder locLeft = _ilg.GetLocal(type);
-            LocalBuilder locRight = _ilg.GetLocal(type);
+            LocalBuilder locLeft = GetLocal(type);
+            LocalBuilder locRight = GetLocal(type);
             _ilg.Emit(OpCodes.Stloc, locRight);
             _ilg.Emit(OpCodes.Stloc, locLeft);
 
@@ -606,7 +610,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldloca, locRight);
 
             //RELEASING locRight
-            _ilg.FreeLocal(locRight);
+            FreeLocal(locRight);
 
             _ilg.EmitGetValueOrDefault(type);
             _ilg.Emit(OpCodes.Ldc_I4_0);
@@ -642,7 +646,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldloc, locLeft);
 
             //RELEASING locLeft
-            _ilg.FreeLocal(locLeft);
+            FreeLocal(locLeft);
         }
 
         //CONFORMING
@@ -655,8 +659,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Label labExit = _ilg.DefineLabel();
 
             // store values (reverse order since they are already on the stack)
-            LocalBuilder locLeft = _ilg.GetLocal(type);
-            LocalBuilder locRight = _ilg.GetLocal(type);
+            LocalBuilder locLeft = GetLocal(type);
+            LocalBuilder locRight = GetLocal(type);
             _ilg.Emit(OpCodes.Stloc, locRight);
             _ilg.Emit(OpCodes.Stloc, locLeft);
 
@@ -678,7 +682,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldloca, locRight);
 
             //RELEASING locRight
-            _ilg.FreeLocal(locRight);
+            FreeLocal(locRight);
 
             _ilg.EmitGetValueOrDefault(type);
             _ilg.Emit(OpCodes.Ldc_I4_0);
@@ -714,7 +718,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _ilg.Emit(OpCodes.Ldloc, locLeft);
 
             //RELEASING locLeft
-            _ilg.FreeLocal(locLeft);
+            FreeLocal(locLeft);
         }
     }
 }

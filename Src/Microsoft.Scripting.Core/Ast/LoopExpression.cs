@@ -59,7 +59,6 @@ namespace Microsoft.Linq.Expressions {
 
     /// <summary>
     /// Factory methods.
-    /// TODO: review which of these overloads we actually need
     /// </summary>
     public partial class Expression {
         public static LoopExpression Loop(Expression body) {

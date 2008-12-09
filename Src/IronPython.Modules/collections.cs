@@ -45,9 +45,11 @@ namespace IronPython.Modules {
             }
 
             public void __init__() {
+                clear();
             }
 
             public void __init__(object iterable) {
+                clear();
                 extend(iterable);
             }
 

@@ -31,7 +31,6 @@ namespace Microsoft.Linq.Expressions {
             _name = name;
         }
 
-        // TODO: Annotations instead of name ?
         public string Name {
             get { return _name; }
         }

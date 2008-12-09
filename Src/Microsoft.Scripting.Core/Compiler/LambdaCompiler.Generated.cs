@@ -225,13 +225,19 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.OnesComplement:
                     EmitUnaryExpression(node);
                     break;
+                case ExpressionType.IsTrue:
+                    EmitUnaryExpression(node);
+                    break;
+                case ExpressionType.IsFalse:
+                    EmitUnaryExpression(node);
+                    break;
 
                 // *** END GENERATED CODE ***
 
                 #endregion
 
                 default:
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
             }
 
             if (emitStart) {

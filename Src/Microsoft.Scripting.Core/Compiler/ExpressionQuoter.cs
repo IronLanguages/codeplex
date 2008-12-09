@@ -49,9 +49,6 @@ namespace Microsoft.Runtime.CompilerServices {
             // A stack of variables that are defined in nested scopes. We search
             // this first when resolving a variable in case a nested scope shadows
             // one of our variable instances.
-            //
-            // TODO: should HoistedLocals track shadowing so we don't need to worry
-            // about it here?
             private readonly Stack<Set<ParameterExpression>> _hiddenVars = new Stack<Set<ParameterExpression>>();
 
             internal ExpressionQuoter(HoistedLocals scope, object[] locals) {
@@ -156,9 +153,7 @@ namespace Microsoft.Runtime.CompilerServices {
                     locals = HoistedLocals.GetParent(locals);
                 }
 
-                // TODO: this should be unreachable because it's an unbound
-                // variable, so we should throw here. It's a breaking change,
-                // however
+                // Unbound variable: return null, so the original node is preserved
                 return null;
             }
         }

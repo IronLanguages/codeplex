@@ -27,7 +27,6 @@ namespace Microsoft.Runtime.CompilerServices {
 
         /// <summary>
         /// Creates a new StrongBox which can receive a value when used in a reference call.
-        /// TODO: review this new API
         /// </summary>
         public StrongBox() {
         }

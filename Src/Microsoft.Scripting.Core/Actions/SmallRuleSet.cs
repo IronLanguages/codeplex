@@ -101,9 +101,6 @@ namespace Microsoft.Scripting {
             Type targetType = typeof(T);
             Type siteType = typeof(CallSite<T>);
 
-            // TODO: we could cache this on Rule<T>
-            MethodInfo invoke = targetType.GetMethod("Invoke");
-
             int length = _rules.Length;
             Expression[] body = new Expression[length + 1];
             for (int i = 0; i < length; i++) {
@@ -119,7 +116,7 @@ namespace Microsoft.Scripting {
                         Expression.Convert(@params[0], siteType),
                         siteType.GetField("Update")
                     ),
-                    invoke,
+                    targetType.GetMethod("Invoke"),
                     new ReadOnlyCollection<Expression>(@params)
                 )
             );

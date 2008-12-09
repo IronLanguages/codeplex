@@ -93,9 +93,6 @@ namespace Microsoft.Scripting {
             }
         }
 
-        // TODO: do we want to keep this in its current form?
-        // It doesn't offer much value anymore
-        // (but it would be useful as a virtual property)
         public bool IsDynamicObject {
             get {
                 return _value is IDynamicObject;
@@ -213,7 +210,7 @@ namespace Microsoft.Scripting {
         /// <returns>The list of dynamic members.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public virtual IEnumerable<string> GetDynamicMemberNames() {
-            return EmptyArray<string>.Instance;
+            return new string[0];
         }
 
         /// <summary>
@@ -225,7 +222,7 @@ namespace Microsoft.Scripting {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public virtual IEnumerable<KeyValuePair<string, object>> GetDynamicDataMembers() {
-            return EmptyArray<KeyValuePair<string, object>>.Instance;
+            return new KeyValuePair<string, object>[0];
         }
 
         // Internal helpers

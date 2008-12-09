@@ -25,9 +25,6 @@ namespace Microsoft.Linq.Expressions {
     /// individual Visit methods from which they can return rewritten nodes.
     /// If a node is rewritten, all parent nodes will be rewritten
     /// automatically.
-    /// 
-    /// TODO: rename back to ExpressionVisitor (fix the Linq test that has a copy)
-    /// TODO: needs public API vetting
     /// </summary>
     public abstract class ExpressionVisitor {
 

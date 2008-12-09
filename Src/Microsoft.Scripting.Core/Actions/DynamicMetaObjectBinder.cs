@@ -106,7 +106,6 @@ namespace Microsoft.Scripting {
         private DynamicMetaObject MakeDeferred(BindingRestrictions rs, params DynamicMetaObject[] args) {
             var exprs = DynamicMetaObject.GetExpressions(args);
 
-            // TODO: we should really be using the same delegate as the CallSite
             Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(args, typeof(object));
 
             // Because we know the arguments match the delegate type (we just created the argument types)

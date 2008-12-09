@@ -260,3 +260,211 @@ STDMETHODIMP COutParams::mVariantBool(VARIANT_BOOL a, VARIANT_BOOL* b)
 
 	return S_OK;
 }
+
+STDMETHODIMP COutParams::mBOOL(BOOL a, BOOL* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mUCHAR(UCHAR a, UCHAR* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::msmall(small a, small* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mINT16(INT16 a, INT16* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mINT64(INT64 a, INT64* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mint(int a, int* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::m__int32(__int32 a, __int32* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mUINT(UINT a, UINT* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mUINT64(UINT64 a, UINT64* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mHRESULT(HRESULT a, HRESULT* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mINT8(INT8 a, INT8* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mLPSTR(LPSTR a, LPSTR* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mLPWSTR(LPWSTR a, LPWSTR* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mPCHAR(CHAR* a, CHAR** b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mPwchar_t(wchar_t* a, wchar_t** b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mwchar_t(wchar_t a, wchar_t* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mGUID(GUID a, GUID* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mDECIMAL(DECIMAL a, DECIMAL* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mCURRENCY(CURRENCY a, CURRENCY* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mPIUnknown(IUnknown* a, IUnknown** b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mPITypeInfo(ITypeInfo* a, ITypeInfo** b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mVARIANT_BOOL(VARIANT_BOOL a, VARIANT_BOOL* b)
+{
+	*b = a;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mBstr1(BSTR a, BSTR* b)
+{
+	if(a!=NULL) 
+	{
+		*b = SysAllocString(a);
+	}
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mVT_BOOL_CHAR(VARIANT a, VARIANT* b)
+{
+	VariantInit(b);
+	b->vt = VT_I1;
+	b->cVal = 't';
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mVT_INT_BSTR(VARIANT a, VARIANT* b)
+{
+	VariantInit(b);
+	b->vt = VT_BSTR;
+
+	if (a.intVal == 1)
+		b->bstrVal = ::SysAllocString(L"hello");
+	else if (a.intVal == 2)
+		b->bstrVal = ::SysAllocString(L"world");
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mVT_BSTR_LONG(VARIANT a, VARIANT* b)
+{
+	USES_CONVERSION;
+
+	VariantInit(b);
+	b->vt = VT_I4;
+	
+	if  (0==strcmp( OLE2A( a.bstrVal), "hello"))
+		b->lVal = 100;
+	else if (0==strcmp( OLE2A( a.bstrVal), "world"))
+		b->lVal = 200;
+
+	return S_OK;
+}
+
+STDMETHODIMP COutParams::mDouble1(DOUBLE a, DOUBLE* b)
+{
+	*b = a;
+
+	return S_OK;
+}

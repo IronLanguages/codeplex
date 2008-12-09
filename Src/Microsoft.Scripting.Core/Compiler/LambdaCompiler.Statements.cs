@@ -145,7 +145,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         // Emits the switch as if stmts
         private void EmitConditionalBranches(SwitchExpression node, Label[] labels) {
-            LocalBuilder testValueSlot = _ilg.GetLocal(typeof(int));
+            LocalBuilder testValueSlot = GetLocal(typeof(int));
             _ilg.Emit(OpCodes.Stloc, testValueSlot);
 
             // For all the "cases" create their conditional branches
@@ -159,7 +159,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
 
-            _ilg.FreeLocal(testValueSlot);
+            FreeLocal(testValueSlot);
         }
 
         // Tries to emit switch as a jmp table
@@ -276,7 +276,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LocalBuilder value = null;
             if (tryType != typeof(void)) {
                 //store the value of the try body
-                value = _ilg.GetLocal(tryType);
+                value = GetLocal(tryType);
                 _ilg.Emit(OpCodes.Stloc, value);
             }
             //******************************************************************
@@ -325,7 +325,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             if (tryType != typeof(void)) {
                 _ilg.Emit(OpCodes.Ldloc, value);
-                _ilg.FreeLocal(value);
+                FreeLocal(value);
             }
             PopLabelBlock(LabelBlockKind.Try);
         }
