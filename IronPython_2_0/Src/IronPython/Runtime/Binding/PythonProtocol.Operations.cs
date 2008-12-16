@@ -476,7 +476,7 @@ namespace IronPython.Runtime.Binding {
                 newTypes[1] = new MetaObject(
                     Ast.New(
                         typeof(Index).GetConstructor(new Type[] { typeof(object) }),
-                        types[1].Expression
+                        Ast.ConvertHelper(types[1].Expression, typeof(object))
                     ),
                     Restrictions.Empty
                 );
