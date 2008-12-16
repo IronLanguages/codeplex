@@ -469,6 +469,14 @@ namespace IronPython.Runtime.Binding {
                 restrictions
             );
         }
+
+        internal static bool IsDataMember(object p) {
+            if (p is PythonFunction || p is BuiltinFunction || p is PythonType || p is BuiltinMethodDescriptor || p is OldClass || p is staticmethod || p is classmethod || p is Method || p is Delegate) {
+                return false;
+            }
+
+            return true;
+        }
     }
 
     internal class ValidationInfo {

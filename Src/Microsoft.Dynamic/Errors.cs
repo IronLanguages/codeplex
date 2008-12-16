@@ -108,15 +108,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// A string like  "Default value of COM parameter cannot be read properly."
-        /// </summary>
-        internal static string DefaultValueCannotBeRead {
-            get {
-                return "Default value of COM parameter cannot be read properly.";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Unexpected VarEnum {0}."
         /// </summary>
         internal static string UnexpectedVarEnum(object p0) {
@@ -257,13 +248,6 @@ namespace Microsoft.Scripting {
         /// </summary>
         internal static Exception MethodShouldNotBeCalled() {
             return new InvalidOperationException(Strings.MethodShouldNotBeCalled);
-        }
-
-        /// <summary>
-        /// InvalidProgramException with message like "Default value of COM parameter cannot be read properly."
-        /// </summary>
-        internal static Exception DefaultValueCannotBeRead() {
-            return new InvalidProgramException(Strings.DefaultValueCannotBeRead);
         }
 
         /// <summary>

@@ -1,0 +1,106 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
+  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>IronPython.Modules</RootNamespace>
+    <AssemblyName>IronPython.Modules</AssemblyName>
+    <WarningsNotAsErrors>618,1616,1685,3005,3008,649</WarningsNotAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Core" />
+    <Reference Include="System" Condition=" '$(SilverlightBuild)' != 'true' " />
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SilverlightSdkPath)\System.Core.dll</HintPath>
+      <Aliases>systemcore</Aliases>
+    </Reference>
+    <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
+  </ItemGroup>
+  <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->
+    <ItemGroup>
+      <!--                    -->
+      <!--                    -->
+      <!--                    -->
+      <Compile Include="array.cs" />
+      <Compile Include="binascii.cs" />
+      <Compile Include="cmath.cs" />
+      <Compile Include="codecs.cs" />
+      <Compile Include="collections.cs" />
+      <Compile Include="copy_reg.cs" />
+      <Compile Include="cPickle.cs" />
+      <Compile Include="cStringIO.cs" />
+      <Compile Include="datetime.cs" />
+      <Compile Include="errno.cs" />
+      <Compile Include="gc.cs" />
+      <Compile Include="imp.cs" />
+      <Compile Include="IterTools.cs" />
+      <Compile Include="locale.cs" />
+      <Compile Include="marshal.cs" />
+      <Compile Include="math.cs" />
+      <Compile Include="math.Generated.cs" />
+      <Compile Include="md5.cs" />
+      <Compile Include="nt.cs" />
+      <Compile Include="operator.cs" />
+      <Compile Include="re.cs" />
+      <Compile Include="select.cs" />
+      <Compile Include="sha.cs" />
+      <Compile Include="sha256.cs" />
+      <Compile Include="sha512.cs" />
+      <Compile Include="socket.cs" />
+      <Compile Include="thread.cs" />
+      <Compile Include="time.cs" />
+      <Compile Include="xxsubtype.cs" />
+      <Compile Include="_functools.cs" />
+      <Compile Include="_random.cs" />
+      <Compile Include="_sre.cs" />
+      <Compile Include="_ssl.cs" />
+      <Compile Include="_struct.cs" />
+      <Compile Include="_weakref.cs" />
+      <Compile Include="_weakref.Generated.cs" />
+      <Compile Include="_winreg.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <!--                              -->
+      <!--          Properties          -->
+      <!--                              -->
+      <Compile Include="Properties\AssemblyInfo.cs" />
+    </ItemGroup>
+  <!-- End Generated Project Items By GenerateSystemCoreCsproj.py -->
+  <ItemGroup>
+    <Compile Include="..\AssemblyVersion.cs">
+      <Link>Properties\AssemblyVersion.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">
+      <Name>Microsoft.Scripting</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\IronPython\IronPython.Build.csproj">
+      <Name>IronPython</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

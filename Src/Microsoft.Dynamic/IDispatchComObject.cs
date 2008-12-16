@@ -303,7 +303,7 @@ namespace Microsoft.Scripting {
                                     BindingFlags.GetProperty,
                                     null,
                                     RuntimeCallableWrapper,
-                                    EmptyArray<object>.Instance,
+                                    new object[0],
                                     CultureInfo.InvariantCulture
                                 );
                                 members.Add(new KeyValuePair<string, object>(method.Name, value));
@@ -519,8 +519,6 @@ namespace Microsoft.Scripting {
             Hashtable puts = new Hashtable();
             Hashtable putrefs = new Hashtable();
 
-            Set<int> usedDispIds = new Set<int>();
-
             for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
                 IntPtr funcDescHandleToRelease = IntPtr.Zero;
 
@@ -538,14 +536,23 @@ namespace Microsoft.Scripting {
 
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0) {
                         puts.Add(name, method);
+
+                        // for the special dispId == 0, we need to store
+                        // the method descriptor for the Do(SetItem) binder. 
+                        if (method.DispId == ComDispIds.DISPID_VALUE && setItem == null) {
+                            setItem = method;
+                        }
                         continue;
                     }
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
                         putrefs.Add(name, method);
+                        // for the special dispId == 0, we need to store
+                        // the method descriptor for the Do(SetItem) binder. 
+                        if (method.DispId == ComDispIds.DISPID_VALUE && setItem == null) {
+                            setItem = method;
+                        }
                         continue;
                     }
-
-                    usedDispIds.Add(funcDesc.memid);
 
                     if (funcDesc.memid == ComDispIds.DISPID_NEWENUM) {
                         funcs.Add("GETENUMERATOR", method);
@@ -566,9 +573,6 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            ProcessPut(funcs, puts, usedDispIds, ref setItem);
-            ProcessPut(funcs, putrefs, usedDispIds, ref setItem);
-
             lock (_CacheComTypeDesc) {
                 ComTypeDesc cachedTypeDesc;
                 if (_CacheComTypeDesc.TryGetValue(typeAttr.guid, out cachedTypeDesc)) {
@@ -582,21 +586,6 @@ namespace Microsoft.Scripting {
                 _comTypeDesc.PutRefs = putrefs;
                 _comTypeDesc.EnsureGetItem(getItem);
                 _comTypeDesc.EnsureSetItem(setItem);
-            }
-        }
-
-        private static void ProcessPut(Hashtable funcs, Hashtable methods, Set<int> usedDispIds, ref ComMethodDesc setItem) {
-            foreach (ComMethodDesc method in methods.Values) {
-                if (!usedDispIds.Contains(method.DispId)) {
-                    funcs.Add(method.Name, method);
-                    usedDispIds.Add(method.DispId);
-                }
-
-                // for the special dispId == 0, we need to store
-                // the method descriptor for the Do(SetItem) binder. 
-                if (method.DispId == ComDispIds.DISPID_VALUE && setItem == null) {
-                    setItem = method;
-                }
             }
         }
 

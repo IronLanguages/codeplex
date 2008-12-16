@@ -57,8 +57,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void EnterScope(BlockExpression node) {
-            if (node.Variables.Count > 0 && (_scope.MergedScopes == null || !_scope.MergedScopes.Contains(node))) {
-                _scope = _tree.Scopes[node].Enter(this, _scope);
+            if (node.Variables.Count > 0 &&
+                (_scope.MergedScopes == null || !_scope.MergedScopes.Contains(node))) {
+
+                CompilerScope scope;
+                if (!_tree.Scopes.TryGetValue(node, out scope)) {
+                    //
+                    // Very often, we want to compile nodes as reductions
+                    // rather than as IL, but usually they need to allocate
+                    // some IL locals. To support this, we allow emitting a
+                    // BlockExpression that was not bound by VariableBinder.
+                    // This works as long as the variables are only used
+                    // locally -- i.e. not closed over.
+                    //
+                    // User-created blocks will never hit this case; only our
+                    // internally reduced nodes will.
+                    //
+                    scope = new CompilerScope(node) { NeedsClosure = _scope.NeedsClosure };
+                }
+
+                _scope = scope.Enter(this, _scope);
                 Debug.Assert(_scope.Node == node);
             }
         }

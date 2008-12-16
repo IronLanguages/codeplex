@@ -376,7 +376,7 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         public static unsafe IntPtr ConvertVariantByrefToPtr(ref Variant value) {
             fixed (Variant* x = &value) {
                 AssertByrefPointsToStack(new IntPtr(x));
@@ -409,7 +409,7 @@ namespace Microsoft.Scripting {
             }
         }
         
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         [Obsolete("do not use this method", true)]
         public static int IDispatchInvoke(
             IntPtr dispatchPointer,
@@ -499,8 +499,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// TODO: Used only in DEBUG build. Remove?
-        /// 
         /// Ensure that "value" is a local variable in some caller's frame. So converting
         /// the byref to an IntPtr is a safe operation. Alternatively, we could also allow 
         /// allowed "value"  to be a pinned object.
@@ -517,6 +515,35 @@ namespace Microsoft.Scripting {
             Debug.Assert((ptr.ToInt64() - ptrToLocal.ToInt64()) < (16 * 1024));
         }
 
+
+        private static readonly object _lock = new object();
+        private static ModuleBuilder _dynamicModule;
+        internal static ModuleBuilder DynamicModule {
+            get {
+                if (_dynamicModule != null) {
+                    return _dynamicModule;
+                }
+                lock (_lock) {
+                    if (_dynamicModule == null) {
+                        var attributes = new[] { 
+                            new CustomAttributeBuilder(typeof(UnverifiableCodeAttribute).GetConstructor(Type.EmptyTypes), new object[0]),
+                            //PermissionSet(SecurityAction.Demand, Unrestricted = true)
+                            new CustomAttributeBuilder(typeof(PermissionSetAttribute).GetConstructor(new Type[]{typeof(SecurityAction)}), 
+                                new object[]{SecurityAction.Demand},
+                                new PropertyInfo[]{typeof(PermissionSetAttribute).GetProperty("Unrestricted")}, 
+                                new object[] {true})
+                        };
+
+                        string name = typeof(VariantArray).Namespace + ".DynamicAssembly";
+                        var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run, attributes);
+                        assembly.DefineVersionInfoResource();
+                        _dynamicModule = assembly.DefineDynamicModule(name);
+                    }
+                    return _dynamicModule;
+                }
+            }
+        }
+
         private const int _dummyMarker = 0x10101010;
         
         /// <summary>
@@ -528,7 +555,7 @@ namespace Microsoft.Scripting {
         private static readonly IUnknownReleaseDelegate _IUnknownRelease = Create_IUnknownRelease();
 
         private static IUnknownReleaseDelegate Create_IUnknownRelease() {
-            DynamicMethod dm = new DynamicMethod("IUnknownRelease", typeof(int), new Type[] { typeof(IntPtr) }, Assembly.GetExecutingAssembly().ManifestModule);
+            DynamicMethod dm = new DynamicMethod("IUnknownRelease", typeof(int), new Type[] { typeof(IntPtr) }, DynamicModule);
 
             ILGenerator method = dm.GetILGenerator();
 
@@ -619,7 +646,7 @@ namespace Microsoft.Scripting {
             paramTypes[argErrIndex] = typeof(uint).MakeByRefType();
 
             // Define the dynamic method in our assembly so we skip verification
-            DynamicMethod dm = new DynamicMethod("IDispatchInvoke", typeof(int), paramTypes, Assembly.GetExecutingAssembly().ManifestModule);
+            DynamicMethod dm = new DynamicMethod("IDispatchInvoke", typeof(int), paramTypes, DynamicModule);
             ILGenerator method = dm.GetILGenerator();
 
             // return functionPtr(...)
@@ -680,10 +707,9 @@ namespace Microsoft.Scripting {
         #endregion
     }
 
-    internal static class UnsafeNativeMethods {
+    internal static class NativeMethods {
         [System.Runtime.Versioning.ResourceExposure(System.Runtime.Versioning.ResourceScope.None)]
         [System.Runtime.Versioning.ResourceConsumption(System.Runtime.Versioning.ResourceScope.Process, System.Runtime.Versioning.ResourceScope.Process)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass")] // TODO: fix
         [DllImport("oleaut32.dll", PreserveSig = false)]
         internal static extern void VariantClear(IntPtr variant);
     }

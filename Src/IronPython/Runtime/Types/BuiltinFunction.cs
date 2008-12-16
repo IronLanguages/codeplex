@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
@@ -337,6 +338,130 @@ namespace IronPython.Runtime.Types {
             return new Binding.MetaBuiltinFunction(parameter, BindingRestrictions.Empty, this);
         }
 
+        internal class BindingResult {
+            public BindingTarget Target;
+            public DynamicMetaObject MetaObject;
+
+            public BindingResult(BindingTarget target, DynamicMetaObject meta) {
+                Target = target;
+                MetaObject = meta;
+            }
+        }
+
+        /// <summary>
+        /// Helper for generating the call to a builtin function.  This is used for calls from built-in method
+        /// descriptors and built-in functions w/ and w/o a bound instance.  
+        /// 
+        /// This provides all sorts of common checks on top of the call while the caller provides a delegate
+        /// to do the actual call.  The common checks include:
+        ///     check for generic-only methods
+        ///     reversed operator support
+        ///     transforming arguments so the default binder can understand them (currently user defined mapping types to PythonDictionary)
+        ///     returning NotImplemented from binary operators
+        ///     Warning when calling certain built-in functions
+        ///     
+        /// </summary>
+        /// <param name="call">The call binder we're doing the call for</param>
+        /// <param name="codeContext">An expression which points to the code context</param>
+        /// <param name="args">The arguments being passed to the function</param>
+        /// <param name="functionRestriction">A restriction for the built-in function, method desc, etc...</param>
+        /// <param name="bind">A delegate to perform the actual call to the method.</param>
+        internal DynamicMetaObject/*!*/ MakeBuiltinFunctionCall(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/ function, DynamicMetaObject/*!*/[] args, bool hasSelf, bool enforceProtected, BindingRestrictions/*!*/ functionRestriction, Func<DynamicMetaObject/*!*/[]/*!*/, BindingResult/*!*/> bind) {
+            DynamicMetaObject res = null;
+
+            // produce an error if all overloads are generic
+            if (IsOnlyGeneric) {
+                return BindingHelpers.TypeErrorGenericMethod(DeclaringType, Name, functionRestriction);
+            }
+
+            // swap the arguments if we have a reversed operator
+            if (IsReversedOperator) {
+                ArrayUtils.SwapLastTwo(args);
+            }
+
+            // if we have a user defined operator for **args then transform it into a PythonDictionary
+            CallSignature sig = BindingHelpers.GetCallSignature(call);
+            if (sig.HasDictionaryArgument()) {
+                int index = sig.IndexOf(ArgumentType.Dictionary);
+                if (hasSelf) {
+                    index++;
+                }
+
+                DynamicMetaObject dict = args[index];
+                
+                if (!(dict.Value is IDictionary)) {
+                    // The DefaultBinder only handles types that implement IDictionary.  Here we have an
+                    // arbitrary user-defined mapping type.  We'll convert it into a PythonDictionary
+                    // and then have an embedded dynamic site pass that dictionary through to the default
+                    // binder.
+                    DynamicMetaObject[] dynamicArgs = ArrayUtils.Insert(function, args);
+
+                    dynamicArgs[index + 1] = new DynamicMetaObject(
+                        Expression.Call(
+                           typeof(PythonOps).GetMethod("UserMappingToPythonDictionary"),
+                           codeContext,
+                           args[index].Expression,
+                           Ast.Constant(Name)
+                        ),
+                        BindingRestrictions.GetTypeRestriction(dict.Expression, dict.LimitType),
+                        PythonOps.UserMappingToPythonDictionary(BinderState.GetBinderState(call).Context, dict.Value, Name)
+                    );
+
+                    if (call is IPythonSite) {
+                        dynamicArgs = ArrayUtils.Insert(
+                            new DynamicMetaObject(codeContext, BindingRestrictions.Empty),
+                            dynamicArgs
+                        );
+                    }
+
+                    return new DynamicMetaObject(
+                        Ast.Dynamic(
+                            call,
+                            typeof(object),
+                            DynamicMetaObject.GetExpressions(dynamicArgs)
+                        ),
+                        BindingRestrictions.Combine(dynamicArgs).Merge(BindingRestrictions.GetTypeRestriction(dict.Expression, dict.LimitType))
+                    );
+                }
+            }
+
+            // do the appropriate calling logic
+            BindingResult result = bind(args);
+
+            // validate the result
+            BindingTarget target = result.Target;
+            res = result.MetaObject;
+
+            // BUG: enforceProtected should alwyas be enforced, but we have some tests that depend upon it not being enforced.
+            if (enforceProtected && target.Method != null && (target.Method.IsFamily || target.Method.IsFamilyOrAssembly)) {
+                // report an error when calling a protected member
+                res = new DynamicMetaObject(
+                    BindingHelpers.TypeErrorForProtectedMember(
+                        target.Method.DeclaringType,
+                        target.Method.Name
+                    ),
+                    res.Restrictions
+                );
+            } else if (IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
+                // Binary Operators return NotImplemented on failure.
+                res = new DynamicMetaObject(
+                    Ast.Property(null, typeof(PythonOps), "NotImplemented"),
+                    res.Restrictions
+                );
+            }
+
+            // add any warnings that are applicable for calling this function
+            WarningInfo info;
+            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
+                res = info.AddWarning(codeContext, res);
+            }            
+
+            // finally add the restrictions for the built-in function and return the result.
+            return new DynamicMetaObject(
+                res.Expression,
+                functionRestriction.Merge(res.Restrictions)
+            );
+        }
         #endregion
                         
         #region Public Python APIs

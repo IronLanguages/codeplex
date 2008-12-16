@@ -537,16 +537,37 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         private class DefaultCallAction : InvokeMemberBinder {
-            internal DefaultCallAction(string name, bool ignoreCase, params ArgumentInfo[] arguments)
+            private LanguageContext _context;
+
+            internal DefaultCallAction(LanguageContext context, string name, bool ignoreCase, params ArgumentInfo[] arguments)
                 : base(name, ignoreCase, arguments) {
+                _context = context;
             }
 
             public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
                 return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
             }
 
+            private static Expression[] GetArgs(DynamicMetaObject target, DynamicMetaObject[] args) {
+                Expression[] res = new Expression[args.Length + 1];
+                res[0] = target.Expression;
+                for (int i = 0; i < args.Length; i++) {
+                    res[1 + i] = args[i].Expression;
+                }
+
+                return res;
+            }
+
             public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject onBindingError) {
-                return ErrorMetaObject(target, args.AddFirst(target), onBindingError);
+                target.Restrictions.Merge(BindingRestrictions.Combine(args));
+                return new DynamicMetaObject(
+                    Expression.Dynamic(
+                        _context.CreateInvokeBinder(Arguments.ToArray()),
+                        typeof(object),
+                        GetArgs(target, args)
+                    ),
+                    target.Restrictions
+                );
             }
 
             public override object CacheIdentity {
@@ -555,7 +576,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public virtual InvokeMemberBinder CreateCallBinder(string name, bool ignoreCase, params ArgumentInfo[] arguments) {
-            return new DefaultCallAction(name, ignoreCase, arguments);
+            return new DefaultCallAction(this, name, ignoreCase, arguments);
         }
 
         private class DefaultInvokeAction : InvokeBinder {

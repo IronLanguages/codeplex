@@ -262,4 +262,19 @@ def test_cp13686():
         import System
         AssertError(AttributeError, setattr, System, "name", "xyz")
 
+@skip("win32") # 2.6 feature
+def test_hasattr_sys_exit():
+    # hasattr shouldn't swallow SystemExit exceptions.
+    class x(object):
+        def __getattr__(self, name):
+            import sys
+            sys.exit(1)
+    
+    a = x()
+    try:
+        hasattr(a, 'abc')
+        AssertUnreachable()
+    except SystemExit:
+        pass
+
 run_test(__name__)

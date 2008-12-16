@@ -209,7 +209,9 @@ namespace IronPython.Runtime {
 
         public virtual object this[params object[] key] {
             get {
-                if (key == null) return this[(object)null];
+                if (key == null) {
+                    return GetItem(null);
+                }
 
                 if (key.Length == 0) {
                     throw PythonOps.TypeError("__getitem__() takes exactly one argument (0 given)");
@@ -219,7 +221,7 @@ namespace IronPython.Runtime {
             }
             set {
                 if (key == null) {
-                    this[(object)null] = value;
+                    SetItem(null, value);
                     return;
                 }
 
@@ -233,28 +235,36 @@ namespace IronPython.Runtime {
 
         public virtual object this[object key] {
             get {
-                Debug.Assert(!(key is SymbolId));
-
-                object ret;
-                if (_storage.TryGetValue(key, out ret)) return ret;
-
-                // we need to manually look up a slot to get the correct behavior when
-                // the __missing__ function is declared on a sub-type which is an old-class
-                if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default,
-                    this,
-                    key,
-                    Symbols.Missing,
-                    out ret)) {
-                    return ret;
-                }
-
-                throw PythonOps.KeyError(key);
+                return GetItem(key);
             }
             set {
-                Debug.Assert(!(key is SymbolId));
-
-                _storage.Add(key, value);
+                SetItem(key, value);
             }
+        }
+
+        private void SetItem(object key, object value) {
+            Debug.Assert(!(key is SymbolId));
+
+            _storage.Add(key, value);
+        }
+
+        private object GetItem(object key) {
+            Debug.Assert(!(key is SymbolId));
+
+            object ret;
+            if (_storage.TryGetValue(key, out ret)) return ret;
+
+            // we need to manually look up a slot to get the correct behavior when
+            // the __missing__ function is declared on a sub-type which is an old-class
+            if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default,
+                this,
+                key,
+                Symbols.Missing,
+                out ret)) {
+                return ret;
+            }
+
+            throw PythonOps.KeyError(key);
         }
 
 

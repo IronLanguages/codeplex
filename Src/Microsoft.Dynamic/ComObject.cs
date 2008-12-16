@@ -109,11 +109,11 @@ namespace Microsoft.Scripting {
         }
 
         internal virtual IEnumerable<string> MemberNames {
-            get { return EmptyArray<string>.Instance; }
+            get { return new string[0]; }
         }
 
         internal virtual IEnumerable<KeyValuePair<string, object>> DataMembers {
-            get { return EmptyArray<KeyValuePair<string, object>>.Instance; }
+            get { return new KeyValuePair<string, object>[0]; }
         }
 
         DynamicMetaObject IDynamicObject.GetMetaObject(Expression parameter) {

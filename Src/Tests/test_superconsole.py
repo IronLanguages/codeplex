@@ -375,6 +375,21 @@ def test_control_character_rendering():
     #for i in xrange(len(errlines)):
     #    Assert(errlines[i].startswith(errors[i]), str(errlines) + " != " + str(errors))
 
+
+def test_hasattr_interrupted():
+    # hasattr() shouldn't swallow KeyboardInterrupt exceptions
+    superConsole.SendKeys("class x{(}object{)}:{ENTER}")
+    superConsole.SendKeys("    def __getattr__{(}self, name{)}:{ENTER}")
+    superConsole.SendKeys("        while True: pass{ENTER}")
+    superConsole.SendKeys("{ENTER}")
+    superConsole.SendKeys("a = x{(}{)}{ENTER}")
+    
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys("hasattr{(}a, 'abc'{)}{ENTER}")
+    superConsole.SendKeys('^(c)')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    Assert("KeyboardInterrupt" + newline in getTestOutput()[1])
+
 def test_tab_insertion():
     '''
     Tab insertion

@@ -420,6 +420,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         //CONFORMING
         private void EmitTypeBinaryExpression(Expression expr) {
             TypeBinaryExpression node = (TypeBinaryExpression)expr;
+
+            if (node.NodeType == ExpressionType.TypeEqual) {
+                EmitExpression(node.ReduceTypeEqual());
+                return;
+            }
+
             Type type = node.Expression.Type;
 
             // Try to determine the result statically

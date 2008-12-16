@@ -322,9 +322,8 @@ STDMETHODIMP CParamsInRetval::mINT8(INT8 a, INT8* b)
 
 STDMETHODIMP CParamsInRetval::mLPSTR(LPSTR a, LPSTR* b)
 {
-//	*b = a;
 	*b = new char[ strlen(a)+1];
-	::MessageBox( 0, L"a", L"title", 0);
+	
 	strcpy( *b, a);
 	return S_OK;
 }

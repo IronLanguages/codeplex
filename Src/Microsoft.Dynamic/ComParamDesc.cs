@@ -56,8 +56,7 @@ namespace Microsoft.Scripting {
                 // This is a parameter, not a return value
                 this._isOut = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOUT) != 0;
                 this._isOpt = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOPT) != 0;
-                // TODO: The PARAMDESCEX struct has a memory issue that needs to be resolved.  For now, we ignore it.
-                //_defaultValue = PARAMDESCEX.GetDefaultValue(ref elemDesc.desc.paramdesc);
+                _defaultValue = PARAMDESCEX.GetDefaultValue(ref elemDesc.desc.paramdesc);
             }
 
             _name = name;
@@ -95,6 +94,7 @@ namespace Microsoft.Scripting {
                 throw Error.MethodShouldNotBeCalled();
             }
 
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
             internal static object GetDefaultValue(ref PARAMDESC paramdesc) {
                 if ((paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FHASDEFAULT) == 0) {
                     return DBNull.Value;
@@ -102,10 +102,15 @@ namespace Microsoft.Scripting {
 
                 PARAMDESCEX varValue = (PARAMDESCEX)Marshal.PtrToStructure(paramdesc.lpVarValue, typeof(PARAMDESCEX));
                 if (varValue._cByte != (ulong)(Marshal.SizeOf((typeof(PARAMDESCEX))))) {
-                    throw Error.DefaultValueCannotBeRead();
+                    return DBNull.Value;
                 }
 
-                return varValue._varDefaultValue.ToObject();
+                try {
+                    // this may fail for various reasons such as no managed representation for native type
+                    return varValue._varDefaultValue.ToObject();
+                } catch (Exception) {
+                    return DBNull.Value;
+                }
             }
         }
 
@@ -124,10 +129,6 @@ namespace Microsoft.Scripting {
                     type = null;
                     break;
 
-#if DISABLE // TODO: WTypes.h indicates that these cannot be used in VARIANTs, but Type.InvokeMember seems to allow it
-                case VarEnum.VT_I8:
-                case VarEnum.UI8:
-#endif
                 case VarEnum.VT_HRESULT:
                     type = typeof(int);
                     break;

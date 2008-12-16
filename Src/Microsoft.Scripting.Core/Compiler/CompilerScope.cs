@@ -254,8 +254,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
 
-            // If this is a genuine unbound variable, the error should be
-            // thrown in VariableBinder.
+            //
+            // If this is an unbound variable in the lambda, the error will be
+            // thrown from VariableBinder. So an error here is generally caused
+            // by an internal error, e.g. a scope was created but it bypassed
+            // VariableBinder.
+            //
             throw Error.UndefinedVariable(variable.Name, variable.Type, CurrentLambdaName);
         }
 

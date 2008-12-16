@@ -216,6 +216,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Unbox:
                     result = RewriteUnaryExpression(node, stack);
                     break;
+                case ExpressionType.TypeEqual:
+                    result = RewriteTypeBinaryExpression(node, stack);
+                    break;
                 case ExpressionType.OnesComplement:
                     result = RewriteUnaryExpression(node, stack);
                     break;
@@ -243,7 +246,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.PreDecrementAssign:
                 case ExpressionType.PostIncrementAssign:
                 case ExpressionType.PostDecrementAssign:
-                case ExpressionType.TypeEqual:
                     result = RewriteReducibleExpression(node, stack);
                     break;
                 case ExpressionType.Quote:

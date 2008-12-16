@@ -39,13 +39,13 @@ def get_environ_variable(key):
     else: return None
 
 def get_all_paths():
-    if get_environ_variable('MERLIN_ROOT') and file_exists(get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython21/25/python.exe'):
+    if get_environ_variable('MERLIN_ROOT') and file_exists(get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython/25/python.exe'):
         #We're in the new world
         if sys.platform == "cli":
             ipython_executable = sys.executable
             compat_test_path   = get_environ_variable('MERLIN_ROOT') + "/Languages/IronPython/Tests/Compat/"
-            cpython_executable = get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython21/25/python.exe'
-            cpython_lib_path   = get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython21/25/Lib'
+            cpython_executable = get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython/25/python.exe'
+            cpython_lib_path   = get_environ_variable('MERLIN_ROOT')+'/../External/Languages/ironpython/25/Lib'
             
         elif sys.platform == "win32":
             rowan_bin = get_environ_variable('ROWAN_BIN')

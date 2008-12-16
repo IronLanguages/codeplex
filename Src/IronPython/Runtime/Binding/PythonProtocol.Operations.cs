@@ -474,7 +474,7 @@ namespace IronPython.Runtime.Binding {
                 newTypes[1] = new DynamicMetaObject(
                     Ast.New(
                         typeof(Index).GetConstructor(new Type[] { typeof(object) }),
-                        types[1].Expression
+                        AstUtils.Convert(types[1].Expression, typeof(object))
                     ),
                     BindingRestrictions.Empty
                 );

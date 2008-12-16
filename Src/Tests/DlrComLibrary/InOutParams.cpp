@@ -9,7 +9,6 @@
 int CInOutParams::s_cConstructed;
 int CInOutParams::s_cReleased;
 
-
 STDMETHODIMP CInOutParams::mBstr(BSTR* a)
 {
 	if(a!=NULL) 
@@ -298,10 +297,8 @@ STDMETHODIMP CInOutParams::mBstr1(BSTR a, BSTR* b)
 
 STDMETHODIMP CInOutParams::mVariant(VARIANT a, VARIANT* b)
 {
-	CComVariant cc(a);
-
-	cc.Detach( b);
-	return S_OK;
+	VariantClear( b);
+	return VariantCopy ( b, &a);
 }
 
 STDMETHODIMP CInOutParams::mVT_BOOL_CHAR(VARIANT a, VARIANT* b)

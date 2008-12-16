@@ -21,8 +21,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting {
-
-    // TODO: do we really need this class?
     internal static class Assert {
 
         internal static Exception Unreachable {

@@ -16,6 +16,9 @@ using System; using Microsoft;
 
 
 namespace Microsoft.Scripting.Generation {
+    public abstract class SiteLocalStorage {
+    }
+
     /// <summary>
     /// Provides storage which is flowed into a callers site.  The same storage object is 
     /// flowed for multiple calls enabling the callee to cache data that can be re-used
@@ -24,7 +27,7 @@ namespace Microsoft.Scripting.Generation {
     /// Data is a public field so that this works properly with DynamicSite's as the reference
     /// type (and EnsureInitialize)
     /// </summary>
-    public class SiteLocalStorage<T> {
+    public class SiteLocalStorage<T> : SiteLocalStorage {
         public T Data;
     }
 }

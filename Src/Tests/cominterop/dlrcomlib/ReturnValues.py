@@ -41,10 +41,14 @@ def test_nonHRESULT_retvals():
 #Test making calls to COM methods which return error values of HRESULT.
 def test_HRESULT_Error():
     AssertErrorWithPartialMessage(NullReferenceException, "Custom error message for E_POINTER", com_obj.mNullRefException)
+    
     # The CLR COM interop support does not use the custom error message provided by the user.
-    #AssertErrorWithPartialMessage(NullReferenceException, "Object reference not set to an instance of an object.", com_obj.mNullRefException, skip=preferComDispatch, bugid="NEEDED")
-
-    AssertErrorWithPartialMessage(COMException, "Migration source incorrect. (Exception from HRESULT: 0x8028005E)", com_obj.mGenericCOMException)
+    #AssertErrorWithPartialMessage(NullReferenceException, "Object reference not set to an instance of an object.", com_obj.mNullRefException, bugid="NEEDED?")
+    
+    if is_vista:
+        AssertErrorWithPartialMessage(COMException, "Migration source incorrect. (Exception from HRESULT: 0x8028005E)", com_obj.mGenericCOMException)
+    else:
+        print "By Design: 409994"
     
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

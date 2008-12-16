@@ -75,6 +75,21 @@ namespace IronPython.Runtime.Binding {
             return base.BindOperation(action, args);
         }
 
+        public override System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> GetDynamicDataMembers() {
+            foreach (KeyValuePair<SymbolId, object> member in Value.__dict__.SymbolAttributes) {
+                if (BindingHelpers.IsDataMember(member.Value)) {
+                    yield return new KeyValuePair<string, object>(SymbolTable.IdToString(member.Key), member.Value);
+                }
+            }
+        }
+
+        public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
+            foreach (object o in Value.__dict__.Keys) {
+                if (o is string) {
+                    yield return (string)o;
+                }
+            }
+        }
         #endregion
 
         #region Calls
@@ -660,35 +675,25 @@ namespace IronPython.Runtime.Binding {
 
                 EnsureInit();
 
-                if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType) || 
-                    typeof(IDictionary).IsAssignableFrom(userDict.LimitType)) {
-
-                    string methodName;
-                    if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType)) {
-                        methodName = "CopyAndVerifyPythonDictionary";
-                    } else {
-                        methodName = "CopyAndVerifyDictionary";
-                    }
-                    _init.Add(
-                        Ast.Assign(
-                            _dict,
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod(methodName),
-                                GetFunctionParam(),
-                                AstUtils.Convert(userDict.Expression, userDict.LimitType)
-                            )
-                        )
-                    );
+                string methodName;
+                if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType)) {
+                    methodName = "CopyAndVerifyPythonDictionary";
+                } else if (typeof(IDictionary).IsAssignableFrom(userDict.LimitType)) {
+                    methodName = "CopyAndVerifyDictionary";
                 } else {
-                    _init.Add(
-                        Ast.Throw(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("TypeErrorForBadDictionaryArgument"),
-                                GetFunctionParam()
-                            )
-                        )
-                    );
+                    methodName = "CopyAndVerifyUserMapping";
                 }
+
+                _init.Add(
+                    Ast.Assign(
+                        _dict,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod(methodName),
+                            GetFunctionParam(),
+                            AstUtils.Convert(userDict.Expression, userDict.LimitType)
+                        )
+                    )
+                );
                 return userDict;
             }
 

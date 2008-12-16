@@ -244,11 +244,12 @@ namespace Microsoft.Scripting {
 
         private VarEnum GetComType(ref Type argumentType) {
             if (argumentType == typeof(Missing)) {
-                //TODO: consider specialcasing marshaling for Missing as VT_ERROR | E_PARAMNOTFOUND 
+                //actual variant type will be VT_ERROR | E_PARAMNOTFOUND 
                 return VarEnum.VT_RECORD;
             }
 
             if (argumentType.IsArray) {
+                //actual variant type will be VT_ARRAY | VT_<ELEMENT_TYPE>
                 return VarEnum.VT_ARRAY;
             }
 

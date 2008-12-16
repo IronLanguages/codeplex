@@ -457,6 +457,13 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// A string like  "Extension node must override method {0}."
+        /// </summary>
+        internal static string ExtensionNodeMustOverrideMethod(object p0) {
+            return FormatString("Extension node must override method {0}.", p0);
+        }
+
+        /// <summary>
         /// A string like  "User-defined operator method '{0}' must be static."
         /// </summary>
         internal static string UserDefinedOperatorMustBeStatic(object p0) {
@@ -1376,6 +1383,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception BodyOfCatchMustHaveSameTypeAsBodyOfTry() {
             return new ArgumentException(Strings.BodyOfCatchMustHaveSameTypeAsBodyOfTry);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Extension node must override method {0}."
+        /// </summary>
+        internal static Exception ExtensionNodeMustOverrideMethod(object p0) {
+            return new InvalidOperationException(Strings.ExtensionNodeMustOverrideMethod(p0));
         }
 
         /// <summary>

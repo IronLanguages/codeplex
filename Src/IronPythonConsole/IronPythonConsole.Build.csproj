@@ -1,0 +1,54 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
+  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>IronPythonConsole</RootNamespace>
+    <AssemblyName>ipy</AssemblyName>
+    <WarningsNotAsErrors>618,1616,1685,649</WarningsNotAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
+  </PropertyGroup>
+  <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->     <ItemGroup>
+      <!--                    -->
+      <!--                    -->
+      <!--                    -->
+      <Compile Include="AssemblyInfo.cs" />
+      <Compile Include="Console.cs" />
+    </ItemGroup>
+  <!-- End Generated Project Items By GenerateSystemCoreCsproj.py -->
+  <ItemGroup>
+    <Compile Include="..\AssemblyVersion.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ipy.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">
+      <Name>Microsoft.Scripting</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\IronPython\IronPython.Build.csproj">
+      <Name>IronPython %28IronPython\IronPython%29</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

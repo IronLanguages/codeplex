@@ -83,55 +83,35 @@ namespace IronPython.Runtime.Binding {
                 )
             );
 
-            if (Value.Template.IsOnlyGeneric) {
-                return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Template.Name, selfRestrict);
-            }
-
-            if (Value.Template.IsReversedOperator) {
-                ArrayUtils.SwapLastTwo(args);
-            }
-
-            BindingTarget target;
-
-            BinderState state = BinderState.GetBinderState(call);
-
-            DynamicMetaObject res = state.Binder.CallMethod(
-                new ParameterBinderWithCodeContext(state.Binder, codeContext),
-                Value.Template.Targets,
+            return Value.Template.MakeBuiltinFunctionCall(
+                call,
+                codeContext,
+                this,
                 args,
-                signature,
+                false,  // no self
+                true,
                 selfRestrict,
-                NarrowingLevel.None,
-                Value.Template.IsBinaryOperator ?
-                    PythonNarrowing.BinaryOperator :
-                    NarrowingLevel.All,
-                Value.Template.Name,
-                out target
-            );
+                (newArgs) => {
+                    BindingTarget target;
 
+                    BinderState state = BinderState.GetBinderState(call);
 
-            if (target.Method != null && (target.Method.IsFamily || target.Method.IsFamilyOrAssembly)) {
-                res = new DynamicMetaObject(
-                    BindingHelpers.TypeErrorForProtectedMember(
-                        target.Method.DeclaringType,
-                        target.Method.Name
-                    ),
-                    res.Restrictions
-                );
-            } else if (Value.Template.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
-                // Binary Operators return NotImplemented on failure.
-                res = new DynamicMetaObject(
-                    Ast.Property(null, typeof(PythonOps), "NotImplemented"),
-                    res.Restrictions
-                );
-            }
+                    DynamicMetaObject res = state.Binder.CallMethod(
+                        new ParameterBinderWithCodeContext(state.Binder, codeContext),
+                        Value.Template.Targets,
+                        newArgs,
+                        signature,
+                        selfRestrict,
+                        NarrowingLevel.None,
+                        Value.Template.IsBinaryOperator ?
+                            PythonNarrowing.BinaryOperator :
+                            NarrowingLevel.All,
+                        Value.Template.Name,
+                        out target
+                    );
 
-            WarningInfo info;
-            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
-                res = info.AddWarning(codeContext, res);
-            }
-
-            return res;
+                    return new BuiltinFunction.BindingResult(target, res);
+                });            
         }
 
         internal Expression MakeFunctionTest(Expression functionTarget) {

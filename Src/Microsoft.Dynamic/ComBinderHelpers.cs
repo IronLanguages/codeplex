@@ -71,8 +71,7 @@ namespace Microsoft.Scripting {
 
             signatureTypes[0] = typeof(CallSite);
 
-            //TODO: we are not restricting on target type here, but in theory we could. 
-            //It is a tradeoff between rule reuse and higher polymorphism of the site. 
+            //we are not restricting on target type here.
             argExpressions[0] = target.Expression;
             signatureTypes[1] = target.Expression.Type;
 

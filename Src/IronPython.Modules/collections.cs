@@ -38,19 +38,64 @@ namespace IronPython.Modules {
             private object[] _data;
             private object _lockObj = new object();
             private int _head, _tail;
-            private int _itemCnt, _version;
+            private int _itemCnt, _maxLen, _version;
 
             public deque() {
+                _maxLen = -1;
+                clear();
+            }
+
+            private deque(int maxLen) {
+                // internal private constructor accepts maxlen < 0
+                _maxLen = maxLen;
                 clear();
             }
 
             public void __init__() {
+                _maxLen = -1;
+                clear();
+            }
+
+            public void __init__([ParamDictionary] IAttributesCollection dict) {
+                _maxLen = VerifyMaxLen(dict);
                 clear();
             }
 
             public void __init__(object iterable) {
+                _maxLen = -1;
                 clear();
                 extend(iterable);
+            }
+
+            public void __init__(object iterable, int maxLen) {
+                if (maxLen < 0) {
+                    throw PythonOps.ValueError("maxlen must be non-negative");
+                }
+                _maxLen = maxLen;
+                clear();
+                extend(iterable);
+            }
+
+            public void __init__(object iterable, [ParamDictionary] IAttributesCollection dict) {
+                __init__(iterable, VerifyMaxLen(dict));
+            }
+
+            private static int VerifyMaxLen(IAttributesCollection dict) {
+                if (dict.Count != 1) {
+                    throw PythonOps.TypeError("deque() takes at most 1 keyword argument ({0} given)", dict.Count);
+                }
+                
+                object value;
+                if (!dict.TryGetValue(SymbolTable.StringToId("maxlen"), out value)) {
+                    IEnumerator<object> e = dict.Keys.GetEnumerator();
+                    if (e.MoveNext()) {
+                        throw PythonOps.TypeError("deque(): '{0}' is an invalid keyword argument", e.Current);
+                    }
+                }
+
+                if (value is int) return (int)value;
+                else if (value is Extensible<int>) return ((Extensible<int>)value).Value;
+                throw PythonOps.TypeError("deque(): keyword argument 'maxlen' requires integer");
             }
 
             #region core deque APIs
@@ -58,6 +103,16 @@ namespace IronPython.Modules {
             public void append(object x) {
                 lock (_lockObj) {
                     _version++;
+
+                    // overwrite head if queue is at max length
+                    if (_itemCnt == _maxLen) {
+                        _data[_tail++] = x;
+                        if (_tail == _data.Length) {
+                            _tail = 0;
+                        }
+                        _head = _tail;
+                        return;
+                    }
 
                     if (_itemCnt == _data.Length) {
                         GrowArray();
@@ -74,6 +129,17 @@ namespace IronPython.Modules {
             public void appendleft(object x) {
                 lock (_lockObj) {
                     _version++;
+
+                    // overwrite tail if queue is full
+                    if (_itemCnt == _maxLen) {
+                        _head--;
+                        if (_head < 0) {
+                            _head = _data.Length - 1;
+                        }
+                        _tail = _head;
+                        _data[_head] = x;
+                        return;
+                    }
 
                     if (_itemCnt == _data.Length) {
                         GrowArray();
@@ -95,7 +161,8 @@ namespace IronPython.Modules {
 
                     _head = _tail = 0;
                     _itemCnt = 0;
-                    _data = new object[8];
+                    if (_maxLen < 0) _data = new object[8];
+                    else _data = new object[Math.Min(_maxLen, 8)];
                 }
             }
 
@@ -115,7 +182,9 @@ namespace IronPython.Modules {
 
             public object pop() {
                 lock (_lockObj) {
-                    if (_itemCnt == 0) throw PythonOps.IndexError("pop from an empty deque");
+                    if (_itemCnt == 0) {
+                        throw PythonOps.IndexError("pop from an empty deque");
+                    }
 
                     _version++;
                     if (_tail != 0) {
@@ -133,7 +202,9 @@ namespace IronPython.Modules {
 
             public object popleft() {
                 lock (_lockObj) {
-                    if (_itemCnt == 0) throw PythonOps.IndexError("pop from an empty deque");
+                    if (_itemCnt == 0) {
+                        throw PythonOps.IndexError("pop from an empty deque");
+                    }
 
                     _version++;
                     object res = _data[_head];
@@ -162,7 +233,7 @@ namespace IronPython.Modules {
 
                     if (found == _head) {
                         popleft();
-                    } else if (found == _tail - 1) {
+                    } else if (found == (_tail > 0 ? _tail - 1 : _data.Length - 1)) {
                         pop();
                     } else if (found == -1) {
                         throw PythonOps.ValueError("deque.remove(value): value not in deque");
@@ -216,37 +287,28 @@ namespace IronPython.Modules {
                 lock (_lockObj) {
                     // rotation is easy if we have no items!
                     if (_itemCnt == 0) return;
+
+                    // set rot to the appropriate positive int
                     int rot = PythonContext.GetContext(context).ConvertToInt32(n) % _itemCnt;
+                    rot = rot % _itemCnt;
+                    if (rot == 0) return; // no need to rotate if we'll end back up where we started
+                    if (rot < 0) rot += _itemCnt;
 
-                    // no need to rotate if we'll end back up where we started
-                    if (rot != 0) {
-                        _version++;
-
-                        if (_itemCnt == _data.Length) {
-                            // if all indexes are filled no moves are required
-                            int newHead = (_head - rot) % _data.Length;
-                            if (newHead < 0) newHead += _data.Length;
-                            int newTail = (_tail - rot) % _data.Length;
-                            if (newTail < 0) newTail += _data.Length;
-
-                            _head = newHead;
-                            _tail = newTail;
-                        } else {
-                            // too bad, we got gaps, looks like we'll be doing some real work.
-                            object[] newData = new object[_itemCnt]; // we re-size to itemCnt so that future rotates don't require work
-                            int curWriteIndex;
-                            if (rot > 0) {
-                                curWriteIndex = rot;
-                            } else {
-                                curWriteIndex = _itemCnt + rot;
-                            }
-                            WalkDeque(delegate(int curIndex) {
-                                newData[curWriteIndex] = _data[curIndex];
-                                curWriteIndex = (curWriteIndex + 1) % _itemCnt;
-                                return true;
-                            });
-                            _data = newData;
-                        }
+                    _version++;
+                    if (_itemCnt == _data.Length) {
+                        // if all indices are filled no moves are required
+                        _head = _tail = (_tail - rot + _data.Length) % _data.Length;
+                    } else {
+                        // too bad, we got gaps, looks like we'll be doing some real work.
+                        object[] newData = new object[_itemCnt]; // we re-size to itemCnt so that future rotates don't require work
+                        int curWriteIndex = rot;
+                        WalkDeque(delegate(int curIndex) {
+                            newData[curWriteIndex] = _data[curIndex];
+                            curWriteIndex = (curWriteIndex + 1) % _itemCnt;
+                            return true;
+                        });
+                        _head = _tail = 0;
+                        _data = newData;
                     }
                 }
             }
@@ -268,7 +330,7 @@ namespace IronPython.Modules {
 
             public object __copy__(CodeContext/*!*/ context) {
                 if (GetType() == typeof(deque)) {
-                    deque res = new deque();
+                    deque res = new deque(_maxLen);
                     res.extend(((IEnumerable)this).GetEnumerator());
                     return res;
                 } else {
@@ -348,7 +410,9 @@ namespace IronPython.Modules {
 
             int IComparable.CompareTo(object obj) {
                 deque otherDeque = obj as deque;
-                if (otherDeque == null) throw new ArgumentException("expected deque");
+                if (otherDeque == null) {
+                    throw new ArgumentException("expected deque");
+                }
 
                 return CompareToWorker(otherDeque);
             }
@@ -429,7 +493,9 @@ namespace IronPython.Modules {
 
                 bool IEnumerator.MoveNext() {
                     lock (_deque._lockObj) {
-                        if (_version != _deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
+                        if (_version != _deque._version) {
+                            throw PythonOps.RuntimeError("deque mutated during iteration");
+                        }
 
                         if (_moveCnt < _deque._itemCnt) {
                             _curIndex++;
@@ -482,7 +548,9 @@ namespace IronPython.Modules {
 
                 bool IEnumerator.MoveNext() {
                     lock (_deque._lockObj) {
-                        if (_version != _deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
+                        if (_version != _deque._version) {
+                            throw PythonOps.RuntimeError("deque mutated during iteration");
+                        }
 
                         if (_moveCnt < _deque._itemCnt) {
                             _curIndex--;
@@ -509,7 +577,12 @@ namespace IronPython.Modules {
             #region private members
 
             private void GrowArray() {
-                object[] newData = new object[_data.Length * 2];
+                // do nothing if array is already at its max length
+                if (_data.Length == _maxLen) return;
+
+                object[] newData;
+                if (_maxLen < 0) newData = new object[_data.Length * 2];
+                else newData = new object[Math.Min(_maxLen, _data.Length * 2)];
 
                 // make the array completely sequential again
                 // by starting head back at 0.
@@ -531,11 +604,15 @@ namespace IronPython.Modules {
             }
 
             private int IndexToSlot(CodeContext/*!*/ context, object index) {
-                if (_itemCnt == 0) throw PythonOps.IndexError("deque index out of range");
+                if (_itemCnt == 0) {
+                    throw PythonOps.IndexError("deque index out of range");
+                }
 
                 int intIndex = PythonContext.GetContext(context).ConvertToInt32(index);
                 if (intIndex >= 0) {
-                    if (intIndex >= _itemCnt) throw PythonOps.IndexError("deque index out of range");
+                    if (intIndex >= _itemCnt) {
+                        throw PythonOps.IndexError("deque index out of range");
+                    }
 
                     int realIndex = _head + intIndex;
                     if (realIndex >= _data.Length) {
@@ -544,7 +621,9 @@ namespace IronPython.Modules {
 
                     return realIndex;
                 } else {
-                    if ((intIndex * -1) > _itemCnt) throw PythonOps.IndexError("deque index out of range");
+                    if ((intIndex * -1) > _itemCnt) {
+                        throw PythonOps.IndexError("deque index out of range");
+                    }
 
                     int realIndex = _tail + intIndex;
                     if (realIndex < 0) {
@@ -610,7 +689,13 @@ namespace IronPython.Modules {
                         });
                     }
 
-                    sb.Append("])");
+                    if (_maxLen < 0) {
+                        sb.Append("])");
+                    } else {
+                        sb.Append("], maxlen=");
+                        sb.Append(_maxLen);
+                        sb.Append(')');
+                    }
 
                     return sb.ToString();
                 } finally {

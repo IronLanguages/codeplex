@@ -239,7 +239,7 @@ namespace Microsoft.Scripting {
                 ((vt) == VarEnum.VT_RECORD)
                 ) {
                 IntPtr variantPtr = UnsafeMethods.ConvertVariantByrefToPtr(ref this);
-                UnsafeNativeMethods.VariantClear(variantPtr);
+                NativeMethods.VariantClear(variantPtr);
                 Debug.Assert(IsEmpty);
             } else {
                 VariantType = VarEnum.VT_EMPTY;

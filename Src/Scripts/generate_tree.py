@@ -117,7 +117,7 @@ expressions = [
     Expression("PreDecrementAssign",    "UnaryExpression",                 interop = True, reducible = True),
     Expression("PostIncrementAssign",   "UnaryExpression",                 interop = True, reducible = True),
     Expression("PostDecrementAssign",   "UnaryExpression",                 interop = True, reducible = True),
-    Expression("TypeEqual",             "TypeBinaryExpression",            reducible = True),
+    Expression("TypeEqual",             "TypeBinaryExpression"),
     Expression("OnesComplement",        "UnaryExpression",                 interop = True),
     Expression("IsTrue",                "UnaryExpression",                 interop = True),
     Expression("IsFalse",               "UnaryExpression",                 interop = True),

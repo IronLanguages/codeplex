@@ -607,19 +607,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #region Linq Conversions
 
-        //CONFORMING
-        // (plus support for None, Void conversions)
         internal static void EmitConvertToType(this ILGenerator il, Type typeFrom, Type typeTo, bool isChecked) {
-            typeFrom = TypeUtils.GetNonNoneType(typeFrom);
-
             if (typeFrom == typeTo) {
                 return;
             }
 
-            // void -> non-void: error
             if (typeFrom == typeof(void)) {
-                //void type should never be converted to non-void type
-                throw new NotSupportedException("Void type cannot be converted to non-void type");
+                throw ContractUtils.Unreachable;
             }
 
             // non-void -> void: pop

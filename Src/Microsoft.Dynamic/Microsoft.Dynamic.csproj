@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">    <DebugType>pdbonly</DebugType>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DocumentationFile>..\..\Bin\DelaySigned Release\Microsoft.Dynamic.XML</DocumentationFile>    <DefineConstants>TRACE;SIGNED;MICROSOFT_SCRIPTING_CORE</DefineConstants>    <ErrorReport>prompt</ErrorReport>    <WarningLevel>4</WarningLevel>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <RunCodeAnalysis>false</RunCodeAnalysis>    <DelaySign>true</DelaySign>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <SignAssembly>true</SignAssembly>    <BaseAddress>1929379840</BaseAddress>  </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' == '' ">
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -52,29 +51,11 @@
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <BaseAddress>1929379840</BaseAddress>
   </PropertyGroup>
-  <Import Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' " Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
-  <PropertyGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' ">
-    <AssemblyName>System.Dynamic</AssemblyName>
-    <OutputType>Library</OutputType>
-    <CreateMetaAssembly>true</CreateMetaAssembly>
-    <AssemblyKeyType>ECMA</AssemblyKeyType>
-    <GenerateAssemblyRefs>true</GenerateAssemblyRefs>
-    <AllowPartialTrustedCalls>true</AllowPartialTrustedCalls>
-    <PublishMetaAssemblyToSDK>true</PublishMetaAssemblyToSDK>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-    <RootNamespace>System.Dynamic</RootNamespace>
-    <NoWarn>0688</NoWarn><!-- mscorlib removed all link demands, so don't warn when overriding a method with no link demand -->
-    <RunCodeAnalysis>true</RunCodeAnalysis>
-    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' == '' ">
+  <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting.Core</Name>
@@ -85,89 +66,63 @@
       <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' ">
-    <!--<Reference Include="System.Core" />-->
-    <!-- This project reference is to overcome initial build errors when building the new System.Core.dll for the first time.
-         That is, the System.Core.dll that no longer contains the C# runtime binder code which is now contained here. After this
-         RI's up, remove this reference and use the normal reference to System.Core above and RI again. -->
-    <ProjectReference Include="..\core\System.Core.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' ">
-    <TextStringResource Include="System\Dynamic\System.Dynamic.txt">
-      <ResFile>System.Dynamic</ResFile>
-      <Sealed>true</Sealed>
-      <Visibility>internal</Visibility>
-      <GenerateResource>true</GenerateResource>
-      <FullClassName>System.Dynamic.SR</FullClassName>
-      <Parameterize>true</Parameterize>
-    </TextStringResource>
-  </ItemGroup>
   <ItemGroup>
-    <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="misc\AssemblyAttributes.cs" />
-    <Compile Include="System\Dynamic\ArgBuilder.cs" />
-    <Compile Include="System\Dynamic\Assert.cs" />
-    <Compile Include="System\Dynamic\BoolArgBuilder.cs" />
-    <Compile Include="System\Dynamic\BoundDispEvent.cs" />
-    <Compile Include="System\Dynamic\CollectionExtensions.cs" />
-    <Compile Include="System\Dynamic\ComBinder.cs" />
-    <Compile Include="System\Dynamic\ComBinderHelpers.cs" />
-    <Compile Include="System\Dynamic\ComDispIds.cs" />
-    <Compile Include="System\Dynamic\ComEventDesc.cs" />
-    <Compile Include="System\Dynamic\ComEventSink.cs" />
-    <Compile Include="System\Dynamic\ComEventSinkProxy.cs" />
-    <Compile Include="System\Dynamic\ComEventSinksContainer.cs" />
-    <Compile Include="System\Dynamic\ComFallbackMetaObject.cs" />
-    <Compile Include="System\Dynamic\ComHresults.cs" />
-    <Compile Include="System\Dynamic\ComInterop.cs" />
-    <Compile Include="System\Dynamic\ComInvokeAction.cs" />
-    <Compile Include="System\Dynamic\ComInvokeBinder.cs" />
-    <Compile Include="System\Dynamic\ComMetaObject.cs" />
-    <Compile Include="System\Dynamic\ComMethodDesc.cs" />
-    <Compile Include="System\Dynamic\ComObject.cs" />
-    <Compile Include="System\Dynamic\ComParamDesc.cs" />
-    <Compile Include="System\Dynamic\ComRuntimeHelpers.cs" />
-    <Compile Include="System\Dynamic\ComTypeClassDesc.cs" />
-    <Compile Include="System\Dynamic\ComTypeDesc.cs" />
-    <Compile Include="System\Dynamic\ComTypeEnumDesc.cs" />
-    <Compile Include="System\Dynamic\ComTypeLibDesc.cs" />
-    <Compile Include="System\Dynamic\ContractUtils.cs" />
-    <Compile Include="System\Dynamic\ConversionArgBuilder.cs" />
-    <Compile Include="System\Dynamic\ConvertibleArgBuilder.cs" />
-    <Compile Include="System\Dynamic\CurrencyArgBuilder.cs" />
-    <Compile Include="System\Dynamic\DateTimeArgBuilder.cs" />
-    <Compile Include="System\Dynamic\DispatchArgBuilder.cs" />
-    <Compile Include="System\Dynamic\DispCallable.cs" />
-    <Compile Include="System\Dynamic\DispCallableMetaObject.cs" />
-    <Compile Include="System\Dynamic\Errors.cs" />
-    <Compile Include="System\Dynamic\ErrorArgBuilder.cs" />
-    <Compile Include="System\Dynamic\ExcepInfo.cs" />
-    <Compile Include="System\Dynamic\Helpers.cs" />
-    <Compile Include="System\Dynamic\IDispatchComObject.cs" />
-    <Compile Include="System\Dynamic\IDispatchMetaObject.cs" />
-    <Compile Include="System\Dynamic\NullArgBuilder.cs" />
-    <Compile Include="System\Dynamic\Set.cs" />
-    <Compile Include="System\Dynamic\SimpleArgBuilder.cs" />
-    <Compile Include="System\Dynamic\SplatCallSite.cs" />
-    <Compile Include="System\Dynamic\SplatCallSite.Generated.cs" />
-    <Compile Include="System\Dynamic\StringArgBuilder.cs" />
-    <Compile Include="System\Dynamic\SynchronizedDictionary.cs" />
-    <Compile Include="System\Dynamic\TypeExtensions.cs" />
-    <Compile Include="System\Dynamic\TypeUtils.cs" />
-    <Compile Include="System\Dynamic\UnknownArgBuilder.cs" />
-    <Compile Include="System\Dynamic\VarEnumSelector.cs" />
-    <Compile Include="System\Dynamic\Variant.cs" />
-    <Compile Include="System\Dynamic\VariantArgBuilder.cs" />
-    <Compile Include="System\Dynamic\VariantArray.cs" />
-    <Compile Include="System\Dynamic\VariantBuilder.cs" />
+    <Compile Include="Properties\GlobalSuppressions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ArgBuilder.cs" />
+    <Compile Include="Assert.cs" />
+    <Compile Include="BoolArgBuilder.cs" />
+    <Compile Include="BoundDispEvent.cs" />
+    <Compile Include="CollectionExtensions.cs" />
+    <Compile Include="ComBinder.cs" />
+    <Compile Include="ComBinderHelpers.cs" />
+    <Compile Include="ComDispIds.cs" />
+    <Compile Include="ComEventDesc.cs" />
+    <Compile Include="ComEventSink.cs" />
+    <Compile Include="ComEventSinkProxy.cs" />
+    <Compile Include="ComEventSinksContainer.cs" />
+    <Compile Include="ComFallbackMetaObject.cs" />
+    <Compile Include="ComHresults.cs" />
+    <Compile Include="ComInterop.cs" />
+    <Compile Include="ComInvokeAction.cs" />
+    <Compile Include="ComInvokeBinder.cs" />
+    <Compile Include="ComMetaObject.cs" />
+    <Compile Include="ComMethodDesc.cs" />
+    <Compile Include="ComObject.cs" />
+    <Compile Include="ComParamDesc.cs" />
+    <Compile Include="ComRuntimeHelpers.cs" />
+    <Compile Include="ComTypeClassDesc.cs" />
+    <Compile Include="ComTypeDesc.cs" />
+    <Compile Include="ComTypeEnumDesc.cs" />
+    <Compile Include="ComTypeLibDesc.cs" />
+    <Compile Include="ContractUtils.cs" />
+    <Compile Include="ConversionArgBuilder.cs" />
+    <Compile Include="ConvertibleArgBuilder.cs" />
+    <Compile Include="CurrencyArgBuilder.cs" />
+    <Compile Include="DateTimeArgBuilder.cs" />
+    <Compile Include="DispatchArgBuilder.cs" />
+    <Compile Include="DispCallable.cs" />
+    <Compile Include="DispCallableMetaObject.cs" />
+    <Compile Include="Errors.cs" />
+    <Compile Include="ErrorArgBuilder.cs" />
+    <Compile Include="ExcepInfo.cs" />
+    <Compile Include="Helpers.cs" />
+    <Compile Include="IDispatchComObject.cs" />
+    <Compile Include="IDispatchMetaObject.cs" />
+    <Compile Include="NullArgBuilder.cs" />
+    <Compile Include="SimpleArgBuilder.cs" />
+    <Compile Include="SplatCallSite.cs" />
+    <Compile Include="SplatCallSite.Generated.cs" />
+    <Compile Include="StringArgBuilder.cs" />
+    <Compile Include="SynchronizedDictionary.cs" />
+    <Compile Include="TypeExtensions.cs" />
+    <Compile Include="TypeUtils.cs" />
+    <Compile Include="UnknownArgBuilder.cs" />
+    <Compile Include="VarEnumSelector.cs" />
+    <Compile Include="Variant.cs" />
+    <Compile Include="VariantArgBuilder.cs" />
+    <Compile Include="VariantArray.cs" />
+    <Compile Include="VariantBuilder.cs" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' ">
-    <Compile Include="System\Dynamic\Parameterized.System.Dynamic.cs" />
-  </ItemGroup>
-  <Import Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' " Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
-  <PropertyGroup Condition=" '$(_NTDRIVE)$(_NTROOT)' != '' ">
-    <DefineConstants>$(DefineConstants);PRODUCTION_BUILD</DefineConstants>
-    <PublishMetaAssemblyPath>$(InternalPath)\sdk\ref\WinFX\$(WINFX_REFS_VERSION)</PublishMetaAssemblyPath>
-  </PropertyGroup>
-  <Import Condition=" '$(_NTDRIVE)$(_NTROOT)' == '' " Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

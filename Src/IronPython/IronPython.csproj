@@ -403,7 +403,7 @@
       <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
       <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Microsoft.Dynamic\System.Dynamic.csproj" Condition=" '$(SilverlightBuild)' != 'true' ">
+    <ProjectReference Include="..\Microsoft.Dynamic\Microsoft.Dynamic.csproj" Condition=" '$(SilverlightBuild)' != 'true' ">
       <Project>{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}</Project>
       <Name>System.Dynamic</Name>
     </ProjectReference>

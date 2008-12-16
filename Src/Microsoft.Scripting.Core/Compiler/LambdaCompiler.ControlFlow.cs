@@ -72,6 +72,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             if (node.DefaultValue != null) {
                 EmitExpression(node.DefaultValue);
+
+                // Store the value in a local so Mark can pick it up.
+                label.StoreValue();
             }
 
             label.Mark();
