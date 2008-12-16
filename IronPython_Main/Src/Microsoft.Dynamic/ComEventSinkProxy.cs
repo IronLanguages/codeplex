@@ -80,7 +80,7 @@ namespace Microsoft.Scripting {
             return base.SupportsInterface(ref iid);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)] // to match the base method
         public override IMessage Invoke(IMessage msg) {
             ContractUtils.RequiresNotNull(msg, "msg");

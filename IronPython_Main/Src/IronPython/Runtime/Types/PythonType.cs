@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -462,6 +463,32 @@ namespace IronPython.Runtime.Types {
             return new List(Get__mro__(this));
         }
 
+        /// <summary>
+        /// Returns true if the specified object is an instance of this type.
+        /// </summary>
+        public virtual bool __instancecheck__(object instance) {
+            return SubclassImpl(DynamicHelpers.GetPythonType(instance));
+        }
+
+        public virtual bool __subclasscheck__(PythonType sub) {
+            return SubclassImpl(sub);
+        }
+
+        private bool SubclassImpl(PythonType sub) {
+            if (UnderlyingSystemType.IsInterface) {
+                // interfaces aren't in bases, and therefore IsSubclassOf doesn't do this check.
+                if (UnderlyingSystemType.IsAssignableFrom(sub.UnderlyingSystemType)) {
+                    return true;
+                }
+            }
+
+            return sub.IsSubclassOf(this);
+        }
+
+        public virtual bool __subclasscheck__(OldClass sub) {
+            return IsSubclassOf(sub.TypeObject);
+        }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]
         public static implicit operator Type(PythonType self) {
             return self.UnderlyingSystemType;
@@ -649,18 +676,6 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
-        /// Returns true if the specified object is an instance of this type.
-        /// </summary>
-        internal bool IsInstanceOfType(object instance) {
-            IPythonObject dyno = instance as IPythonObject;
-            if (dyno != null) {
-                return dyno.PythonType.IsSubclassOf(this);
-            }
-
-            return UnderlyingSystemType.IsInstanceOfType(instance);
-        }
-
-        /// <summary>
         /// Gets the base types from which this type inherits.
         /// </summary>
         internal IList<PythonType>/*!*/ BaseTypes {
@@ -806,8 +821,8 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Searches the resolution order for a slot matching by name
         /// </summary>
-        internal bool TryResolveSlot(CodeContext context, SymbolId name, out PythonTypeSlot slot) {            
-            for(int i = 0; i < _resolutionOrder.Count; i++) {
+        internal bool TryResolveSlot(CodeContext context, SymbolId name, out PythonTypeSlot slot) {
+            for (int i = 0; i < _resolutionOrder.Count; i++) {
                 PythonType dt = _resolutionOrder[i];
 
                 // don't look at interfaces - users can inherit from them, but we resolve members
@@ -824,6 +839,7 @@ namespace IronPython.Runtime.Types {
             if (UnderlyingSystemType.IsInterface) {
                 return TypeCache.Object.TryResolveSlot(context, name, out slot);
             }
+            
 
             slot = null;
             return false;
@@ -1292,6 +1308,7 @@ namespace IronPython.Runtime.Types {
                     AddUserTypeMembers(context, keys, dt);
                 }
             }
+            
 
             AddInstanceMembers(self, keys);
 
@@ -1412,7 +1429,7 @@ namespace IronPython.Runtime.Types {
                     }
                 }
             }
-            
+
             bases = ValidateBases(bases);
 
             _name = name;
@@ -1420,6 +1437,7 @@ namespace IronPython.Runtime.Types {
             _bases = GetBasesAsList(bases).ToArray();
             _resolutionOrder = CalculateMro(this, _bases);
             _pythonContext = PythonContext.GetContext(context);
+
 
             foreach (PythonType pt in _bases) {
                 pt.AddSubType(this);

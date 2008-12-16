@@ -24,7 +24,7 @@ namespace Microsoft.Scripting {
         private ExpressionType _operation;
 
         protected UnaryOperationBinder(ExpressionType operation) {
-            ContractUtils.ReferenceEquals(OperationIsValid(operation), "operation");
+            ContractUtils.Requires(OperationIsValid(operation), "operation");
             _operation = operation;
         }
 

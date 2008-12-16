@@ -17,12 +17,13 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting;
 using System.IO;
+using Microsoft.Linq.Expressions;
 using System.Security;
 using System.Security.Policy;
 using System.Text;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 
@@ -560,6 +561,128 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
             _pe.CreateScriptSourceFromString("def IntIntMethod(a): return a * 100", SourceCodeKind.Statements).Execute(scope);
             IntIntDelegate d = _pe.CreateScriptSourceFromString("IntIntMethod").Execute<IntIntDelegate>(scope);
             AreEqual(d(2), 2 * 100);
+        }
+
+        public void ScenarioMemberNames() {
+            ScriptScope scope = _env.CreateScope();
+
+            _pe.CreateScriptSourceFromString(@"
+class nc(object):
+    def __init__(self):
+        self.baz = 5    
+    foo = 3
+    def abc(self): pass
+    @staticmethod
+    def staticfunc(arg1): pass
+    @classmethod
+    def classmethod(cls): pass
+
+ncinst = nc()
+
+def f(): pass
+
+f.foo = 3
+
+class oc:
+    def __init__(self):
+        self.baz = 5   
+    foo = 3
+    def abc(self): pass
+    @staticmethod
+    def staticfunc(arg1): pass
+    @classmethod
+    def classmethod(cls): pass
+
+ocinst = oc()
+", SourceCodeKind.Statements).Execute(scope);
+
+            ParameterExpression parameter = Expression.Parameter(typeof(object), "");
+
+            DynamicMetaObject nc = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("nc"), parameter);
+            DynamicMetaObject ncinst = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("ncinst"), parameter); ;
+            DynamicMetaObject f = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("f"), parameter); ;
+            DynamicMetaObject oc = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("oc"), parameter); ;
+            DynamicMetaObject ocinst = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("ocinst"), parameter); ;
+
+            List<string> ncnames = new List<string>(nc.GetDynamicMemberNames());
+            List<string> ncinstnames = new List<string>(ncinst.GetDynamicMemberNames());
+            List<string> fnames = new List<string>(f.GetDynamicMemberNames());
+            List<string> ocnames = new List<string>(oc.GetDynamicMemberNames());
+            List<string> ocinstnames = new List<string>(ocinst.GetDynamicMemberNames());
+
+            ncnames.Sort();
+            ncinstnames.Sort();
+            ocnames.Sort();
+            ocinstnames.Sort();
+            fnames.Sort();
+
+            AreEqualLists(ncnames, new[] { "__class__", "__delattr__", "__dict__", "__doc__", "__format__", "__getattribute__", "__hash__", "__init__", "__module__", "__new__", "__reduce__", "__reduce_ex__", "__repr__", "__setattr__", "__str__", "__weakref__", "abc", "classmethod", "foo", "staticfunc" });
+            AreEqualLists(ncinstnames, new[] { "__class__", "__delattr__", "__dict__", "__doc__", "__format__", "__getattribute__", "__hash__", "__init__", "__module__", "__new__", "__reduce__", "__reduce_ex__", "__repr__", "__setattr__", "__str__", "__weakref__", "abc", "baz", "classmethod", "foo", "staticfunc" });
+
+            AreEqualLists(fnames, new[] { "foo" });
+
+            AreEqualLists(ocnames, new[] { "__doc__", "__init__", "__module__", "abc", "classmethod", "foo", "staticfunc" });
+            AreEqualLists(ocinstnames, new[] { "__doc__", "__init__", "__module__", "abc", "baz", "classmethod", "foo", "staticfunc" });
+
+            List<KeyValuePair<string, object>> ncmembers = new List<KeyValuePair<string, object>>(nc.GetDynamicDataMembers());
+            List<KeyValuePair<string, object>> ncinstmembers = new List<KeyValuePair<string, object>>(ncinst.GetDynamicDataMembers());
+            List<KeyValuePair<string, object>> fmembers = new List<KeyValuePair<string, object>>(f.GetDynamicDataMembers());
+            List<KeyValuePair<string, object>> ocmembers = new List<KeyValuePair<string, object>>(oc.GetDynamicDataMembers());
+            List<KeyValuePair<string, object>> ocinstmembers = new List<KeyValuePair<string, object>>(ocinst.GetDynamicDataMembers());
+
+            ncmembers.Sort((x, y) => x.Key.CompareTo(y.Key));
+            ncinstmembers.Sort((x, y) => x.Key.CompareTo(y.Key));
+            ocmembers.Sort((x, y) => x.Key.CompareTo(y.Key));
+            ocinstmembers.Sort((x, y) => x.Key.CompareTo(y.Key));
+            fmembers.Sort((x, y) => x.Key.CompareTo(y.Key));
+
+            AreEqual(ncmembers.Count, 8);
+            Assert(ncmembers[1].Value is PythonFunction); // __init__
+
+            AreEqual(ncinstmembers.Count, 6);            
+            AreEqual(ncinstmembers[4].Key, "baz");
+            AreEqual(ncinstmembers[4].Value, 5);
+
+            AreEqual(ocmembers.Count, 7);
+            Assert(ocmembers[1].Value is Method); // __init__
+
+            AreEqual(ocinstmembers.Count, 4);
+            AreEqual(ocinstmembers[2].Key, "baz");
+            AreEqual(ocinstmembers[2].Value, 5);
+
+            AreEqual(ocinstmembers[3].Key, "foo");
+            AreEqual(ocinstmembers[3].Value, 3); 
+
+            Assert(fmembers.Count == 1);
+            AreEqual(fmembers[0].Key, "foo");
+            AreEqual(fmembers[0].Value, 3);
+        }
+
+        private void AreEqualLists<T>(IList<T> left, IList<T> right) {
+            if (left.Count != right.Count) {
+                string res = "lists differ by length: " + left.Count + " vs " + right.Count + Environment.NewLine + ListsToString(left, right);
+                Assert(false, res);
+            }
+
+            for (int i = 0; i < left.Count; i++) {
+                if (!left[i].Equals(right[i])) {
+                    Assert(false, String.Format("lists differ by value: {0} {1}{2}{3}", left[i], right[i], Environment.NewLine, ListsToString(left, right)));
+                }
+            }
+        }
+
+        private static string ListsToString<T>(IList<T> left, IList<T> right) {
+            string res = "    ";
+
+            foreach (object o in left) {
+                res += "\"" + o + "\", ";
+            }
+
+            res += Environment.NewLine + "    ";
+            foreach (object o in right) {
+                res += "\"" + o + "\", ";
+            }
+            return res;
         }
 
         public void ScenarioCallableClassToDelegate() {

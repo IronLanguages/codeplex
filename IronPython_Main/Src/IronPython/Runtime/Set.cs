@@ -311,12 +311,36 @@ namespace IronPython.Runtime {
             return SetHelpers.Union(this, s);
         }
 
+        public ISet union([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Union(res, s);
+            }
+            return res;
+        }
+
         public object intersection(object s) {
             return SetHelpers.Intersection(this, s);
         }
 
+        public ISet intersection([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Intersection(res, s);
+            }
+            return res;
+        }
+
         public object difference(object s) {
             return SetHelpers.Difference(this, s);
+        }
+
+        public ISet difference([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Difference(res, s);
+            }
+            return res;
         }
 
         public object symmetric_difference(object s) {
@@ -332,7 +356,9 @@ namespace IronPython.Runtime {
         }
 
         private void Init(params object[] o) {
-            if (o.Length > 1) throw PythonOps.TypeError("set expected at most 1 arguments, got {0}", o.Length);
+            if (o.Length > 1) {
+                throw PythonOps.TypeError("set expected at most 1 arguments, got {0}", o.Length);
+            }
 
             _items = new CommonDictionaryStorage();
             if (o.Length != 0) {
@@ -358,6 +384,16 @@ namespace IronPython.Runtime {
             }
         }
 
+        /// <summary>
+        /// Appends one or more IEnumerables to an existing set
+        /// </summary>
+        /// <param name="s"></param>
+        public void update([NotNull] params object[] ss) {
+            foreach (object s in ss) {
+                update(s);
+            }
+        }
+
         public void add(object o) {
             _items.Add(o, o);
         }
@@ -367,12 +403,24 @@ namespace IronPython.Runtime {
             _items = set._items;
         }
 
+        public void intersection_update([NotNull] params object[] ss) {
+            foreach (object s in ss) {
+                intersection_update(s);
+            }
+        }
+
         public void difference_update(object s) {
             SetCollection set = new SetCollection(PythonOps.GetEnumerator(s));
             foreach (object o in set) {
                 if (__contains__(o)) {
                     remove(o);
                 }
+            }
+        }
+
+        public void difference_update([NotNull] params object[] ss) {
+            foreach (object s in ss) {
+                difference_update(s);
             }
         }
 
@@ -391,7 +439,9 @@ namespace IronPython.Runtime {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             PythonOps.Hash(DefaultContext.Default, o);
-            if (!_items.Contains(o)) throw PythonOps.KeyError(o);
+            if (!_items.Contains(o)) {
+                throw PythonOps.KeyError(o);
+            }
 
             _items.Remove(o);
         }
@@ -421,7 +471,9 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceBitwiseAnd(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            if (set == null) {
+                throw PythonOps.TypeError("unsupported operand type(s) for &=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            }
 
             intersection_update(set);
             return this;
@@ -430,7 +482,9 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceBitwiseOr(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            if (set == null) {
+                throw PythonOps.TypeError("unsupported operand type(s) for |=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            }
 
             update(set);
             return this;
@@ -439,7 +493,9 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            if (set == null) {
+                throw PythonOps.TypeError("unsupported operand type(s) for -=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            }
 
             difference_update(set);
             return this;
@@ -448,7 +504,9 @@ namespace IronPython.Runtime {
         [SpecialName]
         public SetCollection InPlaceExclusiveOr(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            if (set == null) {
+                throw PythonOps.TypeError("unsupported operand type(s) for ^=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
+            }
 
             symmetric_difference_update(set);
             return this;
@@ -544,7 +602,9 @@ namespace IronPython.Runtime {
 
         public static bool operator >(SetCollection self, object other) {
             ISet s = other as ISet;
-            if (s == null) throw PythonOps.TypeError("can only compare to a set");
+            if (s == null) {
+                throw PythonOps.TypeError("can only compare to a set");
+            }
 
             if (s.__len__() >= self.__len__()) return false;
 
@@ -556,7 +616,9 @@ namespace IronPython.Runtime {
 
         public static bool operator <(SetCollection self, object other) {
             ISet s = other as ISet;
-            if (s == null) throw PythonOps.TypeError("can only compare to a set");
+            if (s == null) {
+                throw PythonOps.TypeError("can only compare to a set");
+            }
 
             if (s.__len__() <= self.__len__()) return false;
 
@@ -677,7 +739,9 @@ namespace IronPython.Runtime {
                 PythonType dt = cls as PythonType;
                 object res = dt.CreateInstance(context);
                 FrozenSetCollection fs = res as FrozenSetCollection;
-                if (fs == null) throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
+                if (fs == null) {
+                    throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
+                }
                 return fs;
             }
         }
@@ -695,7 +759,9 @@ namespace IronPython.Runtime {
             } else {
                 object res = ((PythonType)cls).CreateInstance(context, setData);
                 FrozenSetCollection fs = res as FrozenSetCollection;
-                if (fs == null) throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
+                if (fs == null) {
+                    throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
+                }
 
                 return fs;
             }
@@ -818,12 +884,36 @@ namespace IronPython.Runtime {
             return SetHelpers.Union(this, s);
         }
 
+        public ISet union([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Union(res, s);
+            }
+            return res;
+        }
+
         public object intersection(object s) {
             return (SetHelpers.Intersection(this, s));
         }
 
+        public ISet intersection([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Intersection(res, s);
+            }
+            return res;
+        }
+
         public object difference(object s) {
             return SetHelpers.Difference(this, s);
+        }
+
+        public ISet difference([NotNull] params object[] ss) {
+            ISet res = this;
+            foreach (object s in ss) {
+                res = SetHelpers.Difference(res, s);
+            }
+            return res;
         }
 
         public object symmetric_difference(object s) {
@@ -973,7 +1063,9 @@ namespace IronPython.Runtime {
 
         public static bool operator >(FrozenSetCollection self, object other) {
             ISet s = other as ISet;
-            if (s == null) throw PythonOps.TypeError("can only compare to a set");
+            if (s == null) {
+                throw PythonOps.TypeError("can only compare to a set");
+            }
 
             if (s.__len__() >= self.__len__()) return false;
 
@@ -985,7 +1077,9 @@ namespace IronPython.Runtime {
 
         public static bool operator <(FrozenSetCollection self, object other) {
             ISet s = other as ISet;
-            if (s == null) throw PythonOps.TypeError("can only compare to a set");
+            if (s == null) {
+                throw PythonOps.TypeError("can only compare to a set");
+            }
 
             if (s.__len__() <= self.__len__()) return false;
 

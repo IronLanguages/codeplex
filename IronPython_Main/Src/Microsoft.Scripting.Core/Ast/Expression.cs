@@ -330,6 +330,10 @@ namespace Microsoft.Linq.Expressions {
             get { return false; }
         }
 
+        /// <summary>
+        /// Returns the node type of this Expression. Extension nodes should return
+        /// ExpressionType.Extension when overriding this method.
+        /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         protected virtual ExpressionType GetNodeKind() {
 #if !MICROSOFT_SCRIPTING_CORE
@@ -339,8 +343,8 @@ namespace Microsoft.Linq.Expressions {
             }
 #endif
 
-            // the base type failed to overload GetNodeKind
-            throw new InvalidOperationException();
+            // the extension expression failed to override GetNodeKind
+            throw Error.ExtensionNodeMustOverrideMethod("Expression.GetNodeKind()");
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
@@ -352,8 +356,8 @@ namespace Microsoft.Linq.Expressions {
             }
 #endif
 
-            // the base type failed to overload GetExpressionType
-            throw new InvalidOperationException();
+            // the extension expression failed to override GetExpressionType
+            throw Error.ExtensionNodeMustOverrideMethod("Expression.GetExpressionType()");
         }
 
         /// <summary>

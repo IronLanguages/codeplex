@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -101,48 +102,49 @@ namespace IronPython.Runtime.Binding {
             // anyway we don't use the typical InstanceRestriction.
             BindingRestrictions selfRestrict = BindingRestrictions.GetExpressionRestriction(Ast.Equal(Expression, Ast.Constant(Value))).Merge(Restrictions);
 
-            if (Value.IsOnlyGeneric) {
-                return BindingHelpers.TypeErrorGenericMethod(Value.DeclaringType, Value.Name, selfRestrict);
-            }
-
-            if (Value.IsReversedOperator) {
-                ArrayUtils.SwapLastTwo(args);
-            }
-
-            BindingTarget target;
-            var binder = BinderState.GetBinderState(call).Binder;
-            DynamicMetaObject res = binder.CallMethod(
-                new ParameterBinderWithCodeContext(binder, codeContext),
-                Value.Targets,
+            return Value.MakeBuiltinFunctionCall(
+                call,
+                codeContext,
+                this,
                 args,
-                BindingHelpers.GetCallSignature(call),
+                false,  // no self
+                false,
                 selfRestrict,
-                PythonNarrowing.None,
-                Value.IsBinaryOperator ?
-                        PythonNarrowing.BinaryOperator :
-                        NarrowingLevel.All,
-                Value.Name,
-                out target
+                (newArgs) => {
+                    BindingTarget target;
+                    var binder = BinderState.GetBinderState(call).Binder;
+                    DynamicMetaObject res = binder.CallMethod(
+                        new ParameterBinderWithCodeContext(binder, codeContext),
+                        Value.Targets,
+                        newArgs,
+                        BindingHelpers.GetCallSignature(call),
+                        selfRestrict,
+                        PythonNarrowing.None,
+                        Value.IsBinaryOperator ?
+                                PythonNarrowing.BinaryOperator :
+                                NarrowingLevel.All,
+                        Value.Name,
+                        out target
+                    );
+
+                    return new BuiltinFunction.BindingResult(target, res);
+                }
             );
-
-            if (Value.IsBinaryOperator && args.Length == 2 && res.Expression.NodeType == ExpressionType.Throw) {
-                // Binary Operators return NotImplemented on failure.
-                res = new DynamicMetaObject(
-                    Ast.Property(null, typeof(PythonOps), "NotImplemented"),
-                    res.Restrictions
-                );
-            }
-
-            WarningInfo info;
-            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
-                res = info.AddWarning(codeContext, res);
-            }
-
-            return res;
         }
 
         private DynamicMetaObject/*!*/ MakeSelfCall(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[]/*!*/ args) {
-            CallSignature signature = BindingHelpers.GetCallSignature(call);
+            BindingRestrictions selfRestrict = Restrictions.Merge(
+                BindingRestrictions.GetTypeRestriction(
+                    Expression,
+                    typeof(BuiltinFunction)
+                )
+            ).Merge(
+                BindingRestrictions.GetExpressionRestriction(
+                    Value.MakeBoundFunctionTest(
+                        AstUtils.Convert(Expression, typeof(BuiltinFunction))
+                    )
+                )
+            );
 
             Expression instance = Ast.Property(
                 Ast.Convert(
@@ -152,80 +154,62 @@ namespace IronPython.Runtime.Binding {
                 typeof(BuiltinFunction).GetProperty("__self__")
             );
 
-            DynamicMetaObject self = GetInstance(
-                instance,
-                CompilerHelpers.GetType(Value.__self__),
-                Restrictions.Merge(
-                    BindingRestrictions.GetTypeRestriction(
-                        Expression,
-                        typeof(BuiltinFunction)
-                    )
-                ).Merge(
-                    BindingRestrictions.GetExpressionRestriction(
-                        Value.MakeBoundFunctionTest(
-                            AstUtils.Convert(Expression, typeof(BuiltinFunction))
-                        )
-                    )
-                )
+              DynamicMetaObject self = GetInstance(instance, CompilerHelpers.GetType(Value.__self__));
+                return Value.MakeBuiltinFunctionCall(
+                call,
+                codeContext,
+                this,
+                ArrayUtils.Insert(self, args),
+                true,   // has self
+                false,
+                selfRestrict,
+                (newArgs) => {
+                    CallSignature signature = BindingHelpers.GetCallSignature(call);
+                    DynamicMetaObject res;
+                    BinderState state = BinderState.GetBinderState(call);
+                    BindingTarget target;
+                    var mc = new ParameterBinderWithCodeContext(state.Binder, codeContext);
+                    if (Value.IsReversedOperator) {
+                        res = state.Binder.CallMethod(
+                            mc,
+                            Value.Targets,
+                            newArgs,
+                            GetReversedSignature(signature),
+                            self.Restrictions,
+                            NarrowingLevel.None,
+                            Value.IsBinaryOperator ?
+                                PythonNarrowing.BinaryOperator :
+                                NarrowingLevel.All,
+                            Value.Name,
+                            out target
+                        );
+                    } else {
+                        res = state.Binder.CallInstanceMethod(
+                            mc,
+                            Value.Targets,
+                            self,
+                            args,
+                            signature,
+                            self.Restrictions,
+                            NarrowingLevel.None,
+                            Value.IsBinaryOperator ?
+                                PythonNarrowing.BinaryOperator :
+                                NarrowingLevel.All,
+                            Value.Name,
+                            out target
+                        );
+                    }
+
+                    return new BuiltinFunction.BindingResult(target, res);
+                }
             );
-
-            DynamicMetaObject res;
-            BinderState state = BinderState.GetBinderState(call);
-            BindingTarget target;
-            var mc = new ParameterBinderWithCodeContext(state.Binder, codeContext);
-            if (Value.IsReversedOperator) {
-                res = state.Binder.CallMethod(
-                    mc,
-                    Value.Targets,
-                    ArrayUtils.Append(args, self),
-                    GetReversedSignature(signature),
-                    self.Restrictions,
-                    NarrowingLevel.None,
-                    Value.IsBinaryOperator ?
-                        PythonNarrowing.BinaryOperator :
-                        NarrowingLevel.All,
-                    Value.Name,
-                    out target
-                );
-            } else {
-                res = state.Binder.CallInstanceMethod(
-                    mc,
-                    Value.Targets,
-                    self,
-                    args,
-                    signature,
-                    self.Restrictions,
-                    NarrowingLevel.None,
-                    Value.IsBinaryOperator ?
-                        PythonNarrowing.BinaryOperator :
-                        NarrowingLevel.All,
-                    Value.Name,
-                    out target
-                );
-            }
-
-            if (Value.IsBinaryOperator && args.Length == 1 && res.Expression.NodeType == ExpressionType.Throw) { // 1 bound function + 1 arg
-                // binary operators return NotImplemented on a failure to call them
-                res = new DynamicMetaObject(
-                    Ast.Property(null, typeof(PythonOps), "NotImplemented"),
-                    res.Restrictions
-                );
-            }
-
-            WarningInfo info;
-            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
-                res = info.AddWarning(codeContext, res);
-            }
-
-            return res;
         }
 
-        private DynamicMetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType, BindingRestrictions/*!*/ restrictions) {
+        private DynamicMetaObject/*!*/ GetInstance(Expression/*!*/ instance, Type/*!*/ testType) {
             Assert.NotNull(instance, testType);
             object instanceValue = Value.__self__;
 
-            restrictions = restrictions.Merge(BindingRestrictions.GetTypeRestriction(instance, testType));
-
+            BindingRestrictions restrictions = BindingRestrictions.GetTypeRestriction(instance, testType);
             // cast the instance to the correct type
             if (CompilerHelpers.IsStrongBox(instanceValue)) {
                 instance = ReadStrongBoxValue(instance);

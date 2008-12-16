@@ -699,6 +699,7 @@ namespace Microsoft.Scripting.Interpretation {
 
         private static object InterpretTypeBinaryExpression(InterpreterState state, Expression expr) {
             TypeBinaryExpression node = (TypeBinaryExpression)expr;
+
             object value;
             if (InterpretAndCheckFlow(state, node.Expression, out value)) {
                 return value;
@@ -708,9 +709,13 @@ namespace Microsoft.Scripting.Interpretation {
                 return ControlFlow.NextForYield;
             }
 
-            return ScriptingRuntimeHelpers.BooleanToObject(
-                node.TypeOperand.IsInstanceOfType(value)
-            );
+            bool result;
+            if (node.NodeType == ExpressionType.TypeEqual) {
+                result = value != null && value.GetType() == node.TypeOperand;
+            } else {
+                result = node.TypeOperand.IsInstanceOfType(value);
+            }
+            return ScriptingRuntimeHelpers.BooleanToObject(result);
         }
 
         private static object InterpretDynamicExpression(InterpreterState state, Expression expr) {

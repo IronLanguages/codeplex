@@ -14,11 +14,14 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Types;
+    
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
@@ -39,6 +42,26 @@ namespace IronPython.Runtime.Binding {
             return conversion.FallbackConvert(this);
         }
 
+        public override System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> GetDynamicDataMembers() {
+            PythonContext pc = Value.PythonContext ?? DefaultContext.DefaultPythonContext;
+
+            IAttributesCollection dict = Value.GetMemberDictionary(pc.DefaultBinderState.Context);
+
+            foreach (KeyValuePair<SymbolId, object> members in dict.SymbolAttributes) {
+                // all members are data members in a type.
+                yield return new KeyValuePair<string, object>(SymbolTable.IdToString(members.Key), members.Value);
+            }
+        }
+
+        public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
+            PythonContext pc = Value.PythonContext ?? DefaultContext.DefaultPythonContext;
+
+            foreach (object o in Value.GetMemberNames(pc.DefaultBinderState.Context)) {
+                if (o is string) {
+                    yield return (string)o;
+                }
+            }
+        }
 
         public new PythonType/*!*/ Value {
             get {

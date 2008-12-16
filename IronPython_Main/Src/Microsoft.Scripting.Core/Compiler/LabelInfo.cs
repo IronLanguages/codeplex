@@ -182,19 +182,20 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return;
             }
 
+            StoreValue();
+            _ilg.Emit(_opCode, Label);
+        }
+
+        internal void StoreValue() {
             if (Value != null) {
                 _ilg.Emit(OpCodes.Stloc, Value);
             }
-            _ilg.Emit(_opCode, Label);
         }
 
         // We always read the value from a local, because we don't know
         // if there will be a "leave" instruction targeting it ("branch"
         // preserves its stack, but "leave" empties the stack)
         internal void Mark() {
-            if (Value != null) {
-                _ilg.Emit(OpCodes.Stloc, Value);
-            }
             _ilg.MarkLabel(Label);
             if (Value != null) {
                 _ilg.Emit(OpCodes.Ldloc, Value);

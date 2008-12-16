@@ -698,7 +698,7 @@ namespace IronPython.Runtime.Binding {
                             break;
                         case ArgumentType.Dictionary:
                             // Deferral?
-                            if (((IDictionary<object, object>)args[i].Value).Count > 0) {
+                            if (PythonOps.Length(args[i].Value) > 0) {
                                 return true;
                             }
                             break;

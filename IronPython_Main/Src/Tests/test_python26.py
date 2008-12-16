@@ -124,14 +124,152 @@ def test_print_function():
     finally:
         sys.stdout = oldout
 
-def test_deque():
-    import collections
+
+def test_user_mappings():
+    # **args should support arbitrary mapping types
+    class ms(str): pass
     
+    class x(object):
+        def __getitem__(self, key):
+            #print('gi', key, type(key))
+            return str('abc')
+        def keys(self): 
+            return [str('a'), str('b'), str('c'), ms('foo')]
+    
+    def f(**args): return args
+    f(**x())
+    l = [(k,v, type(k), type(v)) for k,v in f(**x()).iteritems()]
+
+    def mycmp(a, b):
+        r = cmp(str(a[0]), str(b[0]))
+        return r
+    l.sort(cmp = mycmp)
+    
+    AreEqual(l, [(str('a'), str('abc'), str, str), (str('b'), str('abc'), str, str), (str('c'), str('abc'), str, str), (str('foo'), str('abc'), ms, str), ])
+    
+    class y(object):
+        def __getitem__(self, key):
+                return lambda x:x
+        def keys(self): 
+            return ['key']
+    
+    max([2,3,4], **y())
+    
+    class y(object):
+        def __getitem__(self, key):
+                return lambda x:x
+        def keys(self): 
+            return [ms('key')]
+    
+    
+    max([2,3,4], **y())
+
+def test_type_subclasscheck():
+    global called
+    called = []
+    class metatype(type):
+        def __subclasscheck__(self, sub):
+            called.append((self, sub))
+            return True
+            
+    class myclass(object): __metaclass__ = metatype
+    
+    AreEqual(issubclass(int, myclass), True)
+    AreEqual(called, [(myclass, int)])
+    called = []
+    
+    AreEqual(isinstance(myclass(), int), False)
+    AreEqual(called, [])
+    
+def test_type_instancecheck():
+    global called
+    called = []
+    class metatype(type):
+        def __instancecheck__(self, inst):
+            called.append((self, inst))
+            return True
+            
+    class myclass(object): __metaclass__ = metatype
+
+    AreEqual(isinstance(4, myclass), True)
+    AreEqual(called, [(myclass, 4)])
+
+def test_deque():
+    from collections import deque
+
     # make sure __init__ clears existing contents
-    x = collections.deque([6,7,8,9])
-    x.__init__(collections.deque([1,2,3]))
-    AreEqual(x, collections.deque([1,2,3]))
+    x = deque([6,7,8,9])
+    x.__init__(deque([1,2,3]))
+    AreEqual(x, deque([1,2,3]))
     x.__init__()
-    AreEqual(x, collections.deque())
+    AreEqual(x, deque())
+
+    # test functionality with maxlen
+    x = deque(maxlen=5)
+    for i in xrange(5):
+        x.append(i)
+        AreEqual(x, deque(range(i+1)))
+    x.append(5)
+    AreEqual(x, deque([1,2,3,4,5]))
+    x.appendleft(100)
+    AreEqual(x, deque([100,1,2,3,4]))
+    x.extend(range(10))
+    AreEqual(x, deque([5,6,7,8,9]))
+    x.extendleft(range(10,20))
+    AreEqual(x, deque([19,18,17,16,15]))
+    x.remove(19)
+    AreEqual(x, deque([18,17,16,15]))
+    x.rotate()
+    AreEqual(x, deque([15,18,17,16]))
+    x.rotate(-8)
+    AreEqual(x, deque([15,18,17,16]))
+    x.pop()
+    AreEqual(x, deque([15,18,17]))
+    x.rotate(-1)
+    AreEqual(x, deque([18,17,15]))
+    x.popleft()
+    AreEqual(x, deque([17,15]))
+    x.extendleft(range(4))
+    AreEqual(x, deque([3,2,1,0,17]))
+    x.rotate(3)
+    AreEqual(x, deque([1,0,17,3,2]))
+    x.extend(range(3))
+    AreEqual(x, deque([3,2,0,1,2]))
+    y = x.__copy__()
+    AreEqual(x, y)
+    x.extend(range(4))
+    y.extend(range(4))
+    AreEqual(x, y)
+
+def test_set_multiarg():
+    from iptest.type_util import myset, myfrozenset
+    
+    s1 = [2, 4, 5]
+    s2 = [4, 7, 9, 10]
+    s3 = [2, 4, 5, 6]
+    
+    for A in (set, myset):
+        for B in (set, frozenset, myset, myfrozenset):
+            as1, as2, as3 = A(s1), A(s2), A(s3)
+            bs1, bs2, bs3 = B(s1), B(s2), B(s3)
+            
+            AreEqual(as1.union(as2, as3), A([2, 4, 5, 6, 7, 9, 10]))
+            AreEqual(as1.intersection(as2, as3), A([4]))
+            AreEqual(as2.difference(as3, A([2, 7, 8])), A([9, 10]))
+            
+            AreEqual(bs1.union(as2, as3), A([2, 4, 5, 6, 7, 9, 10]))
+            AreEqual(bs1.intersection(as2, as3), A([4]))
+            AreEqual(bs2.difference(as3, A([2, 7, 8])), A([9, 10]))
+            
+            AreEqual(as1.union(bs2, as3), A([2, 4, 5, 6, 7, 9, 10]))
+            AreEqual(as1.intersection(as2, bs3), A([4]))
+            AreEqual(as2.difference(as3, B([2, 7, 8])), A([9, 10]))
+            
+            as1.update(as2, bs3)
+            AreEqual(as1, B([2, 4, 5, 6, 7, 9, 10]))
+            as2.difference_update(bs3, A([2, 7, 8]))
+            AreEqual(as2, A([9, 10]))
+            as3.intersection_update(bs2, bs1)
+            AreEqual(as3, B([4]))
 
 run_test(__name__)

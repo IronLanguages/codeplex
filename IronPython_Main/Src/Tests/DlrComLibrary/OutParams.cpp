@@ -251,6 +251,7 @@ STDMETHODIMP COutParams::mUShort(USHORT a, USHORT* b)
 
 STDMETHODIMP COutParams::mVariant(VARIANT a, VARIANT* b)
 {
+	VariantClear(b);
 	return VariantCopy(b, &a);
 }
 

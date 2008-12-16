@@ -210,9 +210,6 @@ namespace Microsoft.Scripting {
             site = FindSinkMethod(name);
 
             if (site != null && site._target != null) {
-                // TODO: currently we only pass parameters by value
-                // TODO: however modifiers might specify that some params
-                // TODO: are by ref. Should we wrap those into IStrongBox-like objects?
                 return site._target.DynamicInvoke(new object[] { args });
             }
 

@@ -72,7 +72,7 @@ namespace Microsoft.Scripting {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
         internal Exception GetException() {
-            Debug.Assert(pfnDeferredFillIn == IntPtr.Zero); // TODO
+            Debug.Assert(pfnDeferredFillIn == IntPtr.Zero);
 #if DEBUG
             System.Diagnostics.Debug.Assert(wReserved != -1);
             wReserved = -1; // to ensure that the method gets called only once

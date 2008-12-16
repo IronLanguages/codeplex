@@ -15,12 +15,13 @@
 
 using System; using Microsoft;
 using System.Collections;
-using Microsoft.Linq.Expressions;
+using System.Collections.Generic;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
+using Microsoft.Linq.Expressions;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -50,7 +51,7 @@ namespace IronPython.Runtime.Binding {
 
         public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             CodeContext context = BinderState.GetBinderState(action).Context;
-            IPythonObject sdo = (IPythonObject)args[0].Value;
+            IPythonObject sdo = Value;
             PythonTypeSlot foundSlot;
 
             if (TryGetGetAttribute(context, sdo.PythonType, out foundSlot)) {
@@ -102,6 +103,23 @@ namespace IronPython.Runtime.Binding {
                 context, 
                 args
             );
+        }
+
+        public override System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> GetDynamicDataMembers() {
+            foreach (string name in GetDynamicMemberNames()) {
+                object val = Value.PythonType.GetMember(Value.PythonType.PythonContext.DefaultBinderState.Context, Value, SymbolTable.StringToId(name));
+                if (BindingHelpers.IsDataMember(val)) {
+                    yield return new KeyValuePair<string, object>(name, val);
+                }
+            } 
+        }
+
+        public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
+            foreach (object o in Value.PythonType.GetMemberNames(Value.PythonType.PythonContext.DefaultBinderState.Context, Value)) {
+                if (o is string) {
+                    yield return (string)o;
+                }
+            }
         }
 
         #endregion
