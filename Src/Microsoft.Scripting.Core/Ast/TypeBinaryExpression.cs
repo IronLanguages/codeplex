@@ -94,7 +94,7 @@ namespace Microsoft.Linq.Expressions {
                         value,
                         typeof(object).GetMethod("GetType")
                     ),
-                    Expression.Constant(_typeOperand)
+                    Expression.Constant(_typeOperand, typeof(Type))
                 )
             );
         }

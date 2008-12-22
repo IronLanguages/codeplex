@@ -54,7 +54,54 @@ def test_interface_inheritance():
     System.Array.Sort(array, 0, 10, MyDerivedComparer())
     System.Array.Sort(array, 0, 10, MyFurtherDerivedComparer())
     
-def test_bases():    
+def test_inheritance_generic_method():
+    #
+    # Verify we can inherit from an interface containing a generic method
+    #
+
+    class MyGenericMethods(IGenericMethods):
+        def Factory0(self, TParam = None):
+            self.type = clr.GetClrType(TParam).FullName
+            return TParam("123")
+        def Factory1(self, x, T):
+            self.type = clr.GetClrType(T).FullName
+            return T("456") + x
+        def OutParam(self, x, T):
+            x.Value = T("2")
+            return True
+        def RefParam(self, x, T):
+            x.Value = x.Value + T("10")
+        def Wild(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            self.args[2].Value = kwargs['T2']('1.5')
+            return self.args[3][0]
+    
+    c = MyGenericMethods()
+    AreEqual(GenericMethodTester.TestIntFactory0(c), 123)
+    AreEqual(c.type, 'System.Int32')
+    
+    AreEqual(GenericMethodTester.TestStringFactory1(c, "789"), "456789")
+    AreEqual(c.type, 'System.String')
+    
+    AreEqual(GenericMethodTester.TestIntFactory1(c, 321), 777)
+    AreEqual(c.type, 'System.Int32')
+    
+    AreEqual(GenericMethodTester.TestStringFactory0(c), '123')
+    AreEqual(c.type, 'System.String')
+    
+    AreEqual(GenericMethodTester.TestOutParamString(c), '2')
+    AreEqual(GenericMethodTester.TestOutParamInt(c), 2)
+    
+    AreEqual(GenericMethodTester.TestRefParamString(c, '10'), '1010')
+    AreEqual(GenericMethodTester.TestRefParamInt(c, 10), 20)
+    
+    x = System.Collections.Generic.List[int]((2, 3, 4))
+    r = GenericMethodTester.GoWild(c, True, 'second', x)
+    AreEqual(r.Length, 2)
+    AreEqual(r[0], 1.5)
+
+def test_bases():
     #
     # Verify that changing __bases__ works
     #
@@ -1265,6 +1312,20 @@ def test_ienumerable__getiter__():
         AreEqual(stuff-1, called)
         called +=1
     AreEqual(called, 2)
-    
+
+def test_overload_functions():
+    for x in min.Overloads.Functions:
+        Assert(x.__doc__.startswith('object min('))
+        Assert(x.__doc__.find('CodeContext') == -1)
+    # multiple accesses should return the same object
+    AreEqual(
+        id(min.Overloads[object, object]), 
+        id(min.Overloads[object, object])
+    )
+
+def test_clr_dir():
+    Assert('IndexOf' not in clr.Dir('abc'))
+    Assert('IndexOf' in clr.DirClr('abc'))
+
 run_test(__name__)
 

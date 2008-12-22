@@ -66,7 +66,19 @@ namespace IronPython.Runtime {
             }
         }
 
+        public object __func__ {
+            get {
+                return _func;
+            }
+        }
+
         public object im_self {
+            get {
+                return _inst;
+            }
+        }
+
+        public object __self__ {
             get {
                 return _inst;
             }

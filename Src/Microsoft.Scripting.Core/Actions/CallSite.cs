@@ -610,8 +610,7 @@ namespace Microsoft.Runtime.CompilerServices {
 
             // Need to compile with forceDynamic because T could be invisible,
             // or one of the argument types could be invisible
-            MethodInfo method;
-            return LambdaCompiler.CompileLambda<T>(lambda, true, out method);
+            return LambdaCompiler.CompileDynamic(lambda);
         }
 
         /// <summary>

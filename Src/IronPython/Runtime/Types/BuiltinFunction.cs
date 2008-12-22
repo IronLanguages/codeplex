@@ -245,10 +245,10 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Gets the target methods that we'll be calling.  
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        internal IList<MethodBase> Targets {
+        public IList<MethodBase> Targets {
+            [PythonHidden]
             get {
-                return _data.Targets;
+                return _data.Targets;                
             }
         }
 
@@ -531,9 +531,33 @@ namespace IronPython.Runtime.Types {
             get {
                 // The mapping is actually provided by a class rather than a dictionary
                 // since it's hard to generate all the keys of the signature mapping when
-                // two type systems are involved.  Creating the mapping object is quite
-                // cheap so we don't cache a copy.
-                return new BuiltinFunctionOverloadMapper(this, IsUnbound ? null : _instance);
+                // two type systems are involved.  The mapping object is cached because we use
+                // object equality in rules of built-in functions and want to avoid creating
+                // multiple instances of them.
+                if (_data.OverloadMapper == null) {
+                    Interlocked.CompareExchange(
+                        ref _data.OverloadMapper,
+                        new BuiltinFunctionOverloadMapper(this, IsUnbound ? null : _instance),
+                        null);
+                }
+                return _data.OverloadMapper;
+            }
+        }
+
+        /// <summary>
+        /// Gets the overload dictionary for the logical function.  These overloads
+        /// are never bound to an instance.
+        /// </summary>
+        internal Dictionary<BuiltinFunction.TypeList, BuiltinFunction> OverloadDictionary {
+            get {
+                if (_data.OverloadDictionary == null) {
+                    Interlocked.CompareExchange(
+                        ref _data.OverloadDictionary,
+                        new Dictionary<BuiltinFunction.TypeList, BuiltinFunction>(),
+                        null);
+                }
+
+                return _data.OverloadDictionary;
             }
         }
 
@@ -653,7 +677,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private class TypeList {
+        internal class TypeList {
             private Type[] _types;
 
             public TypeList(Type[] types) {
@@ -726,6 +750,8 @@ namespace IronPython.Runtime.Types {
             public readonly Type/*!*/ DeclaringType;
             public FunctionType Type;
             public Dictionary<TypeList, BuiltinFunction> BoundGenerics;
+            public Dictionary<BuiltinFunction.TypeList, BuiltinFunction> OverloadDictionary;
+            public BuiltinFunctionOverloadMapper OverloadMapper;
 
             public BuiltinFunctionData(string name, MethodBase[] targets, Type declType, FunctionType functionType) {
                 Name = name;

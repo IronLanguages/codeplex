@@ -2836,9 +2836,32 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        public static DynamicMetaObjectBinder MakeListCallAction(int count) {
-            Argument[] infos = CompilerHelpers.MakeRepeatedArray(Argument.Simple, count);
-            infos[count - 1] = new Argument(ArgumentType.List);
+        /// <summary>
+        /// Convert object to a given type. This code is equivalent to NewTypeMaker.EmitConvertFromObject
+        /// except that it happens at runtime instead of compile time.
+        /// </summary>
+        public static T ConvertFromObject<T>(object obj) {
+            Type toType = typeof(T);
+            object result;
+            MethodInfo fastConvertMethod = PythonBinder.GetFastConvertMethod(toType);
+            if (fastConvertMethod != null) {
+                result = fastConvertMethod.Invoke(null, new object[] { obj });
+            } else if (typeof(Delegate).IsAssignableFrom(toType)) {
+                result = Converter.ConvertToDelegate(obj, toType);
+            } else {
+                result = obj;
+            }
+            return (T)obj;
+        }
+
+        public static DynamicMetaObjectBinder MakeComplexCallAction(int count, bool list, SymbolId[] keywords) {
+            Argument[] infos = CompilerHelpers.MakeRepeatedArray(Argument.Simple, count + keywords.Length);
+            if (list) {
+                infos[count - 1] = new Argument(ArgumentType.List);
+            }
+            for (int i = 0; i < keywords.Length; i++) {
+                infos[count + i] = new Argument(keywords[i]);
+            }
 
             return new PythonInvokeBinder(
                 DefaultContext.DefaultPythonContext.DefaultBinderState,

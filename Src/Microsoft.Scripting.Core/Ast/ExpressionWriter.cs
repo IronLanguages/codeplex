@@ -479,11 +479,6 @@ namespace Microsoft.Linq.Expressions {
                 return ".null";
             }
 
-            ITemplatedValue itv = value as ITemplatedValue;
-            if (itv != null) {
-                return ".template" + itv.Index.ToString(CultureInfo.CurrentCulture) + " (" + itv.ObjectValue.ToString() + ")";
-            }
-
             string s;
             if ((s = value as string) != null) {
                 return "\"" + s + "\"";
@@ -532,6 +527,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private static bool NeedsParentheses(Expression parent, Expression child) {
+            Debug.Assert(parent != null);
+            if (child == null) { 
+                return false;
+            }
             return GetOperatorPrecedence(child) < GetOperatorPrecedence(parent);
         }
         

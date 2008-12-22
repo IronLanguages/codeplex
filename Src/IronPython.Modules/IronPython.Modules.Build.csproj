@@ -9,6 +9,7 @@
     <WarningsNotAsErrors>618,1616,1685,3005,3008,649</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
+    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />

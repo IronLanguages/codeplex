@@ -960,4 +960,8 @@ def test_raise_inside_str():
 	    raise error
     AssertError(error, f)
 
+def test_exception_doc():
+    # should be accessible, CPython and IronPython have different strings though.
+    Exception().__doc__
+
 run_test(__name__)

@@ -15,10 +15,13 @@
 using System; using Microsoft;
 
 
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 using System.Runtime.InteropServices;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -141,13 +144,15 @@ namespace IronPython.Runtime {
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
             return true;
         }
+        
+        [SpecialName, PropertyMethod, WrapperDescriptor]
+        public static object Get__doc__(PythonProperty self) {
+            return self._doc;
+        }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public object __doc__ {
-            get { return _doc; }
-            set {
-                throw PythonOps.TypeError("'property' object is immutable");
-            }
+        [SpecialName, PropertyMethod, WrapperDescriptor]
+        public static void Set__doc__(PythonProperty self) {
+            throw PythonOps.TypeError("'property' object is immutable");
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
@@ -177,18 +182,23 @@ namespace IronPython.Runtime {
         public object __get__(CodeContext/*!*/ context, object instance) { return __get__(context, instance, null); }
 
         public new object __get__(CodeContext/*!*/ context, object instance, object owner) {
-            if (instance == null) return this;
-            if (fget != null) return PythonCalls.Call(context, fget, instance);
+            if (instance == null) {
+                return this;
+            } else if (fget != null) {
+                var site = PythonContext.GetContext(context).PropertyGetSite;
+
+                return site.Target(site, context, fget, instance);
+            }
             throw PythonOps.AttributeError("unreadable attribute");
         }
 
         public bool __set__(CodeContext/*!*/ context, object instance, object value) {
             if (instance == null) {
                 return false;
-            }
+            } else if (fset != null) {
+                var site = PythonContext.GetContext(context).PropertySetSite;
 
-            if (fset != null) {
-                PythonCalls.Call(context, fset, instance, value);
+                site.Target(site, context, fset, instance, value);
                 return true;
             } else {
                 throw PythonOps.AttributeError("readonly attribute");
@@ -197,11 +207,13 @@ namespace IronPython.Runtime {
 
         public new bool __delete__(CodeContext/*!*/ context, object instance) {
             if (fdel != null) {
-                PythonCalls.Call(context, fdel, instance);
-                return true;
-            } else {
-                if (instance == null) return false;
+                var site = PythonContext.GetContext(context).PropertyDeleteSite;
 
+                site.Target(site, context, fdel, instance);
+                return true;
+            } else if (instance == null) {
+                return false;
+            } else {
                 throw PythonOps.AttributeError("undeletable attribute");
             }
         }

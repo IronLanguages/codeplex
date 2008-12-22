@@ -266,6 +266,11 @@ namespace IronPython.Runtime.Types {
             ParameterInfo[] pis = info.GetParameters();
             for (int i = 0; i < pis.Length - endParamSkip; i++) {
                 ParameterInfo pi = pis[i];
+                if (i == 0 && pi.ParameterType == typeof(CodeContext)) {
+                    // hide CodeContext parameters
+                    continue;
+                }
+
                 if ((pi.Attributes & ParameterAttributes.Out) == ParameterAttributes.Out || pi.ParameterType.IsByRef) {
                     if (returnCount == 1) {
                         retType.Insert(0, "(");

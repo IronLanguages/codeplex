@@ -122,6 +122,8 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, PythonFunction, object, object, int>> _sharedPythonFunctionCompareSite;
         private CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object, int>> _sharedBuiltinFunctionCompareSite;
 
+        private CallSite<Func<CallSite, CodeContext, object, object, object>> _propGetSite, _propDelSite;
+        private CallSite<Func<CallSite, CodeContext, object, object, object, object>> _propSetSite;
         private CompiledLoader _compiledLoader;
         internal bool _importWarningThrows;
         private CommandDispatcher _commandDispatcher; // can be null
@@ -2637,6 +2639,60 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object>> PropertyGetSite {
+            get {
+                if (_propGetSite == null) {
+                    Interlocked.CompareExchange(ref _propGetSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
+                            new PythonInvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(1)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propGetSite;
+            }
+        }
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object>> PropertyDeleteSite {
+            get {
+                if (_propDelSite == null) {
+                    Interlocked.CompareExchange(ref _propDelSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
+                            new PythonInvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(1)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propDelSite;
+            }
+        }
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object, object>> PropertySetSite {
+            get {
+                if (_propSetSite == null) {
+                    Interlocked.CompareExchange(ref _propSetSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
+                            new PythonInvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(2)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propSetSite;
+            }
+        }
 
         internal new PythonBinder Binder {
             get {

@@ -16,8 +16,11 @@
 using System; using Microsoft;
 using System.Collections.Generic;
 using System.Reflection;
-using IronPython.Runtime.Operations;
+using System.Threading;
+
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
 
@@ -25,6 +28,7 @@ namespace IronPython.Runtime.Types {
     public class BuiltinFunctionOverloadMapper : ICodeFormattable {
         private BuiltinFunction _function;
         private object _instance;
+        private PythonTuple _allOverloads;  // overloads are stored here and may be bound to an instance
 
         public BuiltinFunctionOverloadMapper(BuiltinFunction builtinFunction, object instance) {
             this._function = builtinFunction;
@@ -38,6 +42,10 @@ namespace IronPython.Runtime.Types {
         }
 
         protected object GetOverload(Type[] sig, IList<MethodBase> targets) {
+            return GetOverload(sig, targets, true);
+        }
+
+        private object GetOverload(Type[] sig, IList<MethodBase> targets, bool wrapCtors) {
             // We can still end up with more than one target since generic and non-generic
             // methods can share the same name and signature. So we'll build up a new
             // reflected method with all the candidate targets. A caller can then index this
@@ -45,17 +53,25 @@ namespace IronPython.Runtime.Types {
             // fully disambiguate the target.
 
             // Search for targets with the right number of arguments.
-            MethodBase[] newTargets = FindMatchingTargets(sig, targets);
+            BuiltinFunction bf;
+            BuiltinFunction.TypeList tl = new BuiltinFunction.TypeList(sig);
+            lock (_function.OverloadDictionary) {
+                if (!_function.OverloadDictionary.TryGetValue(tl, out bf)) {
+                    MethodBase[] newTargets = FindMatchingTargets(sig, targets);
 
-            if (targets == null)
-                throw ScriptingRuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
+                    if (targets == null)
+                        throw ScriptingRuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
 
-            BuiltinFunction bf = new BuiltinFunction(_function.Name, newTargets, Function.DeclaringType, _function.FunctionType);
+                    _function.OverloadDictionary[tl] = bf = new BuiltinFunction(_function.Name, newTargets, Function.DeclaringType, _function.FunctionType);
+                }
+            }
 
             if (_instance != null) {
                 return bf.BindToInstance(_instance);
-            } else {
+            } else if (wrapCtors) {
                 return GetTargetFunction(bf);
+            } else {
+                return bf;
             }
         }
 
@@ -93,6 +109,29 @@ namespace IronPython.Runtime.Types {
         public virtual IList<MethodBase> Targets {
             get {
                 return _function.Targets;
+            }
+        }
+
+        public PythonTuple Functions {
+            get {
+                if (_allOverloads == null) {
+                    object[] res = new object[Targets.Count];
+                    int writeIndex = 0;
+                    foreach (MethodBase mb in Targets) {
+                        ParameterInfo[] pis = mb.GetParameters();
+                        Type[] types = new Type[pis.Length];
+
+                        for (int i = 0; i < pis.Length; i++) {
+                            types[i] = pis[i].ParameterType;
+                        }
+
+                        res[writeIndex++] = GetOverload(types, Targets, false);
+                    }
+
+                    Interlocked.CompareExchange(ref _allOverloads, PythonTuple.MakeTuple(res), null);
+                }
+
+                return _allOverloads;
             }
         }
 
