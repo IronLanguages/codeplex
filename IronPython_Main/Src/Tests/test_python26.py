@@ -194,6 +194,26 @@ def test_type_instancecheck():
     AreEqual(isinstance(4, myclass), True)
     AreEqual(called, [(myclass, 4)])
 
+def test_complex():
+    strs = ["5", "2.61e-5", "3e+010", "1.40e09"]
+    vals = [5, 2.61e-5, 3e10, 1.4e9]
+    
+    strings = ["j", "+j", "-j"] + strs + map(lambda x: x + "j", strs)
+    values = [1j, 1j, -1j] + vals + map(lambda x: x * 1j, vals)
+    
+    for s0,v0 in zip(strs, vals):
+        for s1,v1 in zip(strs, vals):
+            for sign,mult in [("+",1), ("-",-1)]:
+                newstrs = [s0+sign+s1+"j", s1+sign+s0+"j", s0+"j"+sign+s1, s1+"j"+sign+s0]
+                newvals = [complex(v0,v1*mult), complex(v1,v0*mult), complex(v1*mult,v0), complex(v0*mult,v1)]
+                strings += newstrs
+                strings += map(lambda x: "(" + x + ")", newstrs)
+                values += newvals * 2
+    
+    for s,v in zip(strings, values):
+        AreEqual(complex(s), v)
+        AreEqual(v, complex(v.__repr__()))
+
 def test_deque():
     from collections import deque
 
@@ -271,5 +291,67 @@ def test_set_multiarg():
             AreEqual(as2, A([9, 10]))
             as3.intersection_update(bs2, bs1)
             AreEqual(as3, B([4]))
+
+def test_attrgetter():
+    import operator
+    
+    tests = ['abc', 3, ['d','e','f'], (1,4,9)]
+    
+    get0 = operator.attrgetter('__class__.__name__')
+    get1 = operator.attrgetter('__class__..')
+    get2 = operator.attrgetter('__class__..__name__')
+    get3 = operator.attrgetter('__class__.__name__.__class__.__name__')
+    
+    for x in tests:
+        AreEqual(x.__class__.__name__, get0(x))
+        AssertError(AttributeError, get1, x)
+        AssertError(AttributeError, get2, x)
+        AreEqual('str', get3(x))
+
+def test_im_aliases():
+    def func(): pass
+    class foo(object):
+        def f(self): pass
+    class bar(foo):
+        def g(self): pass
+    class yak(foo):
+        def f(self): pass
+    
+    a = foo()
+    b = foo()
+    c = bar()
+    d = bar()
+    e = yak()
+    f = yak()
+    
+    fs = [foo.f, a.f, b.f, c.f, d.f]
+    gs = [bar.g, c.g, d.g]
+    f2s = [yak.f, e.f, f.f]
+    all = fs + gs + f2s
+    
+    for x in all:
+        AreEqual(x.im_self, x.__self__)
+        AreEqual(x.im_func, x.__func__)
+    
+    for r in [fs, f2s]:
+        for s in [fs, f2s]:
+            if r == s:
+                for x in r:
+                    if x.__func__ != None:
+                        for y in r:
+                            AreEqual(x.__func__, y.__func__)
+            else:
+                for x in r:
+                    if x.__func__ != None and x.__self__ != None:
+                        for y in s:
+                            if x != y:
+                                AreNotEqual(x.__self__, y.__self__)
+                                AreNotEqual(x.__func__, y.__func__)
+    
+    
+    AreEqual(a.f.__func__, c.f.__func__)
+    AreEqual(b.f.__func__, d.f.__func__)
+    AreNotEqual(a.f.__self__, b.f.__self__)
+    AreNotEqual(b.f.__self__, d.f.__self__)
 
 run_test(__name__)

@@ -2573,6 +2573,7 @@ def test_cp10291():
         AreEqual(k1()(), "K1")
         AreEqual(k2()(), "K2K1")
 
+@skip("win32") # should be reenabled against CPython26
 def test_cp11760():
     class KNew(object):
         def __str__(self): return "KNew"
@@ -2586,11 +2587,10 @@ def test_cp11760():
                     '__get__', '__getattribute__', '__hash__', '__init__',
                     '__new__', '__reduce__', '__reduce_ex__', '__repr__',
                     '__setattr__', '__str__', 'im_class',
-                    'im_func', 'im_self',
+                    'im_func', '__func__', 'im_self', '__self__',
                     #'__call__', '__cmp__',
                     ]:
             Assert(x in dir_str, x + " is not in dir(K().__str__)")
-
 
 def test_delattr():
     global called

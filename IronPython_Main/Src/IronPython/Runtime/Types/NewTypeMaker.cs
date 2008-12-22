@@ -1344,8 +1344,6 @@ namespace IronPython.Runtime.Types {
                 if (!ShouldOverrideVirtual(mi) || !CanOverrideMethod(mi)) continue;
 
                 if (mi.IsPublic || mi.IsFamily || mi.IsFamilyOrAssembly) {
-                    if (mi.IsGenericMethodDefinition) continue;
-
                     if (mi.IsSpecialName) {
                         OverrideSpecialName(mi, specialNames, overriddenProperties);
                     } else {
@@ -1592,6 +1590,10 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public static void EmitConvertFromObject(ILGen il, Type toType) {
             if (toType == typeof(object)) return;
+            if (toType.IsGenericParameter) {
+                il.EmitCall(typeof(PythonOps).GetMethod("ConvertFromObject").MakeGenericMethod(toType));
+                return;
+            }
 
             MethodInfo fastConvertMethod = PythonBinder.GetFastConvertMethod(toType);
             if (fastConvertMethod != null) {
@@ -1822,6 +1824,32 @@ namespace IronPython.Runtime.Types {
             }
             Type[] signature = ReflectionUtils.GetParameterTypes(decl.GetParameters());
             impl = _tg.DefineMethod(decl.Name, finalAttrs, decl.ReturnType, signature);
+            if (decl.IsGenericMethodDefinition) {
+                Type[] args = decl.GetGenericArguments();
+                string[] names = new string[args.Length];
+                for (int i = 0; i < args.Length; i++) {
+                    names[i] = args[i].Name;
+                }
+                var builders = impl.DefineGenericParameters(names);
+                for (int i = 0; i < args.Length; i++) {
+                    // Copy template parameter attributes
+                    builders[i].SetGenericParameterAttributes(args[i].GenericParameterAttributes);
+
+                    // Copy template parameter constraints
+                    Type[] constraints = args[i].GetGenericParameterConstraints();
+                    List<Type> interfaces = new List<Type>(constraints.Length);
+                    foreach (Type constraint in constraints) {
+                        if (constraint.IsInterface) {
+                            interfaces.Add(constraint);
+                        } else {
+                            builders[i].SetBaseTypeConstraint(constraint);
+                        }
+                    }
+                    if (interfaces.Count > 0) {
+                        builders[i].SetInterfaceConstraints(interfaces.ToArray());
+                    }
+                }
+            }
             return CreateILGen(impl.GetILGenerator());
         }
 
@@ -1845,17 +1873,35 @@ namespace IronPython.Runtime.Types {
                     list = true;
                 }
             }
-
             ParameterInfo[] args = pis;
             int nargs = args.Length - firstArg;
+            Type[] genericArgs = mi.GetGenericArguments();
 
             // Create the action
             ILGen cctor = GetCCtor();
-            cctor.EmitInt(nargs);
-            cctor.EmitCall(typeof(PythonOps).GetMethod(list ? "MakeListCallAction" : "MakeSimpleCallAction"));
+            if (list || genericArgs.Length > 0) {
+                // Use a complex call signature that includes param array and keywords
+                cctor.EmitInt(nargs);
+                cctor.EmitBoolean(list);
+
+                // Emit an array of SymbolIds for the types
+                cctor.EmitInt(genericArgs.Length);
+                cctor.Emit(OpCodes.Newarr, typeof(SymbolId));
+                for (int i = 0; i < genericArgs.Length; i++) {
+                    cctor.Emit(OpCodes.Dup);
+                    cctor.EmitInt(i);
+                    cctor.Emit(OpCodes.Ldelema, typeof(SymbolId));
+                    EmitSymbolId(cctor, genericArgs[i].Name);
+                    cctor.Emit(OpCodes.Stobj, typeof(SymbolId));
+                }
+                cctor.EmitCall(typeof(PythonOps).GetMethod("MakeComplexCallAction"));
+            } else {
+                cctor.EmitInt(nargs);
+                cctor.EmitCall(typeof(PythonOps).GetMethod("MakeSimpleCallAction"));
+            }
 
             // Create the dynamic site
-            Type siteType = CompilerHelpers.MakeCallSiteType(MakeSiteSignature(nargs));
+            Type siteType = CompilerHelpers.MakeCallSiteType(MakeSiteSignature(nargs + genericArgs.Length));
             FieldBuilder site = _tg.DefineField("site$" + _site++, siteType, FieldAttributes.Private | FieldAttributes.Static);
             cctor.EmitCall(siteType.GetMethod("Create"));
             cctor.EmitFieldSet(site);
@@ -1880,6 +1926,11 @@ namespace IronPython.Runtime.Types {
                 if (rf != null) {
                     fixers.Add(rf);
                 }
+            }
+
+            for (int i = 0; i < genericArgs.Length; i++) {
+                il.EmitType(genericArgs[i]);
+                il.EmitCall(typeof(DynamicHelpers).GetMethod("GetPythonTypeFromType"));
             }
 
             il.EmitCall(target.FieldType, "Invoke");
@@ -1942,7 +1993,8 @@ namespace IronPython.Runtime.Types {
                 Type concreteType = typeof(StrongBox<>).MakeGenericType(elementType);
                 LocalBuilder refSlot = il.DeclareLocal(concreteType);
                 il.EmitLoadValueIndirect(elementType);
-                il.EmitNew(concreteType, new Type[] { elementType });
+                ConstructorInfo ci = concreteType.GetConstructor(new Type[] { elementType });
+                il.Emit(OpCodes.Newobj, ci);
                 il.Emit(OpCodes.Stloc, refSlot);
                 il.Emit(OpCodes.Ldloc, refSlot);
                 return new ReturnFixer(refSlot, parameter, index);

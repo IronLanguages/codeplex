@@ -53,6 +53,11 @@ namespace IronPython.Modules {
                 if (s == null) {
                     throw PythonOps.TypeError("attribute name must be string");
                 }
+                int dotPos = s.IndexOf('.');
+                if (dotPos >= 0) {
+                    object nextParam = GetOneAttr(context, param, s.Substring(0, dotPos));
+                    return GetOneAttr(context, nextParam, s.Substring(dotPos + 1, s.Length - dotPos - 1));
+                }
                 return PythonOps.GetBoundAttr(context, param, SymbolTable.StringToId(s));
             }
         }

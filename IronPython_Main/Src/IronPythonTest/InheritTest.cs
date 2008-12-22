@@ -1036,7 +1036,49 @@ namespace IronPythonTest {
             return null;
         }
     }
+
+    public interface IGenericMethods {
+        TParam Factory0<TParam>();
+        T Factory1<T>(T arg);
+        bool OutParam<T>(out T arg);
+        void RefParam<T>(ref T arg);
+        T3 Wild<T1, T2, T3>(bool first, ref IEnumerable<T1> second, out T2 third, IList<T3> fourth);
+
+    }
+
+    public static class GenericMethodTester {
+        public static int TestIntFactory0(IGenericMethods i) { return i.Factory0<int>(); }
+        public static string TestStringFactory0(IGenericMethods i) { return i.Factory0<string>(); }
+        public static int TestIntFactory1(IGenericMethods i, int test) { return i.Factory1<int>(test); }
+        public static string TestStringFactory1(IGenericMethods i, string test) { return i.Factory1<string>(test); }
+        public static int TestOutParamInt(IGenericMethods i) {
+            int value;
+            i.OutParam<int>(out value);
+            return value;
+        }
+        public static string TestOutParamString(IGenericMethods i) {
+            string value;
+            i.OutParam<string>(out value);
+            return value;
+        }
+        public static int TestRefParamInt(IGenericMethods i, int inValue) {
+            i.RefParam<int>(ref inValue);
+            return inValue;
+        }
+        public static string TestRefParamString(IGenericMethods i, string inValue) {
+            i.RefParam<string>(ref inValue);
+            return inValue;
+        }
+        private static IEnumerable<string> Yielder(string s) {
+            yield return s;
+        }
+        public static object[] GoWild(IGenericMethods i, bool first, string second, IList<int> value) {
+            double obj;
+            IEnumerable<string> actualSecond = Yielder(second);
+            int len = i.Wild<string, double, int>(first, ref actualSecond, out obj, value);
+            object[] result = new object[len];
+            result[0] = (object)obj;
+            return result;
+        }
+    }
 }
-
-
-

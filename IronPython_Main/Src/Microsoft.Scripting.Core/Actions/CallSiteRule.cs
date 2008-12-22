@@ -21,6 +21,7 @@ using Microsoft.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions.Compiler;
 
 namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
@@ -96,27 +97,27 @@ namespace Microsoft.Runtime.CompilerServices {
         }
 
         /// <summary>
-        /// Gets or sets the method which is used for templating. If the rule is
+        /// Gets the method which is used for templating. If the rule is
         /// not templated then this is a nop (and returns null for the getter).
-        /// 
-        /// The method is tracked here independently from the delegate for the
-        /// common case of the method being a DynamicMethod.  In order to re-bind
-        /// the existing DynamicMethod to a new set of templated parameters we need
-        /// to have the original method.
         /// </summary>
-        internal MethodInfo TemplateMethod {
+        internal Func<Object[], T> TemplateFunction {
             get {
                 if (_template != null) {
-                    return _template.Method;
+                    return _template.TemplateFunction;
                 }
                 return null;
             }
-            set {
+        }
+
+        internal Set<int> TemplatedConsts {
+            get {
                 if (_template != null) {
-                    _template.Method = value;
+                    return _template.TemplatedConstants;
                 }
+                return null;
             }
         }
+
 
 #if MICROSOFT_SCRIPTING_CORE
         public string Dump {
@@ -132,11 +133,35 @@ namespace Microsoft.Runtime.CompilerServices {
 
     /// <summary>
     /// Data used for tracking templating information in a rule.
-    /// 
-    /// Currently we just track the method so we can retarget to
-    /// new constant pools.
     /// </summary>
     internal class TemplateData<T> where T : class {
-        internal MethodInfo Method;
+        private readonly Func<Object[], T> _templateFunction;
+        private readonly Set<int> _templatedConstants;
+
+        internal TemplateData(Func<Object[], T> templateFunction, Set<int> templatedConstants) {
+            _templatedConstants = templatedConstants;
+            _templateFunction = templateFunction;
+        }
+
+        /// <summary>
+        /// Function that can produce concrete lambdas when given list of constant values.
+        /// </summary>
+        internal Func<Object[], T> TemplateFunction {
+            get {
+                return _templateFunction;
+            }
+        }
+
+        /// <summary>
+        /// Specifies which constants are templated by their positions.
+        /// The numbering is assumed as in traversal by ExpressionVisitor.
+        /// We use position as constant identity because it is stable 
+        /// even in trees that contain node junctions.
+        /// </summary>
+        internal Set<int> TemplatedConstants {
+            get {
+                return _templatedConstants;
+            }
+        }
     }
 }

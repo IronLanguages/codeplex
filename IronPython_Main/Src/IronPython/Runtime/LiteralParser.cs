@@ -516,44 +516,80 @@ namespace IronPython.Runtime {
             return text;
         }
 
-        public static Complex64 ParseComplex64(string text) {
-            // remove no-meaning spaces
-            text = text.Trim();
-            if (text == string.Empty) throw PythonOps.ValueError("complex() arg is an empty string");
-            if (text.IndexOf(' ') != -1) throw PythonOps.ValueError("complex() arg is a malformed string");
+        // ParseComplex64 helpers
+        private static char[] signs = new char[] { '+', '-' };
+        private static Exception ExnMalformed() {
+            return PythonOps.ValueError("complex() arg is a malformed string");
+        }
+
+        public static Complex64 ParseComplex64(string s) {
+            // remove no-meaning spaces and convert to lowercase
+            string text = s.Trim().ToLower();
+            if (text == string.Empty) {
+                throw PythonOps.ValueError("complex() arg is an empty string");
+            }
+            if (text.IndexOf(' ') != -1) {
+                throw ExnMalformed();
+            }
+
+            // remove 1 layer of parens
+            if (text.StartsWith("(") && text.EndsWith(")")) {
+                text = text.Substring(1, text.Length - 2);
+            }
 
             try {
                 int len = text.Length;
+                string real, imag;
 
-                char lastChar = text[len - 1];
-                if (lastChar != 'j' && lastChar != 'J')
-                    return Complex64.MakeReal(ParseFloatNoCatch(text));
+                if (text[len - 1] == 'j') {
+                    // last sign delimits real and imaginary...
+                    int signPos = text.LastIndexOfAny(signs);
+                    // ... unless it's after 'e', so we bypass up to 2 of those here
+                    for (int i = 0; signPos > 0 && text[signPos - 1] == 'e'; i++) {
+                        if (i == 2) {
+                            // too many 'e's
+                            throw ExnMalformed();
+                        }
+                        signPos = text.Substring(0, signPos - 1).LastIndexOfAny(signs);
+                    }
 
-                // search for sign char for the imaginary part
-                int signPos = text.LastIndexOfAny(new char[] { '+', '-' });
+                    // no real component
+                    if (signPos < 0) {
+                        return Complex64.MakeImaginary((len == 1) ? 1 : ParseFloatNoCatch(text.Substring(0, len - 1)));
+                    }
 
-                // it is possible the sign belongs to 'e'
-                if (signPos > 1) {
-                    char prevChar = text[signPos - 1];
-                    if (prevChar == 'e' || prevChar == 'E') {
-                        signPos = text.Substring(0, signPos - 1).LastIndexOfAny(new char[] { '+', '-' });
+                    real = text.Substring(0, signPos);
+                    imag = text.Substring(signPos, len - signPos - 1);
+                    if (imag.Length == 1) {
+                        imag += "1"; // convert +/- to +1/-1
+                    }
+                } else {
+                    // 'j' delimits real and imaginary
+                    string[] splitText = text.Split(new char[] { 'j' });
+
+                    // no imaginary component
+                    if (splitText.Length == 1) {
+                        return Complex64.MakeReal(ParseFloatNoCatch(text));
+                    }
+
+                    // there should only be one j
+                    if (splitText.Length != 2) {
+                        throw ExnMalformed();
+                    }
+                    real = splitText[1];
+                    imag = splitText[0];
+
+                    // a sign must follow the 'j'
+                    if (!(real.StartsWith("+") || real.StartsWith("-"))) {
+                        throw ExnMalformed();
                     }
                 }
 
-                if (signPos == -1) {
-                    // special: "j"
-                    return Complex64.MakeImaginary(len == 1 ? 1 : ParseFloatNoCatch(text.Substring(0, len - 1)));
-                } else {
-                    // special: "+j", "-j"
-                    return new Complex64(
-                        signPos == 0 ? 0 : ParseFloatNoCatch(text.Substring(0, signPos)),
-                        (len == signPos + 2) ? (text[signPos] == '+' ? 1 : -1) : ParseFloatNoCatch(text.Substring(signPos, len - signPos - 1)));
-                }
-
+                return new Complex64((real == "") ? 0 : ParseFloatNoCatch(real), ParseFloatNoCatch(imag));
             } catch (OverflowException) {
                 throw PythonOps.ValueError("complex() literal too large to convert");
             } catch {
-                throw PythonOps.ValueError("complex() arg is a malformed string");
+                throw ExnMalformed();
             }
         }
 

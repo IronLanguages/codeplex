@@ -11,6 +11,7 @@
     <WarningLevel>4</WarningLevel>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
+    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />

@@ -113,11 +113,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         public new TDelegate Compile() {
-            return LambdaCompiler.CompileLambda<TDelegate>(this, false);
+            return LambdaCompiler.CompileLambda(this, false);
         }
 
         public new TDelegate Compile(bool emitDebugSymbols) {
-            return LambdaCompiler.CompileLambda<TDelegate>(this, emitDebugSymbols);
+            return LambdaCompiler.CompileLambda(this, emitDebugSymbols);
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {

@@ -68,8 +68,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// <summary>
         /// Each variable referenced within this scope, and how often it was referenced
         /// Populated by VariableBinder
-        /// 
-        /// Created lazily as we only use in about 1 out of 3 compiles when compiling rules.
         /// </summary>
         internal Dictionary<ParameterExpression, int> ReferenceCount;
 
@@ -113,6 +111,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// </summary>
         internal HoistedLocals NearestHoistedLocals {
             get { return _hoistedLocals ?? _closureHoistedLocals; }
+        }
+
+        internal bool IsLambda {
+            get { return Node is LambdaExpression; }
         }
 
         /// <summary>
@@ -265,12 +267,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
         
-        // private methods:
-
-        private bool IsLambda {
-            get { return Node.NodeType == ExpressionType.Lambda; }
-        }
-
         private void SetParent(LambdaCompiler lc, CompilerScope parent) {
             Debug.Assert(_parent == null && parent != this);
             _parent = parent;
@@ -319,7 +315,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     lc.IL.Emit(OpCodes.Newobj, boxType.GetConstructor(Type.EmptyTypes));
                 }
                 // if we want to cache this into a local, do it now
-                if (ShouldCache(v) && !_locals.ContainsKey(v)) {
+                if (ShouldCache(v)) {
                     lc.IL.Emit(OpCodes.Dup);
                     CacheBoxToLocal(lc, v);
                 }
@@ -330,33 +326,39 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitSet(_hoistedLocals.SelfVariable);
         }
 
-
         // If hoisted variables are referenced "enough", we cache the
         // StrongBox<T> in an IL local, which saves an array index and a cast
         // when we go to look it up later
         private void EmitCachedVariables() {
-            foreach (var v in GetVariables()) {
-                if (ShouldCache(v)) {
-                    if (!_locals.ContainsKey(v)) {
-                        var storage = ResolveVariable(v) as ElementBoxStorage;
-                        if (storage != null) {
-                            storage.EmitLoadBox();
-                            CacheBoxToLocal(storage.Compiler, v);
-                        }
+            if (ReferenceCount == null) {
+                return;
+            }
+
+            foreach (var refCount in ReferenceCount) {
+                if (ShouldCache(refCount.Key, refCount.Value)) {
+                    var storage = ResolveVariable(refCount.Key) as ElementBoxStorage;
+                    if (storage != null) {
+                        storage.EmitLoadBox();
+                        CacheBoxToLocal(storage.Compiler, refCount.Key);
                     }
                 }
             }
+        }
+
+        private bool ShouldCache(ParameterExpression v, int refCount) {
+            // This caching is too aggressive in the face of conditionals and
+            // switch. Also, it is too conservative for variables used inside
+            // of loops.
+            return refCount > 2 && !_locals.ContainsKey(v);
         }
 
         private bool ShouldCache(ParameterExpression v) {
             if (ReferenceCount == null) {
                 return false;
             }
-            // This caching is too aggressive in the face of conditionals and
-            // switch. Also, it is too conservative for variables used inside
-            // of loops.
-            int count;
-            return ReferenceCount.TryGetValue(v, out count) && count > 2;
+
+            int refCount;
+            return ReferenceCount.TryGetValue(v, out refCount) && ShouldCache(v, refCount);
         }
 
         private void CacheBoxToLocal(LambdaCompiler lc, ParameterExpression v) {

@@ -405,8 +405,9 @@ import Namespace.")]
         }
 
         /// <summary>
-        /// TODO: Remove me before 2.0 ships (not necessary for backwards compatibility except for w/ alpha 2.0 builds)... 
+        /// TODO: Remove me before 3.0 ships (not necessary for backwards compatibility except for w/ alpha 2.0 builds)... 
         /// </summary>
+        [Obsolete("Call clr.GetPythonType instead")]
         public static PythonType GetDynamicType(Type t) {
             return DynamicHelpers.GetPythonTypeFromType(t);
         }
@@ -632,9 +633,28 @@ import Namespace.")]
             #endregion
         }
 
-        // backwards compatibility w/ IronPython v1.x
         public static PythonType GetPythonType(Type t) {
             return DynamicHelpers.GetPythonTypeFromType(t);
+        }
+
+        /// <summary>
+        /// returns the result of dir(o) as-if "import clr" has not been performed.
+        /// </summary>
+        public static List Dir(object o) {
+            IList<object> ret = PythonOps.GetAttrNames(DefaultContext.Default, o);
+            List lret = new List(ret);
+            lret.sort(DefaultContext.Default);
+            return lret;
+        }
+
+        /// <summary>
+        /// Returns the result of dir(o) as-if "import clr" has been performed.
+        /// </summary>
+        public static List DirClr(object o) {
+            IList<object> ret = PythonOps.GetAttrNames(DefaultContext.DefaultCLS, o);
+            List lret = new List(ret);
+            lret.sort(DefaultContext.DefaultCLS);
+            return lret;
         }
 
         /// <summary>
