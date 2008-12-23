@@ -22,9 +22,7 @@ import sys
 from iptest.assert_util import *
 skiptest("silverlight")
 
-if directory_exists(testpath.lib_testdir):
-    sys.path.append(testpath.lib_testdir)
-else:
+if not is_stdlib():
     print "Need access to CPython's libraries to run this test"
     sys.exit(0)
 

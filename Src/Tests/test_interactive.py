@@ -785,7 +785,7 @@ def test_excepthook():
 def test_sta_sleep_Warning():
     ipi = IronPythonInstance(executable, exec_prefix, '-c "from System.Threading import Thread;Thread.Sleep(100)"')    
     retval, stdouttext, stderrtext, exitcode = ipi.StartAndRunToCompletion()
-    AreEqual(stderrtext, "warning: RuntimeWarning: Calling Thread.Sleep on an STA thread doesn't pump messages.  Use Thread.CurrentThread.Join instead.\r\n")
+    Assert(stderrtext.endswith("RuntimeWarning: Calling Thread.Sleep on an STA thread doesn't pump messages.  Use Thread.CurrentThread.Join instead.\r\n"))
 
 def test_newline():
     ipi = IronPythonInstance(executable, exec_prefix, "")

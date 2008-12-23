@@ -182,9 +182,17 @@ def is_stdlib():
         for x in sys.path:
             if clean_lib==System.IO.Path.GetFullPath(x).lower():
                 return True
+                
+        dirty_lib = clean_lib.replace("cpython", "ironpython")
+        for x in sys.path:
+            if dirty_lib==System.IO.Path.GetFullPath(x).lower():
+                return True
+                
         return False
+        
     elif is_silverlight:
         return False
+        
     else:
         #CPython should always have access to the standard library
         return True
