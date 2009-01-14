@@ -139,6 +139,11 @@ namespace Microsoft.Scripting.Interpretation {
                     return _caller.InvokeInstance(instance, parameters);
                 }
             } catch (Exception e) {
+                // Give the language a chance to associate the interpreter stack trace with the exception.
+                //
+                // Note that this should be called for any exception caused by any Expression node
+                // (for example, integer division by zero). For now, doing it for method calls
+                // catches a large portion of the interesting cases (including calls into the language's library assembly).
                 state.ScriptCode.LanguageContext.InterpretExceptionThrow(state, e, false);
                 throw;
             }
@@ -188,17 +193,22 @@ namespace Microsoft.Scripting.Interpretation {
         }
 
         private static object InterpretMethodCallExpression(InterpreterState state, Expression expr) {
-            MethodCallExpression node = (MethodCallExpression)expr;
+            MethodCallExpression methodCall = (MethodCallExpression)expr;
+            return InterpretMethodCallExpression(state, expr, methodCall.Method, methodCall.Object, methodCall.Arguments);
+        }
+
+        private static object InterpretMethodCallExpression(InterpreterState state, Expression expr,
+            MethodInfo method, Expression target, IList<Expression> arguments) {
 
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
-            if (!node.Method.IsStatic) {
-                if (InterpretAndCheckFlow(state, node.Object, out instance)) {
+            if (!method.IsStatic) {
+                if (InterpretAndCheckFlow(state, target, out instance)) {
                     return instance;
                 }
             }
 
-            var parameterInfos = node.Method.GetParameters();
+            var parameterInfos = method.GetParameters();
 
             object[] parameters;
             if (!state.TryGetStackState(expr, out parameters)) {
@@ -214,7 +224,7 @@ namespace Microsoft.Scripting.Interpretation {
 
                 if (info.ParameterType.IsByRef) {
                     lastByRefParamIndex = i;
-                    paramAddrs[i] = EvaluateAddress(state, node.Arguments[i]);
+                    paramAddrs[i] = EvaluateAddress(state, arguments[i]);
 
                     object value = paramAddrs[i].GetValue(state, !IsInputParameter(info));
                     if (IsInputParameter(info)) {
@@ -224,12 +234,12 @@ namespace Microsoft.Scripting.Interpretation {
                         }
                     }
                 } else if (IsInputParameter(info)) {
-                    Expression arg = node.Arguments[i];
+                    Expression arg = arguments[i];
                     object argValue = null;
                     if (arg != null) {
                         if (InterpretAndCheckFlow(state, arg, out argValue)) {
                             if (state.CurrentYield != null) {
-                                state.SaveStackState(node, parameters);
+                                state.SaveStackState(expr, parameters);
                             }
 
                             return argValue;
@@ -250,7 +260,7 @@ namespace Microsoft.Scripting.Interpretation {
                 object res;
                 try {
                     // Call the method                    
-                    res = InvokeMethod(state, node.Method, instance, parameters);
+                    res = InvokeMethod(state, method, instance, parameters);
                 } finally {
                     // expose by-ref args
                     for (int i = 0; i <= lastByRefParamIndex; i++) {
@@ -261,8 +271,8 @@ namespace Microsoft.Scripting.Interpretation {
                 }
 
                 // back propagate instance on value types if the instance supports it.
-                if (node.Method.DeclaringType != null && node.Method.DeclaringType.IsValueType && !node.Method.IsStatic) {
-                    EvaluateAssign(state, node.Object, instance);
+                if (method.DeclaringType != null && method.DeclaringType.IsValueType && !method.IsStatic) {
+                    EvaluateAssign(state, target, instance);
                 }
 
                 return res;
@@ -568,6 +578,10 @@ namespace Microsoft.Scripting.Interpretation {
         private static object InterpretConvertUnaryExpression(InterpreterState state, Expression expr) {
             UnaryExpression node = (UnaryExpression)expr;
 
+            if (node.Method != null) {
+                return InterpretMethodCallExpression(state, expr, node.Method, null, new[] { node.Operand });
+            }
+
             object value;
             if (InterpretAndCheckFlow(state, node.Operand, out value)) {
                 return value;
@@ -774,7 +788,13 @@ namespace Microsoft.Scripting.Interpretation {
                 if (callSiteInfo.CallSite == null) {
                     SetCallSite(callSiteInfo, node);
                 }
-                return callSiteInfo.CallerTarget(callSiteInfo.CallSite, argValues);
+
+                try {
+                    return callSiteInfo.CallerTarget(callSiteInfo.CallSite, argValues);
+                } catch(Exception e) {
+                    state.ScriptCode.LanguageContext.InterpretExceptionThrow(state, e, false);
+                    throw;
+                }
             }
 
             PerfTrack.NoteEvent(PerfTrack.Categories.Count, "Interpreter: Interpreting meta-action");
@@ -787,7 +807,7 @@ namespace Microsoft.Scripting.Interpretation {
             if (argValues.Length != 1) {
                 args = new DynamicMetaObject[argValues.Length - 1];
                 for (int i = 0; i < args.Length; i++) {
-                    args[i] = DynamicMetaObject.ObjectToMetaObject(
+                    args[i] = DynamicUtils.ObjectToMetaObject(
                         argValues[i + 1],
                         Expression.Constant(argValues[i + 1])
                     );
@@ -795,7 +815,7 @@ namespace Microsoft.Scripting.Interpretation {
             }
 
             DynamicMetaObject binding = action.Bind(
-                DynamicMetaObject.ObjectToMetaObject(
+                DynamicUtils.ObjectToMetaObject(
                     argValues[0],
                     Expression.Constant(argValues[0])
                 ),

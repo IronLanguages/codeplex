@@ -54,6 +54,15 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// A string like  "Cannot perform call."
+        /// </summary>
+        internal static string CannotCall {
+            get {
+                return "Cannot perform call.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "Removing an event handler that is not registered."
         /// </summary>
         internal static string RemovingUnregisteredEvent {

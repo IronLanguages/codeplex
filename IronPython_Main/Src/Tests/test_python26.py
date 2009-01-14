@@ -354,4 +354,147 @@ def test_im_aliases():
     AreNotEqual(a.f.__self__, b.f.__self__)
     AreNotEqual(b.f.__self__, d.f.__self__)
 
+def test_tuple_index():
+    t = (1,4,3,0,3)
+    
+    AssertError(TypeError, t.index)
+    AssertError(TypeError, t.index, 3, 'a')
+    AssertError(TypeError, t.index, 3, 2, 'a')
+    AssertError(TypeError, t.index, 3, 2, 5, 1)
+    
+    AssertError(ValueError, t.index, 5)
+    AssertError(ValueError, t.index, 'a')
+    
+    AreEqual(t.index(1), 0)
+    AreEqual(t.index(3), 2)
+    AreEqual(t.index(3, 2), 2)
+    AreEqual(t.index(3, 3), 4)
+    AssertError(ValueError, t.index, 3, 3, 4)
+    AreEqual(t.index(3, 3, 5), 4)
+    AreEqual(t.index(3, 3, 100), 4)
+    
+    AreEqual(t.index(3, -1), 4)
+    AreEqual(t.index(3, -3, -1), 2)
+    AreEqual(t.index(3, 2, -2), 2)
+    AssertError(ValueError, t.index, 3, 3, -1)
+    AssertError(ValueError, t.index, 3, -2, 0)
+
+def test_tuple_count():
+    t = ('1','2','3',1,3,3,2,3,1,'1','1',3,'3')
+    
+    AssertError(TypeError, t.count)
+    AssertError(TypeError, t.count, 1, 2)
+    
+    AreEqual(t.count('1'), 3)
+    AreEqual(t.count('2'), 1)
+    AreEqual(t.count('3'), 2)
+    AreEqual(t.count(1), 2)
+    AreEqual(t.count(2), 1)
+    AreEqual(t.count(3), 4)
+
+def test__warnings():
+    import sys
+    from collections import deque
+    from _warnings import (filters, default_action, once_registry, warn, warn_explicit)
+    
+    stderr_filename = "test__warnings_stderr.txt"
+    
+    # clean up after possible incomplete test runs
+    def cleanup():
+        try:
+            import os
+            if os.path.exists(stderr_filename):
+                os.remove(stderr_filename)
+        except ImportError:
+            # os module not available in IronPython; use .NET classes
+            from System.IO import File
+            if File.Exists(stderr_filename):
+                File.Delete(stderr_filename)
+    cleanup()
+    
+    # helper for test output
+    expected = deque() # expected output (ignoring filename, lineno, and line)
+    def expect(warn_type, message):
+        for filter in filters:
+            if filter[0] == "ignore" and issubclass(warn_type, filter[2]):
+                return
+        expected.append(": " + warn_type.__name__ + ": " + message + "\n")
+    
+    # redirect stderr
+    stderr_old = sys.stderr
+    stderr_new = open(stderr_filename,'w')
+    sys.stderr = stderr_new
+    
+    # generate test output
+    warn_types = [Warning, UserWarning, DeprecationWarning, PendingDeprecationWarning, SyntaxWarning, RuntimeWarning, FutureWarning, ImportWarning, UnicodeWarning, BytesWarning]
+    warn("Warning Message!")
+    expect(UserWarning, "Warning Message!")
+    for warn_type in warn_types:
+        warn(warn_type("Type-overriding message!"), UnicodeWarning)
+        expect(warn_type, "Type-overriding message!")
+        warn("Another Warning Message!", warn_type)
+        expect(warn_type, "Another Warning Message!")
+        warn_explicit("Explicit Warning!", warn_type, "nonexistent_file.py", 12)
+        expect(warn_type, "Explicit Warning!")
+        warn_explicit("Explicit Warning!", warn_type, "test_python26.py", 34)
+        expect(warn_type, "Explicit Warning!")
+        warn_explicit("Explicit Warning!", warn_type, "nonexistent_file.py", 56, "module.py")
+        expect(warn_type, "Explicit Warning!")
+        warn_explicit("Explicit Warning!", warn_type, "test_python26.py", 78, "module.py")
+        expect(warn_type, "Explicit Warning!")
+    
+    # reset stdout,stderr
+    sys.stderr = stderr_old
+    stderr_new.close()
+    
+    # check test output
+    stderr_file = open(stderr_filename, 'r')
+    # count lines
+    nlines = 0
+    for line in stderr_file:
+        if not line.startswith("  "):
+            nlines += 1
+    AreEqual(nlines, expected.__len__())
+    stderr_file.seek(0)
+    # match lines
+    for line in stderr_file:
+        if line.startswith("  "):
+            continue
+        Assert(line.endswith(expected.popleft()))
+    # clean up
+    stderr_file.close()
+    
+    # remove generated files
+    cleanup()
+
+def test__warnings_showwarning():
+    try:
+        from _warnings import showwarning
+        from System.IO import StringWriter
+        
+        class string_file(file):
+            def __init__(self):
+                self.buf = None
+            def write(self, s):
+                Assert(issubclass(type(s), str))
+                self.buf = s
+            def __repr__(self):
+                return self.buf if self.buf else self.buf.__repr__()
+
+        sw = StringWriter()
+        sf = string_file()
+        
+        showwarning("testwarning", RuntimeWarning, "some_file.py", 666, sw, "# this is a line of code")
+        showwarning("testwarning", SyntaxWarning, "other_file.py", 42, sf, "# another line of code")
+        
+        AreEqual(sw.ToString(), "some_file.py:666: RuntimeWarning: testwarning\n  # this is a line of code\n")
+        AreEqual(sf.__repr__(), "other_file.py:42: SyntaxWarning: testwarning\n  # another line of code\n")
+        
+        sw.Close()
+        sf.close()
+
+    except ImportError:
+        # _warnings.showwarning and/or .NET classes unavailable - skip test
+        pass
+
 run_test(__name__)

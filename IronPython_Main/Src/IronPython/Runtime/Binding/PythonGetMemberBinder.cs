@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Binding {
                     this,
                     cc.Expression
                 );
-            } else if (target.IsDynamicObject) {
+            } else if (target.Value is IDynamicObject) {
                 return GetForeignObject(target);
             }
 #if !SILVERLIGHT

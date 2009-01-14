@@ -16,15 +16,12 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
-using System.Reflection;
-using System.Reflection.Emit;
+using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions.Compiler;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -68,7 +65,7 @@ namespace Microsoft.Scripting {
 
                 Expression<Func<Object[], T>> templateExpr = TemplateRuleRewriter.MakeTemplate<T>(to.RuleSet.Stitch(), replacementList);
 
-                Func<Object[], T> templateFunction = LambdaCompiler.CompileDynamic(templateExpr);
+                Func<Object[], T> templateFunction = templateExpr.Compile();
                 Set<int> consts = new Set<int>(replacementList.Select(pair => pair.Value));
                 template = new TemplateData<T>(templateFunction, consts);
             } else {

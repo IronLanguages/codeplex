@@ -15,13 +15,13 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
 using System.Text;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
@@ -127,16 +127,16 @@ namespace Microsoft.Scripting.Runtime {
             // Create strongly typed return type from the site.
             // This will, among other things, generate tighter code.
             Type[] siteTypes = MakeSiteSignature();
-            
-            Type siteType = DynamicSiteHelpers.MakeCallSiteType(siteTypes);            
-            CallSite callSite = DynamicSiteHelpers.MakeSite(action, siteType);
+
+            CallSite callSite = CallSite.Create(DynamicSiteHelpers.MakeCallSiteDelegate(siteTypes), action);
+            Type siteType = callSite.GetType();
 
             Type convertSiteType = null;
             CallSite convertSite = null;
 
             if (_returnType != typeof(void)) {
-                convertSiteType = DynamicSiteHelpers.MakeCallSiteType(typeof(object), _returnType);
-                convertSite = DynamicSiteHelpers.MakeSite(convert, convertSiteType);
+                convertSite = CallSite.Create(DynamicSiteHelpers.MakeCallSiteDelegate(typeof(object), _returnType), convert);
+                convertSiteType = convertSite.GetType();
             }
 
             // build up constants array

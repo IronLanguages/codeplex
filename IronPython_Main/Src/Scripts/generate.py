@@ -35,6 +35,10 @@ source_directories = [
     root_dir + "\\..\\..\\ndp\\fx\\src\\Dynamic",
 ]
 
+exclude_directories = [
+    root_dir + "\\Runtime\\Tests\\LinqDlrTests",
+]
+
 START = "#region Generated %s"
 END =   "#endregion"
 PREFIX = r"^([ \t]*)"
@@ -182,6 +186,8 @@ class CodeGenerator:
         return result
 
     def do_dir(self, dirname):
+        if dirname in exclude_directories:
+            return
         for file in listdir(dirname):            
             filename = pathjoin(dirname, file)
             if isdir(filename):

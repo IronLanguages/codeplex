@@ -16,6 +16,8 @@
 from iptest.assert_util import skiptest
 skiptest("silverlight")
 from iptest.cominterop_util import *
+from System import *
+from clr import StrongBox
 
 ###############################################################################
 ##GLOBALS######################################################################
@@ -520,7 +522,7 @@ def test_eInOutBstr():
     com_event = com_obj.eInOutBstr
     
     #--typical handler implementations
-    def f1(a):
+    def f1(a, o):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
         return a
@@ -528,16 +530,16 @@ def test_eInOutBstr():
     def f2(*args):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
-        if len(args)!=1: raise TypeError("Too few/many args:" + str(args))
+        if len(args)!=2: raise TypeError("Too few/many args:" + str(args))
         return args[0]
         
     def f3(a, *args):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
-        if len(args)!=0: raise TypeError("Too many args:" + str(args))
+        if len(args)!=1: raise TypeError("Too many args:" + str(args))
         return a
     
-    def f4(a, **kwargs):
+    def f4(a, o, **kwargs):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
         if len(kwargs.keys())!=0: raise TypeError("Too many kwargs:" + str(kwargs))
@@ -546,22 +548,26 @@ def test_eInOutBstr():
     def f5(*args, **kwargs):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
-        if len(args)!=1: raise TypeError("Too few/many args:" + str(args))
+        if len(args)!=2: raise TypeError("Too few/many args:" + str(args))
         if len(kwargs.keys())!=0: raise TypeError("Too many kwargs:" + str(kwargs))
         return args[0]
         
     def f6(a, *args, **kwargs):
         global HANDLER_CALL_COUNT
         HANDLER_CALL_COUNT += 1
-        if len(args)!=0: raise TypeError("Too few/many args:" + str(args))
+        if len(args)!=1: raise TypeError("Too few/many args:" + str(args))
         if len(kwargs.keys())!=0: raise TypeError("Too many kwargs:" + str(kwargs))
         return a
     
     event_handlers = [f1, f2, f3, f4, f5, f6]
     
     try:
-        handler_helper(lambda: e_trigger(""), com_event,  "", event_handlers)
-        handler_helper(lambda: e_trigger("abc"), com_event, "abc", event_handlers)
+        o = StrongBox[str]('www')
+        handler_helper(lambda: e_trigger("", o), com_event,  None, event_handlers)
+
+        o = StrongBox[str]('www')
+        handler_helper(lambda: e_trigger("abc", o), com_event, None, event_handlers)
+        
     except EnvironmentError, e:
         print "Merlin 386367"
 
@@ -1164,7 +1170,7 @@ def test_handler_raises():
     #add the handler and verify events are received
     com_event += except_handler
 
-    AssertError(EnvironmentError, e_trigger)
+    AssertError(Exception, e_trigger)
     AreEqual(HANDLER_CALL_COUNT, 0)
     
     #remove the handler

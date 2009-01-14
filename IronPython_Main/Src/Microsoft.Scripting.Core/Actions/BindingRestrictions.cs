@@ -16,10 +16,13 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting {
+    /// <summary>
+    /// Represents a set of binding restrictions on the <see cref="DynamicMetaObject"/>under which the dynamic binding is valid.
+    /// </summary>
     public sealed class BindingRestrictions {
         private class Restriction {
             internal enum RestrictionKind {
@@ -111,6 +114,11 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// Merges the set of binding restrictions with the current binding restrictions.
+        /// </summary>
+        /// <param name="restrictions">The set of restrictions with which to merge the current binding restrictions.</param>
+        /// <returns>The new set of binding restrictions.</returns>
         public BindingRestrictions Merge(BindingRestrictions restrictions) {
             if (restrictions.IsEmpty) {
                 return this;
@@ -143,9 +151,18 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// Represents an empty set of binding restrictions. This field is read only.
+        /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly BindingRestrictions Empty = new BindingRestrictions();
 
+        /// <summary>
+        /// Creates the binding restriction that check the expression for runtime type identity.
+        /// </summary>
+        /// <param name="expression">The expression to test.</param>
+        /// <param name="type">The exact type to test.</param>
+        /// <returns>The new binding restrictions.</returns>
         public static BindingRestrictions GetTypeRestriction(Expression expression, Type type) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
@@ -157,18 +174,38 @@ namespace Microsoft.Scripting {
             return new BindingRestrictions(new Restriction(expression, type));
         }
 
+        /// <summary>
+        /// Creates the binding restriction that checks the expression for object instance identity.
+        /// </summary>
+        /// <param name="expression">The expression to test.</param>
+        /// <param name="instance">The exact object instance to test.</param>
+        /// <returns>The new binding restrictions.</returns>
         public static BindingRestrictions GetInstanceRestriction(Expression expression, object instance) {
             ContractUtils.RequiresNotNull(expression, "expression");
 
             return new BindingRestrictions(new Restriction(expression, instance));
         }
 
+        /// <summary>
+        /// Creates the binding restriction that checks the expression for arbitrary immutable properties.
+        /// </summary>
+        /// <param name="expression">The expression expression the restrictions.</param>
+        /// <returns>The new binding restrictions.</returns>
+        /// <remarks>
+        /// By convention, the general restrictions created by this method must only test
+        /// immutable object properties.
+        /// </remarks>
         public static BindingRestrictions GetExpressionRestriction(Expression expression) {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.Requires(expression.Type == typeof(bool), "expression");
             return new BindingRestrictions(new Restriction(expression));
         }
 
+        /// <summary>
+        /// Combines binding restrictions from the list of <see cref="DynamicMetaObject"/> instances into one set of restrictions.
+        /// </summary>
+        /// <param name="contributingObjects">The list of <see cref="DynamicMetaObject"/> instances from which to combine restrictions.</param>
+        /// <returns>The new set of binding restrictions.</returns>
         public static BindingRestrictions Combine(IList<DynamicMetaObject> contributingObjects) {
             BindingRestrictions res = BindingRestrictions.Empty;
             if (contributingObjects != null) {
@@ -181,6 +218,10 @@ namespace Microsoft.Scripting {
             return res;
         }
 
+        /// <summary>
+        /// Creates the <see cref="Expression"/> representing the binding restrictions.
+        /// </summary>
+        /// <returns>The expression tree representing the restrictions.</returns>
         public Expression ToExpression() {
             // We could optimize this better, e.g. common subexpression elimination
             // But for now, it's good enough.

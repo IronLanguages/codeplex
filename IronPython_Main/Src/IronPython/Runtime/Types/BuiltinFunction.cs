@@ -418,7 +418,7 @@ namespace IronPython.Runtime.Types {
                         Ast.Dynamic(
                             call,
                             typeof(object),
-                            DynamicMetaObject.GetExpressions(dynamicArgs)
+                            DynamicUtils.GetExpressions(dynamicArgs)
                         ),
                         BindingRestrictions.Combine(dynamicArgs).Merge(BindingRestrictions.GetTypeRestriction(dict.Expression, dict.LimitType))
                     );

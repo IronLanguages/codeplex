@@ -104,6 +104,10 @@ namespace IronPython.Runtime.Operations {
             return new WarningException(string.Format(format, args));
         }
 
+        public static Exception BytesWarning(string format, params object[] args) {
+            return new BytesWarningException(string.Format(format, args));
+        }
+
         // *** END GENERATED CODE ***
 
         #endregion

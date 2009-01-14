@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
     /// nodes go away. All that should be left is global support, and even that
     /// can go once OptimizedModules moves into Python.
     /// </summary>
-    public abstract class GlobalRewriter : StaticLambdaRewriter {
+    public abstract class GlobalRewriter : ExpressionVisitor {
         private Expression _context;
 
         // Rewrite entry points
@@ -70,6 +70,11 @@ namespace Microsoft.Scripting.Generation {
         protected abstract Expression RewriteSet(AssignmentExtensionExpression node);
 
         #region rewriter overrides
+
+        // Reduce dynamic expression so that the lambda can be emitted as a non-dynamic method.
+        protected override Expression VisitDynamic(DynamicExpression node) {
+            return Visit(CompilerHelpers.Reduce(node));
+        }
 
         protected override Expression VisitExtension(Expression node) {
             if (node is YieldExpression ||

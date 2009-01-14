@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Binding {
                             action.Name,
                             args[0].Expression
                         ),
-                        DynamicMetaObject.GetExpressions(ArrayUtils.RemoveFirst(args))
+                        DynamicUtils.GetExpressions(ArrayUtils.RemoveFirst(args))
                     )
                 ),
                 BindingRestrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
@@ -182,7 +182,7 @@ namespace IronPython.Runtime.Binding {
                             action.Name,
                             target.Expression
                         ),
-                        DynamicMetaObject.GetExpressions(args)
+                        DynamicUtils.GetExpressions(args)
                     )
                 ),
                 BindingRestrictions.Combine(args).Merge(target.Restrict(target.LimitType).Restrictions)

@@ -11,7 +11,7 @@
     <WarningLevel>4</WarningLevel>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
-    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
+    <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -258,6 +258,7 @@
       <!--          Runtime.Exceptions          -->
       <!--                                      -->
       <Compile Include="Runtime\Exceptions\AssertionException.Generated.cs" />
+      <Compile Include="Runtime\Exceptions\BytesWarningException.cs" />
       <Compile Include="Runtime\Exceptions\DeprecationWarningException.Generated.cs" />
       <Compile Include="Runtime\Exceptions\EnvironmentException.Generated.cs" />
       <Compile Include="Runtime\Exceptions\FloatingPointException.Generated.cs" />
@@ -394,7 +395,7 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
-  <Import Project="..\..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="..\..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

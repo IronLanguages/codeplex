@@ -758,6 +758,10 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        internal bool TryRemoveValue(object key, out object value) {
+            return _storage.TryRemoveValue(key, out value);
+        }
+
         #endregion
     }
 

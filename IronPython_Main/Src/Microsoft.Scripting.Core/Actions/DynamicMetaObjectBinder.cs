@@ -17,14 +17,22 @@ using System; using Microsoft;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
+    /// <summary>
+    /// The dynamic call site binder that participates in the <see cref="DynamicMetaObject"/> binding protocol.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="CallSiteBinder"/> performs the binding of the dynamic operation using the runtime values
+    /// as input. On the other hand, the <see cref="DynamicMetaObjectBinder"/> participates in the <see cref="DynamicMetaObject"/>
+    /// binding protocol.
+    /// </remarks>
     public abstract class DynamicMetaObjectBinder : CallSiteBinder {
 
         #region Standard Binder Kinds
@@ -51,6 +59,24 @@ namespace Microsoft.Scripting {
 
         #region Public APIs
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DynamicMetaObjectBinder"/> class.
+        /// </summary>
+        protected DynamicMetaObjectBinder() {
+        }
+
+        /// <summary>
+        /// Performs the runtime binding of the dynamic operation on a set of arguments.
+        /// </summary>
+        /// <param name="args">An array of arguments to the dynamic operation.</param>
+        /// <param name="parameters">The array of <see cref="ParameterExpression"/> instances that represent the parameters of the call site in the binding process.</param>
+        /// <param name="returnLabel">A LabelTarget used to return the result of the dynamic binding.</param>
+        /// <returns>
+        /// An Expression that performs tests on the dynamic operation arguments, and
+        /// performs the dynamic operation if hte tests are valid. If the tests fail on
+        /// subsequent occurrences of the dynamic operation, Bind will be called again
+        /// to produce a new <see cref="Expression"/> for the new argument types.
+        /// </returns>
         public sealed override Expression Bind(object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
             if (args.Length == 0) {
                 throw new InvalidOperationException();
@@ -60,14 +86,14 @@ namespace Microsoft.Scripting {
             if (args.Length != 1) {
                 mos = new DynamicMetaObject[args.Length - 1];
                 for (int i = 1; i < args.Length; i++) {
-                    mos[i - 1] = DynamicMetaObject.ObjectToMetaObject(args[i], parameters[i]);
+                    mos[i - 1] = ObjectToMetaObject(args[i], parameters[i]);
                 }
             } else {
                 mos = DynamicMetaObject.EmptyMetaObjects;
             }
 
             DynamicMetaObject binding = Bind(
-                DynamicMetaObject.ObjectToMetaObject(args[0], parameters[0]),
+                ObjectToMetaObject(args[0], parameters[0]),
                 mos
             );
 
@@ -78,8 +104,29 @@ namespace Microsoft.Scripting {
             return GetMetaObjectRule(binding, returnLabel);
         }
 
+        private static DynamicMetaObject ObjectToMetaObject(object argValue, Expression parameterExpression) {
+            IDynamicObject ido = argValue as IDynamicObject;
+            if (ido != null) {
+                return ido.GetMetaObject(parameterExpression);
+            } else {
+                return new DynamicMetaObject(parameterExpression, BindingRestrictions.Empty, argValue);
+            }
+        }
+
+        /// <summary>
+        /// When overridden in the derived class, performs the binding of the dynamic operation.
+        /// </summary>
+        /// <param name="target">The target of the dynamic operation.</param>
+        /// <param name="args">An array of arguments of the dynamic operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public abstract DynamicMetaObject Bind(DynamicMetaObject target, DynamicMetaObject[] args);
 
+        /// <summary>
+        /// Defers the binding of the operation until later time when the runtime values of all dynamic operation arguments have been computed.
+        /// </summary>
+        /// <param name="target">The target of the dynamic operation.</param>
+        /// <param name="args">An array of arguments of the dynamic operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public DynamicMetaObject Defer(DynamicMetaObject target, params DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
 
@@ -96,6 +143,11 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// Defers the binding of the operation until later time when the runtime values of all dynamic operation arguments have been computed.
+        /// </summary>
+        /// <param name="args">An array of arguments of the dynamic operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public DynamicMetaObject Defer(params DynamicMetaObject[] args) {
             return MakeDeferred(
                 BindingRestrictions.Combine(args),

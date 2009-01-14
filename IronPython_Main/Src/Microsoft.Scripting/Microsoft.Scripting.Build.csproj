@@ -12,7 +12,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
-    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
+    <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -258,7 +258,6 @@
       <Compile Include="Generation\ParameterInfoWrapper.cs" />
       <Compile Include="Generation\SiteLocalStorage.cs" />
       <Compile Include="Generation\Snippets.cs" />
-      <Compile Include="Generation\StaticLambdaRewriter.cs" />
       <Compile Include="Generation\ToDiskRewriter.cs" />
       <Compile Include="Generation\TypeGen.cs" />
     </ItemGroup>
@@ -453,6 +452,7 @@
       <Compile Include="Utils\ContractUtils.cs" />
       <Compile Include="Utils\CopyOnWriteList.cs" />
       <Compile Include="Utils\DictionaryUnionEnumerator.cs" />
+      <Compile Include="Utils\DynamicUtils.cs" />
       <Compile Include="Utils\ExceptionFactory.Generated.cs" />
       <Compile Include="Utils\ExceptionUtils.cs" />
       <Compile Include="Utils\IOUtils.cs" />
@@ -488,7 +488,7 @@
   <ItemGroup>
     <Content Include="Microsoft.Scripting.txt" />
   </ItemGroup>
-  <Import Project="..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.targets" />
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);PRODUCTION_BUILD</DefineConstants>

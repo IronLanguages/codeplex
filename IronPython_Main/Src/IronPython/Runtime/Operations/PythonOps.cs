@@ -71,7 +71,16 @@ namespace IronPython.Runtime.Operations {
         /// the value coming first.
         /// </summary>
         public static PythonDictionary MakeDictFromItems(object[] data) {
-            return new PythonDictionary(new CommonDictionaryStorage(data));
+            return new PythonDictionary(new CommonDictionaryStorage(data, false));
+        }
+
+        /// <summary>
+        /// Creates a new dictionary extracting the keys & valeus from the
+        /// provided data array.  Keys/values are adjacent in the array with
+        /// the value coming first.
+        /// </summary>
+        public static PythonDictionary MakeHomogeneousDictFromItems(object[] data) {
+            return new PythonDictionary(new CommonDictionaryStorage(data, true));
         }
 
         public static bool IsCallable(CodeContext/*!*/ context, object o) {
@@ -2249,14 +2258,13 @@ namespace IronPython.Runtime.Operations {
             return function.Defaults[index];
         }
 
-        public static object GetFunctionParameterValue(PythonFunction function, int index, string name, List extraArgs, IAttributesCollection dict) {
+        public static object GetFunctionParameterValue(PythonFunction function, int index, string name, List extraArgs, PythonDictionary dict) {
             if (extraArgs != null && extraArgs.__len__() > 0) {
                 return extraArgs.pop(0);
             }
 
             object val;
-            if (dict != null && dict.TryGetObjectValue(name, out val)) {
-                dict.RemoveObjectKey(name);
+            if (dict != null && dict.TryRemoveValue(name, out val)) {
                 return val;
             }
 

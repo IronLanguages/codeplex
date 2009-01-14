@@ -22,14 +22,23 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 
 namespace Microsoft.Runtime.CompilerServices {
+    
     public static partial class RuntimeOps {
-        // creates access for local variables in scope
+        /// <summary>
+        /// Creates an interface that can be used to modify closed over variables at runtime.
+        /// </summary>
+        /// <param name="data">The closure array.</param>
+        /// <param name="indexes">An array of indicies into the closure array where variables are found.</param>
+        /// <returns>An interface to access variables.</returns>
         [Obsolete("do not call this method", true)]
         public static IList<IStrongBox> CreateRuntimeVariables(object[] data, long[] indexes) {
             return new RuntimeVariableList(data, indexes);
         }
 
-        // creates access when there are no variables in scope
+        /// <summary>
+        /// Creates an interface that can be used to modify closed over variables at runtime.
+        /// </summary>
+        /// <returns>An interface to access variables.</returns>
         [Obsolete("do not call this method", true)]
         public static IList<IStrongBox> CreateRuntimeVariables() {
             return EmptyReadOnlyCollection<IStrongBox>.Instance;

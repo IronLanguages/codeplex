@@ -39,7 +39,7 @@ excs = collect_excs()
 pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDeprecationWarning', 'EnvironmentError',
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
               'FutureWarning', 'AssertionError', 'RuntimeWarning', 'ImportWarning', 'UserWarning', 'SyntaxWarning', 
-	          'UnicodeWarning', 'StopIteration', 'Warning']
+	          'UnicodeWarning', 'StopIteration', 'Warning', 'BytesWarning']
 
 
 class ExceptionInfo(object):
@@ -168,7 +168,8 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                             ExceptionInfo('UserWarning', 'IronPython.Runtime.Exceptions.UserWarningException', None, (), ()),
                             ExceptionInfo('FutureWarning', 'IronPython.Runtime.Exceptions.FutureWarningException', None, (), ()),
                             ExceptionInfo('ImportWarning', 'IronPython.Runtime.Exceptions.ImportWarningException', None, (), ()),
-                            ExceptionInfo('UnicodeWarning', 'IronPython.Runtime.Exceptions.UnicodeWarningException', None, (), ()),                            
+                            ExceptionInfo('UnicodeWarning', 'IronPython.Runtime.Exceptions.UnicodeWarningException', None, (), ()),
+                            ExceptionInfo('BytesWarning', 'IronPython.Runtime.Exceptions.BytesWarningException', None, (), ()),
                         ),
                     ),
                 ),

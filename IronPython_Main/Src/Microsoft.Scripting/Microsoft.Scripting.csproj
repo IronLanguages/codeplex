@@ -1,11 +1,11 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
-  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\silverlight.settings.targets" />
+  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\Support\silverlight.settings.targets" />
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">    <DebugType>pdbonly</DebugType>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DocumentationFile>..\..\Bin\DelaySigned Release\Microsoft.Scripting.xml</DocumentationFile>    <DefineConstants>TRACE;SIGNED</DefineConstants>    <ErrorReport>prompt</ErrorReport>    <WarningLevel>4</WarningLevel>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <RunCodeAnalysis>false</RunCodeAnalysis>    <DelaySign>true</DelaySign>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <SignAssembly>true</SignAssembly>    <BaseAddress>1929379840</BaseAddress>  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>    <DocumentationFile>..\..\Bin\DelaySigned Silverlight Release\Microsoft.Scripting.xml</DocumentationFile>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <NoWarn>1591,618</NoWarn>    <NoStdLib>true</NoStdLib>    <DebugType>pdbonly</DebugType>    <PlatformTarget>AnyCPU</PlatformTarget>    <ErrorReport>prompt</ErrorReport>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <SilverlightBuild>true</SilverlightBuild>    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -168,7 +168,6 @@
     <Compile Include="ComInterop\TypeLibInfoMetaObject.cs" />
     <Compile Include="ComInterop\TypeLibMetaObject.cs" />
     <Compile Include="ComInterop\VarEnumSelector.cs" />
-    <Compile Include="Generation\StaticLambdaRewriter.cs" />
     <Compile Include="Hosting\ErrorSinkProxyListener.cs" />
     <Compile Include="Hosting\Shell\ICommandDispatcher.cs" />
     <Compile Include="Hosting\Shell\Remote\ConsoleRestartManager.cs" />
@@ -329,6 +328,7 @@
     <Compile Include="SourceSpan.cs" />
     <Compile Include="Utils\CollectionExtensions.cs" />
     <Compile Include="Utils\CopyOnWriteList.cs" />
+    <Compile Include="Utils\DynamicUtils.cs" />
     <Compile Include="Utils\ListEqualityComparer.cs" />
     <Compile Include="Utils\MathUtils.cs" />
     <Compile Include="Utils\Publisher.cs" />
@@ -497,5 +497,5 @@
     <Content Include="Microsoft.Scripting.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
-  <Import Project="..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
 </Project>

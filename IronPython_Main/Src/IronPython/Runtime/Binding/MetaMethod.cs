@@ -105,7 +105,7 @@ namespace IronPython.Runtime.Binding {
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
                                 typeof(object),
-                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicMetaObject.GetExpressions(ArrayUtils.Insert(func, args)))
+                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicUtils.GetExpressions(ArrayUtils.Insert(func, args)))
                             )
                         ),
                         BindingRestrictions.Empty
@@ -146,7 +146,7 @@ namespace IronPython.Runtime.Binding {
                             newSig
                         ),
                         typeof(object),
-                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicMetaObject.GetExpressions(newArgs))
+                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicUtils.GetExpressions(newArgs))
                     ),
                     BindingRestrictions.Empty
                 );

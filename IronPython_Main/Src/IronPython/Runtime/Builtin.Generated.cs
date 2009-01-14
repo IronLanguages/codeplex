@@ -178,6 +178,9 @@ namespace IronPython.Runtime {
         public static PythonType UnicodeWarning {
             get { return PythonExceptions.UnicodeWarning; }
         }
+        public static PythonType BytesWarning {
+            get { return PythonExceptions.BytesWarning; }
+        }
 
         // *** END GENERATED CODE ***
 

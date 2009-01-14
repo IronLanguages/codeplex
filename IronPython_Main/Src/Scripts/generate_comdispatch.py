@@ -183,7 +183,7 @@ variantTypes = [
         ],
         setStatements=[
                 "if (value != null) {",
-                "   Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));",
+                "    Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));",
                 "}"
         ]),
     VariantType("UNKNOWN", "Object", 
@@ -198,7 +198,7 @@ variantTypes = [
         ],
         setStatements=[
                 "if (value != null) {",
-                "   _typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);",
+                "    _typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);",
                 "}"
         ]),
     VariantType("DISPATCH", "Object", 
@@ -213,7 +213,7 @@ variantTypes = [
         ],
         setStatements=[
                 "if (value != null) {",
-                "   _typeUnion._unionTypes._unknown = Marshal.GetIDispatchForObject(value);",
+                "    _typeUnion._unionTypes._unknown = Marshal.GetIDispatchForObject(value);",
                 "}"
         ]),
     VariantType("VARIANT", "Object", 
@@ -222,7 +222,7 @@ variantTypes = [
         unmanagedRepresentationType="Variant",
         includeInUnionTypes=False,              # will use "this" 
         getStatements=["return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
-        setStatements=["Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));"])
+        setStatements=["UnsafeMethods.InitVariantForObject(value, ref this);"])
 
 ]
 

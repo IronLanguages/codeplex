@@ -56,6 +56,15 @@ namespace IronPython.Runtime {
             return TryGetValue(SymbolTable.IdToString(key), out value);
         }
 
+        public virtual bool TryRemoveValue(object key, out object value) {
+            if (TryGetValue(key, out value)) {
+                return Remove(key);
+                
+            }
+
+            return false;
+        }
+
         public abstract int Count { get; }
         public abstract void Clear();
         public virtual bool HasNonStringAttributes() {

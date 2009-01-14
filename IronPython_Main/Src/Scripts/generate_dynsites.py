@@ -402,17 +402,6 @@ def gen_void_matchmaker(cw):
     for n in range(1, MaxSiteArity + 2):
         cw.write(mismatch_void, ts = gsig_noret(n), size = n, params = "CallSite site" + gparms(n))
 
-splatcaller = """[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-[Obsolete("used by generated code", true)]
-public static object CallHelper%(size)d(CallSite<Func<CallSite, object%(ts)s>> site, object[] args) {
-    return site.Target(site%(args)s);
-}
-"""
-
-def gen_splatsite(cw):
-    cw.write("//\n// Splatting targets for dynamic sites\n//\n")
-    for n in range(1, MaxSiteArity + 2):
-        cw.write(splatcaller, size = n, ts = ", object" * n, args = gargs_index(n))
 
 update_target="""/// <summary>
 /// Site update code - arity %(arity)d
@@ -445,7 +434,6 @@ def gen_void_matchcaller_targets(cw):
 
 def main():
     return generate(
-        ("SplatCallSite call helpers", gen_splatsite),
         ("Func Types", gen_func_types),
         ("Action Types", gen_action_types),
         ("UpdateAndExecute Methods", gen_update_targets),

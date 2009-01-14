@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Types {
 #endif
     [PythonType("type")]
     public class PythonType : IMembersList, IDynamicObject, IWeakReferenceable, ICodeFormattable {
-        private readonly Type/*!*/ _underlyingSystemType;   // the underlying CLI system type for this type
+        private Type/*!*/ _underlyingSystemType;            // the underlying CLI system type for this type
         private string _name;                               // the name of the type
         private Dictionary<SymbolId, PythonTypeSlot> _dict; // type-level slots & attributes
         private PythonTypeAttributes _attrs;                // attributes of the type
@@ -77,8 +77,6 @@ namespace IronPython.Runtime.Types {
         /// objects), and a dictionary of members is provided.
         /// </summary>
         public PythonType(CodeContext/*!*/ context, string name, PythonTuple bases, IAttributesCollection dict) {
-            _underlyingSystemType = NewTypeMaker.GetNewType(name, bases, dict);
-
             InitializeUserType(context, name, bases, dict);
         }
 
@@ -292,14 +290,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static List<PythonType> CalculateMro(PythonType type, IList<PythonType> ldt) {
-            List<PythonType> mro = Mro.Calculate(type, ldt);
-            for (int i = 0; i < mro.Count; i++) {
-                Type newType;
-                if (TryReplaceExtensibleWithBase(mro[i].UnderlyingSystemType, out newType)) {
-                    mro[i] = DynamicHelpers.GetPythonTypeFromType(newType);
-                }
-            }
-            return mro;
+            return Mro.Calculate(type, ldt);
         }
 
         private static bool TryReplaceExtensibleWithBase(Type curType, out Type newType) {
@@ -1433,11 +1424,9 @@ namespace IronPython.Runtime.Types {
             bases = ValidateBases(bases);
 
             _name = name;
-            _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
             _bases = GetBasesAsList(bases).ToArray();
-            _resolutionOrder = CalculateMro(this, _bases);
             _pythonContext = PythonContext.GetContext(context);
-
+            _resolutionOrder = CalculateMro(this, _bases);
 
             foreach (PythonType pt in _bases) {
                 pt.AddSubType(this);
@@ -1445,6 +1434,60 @@ namespace IronPython.Runtime.Types {
             }
 
             BuildUserTypeDictionary(context, vars);
+            InitializeSlots(name, bases, vars);
+
+            // calculate the .NET type once so it can be used for things like super calls
+            _underlyingSystemType = NewTypeMaker.GetNewType(name, bases, vars);
+
+            // then let the user intercept and rewrite the type - the user can't create
+            // instances of this type yet.
+            _underlyingSystemType = __clitype__();
+            
+            // finally assign the ctors from the real type the user provided
+            _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
+        }
+
+        private void InitializeSlots(string name, PythonTuple bases, IAttributesCollection vars) {
+            List<string> slots = NewTypeMaker.GetSlots(vars);
+
+            if (slots != null) {
+                int index = 0;
+                foreach (object o in bases) {
+                    PythonType pt = o as PythonType;
+                    if (pt == null) {
+                        continue;
+                    }
+
+                    index += pt.SlotCount;
+                }
+
+                for (int i = 0; i < slots.Count; i++) {
+                    string slotName = slots[i];
+                    if (slotName.StartsWith("__") && !slotName.EndsWith("__")) {
+                        slotName = "_" + name + slotName;
+                    }
+
+                    SymbolId id = SymbolTable.StringToId(slotName);
+
+                    // don't replace existing values, they'll just be read-only.  For example
+                    // class foo(object):
+                    //     __slots__ = ['__init__']
+                    //     def __init__(self): pass
+                    //
+                    object dummy;
+                    if (vars.TryGetValue(id, out dummy) ||
+                        id == Symbols.Dict ||
+                        id == Symbols.WeakRef) {
+                        continue;
+                    }
+
+                    AddSlot(id, new ReflectedSlotProperty(slotName, name, i + index));
+                }
+            }
+        }
+
+        public virtual Type __clitype__() {
+            return _underlyingSystemType;
         }
 
         private void BuildUserTypeDictionary(CodeContext context, IAttributesCollection vars) {
@@ -1460,10 +1503,6 @@ namespace IronPython.Runtime.Types {
                 hasWeakRef = true;
             }
 
-            EnsureModule(context, vars);
-            EnsureDoc(vars);
-            MakeNewStatic(vars);
-
             EnsureDict();
 
             if (hasWeakRef && !vars.ContainsKey(Symbols.WeakRef)) {
@@ -1474,18 +1513,38 @@ namespace IronPython.Runtime.Types {
                 AddSlot(Symbols.Dict, new PythonTypeDictSlot(this));
             }
 
-            PopulateSlots(vars);
+            PopulateSlots(context, vars);
         }
 
-        private void PopulateSlots(IAttributesCollection vars) {
+        private void PopulateSlots(CodeContext context, IAttributesCollection vars) {
             foreach (KeyValuePair<SymbolId, object> kvp in vars.SymbolAttributes) {
-                PythonTypeSlot pts = kvp.Value as PythonTypeSlot;
-                if (pts == null) {
-                    pts = new PythonTypeUserDescriptorSlot(kvp.Value);
-                }
-
-                AddSlot(kvp.Key, pts);
+                PopulateSlot(kvp.Key, kvp.Value);
             }
+            
+            PythonTypeSlot val;
+            if (!_dict.TryGetValue(Symbols.Module, out val)) {
+                object modName;
+                if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
+                    PopulateSlot(Symbols.Module, modName);
+                }
+            }
+            
+            if (!_dict.TryGetValue(Symbols.Doc, out val)) {
+                PopulateSlot(Symbols.Doc, null);
+            }
+            
+            if (_dict.TryGetValue(Symbols.NewInst, out val) && val is PythonFunction) {
+                AddSlot(Symbols.NewInst, new staticmethod(val));
+            }
+        }
+        
+        private void PopulateSlot(SymbolId key, object value) {
+            PythonTypeSlot pts = value as PythonTypeSlot;
+            if (pts == null) {
+                pts = new PythonTypeUserDescriptorSlot(value);
+            }
+
+            AddSlot(key, pts);
         }
 
         private static List<PythonType> GetBasesAsList(PythonTuple bases) {
@@ -1500,20 +1559,6 @@ namespace IronPython.Runtime.Types {
             }
 
             return newbs;
-        }
-
-        private static void EnsureDoc(IAttributesCollection vars) {
-            if (!vars.ContainsKey(Symbols.Doc)) {
-                vars[Symbols.Doc] = new PythonTypeValueSlot(null);
-            }
-
-        }
-
-        private static void MakeNewStatic(IAttributesCollection vars) {
-            object newInst;
-            if (vars.TryGetValue(Symbols.NewInst, out newInst) && newInst is PythonFunction) {
-                vars[Symbols.NewInst] = new staticmethod(newInst);
-            }
         }
 
         private PythonTuple ValidateBases(PythonTuple bases) {
@@ -1541,7 +1586,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
         }
-
+        
         #endregion
 
         #region System type initialization

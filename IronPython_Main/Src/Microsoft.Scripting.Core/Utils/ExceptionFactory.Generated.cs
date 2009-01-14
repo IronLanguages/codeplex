@@ -34,15 +34,6 @@ namespace Microsoft.Linq.Expressions {
 
     internal static partial class Strings {
         /// <summary>
-        /// A string like  "DLinq"
-        /// </summary>
-        internal static string OwningTeam {
-            get {
-                return "DLinq";
-            }
-        }
-
-        /// <summary>
         /// A string like  "Method precondition violated"
         /// </summary>
         internal static string MethodPreconditionViolated {
@@ -417,6 +408,15 @@ namespace Microsoft.Linq.Expressions {
         internal static string LabelTypeMustBeVoid {
             get {
                 return "Type must be System.Void for this label argument";
+            }
+        }
+
+        /// <summary>
+        /// A string like  "Quoted expression must be a lambda"
+        /// </summary>
+        internal static string QuotedExpressionMustBeLambda {
+            get {
+                return "Quoted expression must be a lambda";
             }
         }
 
@@ -1233,11 +1233,18 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Runtime constants require a bound delegate."
+        /// A string like  "CompileToMethod cannot compile constant '{0}' because it is a non-trivial value, such as a live object. Instead, create an expression tree that can construct this value."
         /// </summary>
-        internal static string RtConstRequiresBundDelegate {
+        internal static string CannotCompileConstant(object p0) {
+            return FormatString("CompileToMethod cannot compile constant '{0}' because it is a non-trivial value, such as a live object. Instead, create an expression tree that can construct this value.", p0);
+        }
+
+        /// <summary>
+        /// A string like  "Dynamic expressions are not supported by CompileToMethod. Instead, create an expression tree that uses System.Runtime.CompilerServices.CallSite."
+        /// </summary>
+        internal static string CannotCompileDynamic {
             get {
-                return "Runtime constants require a bound delegate.";
+                return "Dynamic expressions are not supported by CompileToMethod. Instead, create an expression tree that uses System.Runtime.CompilerServices.CallSite.";
             }
         }
 
@@ -2086,10 +2093,17 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// InvalidOperationException with message like "Runtime constants require a bound delegate."
+        /// InvalidOperationException with message like "CompileToMethod cannot compile constant '{0}' because it is a non-trivial value, such as a live object. Instead, create an expression tree that can construct this value."
         /// </summary>
-        internal static Exception RtConstRequiresBundDelegate() {
-            return new InvalidOperationException(Strings.RtConstRequiresBundDelegate);
+        internal static Exception CannotCompileConstant(object p0) {
+            return new InvalidOperationException(Strings.CannotCompileConstant(p0));
+        }
+
+        /// <summary>
+        /// NotSupportedException with message like "Dynamic expressions are not supported by CompileToMethod. Instead, create an expression tree that uses System.Runtime.CompilerServices.CallSite."
+        /// </summary>
+        internal static Exception CannotCompileDynamic() {
+            return new NotSupportedException(Strings.CannotCompileDynamic);
         }
 
         /// <summary>

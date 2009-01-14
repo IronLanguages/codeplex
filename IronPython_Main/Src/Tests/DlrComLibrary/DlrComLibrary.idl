@@ -445,7 +445,7 @@ interface IDispEvents : IDispatch{
 	[propput, id(2), helpstring("property expected_hresult")] HRESULT expected_hresult([in] ULONG newVal);
 	[id(3), helpstring("method triggerNull"), source] HRESULT triggerNull(void);
 	[id(4), helpstring("method triggerInOutretBool")] HRESULT triggerInOutretBool([in] VARIANT_BOOL inval, [out,retval] VARIANT_BOOL* ret);
-	[id(5), helpstring("method triggerInOutBstr")] HRESULT triggerInOutBstr([in] BSTR inval, [out,retval] BSTR* outval);
+	[id(5), helpstring("method triggerInOutBstr")] HRESULT triggerInOutBstr([in] BSTR inval, [out] BSTR* outval);
 	[id(6), helpstring("method triggerUShort"), source] HRESULT triggerUShort([in] USHORT inval);
 	[id(7), helpstring("method triggerNullShort")] HRESULT triggerNullShort(void);
 };

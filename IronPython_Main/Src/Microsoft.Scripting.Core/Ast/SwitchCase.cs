@@ -18,6 +18,9 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
+    /// <summary>
+    /// Represents one case of a <see cref="SwitchExpression"/>.
+    /// </summary>
     public sealed class SwitchCase {
         private readonly bool _default;
         private readonly int _value;
@@ -29,25 +32,45 @@ namespace Microsoft.Linq.Expressions {
             _body = body;
         }
 
+        /// <summary>
+        /// True if this is the default case.
+        /// </summary>
         public bool IsDefault {
             get { return _default; }
         }
 
+        /// <summary>
+        /// Gets the value of this case.  This case is selected for execution when the <see cref="SwitchExpression.Test"/> matches this value.
+        /// </summary>
         public int Value {
             get { return _value; }
         }
 
+        /// <summary>
+        /// Gets the body of this case.
+        /// </summary>
         public Expression Body {
             get { return _body; }
         }
     }
 
     public partial class Expression {
+        /// <summary>
+        /// Creates a default <see cref="SwitchCase"/>.
+        /// </summary>
+        /// <param name="body">The body of the case.</param>
+        /// <returns>The created <see cref="SwitchCase"/>.</returns>
         public static SwitchCase DefaultCase(Expression body) {
             RequiresCanRead(body, "body");
             return new SwitchCase(true, 0, body);
         }
 
+        /// <summary>
+        /// Creates a non-default <see cref="SwitchCase"/>.
+        /// </summary>
+        /// <param name="value">The test value of the case.</param>
+        /// <param name="body">The body of the case.</param>
+        /// <returns>The created <see cref="SwitchCase"/>.</returns>
         public static SwitchCase SwitchCase(int value, Expression body) {
             RequiresCanRead(body, "body");
             return new SwitchCase(false, value, body);

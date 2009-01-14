@@ -1327,5 +1327,117 @@ def test_clr_dir():
     Assert('IndexOf' not in clr.Dir('abc'))
     Assert('IndexOf' in clr.DirClr('abc'))
 
+def test_underlying_type():
+    # simple case, just make sure it's called and we can call super
+    global called
+    called = None
+    class MyType(type):
+        def __clitype__(self):
+            global called
+            called = True
+            return super(MyType, self).__clitype__()
+    
+    class x(object):
+        __metaclass__ = MyType
+
+    AreEqual(called, True)
+    
+    import clr
+    clr.AddReference('Microsoft.Scripting')
+    
+    from System import Reflection
+    from Microsoft.Scripting.Generation import AssemblyGen
+    from System.Reflection import Emit, FieldAttributes
+    from System.Reflection.Emit import OpCodes      
+    gen = AssemblyGen(Reflection.AssemblyName('test'), None, '.dll', False)
+    
+    try:
+        # more complex case, actually create a new type and override the
+        # ctors
+        class MyType(type):
+            def __clitype__(self):
+                baseType = super(MyType, self).__clitype__()
+                t = gen.DefinePublicType(self.__name__, baseType, True)
+                
+                ctors = baseType.GetConstructors()
+                for ctor in ctors:            
+                    builder = t.DefineConstructor(
+                        Reflection.MethodAttributes.Public, 
+                        Reflection.CallingConventions.Standard, 
+                        tuple([p.ParameterType for p in ctor.GetParameters()])
+                    )
+                    ilgen = builder.GetILGenerator()
+                    ilgen.Emit(OpCodes.Ldarg, 0)
+                    for index in range(len(ctor.GetParameters())):
+                        ilgen.Emit(OpCodes.Ldarg, index + 1)
+                    ilgen.Emit(OpCodes.Call, ctor)
+                    ilgen.Emit(OpCodes.Ret)
+                
+                newType = t.CreateType()
+                return newType
+        
+        class x(object):
+            __metaclass__ = MyType
+            def __init__(self):
+                self.abc = 3
+              
+        a = x()
+        AreEqual(a.abc, 3)
+        
+        # more complex case, make a static .NET type which can be created
+        class MyType(type):
+            def __clitype__(self):
+                baseType = super(MyType, self).__clitype__()
+                t = gen.DefinePublicType(self.__name__, baseType, True)
+                
+                ctors = baseType.GetConstructors()
+                for ctor in ctors:            
+                    baseParams = ctor.GetParameters()
+                    newParams = baseParams[1:]
+                    
+                    builder = t.DefineConstructor(
+                        Reflection.MethodAttributes.Public, 
+                        Reflection.CallingConventions.Standard, 
+                        tuple([p.ParameterType for p in newParams])
+                    )
+                    fldAttrs = FieldAttributes.Static | FieldAttributes.Public
+                    fld = t.DefineField('$$type', type, fldAttrs)
+                    
+                    ilgen = builder.GetILGenerator()
+                    ilgen.Emit(OpCodes.Ldarg, 0)
+                    ilgen.Emit(OpCodes.Ldsfld, fld)
+                    for index in range(len(ctor.GetParameters())):
+                        ilgen.Emit(OpCodes.Ldarg, index + 1)
+                    ilgen.Emit(OpCodes.Call, ctor)
+                    ilgen.Emit(OpCodes.Ret)
+
+                    # keep a ctor which takes Python types as well so we 
+                    # can be called from Python still.
+                    builder = t.DefineConstructor(
+                        Reflection.MethodAttributes.Public, 
+                        Reflection.CallingConventions.Standard, 
+                        tuple([p.ParameterType for p in ctor.GetParameters()])
+                    )
+                    ilgen = builder.GetILGenerator()
+                    ilgen.Emit(OpCodes.Ldarg, 0)
+                    for index in range(len(ctor.GetParameters())):
+                        ilgen.Emit(OpCodes.Ldarg, index + 1)
+                    ilgen.Emit(OpCodes.Call, ctor)
+                    ilgen.Emit(OpCodes.Ret)
+
+                newType = t.CreateType()
+                newType.GetField('$$type').SetValue(None, self)
+                return newType
+        
+        class MyCreatableDotNetType(object):
+            __metaclass__ = MyType
+            def __init__(self):
+                self.abc = 3
+
+        # TODO: Test Type.GetType (requires the base class to be non-transient)
+    finally:
+        #gen.SaveAssembly()
+        pass
+    
 run_test(__name__)
 

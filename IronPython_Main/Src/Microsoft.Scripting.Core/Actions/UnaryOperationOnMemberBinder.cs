@@ -21,8 +21,7 @@ using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
-    /// A Binder that is responsible for runtime binding of operation:
-    /// a.b (op)= c
+    /// Represents the unary dynamic operation on member at the call site, providing the binding semantic and the details about the operation.
     /// </summary>
     public abstract class UnaryOperationOnMemberBinder : DynamicMetaObjectBinder {
         private readonly ExpressionType _operation;
@@ -30,11 +29,11 @@ namespace Microsoft.Scripting {
         private readonly bool _ignoreCase;
 
         /// <summary>
-        /// Constructor of the OperationOnIndexBinder object, representing "a.b (op)= c" operation.
+        /// Initializes a new instance of the <see cref="UnaryOperationOnMemberBinder"/> class.
         /// </summary>
-        /// <param name="operation">Binary operation to be performed.</param>
-        /// <param name="name">Name of the member for the operation.</param>
-        /// <param name="ignoreCase">Ignore case of the member.</param>
+        /// <param name="operation">The unary operation kind.</param>
+        /// <param name="name">The name of the member for the operation.</param>
+        /// <param name="ignoreCase">The value indicating whether to ignore the case of the member name.</param>
         protected UnaryOperationOnMemberBinder(ExpressionType operation, string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.Requires(UnaryOperationBinder.OperationIsValid(operation), "operation");
@@ -44,7 +43,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// The operation to be performed.
+        /// The unary operation kind.
         /// </summary>
         public ExpressionType Operation {
             get {
@@ -53,7 +52,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Name of the member for the operation.
+        /// The name of the member for the operation.
         /// </summary>
         public string Name {
             get {
@@ -62,7 +61,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Ignore case of the member.
+        /// Gets the value indicating whether to ignore the case of the member name.
         /// </summary>
         public bool IgnoreCase {
             get {
@@ -71,53 +70,53 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Implements a binding logic for the binary operation part of the binding.
-        /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
-        /// as:
-        ///    a[b] = a[b] + c
-        /// to let the language participate in the binding of the binary operation only.
+        /// Performs the binding of the unary dynamic operation if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <returns>MetaObject representing the binding result.</returns>
+        /// <param name="target">The target of the dynamic unary operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
+        /// <remarks> This method is called by the target when the target implements the unary operation on member
+        /// as a sequence of get member, unary operation and set member, to let the <see cref="DynamicMetaObject"/>
+        /// request the binding of the unary operation only.
+        /// </remarks>
         public DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target) {
             return FallbackUnaryOperation(target);
         }
 
         /// <summary>
-        /// Implements a binding logic for the binary operation part of the binding.
-        /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
-        /// as:
-        ///    a[b] = a[b] + c
-        /// to let the language participate in the binding of the binary operation only.
+        /// When overridden in the derived class, performs the binding of the unary dynamic operation if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
-        /// <returns>MetaObject representing the binding result.</returns>
+        /// <param name="target">The target of the dynamic unary operation.</param>
+        /// <param name="errorSuggestion">The binding result in case the binding fails, or null.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
+        /// <remarks> This method is called by the target when the target implements the unary operation on member
+        /// as a sequence of get member, unary operation and set member, to let the <see cref="DynamicMetaObject"/>
+        /// request the binding of the unary operation only.
+        /// </remarks>
         public abstract DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target, DynamicMetaObject errorSuggestion);
 
         /// <summary>
-        /// Implements a binding logic for the operation. This is called by the target when
-        /// the target lets the executing language participate in the binding process.
+        /// Performs the binding of the dynamic unary operation on member if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <returns>MetaObject representing the binding.</returns>
+        /// <param name="target">The target of the dynamic unary operation on member.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public DynamicMetaObject FallbackUnaryOperationOnMember(DynamicMetaObject target) {
             return FallbackUnaryOperationOnMember(target, null);
         }
 
         /// <summary>
-        /// Implements a binding logic for the operation. This is called by the target when
-        /// the target lets the executing language participate in the binding process.
+        /// When overridden in the derived class, performs the binding of the dynamic unary operation on member if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="errorSuggestion">The representation of the binding error that the target meta
-        /// object recommends the language to use if the language cannot bind.
-        /// This allows the target meta object to participate in the error handling process.</param>
-        /// <returns>MetaObject representing the binding.</returns>
+        /// <param name="target">The target of the dynamic unary operation on member.</param>
+        /// <param name="errorSuggestion">The binding result in case the binding fails, or null.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public abstract DynamicMetaObject FallbackUnaryOperationOnMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion);
 
+        /// <summary>
+        /// Performs the binding of the dynamic unary operation.
+        /// </summary>
+        /// <param name="target">The target of the dynamic operation.</param>
+        /// <param name="args">An array of arguments of the dynamic operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public sealed override DynamicMetaObject Bind(DynamicMetaObject target, params DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(args == null || args.Length == 0, "args");
@@ -126,10 +125,10 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Implements Equality operation for the OperationOnMemberBinder
+        /// Determines whether the specified System.Object is equal to the current <see cref="UnaryOperationOnMemberBinder"/>.
         /// </summary>
-        /// <param name="obj">Instance to comapre equal to.</param>
-        /// <returns>true/false</returns>
+        /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="UnaryOperationOnMemberBinder"/>.</param>
+        /// <returns>true if the specified System.Object is equal to the current <see cref="UnaryOperationOnMemberBinder"/>; otherwise, false.</returns>
         [Confined]
         public override bool Equals(object obj) {
             UnaryOperationOnMemberBinder gma = obj as UnaryOperationOnMemberBinder;
@@ -137,9 +136,9 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Calculates hash code for the OperationOnMemberBinder
+        /// Returns the hash code for this instance. 
         /// </summary>
-        /// <returns>The hash code.</returns>
+        /// <returns>An <see cref="Int32"/> containing the hash code for this instance.</returns>
         [Confined]
         public override int GetHashCode() {
             return UnaryOperationOnMemberBinderHash ^ (int)_operation ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);

@@ -31,6 +31,7 @@ using IronPython;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -598,11 +599,11 @@ ocinst = oc()
 
             ParameterExpression parameter = Expression.Parameter(typeof(object), "");
 
-            DynamicMetaObject nc = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("nc"), parameter);
-            DynamicMetaObject ncinst = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("ncinst"), parameter); ;
-            DynamicMetaObject f = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("f"), parameter); ;
-            DynamicMetaObject oc = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("oc"), parameter); ;
-            DynamicMetaObject ocinst = DynamicMetaObject.ObjectToMetaObject(scope.GetVariable("ocinst"), parameter); ;
+            DynamicMetaObject nc = DynamicUtils.ObjectToMetaObject(scope.GetVariable("nc"), parameter);
+            DynamicMetaObject ncinst = DynamicUtils.ObjectToMetaObject(scope.GetVariable("ncinst"), parameter); ;
+            DynamicMetaObject f = DynamicUtils.ObjectToMetaObject(scope.GetVariable("f"), parameter); ;
+            DynamicMetaObject oc = DynamicUtils.ObjectToMetaObject(scope.GetVariable("oc"), parameter); ;
+            DynamicMetaObject ocinst = DynamicUtils.ObjectToMetaObject(scope.GetVariable("ocinst"), parameter); ;
 
             List<string> ncnames = new List<string>(nc.GetDynamicMemberNames());
             List<string> ncinstnames = new List<string>(ncinst.GetDynamicMemberNames());
