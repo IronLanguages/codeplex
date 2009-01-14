@@ -117,6 +117,21 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        internal void MoveRule(Rule<T> rule, Type[] args) {
+            LinkedList<Rule<T>> list = GetRuleList(args);
+            lock (list) {
+                LinkedListNode<Rule<T>> node = list.First;
+                while (node != null) {
+                    if (node.Value == rule) {
+                        list.Remove(node);
+                        list.AddFirst(node);
+                        break;
+                    }
+                    node = node.Next;
+                }
+            }
+        }
+
         private class RuleTable {
             internal Dictionary<Type, RuleTable> NextTable;
             internal LinkedList<Rule<T>> Rules;

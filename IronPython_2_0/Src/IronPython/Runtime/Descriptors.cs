@@ -177,18 +177,22 @@ namespace IronPython.Runtime {
         public object __get__(CodeContext/*!*/ context, object instance) { return __get__(context, instance, null); }
 
         public new object __get__(CodeContext/*!*/ context, object instance, object owner) {
-            if (instance == null) return this;
-            if (fget != null) return PythonCalls.Call(context, fget, instance);
+            if (instance == null) {
+                return this;
+            } else if (fget != null) {
+                var site = PythonContext.GetContext(context).PropertyGetSite;
+
+                return site.Target(site, context, fget, instance);
+            }
             throw PythonOps.AttributeError("unreadable attribute");
         }
 
         public bool __set__(CodeContext/*!*/ context, object instance, object value) {
             if (instance == null) {
                 return false;
-            }
-
-            if (fset != null) {
-                PythonCalls.Call(context, fset, instance, value);
+            } else if (fset != null) {
+                var site = PythonContext.GetContext(context).PropertySetSite;
+                site.Target(site, context, fset, instance, value);
                 return true;
             } else {
                 throw PythonOps.AttributeError("readonly attribute");
@@ -197,11 +201,13 @@ namespace IronPython.Runtime {
 
         public new bool __delete__(CodeContext/*!*/ context, object instance) {
             if (fdel != null) {
-                PythonCalls.Call(context, fdel, instance);
-                return true;
-            } else {
-                if (instance == null) return false;
+                var site = PythonContext.GetContext(context).PropertyDeleteSite;
 
+                site.Target(site, context, fdel, instance);
+                return true;
+            } else if (instance == null) {
+                return false;
+            } else {
                 throw PythonOps.AttributeError("undeletable attribute");
             }
         }

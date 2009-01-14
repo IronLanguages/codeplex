@@ -242,6 +242,7 @@ namespace Microsoft.Scripting.Actions {
                             //
 
                             AddRule(rule);
+                            _cache.MoveRule(_binder, rule, argTypes);
                         }
                     }
 

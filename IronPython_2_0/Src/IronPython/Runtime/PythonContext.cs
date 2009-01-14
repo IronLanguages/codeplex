@@ -120,11 +120,16 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, PythonFunction, object, object, int>> _sharedPythonFunctionCompareSite;
         private CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object, int>> _sharedBuiltinFunctionCompareSite;
 
+        private CallSite<Func<CallSite, CodeContext, object, object, object>> _propGetSite, _propDelSite;
+        private CallSite<Func<CallSite, CodeContext, object, object, object, object>> _propSetSite;
         private CompiledLoader _compiledLoader;
         internal bool _importWarningThrows;
         private CommandDispatcher _commandDispatcher; // can be null
         private ClrModule.ReferencesList _referencesList;
         private string _floatFormat, _doubleFormat;
+
+        private Dictionary<Type, CallSite<Func<CallSite, object, int>>> _hashSites;
+        private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -2579,6 +2584,60 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        internal CallSite<Func<CallSite, CodeContext, object, object, object>> PropertyGetSite {
+            get {
+                if (_propGetSite == null) {
+                    Interlocked.CompareExchange(ref _propGetSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
+                            new InvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(1)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propGetSite;
+            }
+        }
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object>> PropertyDeleteSite {
+            get {
+                if (_propDelSite == null) {
+                    Interlocked.CompareExchange(ref _propDelSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
+                            new InvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(1)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propDelSite;
+            }
+        }
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object, object>> PropertySetSite {
+            get {
+                if (_propSetSite == null) {
+                    Interlocked.CompareExchange(ref _propSetSite,
+                        CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
+                            new InvokeBinder(
+                                DefaultBinderState,
+                                new CallSignature(2)
+                            )
+                        ),
+                        null
+                    );
+                }
+
+                return _propSetSite;
+            }
+        }
+
         internal new PythonBinder Binder {
             get {
                 return (PythonBinder)base.Binder;
@@ -2693,6 +2752,51 @@ namespace IronPython.Runtime {
 
             return new FunctionComparer<object>(this, cmp, _sharedFunctionCompareSite);
             
+        }
+
+        internal CallSite<Func<CallSite, object, object, bool>> GetEqualSite(Type/*!*/ type) {
+            if (_equalSites == null) {
+                Interlocked.CompareExchange(ref _equalSites, new Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>>(), null);
+            }
+
+            CallSite<Func<CallSite, object, object, bool>> res;
+            if (!_equalSites.TryGetValue(type, out res)) {
+                _equalSites[type] = res = MakeEqualSite();
+            }
+
+            return res;
+        }
+
+        internal CallSite<Func<CallSite, object, object, bool>> MakeEqualSite() {
+            return CallSite<Func<CallSite, object, object, bool>>.Create(
+                Binders.BinaryOperationRetType(
+                    DefaultBinderState,
+                    StandardOperators.Equal,
+                    typeof(bool)
+                )
+            );
+        }
+
+        internal CallSite<Func<CallSite, object, int>> GetHashSite(Type/*!*/ type) {
+            if (_hashSites == null) {
+                Interlocked.CompareExchange(ref _hashSites, new Dictionary<Type, CallSite<Func<CallSite, object, int>>>(), null);
+            }
+
+            CallSite<Func<CallSite, object, int>> res;
+            if (!_hashSites.TryGetValue(type, out res)) {
+                _hashSites[type] = res = MakeHashSite();
+            }
+
+            return res;
+        }
+
+        internal CallSite<Func<CallSite, object, int>> MakeHashSite() {
+            return CallSite<Func<CallSite, object, int>>.Create(
+                new OperationBinder(
+                    DefaultBinderState,
+                    OperatorStrings.Hash
+                )
+            );
         }
     }
 

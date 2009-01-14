@@ -58,5 +58,9 @@ namespace Microsoft.Scripting.Actions {
             RuleTree<T> tree = GetOrMakeRuleTree(binder);
             tree.RemoveRule(args, rule);
         }
+        
+        internal void MoveRule(CallSiteBinder binder, Rule<T> rule, Type[] types) {
+            GetOrMakeRuleTree(binder).MoveRule(rule, types);
+        }
     }
 }
