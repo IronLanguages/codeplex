@@ -63,25 +63,8 @@ namespace Microsoft.Scripting {
         /// </summary>
         private class ComEventSinkMethod {
             public string _name;
-            public Delegate _target;
+            public Func<object[], object> _handlers;
         }
-
-        delegate object ComEventCallHandler(object[] args);
-
-        private class ComEventCallContext {
-            private static SplatCallSite _site = new SplatCallSite(new ComInvokeAction());
-
-            public object _func;
-
-            public ComEventCallContext(object func) {
-                _func = func;
-            }
-
-            public object Call(object[] args) {
-                return _site.Invoke(args.AddFirst(_func));
-            }
-        }
-
         #endregion
 
         #region ctor
@@ -144,7 +127,7 @@ namespace Microsoft.Scripting {
 
         public void AddHandler(int dispid, object func) {
             string name = String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", dispid);
-            ComEventCallHandler handler = new ComEventCallContext(func).Call;
+            Func<object[], object> handler = new SplatCallSite(func).Invoke;
 
             lock (_lockObject) {
                 ComEventSinkMethod sinkMethod;
@@ -160,7 +143,7 @@ namespace Microsoft.Scripting {
                     _comEventSinkMethods.Add(sinkMethod);
                 }
 
-                sinkMethod._target = Delegate.Combine(sinkMethod._target, handler);
+                sinkMethod._handlers += handler;
             }
         }
 
@@ -179,18 +162,18 @@ namespace Microsoft.Scripting {
                 // to the func handler we want to remove. This will be
                 // easy since we Target property of the delegate object
                 // is a ComEventCallContext object.
-                Delegate[] delegates = sinkEntry._target.GetInvocationList();
+                Delegate[] delegates = sinkEntry._handlers.GetInvocationList();
                 foreach (Delegate d in delegates) {
-                    ComEventCallContext callContext = d.Target as ComEventCallContext;
-                    if (callContext != null && callContext._func.Equals(func)) {
-                        sinkEntry._target = Delegate.Remove(sinkEntry._target, d);
+                    SplatCallSite callContext = d.Target as SplatCallSite;
+                    if (callContext != null && callContext._callable.Equals(func)) {
+                        sinkEntry._handlers -= d as Func<object[], object>;
                         break;
                     }
                 }
 
                 // If the delegates chain is empty - we can remove 
                 // corresponding ComEvenSinkEntry
-                if (sinkEntry._target == null)
+                if (sinkEntry._handlers == null)
                     _comEventSinkMethods.Remove(sinkEntry);
 
                 // We can Unadvise from the ConnectionPoint if no more sink entries
@@ -209,8 +192,8 @@ namespace Microsoft.Scripting {
             ComEventSinkMethod site;
             site = FindSinkMethod(name);
 
-            if (site != null && site._target != null) {
-                return site._target.DynamicInvoke(new object[] { args });
+            if (site != null && site._handlers != null) {
+                return site._handlers(args);
             }
 
             return null;
@@ -335,11 +318,7 @@ namespace Microsoft.Scripting {
                 return null;
 
             ComEventSinkMethod site;
-            site = _comEventSinkMethods.Find(
-                delegate(ComEventSinkMethod element) {
-                    return element._name == name;
-                }
-            );
+            site = _comEventSinkMethods.Find(element => element._name == name);
 
             return site;
         }

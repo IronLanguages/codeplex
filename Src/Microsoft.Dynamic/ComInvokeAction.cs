@@ -20,9 +20,11 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting {
-    class ComInvokeAction : InvokeBinder {
+    internal sealed class  ComInvokeAction : InvokeBinder {
         public override object CacheIdentity {
             get { return this; }
         }
@@ -40,9 +42,89 @@ namespace Microsoft.Scripting {
         }
 
         public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject errorSuggestion) {
-            return errorSuggestion ?? DynamicMetaObject.CreateThrow(target, args, typeof(NotSupportedException), "Cannot perform call");
+            return errorSuggestion ?? DynamicMetaObject.CreateThrow(target, args, typeof(NotSupportedException), Strings.CannotCall);
         }
     }
+
+
+    internal sealed class SplatInvokeBinder : DynamicMetaObjectBinder {
+
+        // SplatInvokeBinder is a singleton
+        private SplatInvokeBinder() {}
+        private static readonly SplatInvokeBinder _instance = new SplatInvokeBinder();
+
+        internal static SplatInvokeBinder Instance{
+            get {
+                return _instance;
+            }
+        }
+
+        public sealed override DynamicMetaObject Bind(DynamicMetaObject target, DynamicMetaObject[] args) {
+            ContractUtils.RequiresNotNull(target, "target");
+            ContractUtils.RequiresNotNull(target, "args");
+
+            // there must be only one argument and it is always object[].
+            // see SplatCallSite.Invoke
+            Debug.Assert(args.Length == 1);
+            Debug.Assert(args[0] != null);
+            Debug.Assert(args[0].Expression.Type == typeof(object[]));
+
+
+            // We know it is an array.
+            DynamicMetaObject arg = args[0];
+
+            Expression argAsArrayExpr = arg.Expression;
+
+            object[] argValues = (object[])arg.Value;
+            int argLen = argValues.Length;
+
+            DynamicMetaObject[] splattedArgs = new DynamicMetaObject[argLen];
+            ArgumentInfo[] arginfos = new ArgumentInfo[argLen];
+
+            for (int i = 0; i < argLen; i++) {
+                Expression argExpr = Expression.ArrayIndex(
+                    argAsArrayExpr,
+                    Expression.Constant(i)
+                );
+
+                splattedArgs[i] = new DynamicMetaObject(
+                    argExpr,
+                    BindingRestrictions.Empty,
+                    argValues[i]
+                );
+                arginfos[i] = Expression.ByRefArgument(i);
+            }
+
+
+            BindingRestrictions arrayLenRestriction = BindingRestrictions.GetExpressionRestriction(
+                Expression.Equal(
+                    Expression.ArrayLength(
+                        argAsArrayExpr
+                    ),
+                    Expression.Constant(argLen)
+                )
+            );
+
+            ComInvokeAction invokeBinder = new ComInvokeAction(arginfos);
+            DynamicMetaObject innerAction = target.BindInvoke(invokeBinder, splattedArgs);
+
+            BindingRestrictions restrictions =
+                target.Restrictions.
+                Merge(arg.Restrictions).
+                Merge(arrayLenRestriction).
+                Merge(innerAction.Restrictions);
+
+            return new DynamicMetaObject(
+                innerAction.Expression,
+                restrictions
+            );
+        }
+
+        public override object CacheIdentity {
+            get { return this; }
+        }
+    }
+
 }
 
 #endif

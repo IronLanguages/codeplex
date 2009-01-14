@@ -101,44 +101,7 @@ namespace IronPython.Runtime.Types {
                     // creation code                    
                     return GetTypeMaker(bases, typeInfo).CreateNewType();
                 });
-
-            if (typeInfo.Slots != null) {
-                int index = 0;
-                foreach (object o in bases) {
-                    PythonType pt = o as PythonType;
-                    if (pt == null) {
-                        continue;
-                    }
-
-                    index += pt.SlotCount;
-                }
-
-                for (int i = 0; i < typeInfo.Slots.Count; i++) {
-                    string name = typeInfo.Slots[i];
-                    if (name.StartsWith("__") && !name.EndsWith("__")) {
-                        name = "_" + typeName + name;
-                    }
-
-                    SymbolId id = SymbolTable.StringToId(name);
-
-                    // don't replace existing values, they'll just be read-only.  For example
-                    // class foo(object):
-                    //     __slots__ = ['__init__']
-                    //     def __init__(self): pass
-                    //
-                    object dummy;
-                    if (dict.TryGetValue(id, out dummy)) continue;
-
-                    if (id == Symbols.Dict) {
-                        continue;
-                    } else if (id == Symbols.WeakRef) {
-                        continue;
-                    }
-
-                    dict[id] = new ReflectedSlotProperty(name, typeName, i + index);
-                }
-            }
-
+            
             OptimizedScriptCode.InitializeFields(ret, true);
 
             return ret;
@@ -152,7 +115,7 @@ namespace IronPython.Runtime.Types {
             return new NewTypeMaker(bases, ti);
         }
 
-        private static List<string> GetSlots(IAttributesCollection dict) {
+        internal static List<string> GetSlots(IAttributesCollection dict) {
             List<string> res = null;
             object slots;
             if (dict != null && dict.TryGetValue(Symbols.Slots, out slots)) {

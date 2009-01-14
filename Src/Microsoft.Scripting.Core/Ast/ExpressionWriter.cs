@@ -603,6 +603,8 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.PreIncrementAssign:
                 case ExpressionType.PreDecrementAssign:
                 case ExpressionType.OnesComplement:
+                case ExpressionType.IsFalse:
+                case ExpressionType.IsTrue:
                     return 13;
 
                 case ExpressionType.PostIncrementAssign:
@@ -715,6 +717,12 @@ namespace Microsoft.Linq.Expressions {
                     break;
                 case ExpressionType.Throw:
                     Out(".throw ");
+                    break;
+                case ExpressionType.IsFalse:
+                    Out(".IsFalse ");
+                    break;
+                case ExpressionType.IsTrue:
+                    Out(".IsTrue ");
                     break;
             }
 

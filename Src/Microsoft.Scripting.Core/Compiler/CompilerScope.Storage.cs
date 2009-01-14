@@ -66,10 +66,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             internal override void EmitAddress() {
                 Compiler.IL.Emit(OpCodes.Ldloca, _local);
             }
-
-            internal override void FreeLocal() {
-                Compiler.FreeNamedLocal(_local, Variable.Name);
-            }
         }
 
         private sealed class ArgumentStorage : Storage {

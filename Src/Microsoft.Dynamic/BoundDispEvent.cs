@@ -34,12 +34,23 @@ namespace Microsoft.Scripting {
             _dispid = dispid;
         }
 
+
+        /// <summary>
+        /// Adds a handler to an event.
+        /// </summary>
+        /// <param name="func">The handler to be added.</param>
+        /// <returns>The original event with handler added.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]
         [SpecialName]
         public object op_AdditionAssignment(object func) {
             return InPlaceAdd(func);
         }
 
+        /// <summary>
+        /// Adds a handler to an event.
+        /// </summary>
+        /// <param name="func">The handler to be added.</param>
+        /// <returns>The original event with handler added.</returns>
         [SpecialName]
         public object InPlaceAdd(object func) {
             ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, true);
@@ -47,6 +58,11 @@ namespace Microsoft.Scripting {
             return this;
         }
 
+        /// <summary>
+        /// Removes handler from the event.
+        /// </summary>
+        /// <param name="func">The handler to be removed.</param>
+        /// <returns>The original event with handler removed.</returns>
         [SpecialName]
         public object InPlaceSubtract(object func) {
             ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, false);

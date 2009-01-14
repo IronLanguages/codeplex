@@ -22,6 +22,9 @@ using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     //CONFORMING
+    /// <summary>
+    /// Represents creating a new array and possibly initializing the elements of the new array.
+    /// </summary>
     public class NewArrayExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
         private readonly Type _type;
@@ -39,10 +42,17 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        /// <summary>
+        /// Gets the static type of the expression that this <see cref="Expression" /> represents. (Inherited from <see cref="Expression"/>.)
+        /// </summary>
+        /// <returns>The <see cref="Type"/> that represents the static type of the expression.</returns>
         protected override Type GetExpressionType() {
             return _type;
         }
 
+        /// <summary>
+        /// Gets the bounds of the array if the value of the <see cref="P:NodeType"/> property is NewArrayBounds, or the values to initialize the elements of the new array if the value of the <see cref="P:NodeType"/> property is NewArrayInit. 
+        /// </summary>
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
@@ -57,6 +67,11 @@ namespace Microsoft.Linq.Expressions {
             : base(type, expressions) {
         }
 
+
+        /// <summary>
+        /// Returns the node type of this <see cref="Expression" />. (Inherited from <see cref="Expression" />.)
+        /// </summary>
+        /// <returns>The <see cref="ExpressionType"/> that represents this expression.</returns>
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.NewArrayInit;
         }
@@ -67,14 +82,15 @@ namespace Microsoft.Linq.Expressions {
             : base(type, expressions) {
         }
 
+        /// <summary>
+        /// Returns the node type of this <see cref="Expression" />. (Inherited from <see cref="Expression" />.)
+        /// </summary>
+        /// <returns>The <see cref="ExpressionType"/> that represents this expression.</returns>
         protected override ExpressionType GetNodeKind() {
             return ExpressionType.NewArrayBounds;
         }
     }
     
-    /// <summary>
-    /// Factory methods.
-    /// </summary>
     public partial class Expression {
 
         #region NewArrayInit
@@ -85,6 +101,7 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
+        /// <returns>An instance of the <see cref="NewArrayExpression"/>.</returns>
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) {
             return NewArrayInit(type, (IEnumerable<Expression>)initializers);
         }
@@ -94,6 +111,7 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         /// <param name="type">A Type that represents the element type of the array.</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
+        /// <returns>An instance of the <see cref="NewArrayExpression"/>.</returns>
         public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(initializers, "initializers");
@@ -109,7 +127,7 @@ namespace Microsoft.Linq.Expressions {
                 RequiresCanRead(expr, "initializers");
 
                 if (!TypeUtils.AreReferenceAssignable(type, expr.Type)) {
-                    if (TypeUtils.IsSameOrSubclass(typeof(Expression), type) && type.IsAssignableFrom(expr.GetType())) {
+                    if (TypeUtils.IsSameOrSubclass(typeof(LambdaExpression), type) && type.IsAssignableFrom(expr.GetType())) {
                         expr = Expression.Quote(expr);
                     } else {
                         throw Error.ExpressionTypeCannotInitializeArrayType(expr.Type, type);
@@ -137,11 +155,23 @@ namespace Microsoft.Linq.Expressions {
         #region NewArrayBounds
 
         //CONFORMING
+        /// <summary>
+        /// Creates a <see cref="NewArrayExpression"/> that represents creating an array that has a specified rank. 
+        /// </summary>
+        /// <param name="type">A <see cref="Type"/> that represents the element type of the array.</param>
+        /// <param name="bounds">An array that contains Expression objects to use to populate the Expressions collection.</param>
+        /// <returns>A <see cref="NewArrayExpression"/> that has the <see cref="P:NodeType"/> property equal to type and the <see cref="P:Expressions"/> property set to the specified value.</returns>
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) {
             return NewArrayBounds(type, (IEnumerable<Expression>)bounds);
         }
 
         //CONFORMING
+        /// <summary>
+        /// Creates a <see cref="NewArrayExpression"/> that represents creating an array that has a specified rank. 
+        /// </summary>
+        /// <param name="type">A <see cref="Type"/> that represents the element type of the array.</param>
+        /// <param name="bounds">An IEnumerable{T} that contains Expression objects to use to populate the Expressions collection.</param>
+        /// <returns>A <see cref="NewArrayExpression"/> that has the <see cref="P:NodeType"/> property equal to type and the <see cref="P:Expressions"/> property set to the specified value.</returns>
         public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.RequiresNotNull(bounds, "bounds");

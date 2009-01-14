@@ -25,8 +25,10 @@ using Microsoft.Linq.Expressions.Compiler;
 
 namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
-    /// This type is only used by CallSite internally. Do not use
+    /// This API supports the .NET Framework infrastructure and is not intended to be used directly from your code.
+    /// Represents a runtime binding at a call site.
     /// </summary>
+    /// <typeparam name="T">The delegate type.</typeparam>
     public sealed class CallSiteRule<T> where T : class {
 
         internal static readonly ReadOnlyCollection<ParameterExpression> Parameters;
@@ -120,6 +122,9 @@ namespace Microsoft.Runtime.CompilerServices {
 
 
 #if MICROSOFT_SCRIPTING_CORE
+        /// <summary>
+        /// Returns a string representation of the <see cref="CallSiteRule{T}"/>.
+        /// </summary>
         public string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {

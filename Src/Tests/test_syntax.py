@@ -600,4 +600,140 @@ try:
 except IndentationError, e:
     AreEqual(e.lineno, 2)
 
+@skip("win32", "silverlight") # no encoding.Default
+def test_parser_recovery():
+    # bunch of test infrastructure...
+    
+    import clr
+    clr.AddReference('IronPython')
+    clr.AddReference('Microsoft.Scripting')
+    
+    from Microsoft.Scripting import (
+        TextContentProvider, SourceCodeKind, SourceUnit, ErrorSink,  
+        SourceCodeReader
+        )
+    from Microsoft.Scripting.Runtime import CompilerContext
+
+    from IronPython import PythonOptions
+    from IronPython.Compiler import Parser, Tokenizer, PythonCompilerOptions, Ast
+    from System.IO import StringReader
+    from System.Text import Encoding
+
+    class MyErrorSink(ErrorSink):    
+        def __init__(self):
+            self.Errors = []
+        
+        def Add(self, *args):
+            if type(args[0]) is str:
+                self.AddWithPath(*args)
+            else:
+                self.AddWithSourceUnit(*args)
+        
+        def AddWithPath(self, message, path, code, line, span, error, severity):
+            err = (
+                message,
+                path,
+                span,
+                error
+            )
+            self.Errors.append(err)
+        
+        def AddWithSourceUnit(self, source, message, span, errorCode, severity):
+            err = (
+                message, 
+                source.Path,
+                span,
+                errorCode
+            )
+            
+            self.Errors.append(err)
+    
+    class MyTextContentProvider(TextContentProvider):
+        def __init__(self, text):
+            self.text = text
+        def GetReader(self):
+            return SourceCodeReader(StringReader(self.text), Encoding.Default)
+
+    def parse_text(text):
+        errorSink = MyErrorSink()
+        sourceUnit = SourceUnit(
+                clr.GetCurrentRuntime().GetLanguageByName('python'),
+                MyTextContentProvider(text),
+                'foo',
+                SourceCodeKind.File
+            )
+           
+        parser = Parser.CreateParser(
+            CompilerContext(sourceUnit, PythonCompilerOptions(), errorSink),
+            PythonOptions()
+        )
+        parser.ParseFile(True)
+        return errorSink
+
+    def TestErrors(text, errors):
+        res = parse_text(text)
+        AreEqual(len(res.Errors), len(errors))
+        for curErr, expectedMsg in zip(res.Errors, errors):
+            AreEqual(curErr[0], expectedMsg)
+    
+    def PrintErrors(text):
+        """helper for creating new tests"""
+        errors = parse_text(text)
+        print
+        for err in errors.Errors:
+            print err
+    
+    TestErrors("""class 
+
+def x(self):
+    pass""", ["unexpected token '<newline>'"])
+
+    
+    TestErrors("""class x
+
+def x(self):
+    pass
+""", ["unexpected token '<newline>'"])
+
+    TestErrors("""class x(
+
+def x(self):
+    pass""", ["unexpected token 'def'"])
+
+    TestErrors("""class X:
+	if x:
+
+	def x(): pass""", ['expected an indented block'])
+
+    TestErrors("""class X:
+	if x is None:
+		x = 
+
+	def x(self): pass""", ['invalid syntax'])
+
+    TestErrors("""class X:
+    
+    def f(
+    
+    def g(self): pass""", ["unexpected token 'def'"])
+
+    TestErrors("""class X:
+    
+    def f(*
+    
+    def g(self): pass""", ["unexpected token 'def'"])
+
+    TestErrors("""class X:
+    
+    def f(**
+    
+    def g(self): pass""", ["unexpected token 'def'"])
+
+    TestErrors("""class X:
+    
+    def f(*a, **
+    
+    def g(self): pass""", ["unexpected token 'def'"])
+    
+
 run_test(__name__)

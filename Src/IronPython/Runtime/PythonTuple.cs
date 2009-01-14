@@ -16,13 +16,14 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices; 
 using System.Text;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils; 
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -76,6 +77,45 @@ namespace IronPython.Runtime {
                 return tupObj;
             }
         }
+        #endregion
+
+        #region Python 2.6 Methods
+
+        public int index(object obj, object start) {
+            return index(obj, Converter.ConvertToIndex(start), _data.Length);
+        }
+
+        public int index(object obj, [DefaultParameterValue(0)]int start) {
+            return index(obj, start, _data.Length);
+        }
+
+        public int index(object obj, object start, object end) {
+            return index(obj, Converter.ConvertToIndex(start), Converter.ConvertToIndex(end));
+        }
+
+        public int index(object obj, int start, int end) {
+            start = PythonOps.FixSliceIndex(start, _data.Length);
+            end = PythonOps.FixSliceIndex(end, _data.Length);
+
+            for (int i = start; i < end; i++) {
+                if (PythonOps.EqualRetBool(obj, _data[i])) {
+                    return i;
+                }
+            }
+
+            throw PythonOps.ValueError("tuple.index(x): x not in list");
+        }
+
+        public int count(object obj) {
+            int cnt = 0;
+            foreach (object elem in _data) {
+                if (PythonOps.EqualRetBool(obj, elem)) {
+                    cnt++;
+                }
+            }
+            return cnt;
+        }
+
         #endregion
 
         internal static PythonTuple Make(object o) {

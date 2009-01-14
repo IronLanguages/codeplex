@@ -922,6 +922,19 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
+        [MultiRuntimeAware]
+        private static PythonType BytesWarningStorage;
+        public static PythonType BytesWarning {
+            get {
+                if (BytesWarningStorage == null) {
+                    lock (typeof(PythonExceptions)) {
+                        BytesWarningStorage = CreateSubType(Warning, "BytesWarning");
+                    }
+                }
+                return BytesWarningStorage;
+            }
+        }
+
 
         // *** END GENERATED CODE ***
 
@@ -949,6 +962,7 @@ namespace IronPython.Runtime.Exceptions {
             #endif
             if (clrException is System.ArgumentException) return new BaseException(ValueError);
             if (clrException is System.ArithmeticException) return new BaseException(ArithmeticError);
+            if (clrException is IronPython.Runtime.Exceptions.BytesWarningException) return new BaseException(BytesWarning);
             if (clrException is IronPython.Runtime.Exceptions.DeprecationWarningException) return new BaseException(DeprecationWarning);
             if (clrException is System.Runtime.InteropServices.ExternalException) return new _EnvironmentError();
             if (clrException is IronPython.Runtime.Exceptions.FutureWarningException) return new BaseException(FutureWarning);
@@ -1003,6 +1017,7 @@ namespace IronPython.Runtime.Exceptions {
             #endif
             if (type == ValueError) return new System.ArgumentException(message);
             if (type == ArithmeticError) return new System.ArithmeticException(message);
+            if (type == BytesWarning) return new IronPython.Runtime.Exceptions.BytesWarningException(message);
             if (type == DeprecationWarning) return new IronPython.Runtime.Exceptions.DeprecationWarningException(message);
             if (type == EnvironmentError) return new System.Runtime.InteropServices.ExternalException(message);
             if (type == FutureWarning) return new IronPython.Runtime.Exceptions.FutureWarningException(message);

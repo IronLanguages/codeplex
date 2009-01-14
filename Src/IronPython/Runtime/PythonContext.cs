@@ -130,6 +130,9 @@ namespace IronPython.Runtime {
         private ClrModule.ReferencesList _referencesList;
         private string _floatFormat, _doubleFormat;
         private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
+        
+        private Dictionary<Type, CallSite<Func<CallSite, object, int>>> _hashSites;
+        private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -1434,20 +1437,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static string GetIronPythonAssembly(string baseName) {
-#if SIGNED
-
-#if DEBUG && !SILVERLIGHT
-            try {
-                Debug.Assert(Assembly.GetExecutingAssembly().GetName().Version.ToString() == "2.0.0.5000");
-            } catch (SecurityException) {
-            }
-#endif
-
-            return baseName + ", Version=2.0.0.5000, Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-#else
-            return baseName;
-#endif
+        public static string GetIronPythonAssembly(string/*!*/ baseName) {
+            ContractUtils.RequiresNotNull(baseName, "baseName");
+            string fullName = typeof(PythonContext).Assembly.FullName;
+            int firstComma = fullName.IndexOf(',');
+            return firstComma > 0 ? baseName + fullName.Substring(firstComma) : baseName;
         }
 
         /// <summary>
@@ -2808,6 +2802,51 @@ namespace IronPython.Runtime {
 
             return new FunctionComparer<object>(this, cmp, _sharedFunctionCompareSite);
             
+        }
+
+        internal CallSite<Func<CallSite, object, object, bool>> GetEqualSite(Type/*!*/ type) {
+            if (_equalSites == null) {
+                Interlocked.CompareExchange(ref _equalSites, new Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>>(), null);
+            }
+
+            CallSite<Func<CallSite, object, object, bool>> res;
+            if (!_equalSites.TryGetValue(type, out res)) {
+                _equalSites[type] = res = MakeEqualSite();
+            }
+
+            return res;
+        }
+
+        internal CallSite<Func<CallSite, object, object, bool>> MakeEqualSite() {
+            return CallSite<Func<CallSite, object, object, bool>>.Create(
+                Binders.BinaryOperationRetType(
+                    DefaultBinderState,
+                    StandardOperators.Equal,
+                    typeof(bool)
+                )
+            );
+        }
+
+        internal CallSite<Func<CallSite, object, int>> GetHashSite(Type/*!*/ type) {
+            if (_hashSites == null) {
+                Interlocked.CompareExchange(ref _hashSites, new Dictionary<Type, CallSite<Func<CallSite, object, int>>>(), null);
+            }
+
+            CallSite<Func<CallSite, object, int>> res;
+            if (!_hashSites.TryGetValue(type, out res)) {
+                _hashSites[type] = res = MakeHashSite();
+            }
+
+            return res;
+        }
+
+        internal CallSite<Func<CallSite, object, int>> MakeHashSite() {
+            return CallSite<Func<CallSite, object, int>>.Create(
+                new PythonOperationBinder(
+                    DefaultBinderState,
+                    OperatorStrings.Hash
+                )
+            );
         }
     }
 

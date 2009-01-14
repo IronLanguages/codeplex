@@ -441,6 +441,8 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.Unbox:
                 case ExpressionType.Negate:
                 case ExpressionType.Not:
+                case ExpressionType.IsFalse:
+                case ExpressionType.IsTrue:
                 case ExpressionType.OnesComplement:
                 case ExpressionType.Conditional:
                 case ExpressionType.NewArrayInit:

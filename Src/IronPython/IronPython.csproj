@@ -1,11 +1,11 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
-  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\silverlight.settings.targets" />
+  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\Support\silverlight.settings.targets" />
   <PropertyGroup Condition=" '$(Configuration)' == 'DelaySigned Release' ">    <DebugType>pdbonly</DebugType>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DefineConstants>TRACE;SIGNED</DefineConstants>    <ErrorReport>prompt</ErrorReport>    <WarningLevel>4</WarningLevel>    <RunCodeAnalysis>false</RunCodeAnalysis>    <DelaySign>true</DelaySign>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <SignAssembly>true</SignAssembly>  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>    <DefineConstants>TRACE;SILVERLIGHT;SIGNED</DefineConstants>    <NoWarn>618</NoWarn>    <NoStdLib>true</NoStdLib>    <DebugType>pdbonly</DebugType>    <PlatformTarget>AnyCPU</PlatformTarget>    <ErrorReport>prompt</ErrorReport>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <SilverlightBuild>true</SilverlightBuild>    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -183,6 +183,7 @@
     <Compile Include="Runtime\Bytes.cs" />
     <Compile Include="Runtime\ClassMethodAttribute.cs" />
     <Compile Include="Runtime\ClrModule.cs" />
+    <Compile Include="Runtime\Exceptions\BytesWarningException.cs" />
     <Compile Include="Runtime\Index.cs" />
     <Compile Include="Runtime\NewStringFormatter.cs" />
     <Compile Include="Runtime\Operations\ByteOps.cs" />
@@ -465,7 +466,7 @@
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
-  <Import Project="..\..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="..\..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

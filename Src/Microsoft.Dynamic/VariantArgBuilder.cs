@@ -22,6 +22,7 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Scripting {
     internal class VariantArgBuilder : SimpleArgBuilder {
@@ -50,14 +51,10 @@ namespace Microsoft.Scripting {
         internal override Expression MarshalToRef(Expression parameter) {
             parameter = Marshal(parameter);
 
-            // parameter == null ? IntPtr.Zero : UnsafeMethods.GetVariantForObject(parameter);
-            return Expression.Condition(
-                Expression.Equal(parameter, Expression.Constant(null)),
-                Expression.Constant(new Variant()),
-                Expression.Call(
-                    typeof(UnsafeMethods).GetMethod("GetVariantForObject"),
-                    parameter
-                )
+            // parameter == UnsafeMethods.GetVariantForObject(parameter);
+            return Expression.Call(
+                typeof(UnsafeMethods).GetMethod("GetVariantForObject", BindingFlags.Static | System.Reflection.BindingFlags.NonPublic),
+                parameter
             );
         }
 

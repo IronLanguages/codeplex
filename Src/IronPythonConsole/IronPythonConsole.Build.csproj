@@ -10,7 +10,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
-    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
+    <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
   </PropertyGroup>
   <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->     <ItemGroup>
       <!--                    -->

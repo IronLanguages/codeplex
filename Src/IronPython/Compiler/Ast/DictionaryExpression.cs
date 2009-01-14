@@ -37,18 +37,36 @@ namespace IronPython.Compiler.Ast {
             // which creates the dictionary
             if (_items.Length != 0) {
                 MSAst.Expression[] parts = new MSAst.Expression[_items.Length * 2];
+                Type t = null;
+                bool heterogeneous = false;
                 for (int index = 0; index < _items.Length; index++) {
                     SliceExpression slice = _items[index];
                     // Eval order should be:
                     //   { 2 : 1, 4 : 3, 6 :5 }
                     // This is backwards from parameter list eval, so create temporaries to swap ordering.
 
+                    
                     parts[index * 2] = ag.TransformOrConstantNull(slice.SliceStop, typeof(object));
-                    parts[index * 2 + 1] = ag.TransformOrConstantNull(slice.SliceStart, typeof(object));
+                    MSAst.Expression key = parts[index * 2 + 1] = ag.TransformOrConstantNull(slice.SliceStart, typeof(object));
+
+                    Type newType;
+                    if (key.NodeType == Microsoft.Linq.Expressions.ExpressionType.Convert) {
+                        newType = ((MSAst.UnaryExpression)key).Operand.Type;
+                    } else {
+                        newType = key.Type;
+                    }
+
+                    if (t == null) {
+                        t = newType;
+                    } else if (newType == typeof(object)) {
+                        heterogeneous = true;
+                    } else if (newType != t) {
+                        heterogeneous = true;
+                    }
                 }
 
                 return Ast.Call(
-                    typeof(PythonOps).GetMethod("MakeDictFromItems"),
+                    typeof(PythonOps).GetMethod(heterogeneous ? "MakeDictFromItems" : "MakeHomogeneousDictFromItems"),
                     Ast.NewArrayInit(
                         typeof(object),
                         parts

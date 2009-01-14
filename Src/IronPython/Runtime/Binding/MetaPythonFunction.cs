@@ -582,7 +582,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Constant(dfltIndex),
                         Ast.Constant(_func.Value.ArgNames[index], typeof(string)),
                         VariableOrNull(_params, typeof(List)),
-                        VariableOrNull(_dict, typeof(IAttributesCollection))
+                        VariableOrNull(_dict, typeof(PythonDictionary))
                     );
                 }
             }
@@ -737,37 +737,38 @@ namespace IronPython.Runtime.Binding {
                 Debug.Assert(_dict == null);
                 _temps.Add(_dict = Ast.Variable(typeof(PythonDictionary), "$dict"));
 
-                int count = 2;
-                if (namedArgs != null) {
-                    count += namedArgs.Count;
-                }
-
-                Expression[] dictCreator = new Expression[count];
+                Expression dictCreator;
                 ParameterExpression dictRef = _dict;
-                
-                count = 0;
-                dictCreator[count++] = Ast.Assign(
-                    _dict,
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("MakeDict"),
-                        Ast.Constant(0)
-                    )
-                );
 
                 if (namedArgs != null) {
+                    Debug.Assert(namedArgs.Count > 0);
+
+                    Expression[] items = new Expression[namedArgs.Count * 2];
+                    int itemIndex = 0;
                     foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
-                        dictCreator[count++] = Ast.Call(
-                            dictRef,
-                            typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
-                            Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object)),
-                            AstUtils.Convert(kvp.Value, typeof(object))
-                        );
+                        items[itemIndex++] = AstUtils.Convert(kvp.Value, typeof(object));
+                        items[itemIndex++] = Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object));
                     }
+
+                    dictCreator = Ast.Assign(
+                        _dict,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("MakeHomogeneousDictFromItems"),
+                            Ast.NewArrayInit(typeof(object), items)
+                        )
+                    );
+
+                } else {
+                    dictCreator = Ast.Assign(
+                        _dict,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("MakeDict"),
+                            Ast.Constant(0)
+                        )
+                    );
                 }
 
-                dictCreator[count] = dictRef;
-
-                return Ast.Block(dictCreator);
+                return dictCreator;
             }
 
             /// <summary>

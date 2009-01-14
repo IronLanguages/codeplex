@@ -22,6 +22,8 @@ using Microsoft.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -50,17 +52,16 @@ namespace IronPython.Runtime {
     {
         private Bucket[] _buckets;
         private int _count;
+        private Func<object, int> _hashFunc;
+        private Func<object, object, bool> _eqFunc;
+        private Type _keyType;
+
         private const int InitialBucketSize = 7;
         private const int ResizeMultiplier = 3;
 
-        class HashSite {
-            internal static CallSite<Func<CallSite, object, int>> _HashSite = CallSite<Func<CallSite, object, int>>.Create(
-                new PythonOperationBinder(
-                    DefaultContext.DefaultPythonContext.DefaultBinderState,
-                    OperatorStrings.Hash
-                )
-            );
-        }
+        // pre-created delegate instances shared by all homogeneous dictionaries for primitive types.
+        private static readonly Func<object, int> _primitiveHash = PrimitiveHash, _doubleHash = DoubleHash, _intHash = IntHash, _tupleHash = TupleHash, _genericHash = GenericHash;
+        private static readonly Func<object, object, bool> _intEquals = IntEquals, _doubleEquals = DoubleEquals, _stringEquals = StringEquals, _tupleEquals = TupleEquals, _genericEquals = GenericEquals;
 
         /// <summary>
         /// Creates a new dictionary storage with no buckets
@@ -79,8 +80,34 @@ namespace IronPython.Runtime {
         /// Creates a new dictionary geting values/keys from the
         /// items arary
         /// </summary>
-        public CommonDictionaryStorage(object[] items)
+        public CommonDictionaryStorage(object[] items, bool isHomogeneous)
             : this(Math.Max(items.Length / 2, InitialBucketSize)) {
+            // always called w/ items, and items should be even (key/value pairs)
+            Debug.Assert(items.Length > 0 && (items.Length & 0x01) == 0);
+
+            Type t = CompilerHelpers.GetType(items[1]);
+            
+            if (!isHomogeneous) {
+                for (int i = 1; i < items.Length / 2; i++) {
+                    if (CompilerHelpers.GetType(items[i * 2 + 1]) != t) {
+                        SetHeterogeneousSites();
+                        t = null;
+                        break;
+                    }
+                }
+            }
+
+            if (t != null) {
+                // homogeneous collection
+                UpdateHelperFunctions(t);
+            }
+
+            for (int i = 0; i < items.Length / 2; i++) {
+                AddOne(items[i * 2 + 1], items[i * 2]);
+            }
+        }
+
+        private void AddItems(object[] items) {
             for (int i = 0; i < items.Length / 2; i++) {
                 AddNoLock(items[i * 2 + 1], items[i * 2]);
             }
@@ -90,9 +117,12 @@ namespace IronPython.Runtime {
         /// Creates a new dictionary storage with the given set of buckets
         /// and size.  Used when cloning the dictionary storage.
         /// </summary>
-        private CommonDictionaryStorage(Bucket[] buckets, int count) {
+        private CommonDictionaryStorage(Bucket[] buckets, int count, Type keyType, Func<object, int> hashFunc, Func<object, object, bool> eqFunc) {
             _buckets = buckets;
             _count = count;
+            _keyType = keyType;
+            _hashFunc = hashFunc;
+            _eqFunc = eqFunc;
         }
 
 #if !SILVERLIGHT
@@ -119,6 +149,15 @@ namespace IronPython.Runtime {
                 Initialize();
             }
 
+            Type t = CompilerHelpers.GetType(key);
+            if (t != _keyType && _keyType != typeof(CommonDictionaryStorage)) {                
+                UpdateHelperFunctions(t);
+            }
+
+            AddOne(key, value);
+        }
+
+        private void AddOne(object key, object value) {
             if (Add(_buckets, key, value)) {
                 _count++;
 
@@ -127,6 +166,57 @@ namespace IronPython.Runtime {
                     EnsureSize(_buckets.Length * ResizeMultiplier);
                 }
             }
+        }
+
+        private void UpdateHelperFunctions(Type t) {            
+            if (_keyType == null) {
+                // first time through, get the sites for this specific type...
+                if (t == typeof(int)) {
+                    _hashFunc = _intHash;
+                    _eqFunc = _intEquals;
+                } else if (t == typeof(string)) {
+                    _hashFunc = _primitiveHash;
+                    _eqFunc = _stringEquals;
+                } else if (t == typeof(double)) {
+                    _hashFunc = _doubleHash;
+                    _eqFunc = _doubleEquals;
+                } else if(t == typeof(PythonTuple)) {
+                    _hashFunc = _tupleHash;
+                    _eqFunc = _tupleEquals;
+                } else {
+                    // random type, but still homogeneous... get a shared site for this type.
+                    var hashSite = DefaultContext.DefaultPythonContext.GetHashSite(t);
+                    var equalSite = DefaultContext.DefaultPythonContext.GetEqualSite(t);
+
+                    AssignSiteDelegates(hashSite, equalSite);
+                }
+
+                _keyType = t;
+            } else if (_keyType != typeof(CommonDictionaryStorage)) {
+                // 2nd time through, we're adding a new type so we have mutliple types now, 
+                // make a new site for this storage
+
+                SetHeterogeneousSites();
+
+                // we need to clone the buckets so any lock-free readers will only see
+                // the old buckets which are homogeneous
+                _buckets = (Bucket[])_buckets.Clone();
+            }
+            // else we have already created a new site this dictionary
+        }
+
+        private void SetHeterogeneousSites() {
+            var hashSite = DefaultContext.DefaultPythonContext.MakeHashSite();
+            var equalSite = DefaultContext.DefaultPythonContext.MakeEqualSite();
+
+            AssignSiteDelegates(hashSite, equalSite);
+
+            _keyType = typeof(CommonDictionaryStorage);
+        }
+
+        private void AssignSiteDelegates(CallSite<Func<CallSite, object, int>> hashSite, CallSite<Func<CallSite, object, object, bool>> equalSite) {
+            _hashFunc = (o) => hashSite.Target(hashSite, o);
+            _eqFunc = (o1, o2) => equalSite.Target(equalSite, o1, o2);
         }
 
         private void EnsureSize(int newSize) {
@@ -162,19 +252,19 @@ namespace IronPython.Runtime {
         /// Static add helper that works over a single set of buckets.  Used for
         /// both the normal add case as well as the resize case.
         /// </summary>
-        private static bool Add(Bucket[] buckets, object key, object value) {
+        private bool Add(Bucket[] buckets, object key, object value) {            
             int hc = Hash(key);
 
             return AddWorker(buckets, key, value, hc);
         }
 
-        private static bool AddWorker(Bucket[] buckets, object key, object value, int hc) {
+        private bool AddWorker(Bucket[] buckets, object key, object value, int hc) {
             int index = hc % buckets.Length;
             Bucket prev = buckets[index];
             Bucket cur = prev;
 
             while (cur != null) {
-                if (cur.HashCode == hc && PythonOps.EqualRetBool(key, cur.Key)) {
+                if (cur.HashCode == hc && _eqFunc(key, cur.Key)) {
                     cur.Value = value;
                     return false;
                 }
@@ -198,28 +288,49 @@ namespace IronPython.Runtime {
         /// entry was removed or false.
         /// </summary>
         public override bool Remove(object key) {
-            int hc = Hash(key);
+            object dummy;
+            return TryRemoveValue(key, out dummy);
+        }
 
+        public override bool TryRemoveValue(object key, out object value) {
             lock (this) {
-                if (_buckets == null) return false;
+                if (!HasAnyValues(_buckets)) {
+                    value = null;
+                    return false;
+                }
+
+                Func<object, int> hashFunc;
+                Func<object, object, bool> eqFunc;
+                if (CompilerHelpers.GetType(key) == _keyType || _keyType == typeof(CommonDictionaryStorage)) {
+                    hashFunc = _hashFunc;
+                    eqFunc = _eqFunc;
+                } else {
+                    hashFunc = _genericHash;
+                    eqFunc = _genericEquals;
+                }
+
+                int hc = hashFunc(key) & Int32.MaxValue;
 
                 int index = hc % _buckets.Length;
                 Bucket bucket = _buckets[index];
                 Bucket prev = bucket;
                 while (bucket != null) {
-                    if (bucket.HashCode == hc && PythonOps.EqualRetBool(key, bucket.Key)) {
+                    if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
+                        value = bucket.Value;
                         if (prev == bucket) {
                             _buckets[index] = bucket.Next;
                         } else {
                             prev.Next = bucket.Next;
                         }
                         _count--;
+                        
                         return true;
                     }
                     prev = bucket;
                     bucket = bucket.Next;
                 }
             }
+            value = null;
             return false;
         }
 
@@ -236,19 +347,13 @@ namespace IronPython.Runtime {
         /// Used so the contains check can run against a buckets while a writer
         /// replaces the buckets.
         /// </summary>
-        private static bool Contains(Bucket[] buckets, object key) {
-            if (buckets == null) return false;
+        private bool Contains(Bucket[] buckets, object key) {
+            object res;
+            return TryGetValue(buckets, key, out res);
+        }
 
-            
-            int hc = Hash(key);
-            Bucket bucket = buckets[hc % buckets.Length];
-            while (bucket != null) {
-                if (bucket.HashCode == hc && PythonOps.EqualRetBool(key, bucket.Key)) {
-                    return true;
-                }
-                bucket = bucket.Next;
-            }
-            return false;
+        private bool HasAnyValues(Bucket[] buckets) {
+            return buckets != null && _hashFunc != null;
         }
 
         /// <summary>
@@ -265,12 +370,21 @@ namespace IronPython.Runtime {
         /// Used so the value lookup can run against a buckets while a writer
         /// replaces the buckets.
         /// </summary>
-        private static bool TryGetValue(Bucket[] buckets, object key, out object value) {
-            if (buckets != null) {
-                int hc = Hash(key);
+        private bool TryGetValue(Bucket[] buckets, object key, out object value) {
+            if (HasAnyValues(buckets)) {
+                int hc;
+                Func<object, object, bool> eqFunc;
+                if (CompilerHelpers.GetType(key) == _keyType || _keyType == typeof(CommonDictionaryStorage)) {
+                    hc = _hashFunc(key) & Int32.MaxValue;
+                    eqFunc = _eqFunc;
+                } else {
+                    hc = _genericHash(key) & Int32.MaxValue;
+                    eqFunc = _genericEquals;
+                }
+
                 Bucket bucket = buckets[hc % buckets.Length];
                 while (bucket != null) {
-                    if (bucket.HashCode == hc && PythonOps.EqualRetBool(key, bucket.Key)) {
+                    if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
                         value = bucket.Value;
                         return true;
                     }
@@ -320,7 +434,7 @@ namespace IronPython.Runtime {
 
         public override bool HasNonStringAttributes() {
             lock (this) {
-                if (_buckets != null) {
+                if (_keyType != typeof(string) && _buckets != null) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
                         while (curBucket != null) {
@@ -353,7 +467,7 @@ namespace IronPython.Runtime {
                     }
                 }
 
-                return new CommonDictionaryStorage(resBuckets, Count);
+                return new CommonDictionaryStorage(resBuckets, Count, _keyType, _hashFunc, _eqFunc);
             }
         }
 
@@ -382,6 +496,14 @@ namespace IronPython.Runtime {
                 }
                 into.EnsureSize(curSize);
             }
+
+            if (into._keyType == null) {
+                into._keyType = _keyType;
+                into._hashFunc = _hashFunc;
+                into._eqFunc = _eqFunc;
+            } else if (into._keyType != _keyType) {
+                SetHeterogeneousSites();
+            }
             
             for (int i = 0; i < _buckets.Length; i++) {
                 Bucket curBucket = _buckets[i];
@@ -408,14 +530,10 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Helper to hash the given key w/ support for null.
         /// </summary>
-        private static int Hash(object key) {
-            if (key is string) return key.GetHashCode() & 0x7fffffff;
+        private int Hash(object key) {
+            if (key is string) return key.GetHashCode() & Int32.MaxValue;
 
-            return GeneralHash(key);
-        }
-
-        private static int GeneralHash(object key) {
-            return HashSite._HashSite.Target(HashSite._HashSite, key) & 0x7fffffff;
+            return _hashFunc(key) & Int32.MaxValue;
         }
 
         /// <summary>
@@ -450,6 +568,50 @@ namespace IronPython.Runtime {
                 return Next.Clone();
             }
         }
+
+        #region Hash/Equality Delegates
+
+        private static int PrimitiveHash(object o) {
+            return o.GetHashCode();
+        }
+
+        private static int IntHash(object o) {
+            return (int)o;
+        }
+
+        private static int DoubleHash(object o) {
+            return DoubleOps.__hash__((double)o);
+        }
+
+        private static int GenericHash(object o) {
+            return PythonOps.Hash(DefaultContext.Default, o);
+        }
+
+        private static int TupleHash(object o) {
+            return ((IValueEquality)o).GetValueHashCode();
+        }
+
+        private static bool StringEquals(object o1, object o2) {
+            return (string)o1 == (string)o2;
+        }
+
+        private static bool IntEquals(object o1, object o2) {
+            return (int)o1 == (int)o2;
+        }
+
+        private static bool DoubleEquals(object o1, object o2) {
+            return (double)o1 == (double)o2;
+        }
+
+        private static bool TupleEquals(object o1, object o2) {
+            return ((IValueEquality)o1).ValueEquals(o2);
+        }
+
+        private static bool GenericEquals(object o1, object o2) {
+            return PythonOps.EqualRetBool(o1, o2);
+        }
+
+        #endregion
 
 #if !SILVERLIGHT
 

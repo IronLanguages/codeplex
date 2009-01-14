@@ -22,9 +22,9 @@ class event(object):
         self.handlers = []
     
     def __iadd__(self, other):
-        if issubclass(other.__class__, event):
+        if isinstance(other, event):
             self.handlers.extend(other.handlers)
-        elif issubclass(other.__class__, event_caller):
+        elif isinstance(other, event_caller):
             self.handlers.extend(other.event.handlers)
         else:
             if not callable(other):
@@ -33,16 +33,16 @@ class event(object):
         return self
         
     def __isub__(self, other):
-        if issubclass(other.__class__, event):
+        if isinstance(other, event):
             newEv = []
             for x in self.handlers:
                 if not other.handlers.contains(x):
                     newEv.append(x)
             self.handlers = newEv
-        elif issubclass(other.__class__, event_caller):
+        elif isinstance(other, event_caller):
             newEv = []
-            for x in self.event.handlers:
-                if not other.handlers.contains(x):
+            for x in self.handlers:
+                if not other.event.handlers.contains(x):
                     newEv.append(x)
             self.handlers = newEv
         else:
@@ -73,8 +73,8 @@ class event_caller(object):
 
     def __get__(self, instance, owner):
         return self
-		
-		
+
+
 def make_event():
     """Creates an event object tuple.  The first value in the tuple can be
     exposed to allow external code to hook and unhook from the event.  The

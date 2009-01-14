@@ -17,11 +17,11 @@ using System; using Microsoft;
 
 namespace Microsoft.Scripting {
     /// <summary>
-    /// Represents a type of a null value.
+    /// Represents the type of a null value.
     /// </summary>
     public sealed class DynamicNull {
         /// <summary>
-        /// The type of null value.
+        /// Represents the singleton type of a null value.
         /// </summary>
         public static readonly Type Type = typeof(DynamicNull);
 

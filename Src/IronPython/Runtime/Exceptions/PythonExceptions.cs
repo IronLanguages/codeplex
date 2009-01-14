@@ -551,6 +551,12 @@ namespace IronPython.Runtime.Exceptions {
         #region Exception translation
 
         internal static System.Exception CreateThrowable(PythonType type, params object[] args) {
+            BaseException be = CreatePythonThrowable(type, args);
+
+            return be.GetClrException();
+        }
+
+        internal static BaseException CreatePythonThrowable(PythonType type, params object[] args) {
             BaseException be;
             if (type.UnderlyingSystemType == typeof(BaseException)) {
                 be = new BaseException(type);
@@ -558,8 +564,7 @@ namespace IronPython.Runtime.Exceptions {
                 be = (BaseException)Activator.CreateInstance(type.UnderlyingSystemType, type);
             }
             be.__init__(args);
-
-            return be.GetClrException();
+            return be;
         }
         
         /// <summary>

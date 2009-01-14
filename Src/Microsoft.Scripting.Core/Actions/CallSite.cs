@@ -145,6 +145,12 @@ namespace Microsoft.Runtime.CompilerServices {
             Target = Update = update;
         }
 
+        /// <summary>
+        /// Creates an instance of the dynamic call site, initialized with the binder responsible for the
+        /// runtime binding of the dynamic operations at this call site.
+        /// </summary>
+        /// <param name="binder">The binder responsible for the runtime binding of the dynamic operations at this call site.</param>
+        /// <returns>The new instance of dynamic call site.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static CallSite<T> Create(CallSiteBinder binder) {
             return new CallSite<T>(binder);
@@ -610,7 +616,7 @@ namespace Microsoft.Runtime.CompilerServices {
 
             // Need to compile with forceDynamic because T could be invisible,
             // or one of the argument types could be invisible
-            return LambdaCompiler.CompileDynamic(lambda);
+            return lambda.Compile();
         }
 
         /// <summary>
@@ -621,6 +627,7 @@ namespace Microsoft.Runtime.CompilerServices {
         private static ConditionalExpression IfThen(Expression test, Expression ifTrue) {
             return Expression.Condition(test, Expression.Void(ifTrue), Expression.Empty());
         }
+
         private static Expression Convert(Expression arg, Type type) {
             if (TypeUtils.AreReferenceAssignable(type, arg.Type)) {
                 return arg;

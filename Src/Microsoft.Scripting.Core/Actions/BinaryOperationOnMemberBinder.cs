@@ -21,8 +21,7 @@ using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
-    /// A Binder that is responsible for runtime binding of operation:
-    /// a.b (op)= c
+    /// Represents the binary dynamic operation on member at the call site, providing the binding semantic and the details about the operation.
     /// </summary>
     public abstract class BinaryOperationOnMemberBinder : DynamicMetaObjectBinder {
         private readonly ExpressionType _operation;
@@ -30,11 +29,11 @@ namespace Microsoft.Scripting {
         private readonly bool _ignoreCase;
 
         /// <summary>
-        /// Constructor of the OperationOnIndexBinder object, representing "a.b (op)= c" operation.
+        /// Initializes a new instance of the <see cref="BinaryOperationOnMemberBinder"/> class.
         /// </summary>
-        /// <param name="operation">Binary operation to be performed.</param>
-        /// <param name="name">Name of the member for the operation.</param>
-        /// <param name="ignoreCase">Ignore case of the member.</param>
+        /// <param name="operation">The binary operation kind.</param>
+        /// <param name="name">The name of the member for the operation.</param>
+        /// <param name="ignoreCase">The value indicating whether to ignore the case of the member name.</param>
         protected BinaryOperationOnMemberBinder(ExpressionType operation, string name, bool ignoreCase) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.Requires(BinaryOperationBinder.OperationIsValid(operation), "operation");
@@ -44,7 +43,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// The operation to be performed.
+        /// The binary operation kind.
         /// </summary>
         public ExpressionType Operation {
             get {
@@ -53,7 +52,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Name of the member for the operation.
+        /// The name of the member for the operation.
         /// </summary>
         public string Name {
             get {
@@ -62,7 +61,7 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Ignore case of the member.
+        /// Gets the value indicating whether to ignore the case of the member name.
         /// </summary>
         public bool IgnoreCase {
             get {
@@ -71,55 +70,57 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Implements a binding logic for the binary operation part of the binding.
-        /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
-        /// as:
-        ///    a[b] = a[b] + c
-        /// to let the language participate in the binding of the binary operation only.
+        /// Performs the binding of the binary dynamic operation if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="arg">Right-hand operator value</param>
-        /// <returns>MetaObject representing the binding result.</returns>
+        /// <param name="target">The target of the dynamic binary operation.</param>
+        /// <param name="arg">The right hand side operand of the dynamic binary operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
+        /// <remarks> This method is called by the target when the target implements the binary operation on member
+        /// as a sequence of get member, binary operation and set member, to let the <see cref="DynamicMetaObject"/>
+        /// request the binding of the binary operation only.
+        /// </remarks>
         public DynamicMetaObject FallbackBinaryOperation(DynamicMetaObject target, DynamicMetaObject arg) {
             return FallbackBinaryOperation(target, arg, null);
         }
 
         /// <summary>
-        /// Implements a binding logic for the binary operation part of the binding.
-        /// This is called by the target when the target implements the whole operation:
-        ///    a[b] += c
-        /// as:
-        ///    a[b] = a[b] + c
-        /// to let the language participate in the binding of the binary operation only.
+        /// When overridden in the derived class, performs the binding of the binary dynamic operation if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="arg">Right-hand operator value</param>
-        /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
-        /// <returns>MetaObject representing the binding result.</returns>
+        /// <param name="target">The target of the dynamic binary operation.</param>
+        /// <param name="arg">The right hand side operand of the dynamic binary operation.</param>
+        /// <param name="errorSuggestion">The binding result in case the binding fails, or null.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
+        /// <remarks> This method is called by the target when the target implements the binary operation on member
+        /// as a sequence of get member, binary operation and set member, to let the <see cref="DynamicMetaObject"/>
+        /// request the binding of the binary operation only.
+        /// </remarks>
         public abstract DynamicMetaObject FallbackBinaryOperation(DynamicMetaObject target, DynamicMetaObject arg, DynamicMetaObject errorSuggestion);
 
         /// <summary>
-        /// Implements a binding logic for the operation. This is called by the target when
-        /// the target lets the executing language participate in the binding process.
+        /// Performs the binding of the dynamic binary operation on member if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="value">The right-hand value</param>
-        /// <returns>MetaObject representing the binding.</returns>
+        /// <param name="target">The target of the dynamic binary operation on member.</param>
+        /// <param name="value">The right hand side operand of the dynamic binary operation on member.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public DynamicMetaObject FallbackBinaryOperationOnMember(DynamicMetaObject target, DynamicMetaObject value) {
             return FallbackBinaryOperationOnMember(target, value, null);
         }
 
         /// <summary>
-        /// Implements a binding logic for the operation. This is called by the target when
-        /// the target lets the executing language participate in the binding process.
+        /// When overridden in the derived class, performs the binding of the dynamic binary operation on member if the target dynamic object cannot bind.
         /// </summary>
-        /// <param name="target">Target of the operation.</param>
-        /// <param name="value">The right-hand value</param>
-        /// <param name="errorSuggestion">The representaiton of the binding error that the target meta object recommends the language to use if the language cannot bind. This allows the target meta object to participate in the error handling process.</param>
-        /// <returns>MetaObject representing the binding.</returns>
+        /// <param name="target">The target of the dynamic binary operation on member.</param>
+        /// <param name="value">The right hand side operand of the dynamic binary operation on member.</param>
+        /// <param name="errorSuggestion">The binding result in case the binding fails, or null.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public abstract DynamicMetaObject FallbackBinaryOperationOnMember(DynamicMetaObject target, DynamicMetaObject value, DynamicMetaObject errorSuggestion);
 
+        /// <summary>
+        /// Performs the binding of the dynamic binary operation.
+        /// </summary>
+        /// <param name="target">The target of the dynamic operation.</param>
+        /// <param name="args">An array of arguments of the dynamic operation.</param>
+        /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public sealed override DynamicMetaObject Bind(DynamicMetaObject target, params DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.Requires(args != null && args.Length == 1, "args");
@@ -128,10 +129,10 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Implements Equality operation for the OperationOnMemberBinder
+        /// Determines whether the specified System.Object is equal to the current <see cref="BinaryOperationOnMemberBinder"/>.
         /// </summary>
-        /// <param name="obj">Instance to comapre equal to.</param>
-        /// <returns>true/false</returns>
+        /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="BinaryOperationOnMemberBinder"/>.</param>
+        /// <returns>true if the specified System.Object is equal to the current <see cref="BinaryOperationOnMemberBinder"/>; otherwise, false.</returns>
         [Confined]
         public override bool Equals(object obj) {
             BinaryOperationOnMemberBinder gma = obj as BinaryOperationOnMemberBinder;
@@ -139,9 +140,9 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Calculates hash code for the OperationOnMemberBinder
+        /// Returns the hash code for this instance. 
         /// </summary>
-        /// <returns>The hash code.</returns>
+        /// <returns>An <see cref="Int32"/> containing the hash code for this instance.</returns>
         [Confined]
         public override int GetHashCode() {
             return BinaryOperationOnMemberBinderHash ^ (int)_operation ^ _name.GetHashCode() ^ (_ignoreCase ? unchecked((int)0x80000000) : 0);

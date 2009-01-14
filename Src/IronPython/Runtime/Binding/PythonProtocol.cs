@@ -190,7 +190,7 @@ namespace IronPython.Runtime.Binding {
                         GetPythonType(self),
                         AstUtils.Convert(body, typeof(object))
                     ), 
-                    DynamicMetaObject.GetExpressions(args)
+                    DynamicUtils.GetExpressions(args)
                 );
 
                 body = Ast.Dynamic(

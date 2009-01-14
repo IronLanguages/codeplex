@@ -9,7 +9,7 @@
     <WarningLevel>4</WarningLevel>
     <WarningsNotAsErrors>618,649,1616,1685,3000,3001,3002,3003,3005,3006,3008,3009,649</WarningsNotAsErrors>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
-    <OutputPath>$(SuiteBinPath)\$(BuildArchitecture)\Merlin</OutputPath>
+    <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -76,7 +76,7 @@
       <Name>IronPython %28Languages\IronPython\IronPython%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="..\..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
+  <Import Project="..\..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy /y "$(TargetPath)" "$(ProjectDir)..\tests\"</PostBuildEvent>

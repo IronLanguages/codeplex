@@ -89,9 +89,9 @@ def test_unexpected_token():
     
 def test_multiple_errors():
     expected = [
+        ("unexpected token 'print'", "print", 16, FatalError),
         ("EOL while scanning single-quoted string", '"hello', 16, FatalError),
         ("unexpected token 'print'", "print", 16, FatalError),
-        ("unexpected token '<eof> while reading string'", '"hello', 16, FatalError),
     ]
     actual = compile_expression("""print "hello""")    
     AreEqual(expected, actual)   
@@ -99,8 +99,6 @@ def test_multiple_errors():
 def test_not_indented_class():
     expected = [
         ("expected an indented block", "pass", 32, FatalError),
-        ("invalid syntax", (2,5), 16, FatalError),
-        ("unexpected end of file", (2,5), 16, FatalError),
     ]
     code = """\
 class Foo:
@@ -185,13 +183,7 @@ def foo():
 def test_all_together():        
     expected = [   
         ("unexpected token '}'", "}", 16, FatalError),
-        ("unexpected token '<newline>'", (2,11), 16, FatalError),
-        ("unexpected token 'def'", "def", 16, FatalError),
-        ("unexpected token 'foo'", "foo", 16, FatalError),
-        ("unexpected token ':'", ":", 16, FatalError),
-        ("unexpected indent", "a", 32, FatalError),
-        ("invalid syntax", (5,11), 16, FatalError),
-        ("unexpected token '<eof>'", (5,11), 17, FatalError),
+        ("unexpected token '}'", "}", 16, FatalError),
     ]        
     code = """\
 None = 2

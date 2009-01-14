@@ -18,12 +18,19 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Runtime.CompilerServices {
     public partial class RuntimeOps {
+        /// <summary>
+        /// Quotes the provided expression tree.
+        /// </summary>
+        /// <param name="expression">The expression to quote.</param>
+        /// <param name="hoistedLocals">The hoisted local state provided by the compiler.</param>
+        /// <param name="locals">The actual hoisted local values.</param>
+        /// <returns>The quoted expression.</returns>
         [Obsolete("do not call this method", true)]
         public static Expression Quote(Expression expression, object hoistedLocals, object[] locals) {
             Debug.Assert(hoistedLocals != null && locals != null);
@@ -31,6 +38,13 @@ namespace Microsoft.Runtime.CompilerServices {
             return quoter.Visit(expression);
         }
 
+        /// <summary>
+        /// Combines two runtime variable lists and returns a new list.
+        /// </summary>
+        /// <param name="first">The first list.</param>
+        /// <param name="second">The second list.</param>
+        /// <param name="indexes">The index array indicating which list to get variables from.</param>
+        /// <returns>The merged runtime variables.</returns>
         [Obsolete("do not call this method", true)]
         public static IList<IStrongBox> MergeRuntimeVariables(IList<IStrongBox> first, IList<IStrongBox> second, int[] indexes) {
             return new MergedRuntimeVariables(first, second, indexes);
@@ -153,8 +167,9 @@ namespace Microsoft.Runtime.CompilerServices {
                     locals = HoistedLocals.GetParent(locals);
                 }
 
-                // Unbound variable: return null, so the original node is preserved
-                return null;
+                // Unbound variable: an error should've been thrown already
+                // from VariableBinder
+                throw ContractUtils.Unreachable;
             }
         }
 
