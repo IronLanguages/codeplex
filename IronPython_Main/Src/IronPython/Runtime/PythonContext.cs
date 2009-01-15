@@ -463,6 +463,7 @@ namespace IronPython.Runtime {
             // These fields do not get reset on "reload(sys)", we populate them once on startup
             SetSystemStateValue("argv", List.FromArrayNoCopy(new object[] { String.Empty }));
             SetSystemStateValue("modules", _modulesDict);
+            SetSystemStateValue("py3kwarning", _options.WarnPy3k);
 
             _modulesDict["sys"] = _systemState;
 

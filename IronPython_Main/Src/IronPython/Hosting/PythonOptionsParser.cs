@@ -102,6 +102,10 @@ namespace IronPython.Hosting {
 
                     _warningFilters.Add(PopNextArg());
                     break;
+                
+                case "-3":
+                    LanguageSetup.Options["WarnPy3k"] = ScriptingRuntimeHelpers.True;
+                    break;
 
                 case "-":
                     PushArgBack();
@@ -178,6 +182,7 @@ namespace IronPython.Hosting {
                 { "-t",                     "Issue warnings about inconsistent tab usage" },
                 { "-tt",                    "Issue errors for inconsistent tab usage" },
                 { "-W arg",                 "Warning control (arg is action:message:category:module:lineno)" },
+                { "-3",                     "Warn about Python 3.x incompatibilities" },
 
                 { "-X:MaxRecursion",        "Set the maximum recursion level" },
                 { "-X:MTA",                 "Run in multithreaded apartment" },

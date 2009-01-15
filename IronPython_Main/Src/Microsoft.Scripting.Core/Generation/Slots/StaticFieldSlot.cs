@@ -1,0 +1,71 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System; using Microsoft;
+using System.Reflection;
+
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
+using System.Diagnostics.Contracts;
+
+namespace Microsoft.Scripting.Generation {
+    /// <summary>
+    /// A slot backed by a static field in a type
+    /// </summary>
+    class StaticFieldSlot : Slot {
+        private readonly FieldInfo _field;
+
+        public StaticFieldSlot(FieldInfo field) {
+            CodeContract.RequiresNotNull(field, "field");
+
+            this._field = field;
+        }
+        public override void EmitGet(ILGen cg) {
+            CodeContract.RequiresNotNull(cg, "cg");
+
+            cg.EmitFieldGet(_field);
+        }
+
+        public override void EmitGetAddr(ILGen cg) {
+            CodeContract.RequiresNotNull(cg, "cg");
+
+            cg.EmitFieldAddress(_field);
+        }
+
+        public override void EmitSet(ILGen cg) {
+            CodeContract.RequiresNotNull(cg, "cg");
+
+            cg.EmitFieldSet(_field);
+        }
+
+        public override Type Type {
+            get {
+                return _field.FieldType;
+            }
+        }
+
+        /// <summary>
+        /// Gets the FieldInfo for which this slot will emit a get / set for.
+        /// </summary>
+        public FieldInfo Field {
+            get { return _field; }
+        }
+
+        [Confined]
+        public override string/*!*/ ToString() {
+            return String.Format("StaticFieldSlot Field: {0}.{1} Type: {1}", _field.DeclaringType, _field.Name, _field.FieldType);
+        }
+    }
+}
