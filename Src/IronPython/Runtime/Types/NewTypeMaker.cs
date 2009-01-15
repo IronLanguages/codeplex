@@ -1779,7 +1779,11 @@ namespace IronPython.Runtime.Types {
         }
 
         protected ILGen DefineMethodOverride(MethodAttributes extra, MethodInfo decl, out MethodBuilder impl) {
-            MethodAttributes finalAttrs = (decl.Attributes & ~MethodAttributesToEraseInOveride) | extra;
+            MethodAttributes finalAttrs = (decl.Attributes & ~(MethodAttributesToEraseInOveride)) | extra;
+            if (!decl.DeclaringType.IsInterface) {
+                finalAttrs &= ~MethodAttributes.NewSlot;
+            }
+
             if ((extra & MethodAttributes.MemberAccessMask) != 0) {
                 // remove existing member access, add new member access
                 finalAttrs &= ~MethodAttributes.MemberAccessMask;
