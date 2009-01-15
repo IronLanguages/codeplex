@@ -236,7 +236,8 @@ namespace IronPython.Runtime.Types {
             return this;
         }
 
-        internal Type DeclaringType {
+        public Type DeclaringType {
+            [PythonHidden]
             get {
                 return _data.DeclaringType;
             }

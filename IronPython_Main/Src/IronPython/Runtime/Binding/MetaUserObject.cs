@@ -50,6 +50,11 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
+            DynamicMetaObject errorSuggestion = null;
+            if (_baseMetaObject != null) {
+                errorSuggestion = _baseMetaObject.BindInvokeMember(action, args);
+            }
+            
             CodeContext context = BinderState.GetBinderState(action).Context;
             IPythonObject sdo = Value;
             PythonTypeSlot foundSlot;
@@ -69,7 +74,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             // it's a normal .NET member, let the calling language handle it how it usually does
-            return action.FallbackInvokeMember(this, args);
+            return action.FallbackInvokeMember(this, args, errorSuggestion);
         }
 
         public override DynamicMetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {

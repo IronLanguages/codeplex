@@ -77,7 +77,8 @@ namespace IronPython.Runtime.Types {
             get { return _template; }
         }
 
-        internal Type/*!*/ DeclaringType {
+        public Type/*!*/ DeclaringType {
+            [PythonHidden]
             get {
                 return _template.DeclaringType;
             }
