@@ -103,13 +103,19 @@ def generate_one_func_type(cw, n):
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]""")
     cw.write('public delegate TResult Func<%(gsig)s>(%(gparms)s);', gsig = gsig_1_result(n), gparms = gparams_1(n))
 
+def gen_func_action(cw, lo, med, hi, func):
+    cw.write("#if MICROSOFT_SCRIPTING_CORE")
+    for i in range(lo, med):
+        func(cw, i)
+    cw.write("\n#endif")
+    for i in range(med, hi):
+        func(cw, i)
+
 def gen_func_types(cw):
-    for i in range(2, 17):
-        generate_one_func_type(cw, i)
+    gen_func_action(cw, 2, 9, 17, generate_one_func_type)
 
 def gen_action_types(cw):
-    for i in range(2, 17):
-        generate_one_action_type(cw, i)
+    gen_func_action(cw, 2, 9, 17, generate_one_action_type)
 
 #
 # Pregenerated UpdateAndExecute methods for Func, Action delegate types

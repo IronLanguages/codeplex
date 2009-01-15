@@ -19,7 +19,6 @@ using System; using Microsoft;
 
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using Microsoft.Contracts;
 using System.Globalization;
 
 namespace Microsoft.Scripting {

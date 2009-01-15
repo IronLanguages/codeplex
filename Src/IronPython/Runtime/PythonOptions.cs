@@ -34,6 +34,7 @@ namespace IronPython {
 
         private readonly ReadOnlyCollection<string>/*!*/ _arguments;
         private readonly ReadOnlyCollection<string>/*!*/ _warningFilters;
+        private readonly bool _warnPy3k;
         private readonly int _recursionLimit;
         private readonly Severity _indentationInconsistencySeverity;
         private readonly PythonDivisionOptions _division;
@@ -64,6 +65,10 @@ namespace IronPython {
         /// </summary>
         public ReadOnlyCollection<string>/*!*/ WarningFilters {
             get { return _warningFilters; }
+        }
+
+        public bool WarnPy3k {
+            get { return _warnPy3k; }
         }
 
         public int RecursionLimit {
@@ -100,6 +105,7 @@ namespace IronPython {
             _arguments = GetStringCollectionOption(options, "Arguments") ?? EmptyStringCollection;
             _warningFilters = GetStringCollectionOption(options, "WarningFilters", ';', ',') ?? EmptyStringCollection;
 
+            _warnPy3k = GetOption(options, "WarnPy3k", false);
             _optimize = GetOption(options, "Optimize", false);
             _stripDocStrings = GetOption(options, "StripDocStrings", false);
             _division = GetOption(options, "DivisionOptions", PythonDivisionOptions.Old);

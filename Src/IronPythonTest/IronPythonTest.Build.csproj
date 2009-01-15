@@ -78,7 +78,4 @@
   </ItemGroup>
   <Import Project="..\..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>copy /y "$(TargetPath)" "$(ProjectDir)..\tests\"</PostBuildEvent>
-  </PropertyGroup>
 </Project>
