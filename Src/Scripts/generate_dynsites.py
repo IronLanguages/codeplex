@@ -230,9 +230,9 @@ internal static %(methodDeclaration)s {
     Matchmaker mm = Interlocked.Exchange(ref MatchmakerCache<%(funcType)s>.Info, null);
     if (mm == null) {
         mm = new Matchmaker();
-        mm.Delegete = ruleTarget = mm.%(fallbackMethod)s<%(typeArgs)s>;
+        mm.Delegate = ruleTarget = mm.%(fallbackMethod)s<%(typeArgs)s>;
     } else {
-        ruleTarget = (%(funcType)s)mm.Delegete;
+        ruleTarget = (%(funcType)s)mm.Delegate;
     }
 
     try {    
@@ -286,12 +286,11 @@ internal static %(methodDeclaration)s {
         //
         // Level 2 cache lookup
         //
-        var args = new object[] { %(args)s };
     
         //
         // Any applicable rules in level 2 cache?
         //
-        if ((applicable = CallSiteOps.FindApplicableRules(@this, args)) != null) {
+        if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
             for (index = 0, count = applicable.Length; index < count; index++) {
                 rule = applicable[index];
     
@@ -312,7 +311,7 @@ internal static %(methodDeclaration)s {
                         //
                         CallSiteOps.AddRule(@this, rule);
                         // and then move it to the front of the L2 cache
-                        @this.RuleCache.MoveRule(rule, args);
+                        @this.RuleCache.MoveRule(rule);
                     }
                 }
     
@@ -332,7 +331,8 @@ internal static %(methodDeclaration)s {
         //
     
         rule = null;
-        
+        var args = new object[] { %(args)s };
+       
         for (; ; ) {
             rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
     

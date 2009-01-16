@@ -77,7 +77,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitExpressionEnd(startEmitted);
         }
 
-        #region DebugMarkers
+        #region label block tracking
 
         private ExpressionStart EmitExpressionStart(Expression node) {
             if (TryPushLabelBlock(node)) {

@@ -64,7 +64,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     result = RewriteMethodCallExpression(node, stack);
                     break;
                 case ExpressionType.Coalesce:
-                    result = RewriteBinaryExpression(node, stack);
+                    result = RewriteLogicalBinaryExpression(node, stack);
                     break;
                 case ExpressionType.Conditional:
                     result = RewriteConditionalExpression(node, stack);

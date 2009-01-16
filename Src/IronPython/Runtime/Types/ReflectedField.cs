@@ -84,6 +84,19 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
         }
 
+        public string __doc__ {
+            get {
+                return DocBuilder.DocOneInfo(info);
+            }
+        }
+
+        public PythonType FieldType {
+            [PythonHidden]
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(info.FieldType);
+            }
+        }
+
         #endregion
 
         #region Internal APIs

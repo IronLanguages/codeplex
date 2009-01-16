@@ -100,6 +100,13 @@ namespace Microsoft.Linq.Expressions {
         internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitIndex(this);
         }
+
+        internal Expression Rewrite(Expression instance, Expression[] arguments) {
+            Debug.Assert(instance != null);
+            Debug.Assert(arguments == null || arguments.Length == _arguments.Count);
+
+            return Expression.MakeIndex(instance, _indexer, arguments ?? _arguments);
+        }
     }
 
     public partial class Expression {

@@ -21,6 +21,7 @@ using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using System.Text;
+using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -80,6 +81,13 @@ namespace Microsoft.Linq.Expressions {
 
         internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitInvocation(this);
+        }
+
+        internal InvocationExpression Rewrite(Expression lambda, Expression[] arguments) {
+            Debug.Assert(lambda != null);
+            Debug.Assert(arguments == null || arguments.Length == _arguments.Count);
+
+            return Expression.Invoke(lambda, arguments ?? _arguments);
         }
     }
 

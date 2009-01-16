@@ -150,7 +150,7 @@ def gen_stackspiller_switch(cw):
             method += node.kind
         
         #special case AndAlso and OrElse
-        if node.kind == "AndAlso" or node.kind == "OrElse":
+        if node.kind in ["AndAlso", "OrElse", "Coalesce"]:
             method += "Logical"
 
         cw.write("case ExpressionType." + node.kind + ":")

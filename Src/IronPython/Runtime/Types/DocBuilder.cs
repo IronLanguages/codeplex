@@ -107,6 +107,11 @@ namespace IronPython.Runtime.Types {
             return DocOneInfoForProperty(info.DeclaringType, info.Name, info.GetGetMethod(), info.GetSetMethod(), attrs);
         }
 
+        public static string DocOneInfo(FieldInfo info) {
+            object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
+            return DocOneInfoForProperty(info.DeclaringType, info.Name, null, null, attrs);
+        }
+
         public static string DocOneInfo(MethodBase info, string name) {
             // Look for methods tagged with [Documentation("doc string for foo")]
             object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);

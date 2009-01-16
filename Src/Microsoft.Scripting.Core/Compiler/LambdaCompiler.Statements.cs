@@ -26,21 +26,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         private void Emit(BlockExpression node, EmitAs emitAs) {
-            int count = node.ExpressionCount;
-
-            // Labels defined immediately in the block are valid for the whole block
-
-            for(int i = 0; i < count; i++) {
-                Expression e = node.GetExpression(i);
-
-                var label = e as LabelExpression;
-                if (label != null) {
-                    DefineLabel(label.Target);
-                }
-            }
-
             EnterScope(node);
 
+            int count = node.ExpressionCount;
             for (int index = 0; index < count - 1; index++) {
                 EmitExpressionAsVoid(node.GetExpression(index));
             }
@@ -102,7 +90,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LabelInfo breakTarget = DefineLabel(node.BreakLabel);
             LabelInfo continueTarget = DefineLabel(node.ContinueLabel);
 
-            continueTarget.Mark();
+            continueTarget.MarkWithEmptyStack();
 
             EmitExpressionAsVoid(node.Body);
 
@@ -110,7 +98,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             PopLabelBlock(LabelBlockKind.Block);
 
-            breakTarget.Mark();
+            breakTarget.MarkWithEmptyStack();
         }
 
         #region SwitchStatement
@@ -155,7 +143,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 EmitExpressionAsVoid(node.SwitchCases[i].Body);
             }
 
-            breakTarget.Mark();
+            breakTarget.MarkWithEmptyStack();
         }
 
         private const int MaxJumpTableSize = 65536;
