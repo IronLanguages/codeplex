@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Binding {
                     this,
                     cc.Expression
                 );
-            } else if (target.Value is IDynamicObject) {
+            } else if (target.Value is IDynamicObject && !(target is MetaPythonObject)) {
                 return GetForeignObject(target);
             }
 #if !SILVERLIGHT
@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(object),
                     self.Expression
                 ),
-                self.Restrictions
+                self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, self.LimitType))
             );
         }
 

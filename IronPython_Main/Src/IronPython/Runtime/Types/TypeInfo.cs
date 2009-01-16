@@ -1220,12 +1220,24 @@ namespace IronPython.Runtime.Types {
                 Type[] allInterfaces = t.GetInterfaces();
                 List<Type> res = new List<Type>();
                 foreach (Type intf in allInterfaces) {
-                    InterfaceMapping imap = t.GetInterfaceMap(intf);
-                    foreach (MethodInfo mi in imap.TargetMethods) {
-                        if (mi.DeclaringType == t) {
-                            res.Add(intf);
-                            break;
+                    try {
+                        InterfaceMapping imap = t.GetInterfaceMap(intf);
+                        foreach (MethodInfo mi in imap.TargetMethods) {
+                            if (mi.DeclaringType == t) {
+                                res.Add(intf);
+                                break;
+                            }
                         }
+                    } catch (ArgumentException) {
+                        // this fails when the CLR is manufacturing an interface
+                        // type for a built in type.  For example IList<string>
+                        // for Array[str].  This can be reproed by doing:
+                        //
+                        // import System
+                        // System.Array[str].__dict__['__contains__']
+
+                        // __contains__ is actually inherited from Array's IList
+                        // implementation but IList<str> interferes here.
                     }
                 }
 

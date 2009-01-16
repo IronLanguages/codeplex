@@ -1327,6 +1327,9 @@ def test_clr_dir():
     Assert('IndexOf' not in clr.Dir('abc'))
     Assert('IndexOf' in clr.DirClr('abc'))
 
+def test_array_contains():
+    AssertError(KeyError, lambda : System.Array[str].__dict__['__contains__'])
+
 def test_underlying_type():
     # simple case, just make sure it's called and we can call super
     global called

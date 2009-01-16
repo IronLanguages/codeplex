@@ -83,6 +83,13 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        public PythonType PropertyType {
+            [PythonHidden]
+            get {
+                return DynamicHelpers.GetPythonTypeFromType(_info.PropertyType);
+            }
+        }
+
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 

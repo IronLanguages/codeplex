@@ -47,22 +47,22 @@ namespace IronPython.Runtime.Types {
             return _dt.GetMemberDictionary(context, false).Count;
         }
 
-        public bool __contains__(object value) {
-            return has_key(value);
+        public bool __contains__(CodeContext/*!*/ context, object value) {
+            return has_key(context, value);
         }
 
         public string/*!*/ __str__(CodeContext/*!*/ context) {
             return DictionaryOps.__repr__(context, this);
         }
 
-        public bool has_key(object key) {
+        public bool has_key(CodeContext/*!*/ context, object key) {
             object dummy;
-            return TryGetValue(key, out dummy);
+            return TryGetValue(context, key, out dummy);
         }
 
-        public object get([NotNull]object k, [DefaultParameterValue(null)]object d) {
+        public object get(CodeContext/*!*/ context, [NotNull]object k, [DefaultParameterValue(null)]object d) {
             object res;
-            if (!TryGetValue(k, out res)) {
+            if (!TryGetValue(context, k, out res)) {
                 res = d;
             }
 
@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Types {
         }
 
         bool IDictionary.Contains(object key) {
-            return has_key(key);
+            return has_key(DefaultContext.Default, key);
         }
 
         #endregion              
@@ -241,7 +241,7 @@ namespace IronPython.Runtime.Types {
         #region IDictionary<object,object> Members
 
         bool IDictionary<object, object>.ContainsKey(object key) {
-            return has_key(key);
+            return has_key(DefaultContext.Default, key);
         }
 
         ICollection<object> IDictionary<object, object>.Keys {
@@ -255,7 +255,7 @@ namespace IronPython.Runtime.Types {
         }
 
         bool IDictionary<object, object>.TryGetValue(object key, out object value) {
-            return TryGetValue(key, out value);
+            return TryGetValue(DefaultContext.Default, key, out value);
         }
 
         ICollection<object> IDictionary<object, object>.Values {
@@ -273,7 +273,7 @@ namespace IronPython.Runtime.Types {
         }
 
         bool ICollection<KeyValuePair<object, object>>.Contains(KeyValuePair<object, object> item) {
-            return has_key(item.Key);
+            return has_key(DefaultContext.Default, item.Key);
         }
 
         void ICollection<KeyValuePair<object, object>>.CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
@@ -327,11 +327,11 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.KeyError(index.ToString());
         }
 
-        private bool TryGetValue(object key, out object value) {
+        private bool TryGetValue(CodeContext/*!*/ context, object key, out object value) {
             string strIndex = key as string;
             if (strIndex != null) {
                 PythonTypeSlot dts;
-                if (_dt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(strIndex), out dts)) {
+                if (_dt.TryLookupSlot(context, SymbolTable.StringToId(strIndex), out dts)) {
                     PythonTypeUserDescriptorSlot uds = dts as PythonTypeUserDescriptorSlot;
                     if (uds != null) {
                         value = uds.Value;
