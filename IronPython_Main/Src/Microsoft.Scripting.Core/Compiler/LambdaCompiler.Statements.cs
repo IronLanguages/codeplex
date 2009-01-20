@@ -44,8 +44,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             ExitScope(node);
         }
 
-        private void EnterScope(BlockExpression node) {
-            if (node.Variables.Count > 0 &&
+        private void EnterScope(object node) {
+            if (HasVariables(node) &&
                 (_scope.MergedScopes == null || !_scope.MergedScopes.Contains(node))) {
 
                 CompilerScope scope;
@@ -68,8 +68,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 Debug.Assert(_scope.Node == node);
             }
         }
+                
+        private static bool HasVariables(object node) {
+            var block = node as BlockExpression;
+            if (block != null) {
+                return block.Variables.Count > 0;
+            }
+            return ((CatchBlock)node).Variable != null;
+        }
 
-        private void ExitScope(BlockExpression node) {
+        private void ExitScope(object node) {
             if (_scope.Node == node) {
                 _scope = _scope.Exit();
             }
@@ -293,6 +301,14 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 PushLabelBlock(LabelBlockKind.Catch);
 
                 // Begin the strongly typed exception block
+                if (cb.Filter == null) {
+                    _ilg.BeginCatchBlock(cb.Test);
+                } else {
+                    _ilg.BeginExceptFilterBlock();
+                }
+
+                EnterScope(cb);
+
                 EmitCatchStart(cb);
 
                 //
@@ -303,6 +319,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     //store the value of the catch block body
                     _ilg.Emit(OpCodes.Stloc, value);
                 }
+
+                ExitScope(cb);
 
                 PopLabelBlock(LabelBlockKind.Catch);
             }
@@ -343,15 +361,12 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// </summary>
         private void EmitCatchStart(CatchBlock cb) {
             if (cb.Filter == null) {
-                _ilg.BeginCatchBlock(cb.Test);
                 EmitSaveExceptionOrPop(cb);
                 return;
             }
 
             // emit filter block. Filter blocks are untyped so we need to do
             // the type check ourselves.  
-            _ilg.BeginExceptFilterBlock();
-
             Label endFilter = _ilg.DefineLabel();
             Label rightType = _ilg.DefineLabel();
 
