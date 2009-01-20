@@ -49,8 +49,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         /// <summary>
         /// The expression node for this scope
+        /// Can be LambdaExpression, BlockExpression, or CatchBlock
         /// </summary>
-        internal readonly Expression Node;
+        internal readonly object Node;
 
         /// <summary>
         /// Does this scope (or any inner scope) close over variables from any
@@ -76,7 +77,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// 
         /// Created lazily as we create hundreds of compiler scopes w/o merging scopes when compiling rules.
         /// </summary>
-        internal Set<BlockExpression> MergedScopes;
+        internal Set<object> MergedScopes;
 
         /// <summary>
         /// The scope's hoisted locals, if any.
@@ -95,7 +96,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// </summary>
         private readonly Dictionary<ParameterExpression, Storage> _locals = new Dictionary<ParameterExpression, Storage>();
 
-        internal CompilerScope(Expression node) {
+        internal CompilerScope(object node) {
             Node = node;
             var variables = GetVariables(node);
 
@@ -111,10 +112,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
         /// </summary>
         internal HoistedLocals NearestHoistedLocals {
             get { return _hoistedLocals ?? _closureHoistedLocals; }
-        }
-
-        internal bool IsLambda {
-            get { return Node is LambdaExpression; }
         }
 
         /// <summary>
@@ -267,6 +264,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
         #endregion
         
+        internal bool IsLambda {
+            get { return Node is LambdaExpression; }
+        }
+
         private void SetParent(LambdaCompiler lc, CompilerScope parent) {
             Debug.Assert(_parent == null && parent != this);
             _parent = parent;
@@ -414,18 +415,22 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return vars;
             }
             var list = new List<ParameterExpression>(vars);
-            foreach (var block in MergedScopes) {
-                list.AddRange(block.Variables);
+            foreach (var scope in MergedScopes) {
+                list.AddRange(GetVariables(scope));
             }
             return list;
         }
 
-        private static ReadOnlyCollection<ParameterExpression> GetVariables(Expression scope) {
+        private static IList<ParameterExpression> GetVariables(object scope) {
             var lambda = scope as LambdaExpression;
             if (lambda != null) {
                 return lambda.Parameters;
             }
-            return ((BlockExpression)scope).Variables;
+            var block = scope as BlockExpression;
+            if (block != null) {
+                return block.Variables;
+            }
+            return new[] { ((CatchBlock)scope).Variable };
         }
 
         private string CurrentLambdaName {

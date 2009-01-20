@@ -257,29 +257,19 @@ internal static %(methodDeclaration)s {
                 //
                 ruleTarget = CallSiteOps.SetTarget(@this, rule);
     
-                try {
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // if we produce another monomorphic
+                    // rule we should try and share code between the two.
+                    originalRule = rule;
+                } else {
                     %(setResult)s ruleTarget(site, %(args)s);
                     if (mm.Match) {
                         %(returnResult)s;
-                    }
-                } finally {
-                    if (mm.Match) {
-                        //
-                        // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                        // see them again. The site is polymorphic. Update the delegate and keep running
-                        //
-                        CallSiteOps.SetPolymorphicTarget(@this);
-                    }
-                }
-    
-                if ((object)startingTarget == (object)ruleTarget) {
-                    // our rule was previously monomorphic, if we produce another monomorphic
-                    // rule we should try and share code between the two.
-                    originalRule = rule;
-                }
-                
-                // Rule didn't match, try the next one
-                mm.Match = true;            
+                    }        
+                            
+                    // Rule didn't match, try the next one
+                    mm.Match = true;            
+                }                
             }
         }
     
