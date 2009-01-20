@@ -87,6 +87,7 @@ TIME_LVL = TIME_MED
 #list of slow tests that we disable unless -T:max is supplied
 SLOW_LIST = [
             "test_numtypes.py",
+            "test_fuzz_parser.py"
             ]
 
 #tests we do not wish to run. These should be in the "Tests" directory

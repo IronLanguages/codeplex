@@ -452,6 +452,10 @@ def skiptest(*args):
         print '... %s, skipping whole test module on 64-bit CLI...' % sys.platform
         exit_module()
     
+    elif get_num_iterations() > 1 and 'multiple_execute' in args:
+        print '... %d invocations, skipping whole test module under "multiple_execute" mode...' % get_num_iterations()
+        exit_module()
+    
     if sys.platform in args: 
         print '... %s, skipping whole test module...' % sys.platform
         exit_module()

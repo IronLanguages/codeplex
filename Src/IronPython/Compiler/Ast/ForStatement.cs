@@ -136,7 +136,7 @@ namespace IronPython.Compiler.Ast {
                             Operators.None
                         ),
                         body,
-                        Ast.Assign(ag.LineNumberExpression, Ast.Constant(list.Start.Line)),
+                        ag.UpdateLineNumber(list.Start.Line),
                         Ast.Empty()
                     ), 
                     ag.Transform(else_),

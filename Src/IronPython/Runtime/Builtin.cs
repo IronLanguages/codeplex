@@ -459,8 +459,12 @@ namespace IronPython.Runtime {
             SourceUnit sourceUnit = pc.CreateFileUnit(path, pc.DefaultEncoding, SourceCodeKind.Statements);
             ScriptCode code;
 
+            var options = GetDefaultCompilerOptions(context, true, 0);
+            //always generate an unoptimized module since we run these against a dictionary namespace
+            options.Module &= ~ModuleOptions.Optimized;
+
             try {
-                code = sourceUnit.Compile(GetDefaultCompilerOptions(context, true, 0), ThrowingErrorSink.Default);
+                code = sourceUnit.Compile(options, ThrowingErrorSink.Default);
             } catch (UnauthorizedAccessException x) {
                 throw PythonOps.IOError(x);
             }

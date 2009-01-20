@@ -579,11 +579,12 @@ namespace IronPython.Runtime {
                 return null;
             }
 
-            if (interpret && !disableInterpreter) { // TODO: enable -X:Interpret flag: || _options.InterpretedMode
-                // TODO: fix generated DLR ASTs
-                lambda = new GlobalLookupRewriter().RewriteLambda(lambda);
-                return new InterpretedScriptCode(lambda, sourceUnit);
-            } else if ((pythonOptions.Module & ModuleOptions.Optimized) != 0) {
+            bool optimized = (pythonOptions.Module & ModuleOptions.Optimized) != 0;
+
+            //TODO: don't ever disableInterpreter and rely on adaptive compiler
+            if (_options.AdaptiveCompilation || (interpret && !disableInterpreter)) {
+                return new Microsoft.Scripting.Interpreter.LightScriptCode(lambda, sourceUnit, optimized);
+            } else if (optimized) {
                 return new OptimizedScriptCode(lambda, sourceUnit);
             } else {
                 // TODO: fix generated DLR ASTs

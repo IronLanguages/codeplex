@@ -178,8 +178,8 @@ namespace IronPython.Compiler.Ast {
                     Ast.Constant(ag.BinderState, typeof(object)),
                     Ast.Constant(_languageFeatures)
                 ),
-                Ast.Assign(ag.LineNumberExpression, Ast.Constant(0)),
-                Ast.Assign(ag.LineNumberUpdated, Ast.Constant(false)),
+                ag.UpdateLineNumber(0),
+                ag.UpdateLineUpdated(false),
                 ag.WrapScopeStatements(Transform(ag)),   // new ComboActionRewriter().VisitNode(Transform(ag))
                 Ast.Empty()
             );

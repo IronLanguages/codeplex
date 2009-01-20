@@ -81,6 +81,11 @@ namespace IronPython.Compiler.Ast {
             _document = _context.SourceUnit.Document;
         }
 
+        // We don't need to insert code to track lines in adaptive mode as the interpreter does that for us.
+        public bool TrackLines {
+            get { return !PythonContext.PythonOptions.AdaptiveCompilation; }
+        }
+
         public bool Optimize {
             get { return PythonContext.PythonOptions.Optimize; }
         }
@@ -316,7 +321,7 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// A temporary variable to track the current line number
         /// </summary>
-        internal MSAst.ParameterExpression/*!*/ LineNumberExpression {
+        private MSAst.ParameterExpression/*!*/ LineNumberExpression {
             get {
                 if (_lineNoVar == null) {
                     _lineNoVar = _block.HiddenVariable(typeof(int), "$lineNo");
@@ -342,7 +347,7 @@ namespace IronPython.Compiler.Ast {
         /// 
         /// We also sometimes directly check _lineNoUpdated to avoid creating this unless we have nested exceptions.
         /// </summary>
-        internal MSAst.ParameterExpression/*!*/ LineNumberUpdated {
+        private MSAst.ParameterExpression/*!*/ LineNumberUpdated {
             get {
                 if (_lineNoUpdated == null) {
                     _lineNoUpdated = _block.HiddenVariable(typeof(bool), "$lineUpdated");
@@ -385,10 +390,6 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return GetLineNumberUpdateExpression();
-        }
-
-        internal MSAst.Expression GetLineNumberUpdateExpression() {
             return GetLineNumberUpdateExpression(true);
         }
 
@@ -403,15 +404,15 @@ namespace IronPython.Compiler.Ast {
                     ),
                     Ast.Call(
                         typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
-                        AstUtils.CodeContext(), 
-                        Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")), 
-                        Ast.Constant(_block.Name), 
-                        Ast.Constant(Context.SourceUnit.Path ?? "<string>"), 
+                        AstUtils.CodeContext(),
+                        Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")),
+                        Ast.Constant(_block.Name),
+                        Ast.Constant(Context.SourceUnit.Path ?? "<string>"),
                         LineNumberExpression
                     )
                 ),
                 AstUtils.Assign(
-                    LineNumberUpdated, 
+                    LineNumberUpdated,
                     Ast.Constant(preventAdditionalAdds)
                 ),
                 Ast.Empty()
@@ -513,7 +514,7 @@ namespace IronPython.Compiler.Ast {
             // from updating the line info first.
             bool updateLine = false;
 
-            if (fromStmt.CanThrow &&        // don't need to update line tracking for statements that can't throw
+            if (TrackLines && fromStmt.CanThrow &&        // don't need to update line tracking for statements that can't throw
                 ((_curLine.HasValue && fromStmt.Start.IsValid && _curLine.Value != fromStmt.Start.Line) ||  // don't need to update unless line has changed
                 (!_curLine.HasValue && fromStmt.Start.IsValid))) {  // do need to update if we don't yet have a valid line
 
@@ -525,16 +526,48 @@ namespace IronPython.Compiler.Ast {
 
             if (toExpr != null && updateLine) {
                 toExpr = Ast.Block(
-                    Ast.Assign(
-                        LineNumberExpression,
-                        Ast.Constant(fromStmt.Start.Line)
-                    ),
+                    UpdateLineNumber(fromStmt.Start.Line),
                     toExpr,
                     Ast.Empty()
                 );
             }
 
             return toExpr;
+        }
+
+        internal MSAst.Expression PushLineUpdated(bool updated, ParameterExpression saveCurrent) {
+            if (TrackLines) {
+                return MSAst.Expression.Block(
+                        Ast.Assign(saveCurrent, LineNumberUpdated),
+                        Ast.Assign(LineNumberUpdated, Ast.Constant(updated))
+                    );
+            } else {
+                return MSAst.Expression.Empty();
+            }
+        }
+
+        internal MSAst.Expression PopLineUpdated(ParameterExpression saveCurrent) {
+            if (TrackLines) {
+                return Ast.Assign(LineNumberUpdated, saveCurrent);
+            } else {
+                return MSAst.Expression.Empty();
+            }
+        }
+
+        internal MSAst.Expression UpdateLineUpdated(bool updated) {
+            if (TrackLines) {
+                return Ast.Assign(LineNumberUpdated, Ast.Constant(updated));
+            } else {
+                return MSAst.Expression.Empty();
+            }
+        }
+
+        internal MSAst.Expression UpdateLineNumber(int line) {
+            if (TrackLines) {
+                return Ast.Assign(LineNumberExpression, Ast.Constant(line));
+            } else {
+                return MSAst.Expression.Empty();
+            }
         }
 
         internal MSAst.Expression TransformLoopBody(Statement body, out LabelTarget breakLabel, out LabelTarget continueLabel) {

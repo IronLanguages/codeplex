@@ -56,7 +56,7 @@ namespace IronPython.Compiler.Ast {
                 read = AstUtils.Read(_name);
             }
 
-            if (!_assigned) {
+            if (!_assigned && !(read is Microsoft.Scripting.Ast.GlobalVariableExpression)) {
                 read = Ast.Call(
                     AstGenerator.GetHelperMethod("CheckUninitialized"),
                     read,

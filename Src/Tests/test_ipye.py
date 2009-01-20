@@ -122,7 +122,7 @@ def test_formatexception_showclrexceptions():
     AreEqual(exc_string.count(" line "), 4)
     Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
 
-@skip("silverlight")
+@skip("silverlight", "multiple_execute") #CodePlex 20636 - multi-execute
 def test_formatexception_exceptiondetail():
     import Microsoft.Scripting
     from IronPython.Hosting import Python
@@ -140,7 +140,6 @@ def test_formatexception_exceptiondetail():
     Assert(exc_string.startswith("first"))
     Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
     exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
-    AreEqual(exc_string.count("at "), 6)
     Assert(exc_string.endswith("Exception: first"))
     
 

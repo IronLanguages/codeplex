@@ -105,9 +105,7 @@ namespace Microsoft.Scripting {
         }              
 
         /// <summary>
-        /// Gets the data stored for the specified class at the specified index.  If the
-        /// class has changed a full lookup for the slot will be performed and the correct
-        /// value will be retrieved.
+        /// Deletes the data stored for the specified class at the specified index.
         /// </summary>
         internal bool DeleteValue(ExpandoClass klass, int index, bool caseInsensitive) {
             Debug.Assert(index != -1);
@@ -167,7 +165,7 @@ namespace Microsoft.Scripting {
         }
 
         #endregion
-        
+
         #region IDynamicObject Members
 
         DynamicMetaObject IDynamicObject.GetMetaObject(Expression parameter) {
@@ -290,8 +288,30 @@ namespace Microsoft.Scripting {
                 );
             }
 
+            public override IEnumerable<KeyValuePair<string,object>> GetDynamicDataMembers()
+            {
+                var expandoData = Value._data;
+                var klass = expandoData.Class;
+                var data = expandoData.Data;
+                for (int i = 0; i < klass.Keys.Length; i++) {
+                    object val = data[i];
+                    // all members are data members in a class
+                    if (val != ExpandoObject.Uninitialized) {
+                        yield return new KeyValuePair<string, object>(klass.Keys[i], val);
+                    }
+                }
+            } 
+
             public override IEnumerable<string> GetDynamicMemberNames() {
-                return new ReadOnlyCollection<string>(Value._data.Class.Keys);
+                var expandoData = Value._data;
+                var klass = expandoData.Class;
+                var data = expandoData.Data;
+                for (int i = 0; i < klass.Keys.Length; i++) {
+                    object val = data[i];
+                    if (val != ExpandoObject.Uninitialized) {
+                        yield return klass.Keys[i];
+                    }
+                }
             }
 
             /// <summary>

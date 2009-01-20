@@ -36,6 +36,7 @@ def test_main(level='full'):
         'generate_typecache',
         'generate_comdispatch',
         'generate_tree',
+        'generate_dynamic_instructions',
 		# TODO: uncomment when we have whole Core sources in Snap/test
 		# 'generate_exception_factory',        
 	]
