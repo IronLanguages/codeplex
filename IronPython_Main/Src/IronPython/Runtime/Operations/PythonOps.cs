@@ -1953,12 +1953,16 @@ namespace IronPython.Runtime.Operations {
                 if (name.IndexOf('#') > 0) {
                     // dynamic method, strip the trailing id...
                     name = name.Substring(0, name.IndexOf('#'));
-                } 
-                PythonFunction fx = new PythonFunction(frame.CodeContext, name, null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects, FunctionAttributes.None);
+                }
+                CodeContext context = frame.CodeContext;
+                if (context == null) {
+                    context = DefaultContext.Default;
+                }
+                PythonFunction fx = new PythonFunction(context, name, null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects, FunctionAttributes.None);
 
                 TraceBackFrame tbf = new TraceBackFrame(
-                    new PythonDictionary(new GlobalScopeDictionaryStorage(frame.CodeContext.Scope)),
-                    LocalScopeDictionaryStorage.GetDictionaryFromScope(frame.CodeContext.Scope),
+                    new PythonDictionary(new GlobalScopeDictionaryStorage(context.Scope)),
+                    LocalScopeDictionaryStorage.GetDictionaryFromScope(context.Scope),
                     fx.func_code);
 
                 fx.func_code.SetFilename(frame.GetFileName());
@@ -2815,13 +2819,6 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void FunctionPushFrame() {
-            //HACK ALERT:
-            // In interpreted mode, cap the recursion limit at 200, since our stack grows 30x faster than normal.
-            //TODO: remove this when we switch to a non-recursive interpretation strategy
-            if (PythonContext.GetPythonOptions(null).InterpretedMode) {
-                if (PythonFunction.Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
-            }
-
             if (++PythonFunction.Depth > PythonFunction._MaximumDepth)
                 throw PythonOps.RuntimeError("maximum recursion depth exceeded");
         }

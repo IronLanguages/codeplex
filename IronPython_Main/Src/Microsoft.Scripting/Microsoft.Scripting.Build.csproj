@@ -13,6 +13,7 @@
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
     <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
+    <DefineConstants>SYSTEM_CORE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -341,6 +342,21 @@
       <Compile Include="Interpretation\InterpreterVariables.cs" />
       <Compile Include="Interpretation\LambdaInvoker.cs" />
       <Compile Include="Interpretation\VariableAddress.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <!--                               -->
+      <!--          Interpreter          -->
+      <!--                               -->
+      <Compile Include="Interpreter\DynamicInstructions.cs" />
+      <Compile Include="Interpreter\DynamicInstructions.Generated.cs" />
+      <Compile Include="Interpreter\Instruction.cs" />
+      <Compile Include="Interpreter\Interpreter.cs" />
+      <Compile Include="Interpreter\LightCompiler.cs" />
+      <Compile Include="Interpreter\LightGlobalRewriter.cs" />
+      <Compile Include="Interpreter\LightLambda.cs" />
+      <Compile Include="Interpreter\LightLambda.Generated.cs" />
+      <Compile Include="Interpreter\LightScriptCode.cs" />
+      <Compile Include="Interpreter\StackFrame.cs" />
     </ItemGroup>
     <ItemGroup>
       <!--                        -->

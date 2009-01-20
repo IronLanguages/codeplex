@@ -19,19 +19,40 @@ import exceptions
 
 #------------------------------------------------------------------------------
 def test_raise():
-    global m
-    m = 0
+    events = []
+    expectedEvents = [
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)',
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(None)', 'A.__enter__', 'A.__exit__(exception)', 
+    'A.__enter__', 267504, 'A.__exit__(None)']
     
     #test case with RAISE(exit consumes), YIELD, RETURN, BREAK and CONTINUE in WITH
     class A:
         def __enter__(self):
-            globals()["m"] += 99
+            events.append('A.__enter__')
             return 300
         def __exit__(self,type,value,traceback):
             if(type == None and value == None and traceback == None):
-                globals()["m"] += 55
+                events.append('A.__exit__(None)')
             else:
-                globals()["m"] *= 2
+                events.append('A.__exit__(exception)')
             return 1
     
     a = A()
@@ -51,7 +72,8 @@ def test_raise():
                     if(x  % 3 == 0):
                         raise RuntimeError("we force exception")
                     if(y == 8):
-                        globals()["m"] += p
+                        events.append(p)
+                        #globals()["m"] += p
                         return
                     if(x  % 3  == 0 and y %3 == 0):
                         raise RuntimeError("we force exception")
@@ -62,7 +84,7 @@ def test_raise():
     try:
         k = foo()
         while(k.next()):pass
-    except StopIteration: AreEqual(m,427056988)
+    except StopIteration: AreEqual(events, expectedEvents)
     else :Fail("Expected StopIteration but found None")
 
 #------------------------------------------------------------------------------
@@ -221,18 +243,25 @@ def test_missing_exit():
 
 #------------------------------------------------------------------------------
 def test_with_stmt_under_compound_stmts_no_yield():
-    global gblvar
-    gblvar = 0
+    events = []
+    expectedEvents = [
+        'body', 'ZeroDivisionError', 
+        'inherited_cxtmgr.__enter__', 
+        'inner_with', 'inner_body', 
+        'inherited_cxtmgr.__enter__', 'deep_inner_with', 'cxtmgr.__exit__', 
+        'finally', 
+        'ClassInFinally.__enter__', 'last_with', 'ClassInFinally.__exit__', 
+        'cxtmgr.__exit__']
 
     #inheritance
     class cxtmgr:
         def __exit__(self, a, b, c):
-            globals()["gblvar"] += 10
+            events.append('cxtmgr.__exit__')
             return False
 
     class inherited_cxtmgr(cxtmgr):
         def __enter__(self):
-            globals()["gblvar"] += 10
+            events.append('inherited_cxtmgr.__enter__')
             return False
 
 
@@ -240,32 +269,33 @@ def test_with_stmt_under_compound_stmts_no_yield():
     #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
     try: #Try
         try: #try->try
-            globals()["gblvar"] += 1
+            events.append('body')
             1/0
         except ZeroDivisionError: #try->(try->except)
-            globals()["gblvar"] += 2
+            events.append('ZeroDivisionError')
             with inherited_cxtmgr() as ic: #try->(try->(except->with(inherited)))
-                globals()["gblvar"] += 3
+                events.append('inner_with')
                 def fun_in_with(): return "Python is smart"
                 AreEqual(fun_in_with(),"Python is smart") #try->(try->(except->(with ->fun)))
                 try:                                      #try->(try->(except->(with ->fun ->try)))
-                    globals()["gblvar"] += 4
+                    events.append('inner_body')
                     with inherited_cxtmgr() as inherited_cxtmgr.var: #try->(try->(except->(with ->fun ->(try->with))))
-                        globals()["gblvar"] += 5
+                        events.append('deep_inner_with')
                         raise Myerr1  #try->(try->(except->(with ->fun ->(try->with->raise))))
                 finally:    #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally))))
                     AreEqual(sys.exc_info()[0], exceptions.ZeroDivisionError)
-                    globals()["gblvar"] += 6
+                    events.append('finally')
                     class ClassInFinally:
                         def __enter__(self):
-                            globals()["gblvar"] +=  7
+                            events.append('ClassInFinally.__enter__')
                             return 200
                         def __exit__(self,a,b,c):
-                            globals()["gblvar"] += 8
+                            events.append('ClassInFinally.__exit__')
                             return False # it raises
                     with ClassInFinally(): #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
-                        globals()["gblvar"] += 9
-    except Myerr1: AreEqual(globals()["gblvar"],85)
+                        events.append('last_with')
+    except Myerr1: AreEqual(events, expectedEvents)
+    else: Fail("Expected Myerr1")
 
 #------------------------------------------------------------------------------
 def test_with_enter_and_exit():
