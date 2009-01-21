@@ -135,6 +135,7 @@ namespace IronPython.Runtime {
 
         // hex_version is set by PythonContext
         public const int maxint = Int32.MaxValue;
+        public const int maxsize = Int32.MaxValue;
         public const int maxunicode = (int)ushort.MaxValue;
 
         // modules is set by PythonContext and only on the initial load

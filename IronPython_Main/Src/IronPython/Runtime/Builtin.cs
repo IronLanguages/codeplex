@@ -1275,6 +1275,22 @@ namespace IronPython.Runtime {
             return value;
         }
 
+        public static object next(IEnumerator iter) {
+            if (iter.MoveNext()) {
+                return iter.Current;
+            } else {
+                throw PythonOps.StopIteration();
+            }
+        }
+
+        public static object next(IEnumerator iter, object defaultVal) {
+            if (iter.MoveNext()) {
+                return iter.Current;
+            } else {
+                return defaultVal;
+            }
+        }
+
         public static PythonType @object {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(object));
