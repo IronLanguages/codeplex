@@ -28,6 +28,14 @@ using Microsoft.Scripting.Utils;
 [assembly: PythonModule("_functools", typeof(IronPython.Modules.FunctionTools))]
 namespace IronPython.Modules {
     public static class FunctionTools {
+        public static object reduce(CodeContext/*!*/ context, object func, object seq) {
+            return Builtin.reduce(context, func, seq);
+        }
+
+        public static object reduce(CodeContext/*!*/ context, object func, object seq, object initializer) {
+            return Builtin.reduce(context, func, seq, initializer);
+        }
+        
         /// <summary>
         /// Returns a new callable object with the provided initial set of arguments
         /// bound to it.  Calling the new function then appends to the additional

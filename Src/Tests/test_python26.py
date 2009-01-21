@@ -497,6 +497,44 @@ def test__warnings_showwarning():
         # _warnings.showwarning and/or .NET classes unavailable in CPython - skip test
         pass
 
+def test_builtin_next():
+    from collections import deque
+    
+    values = [1,2,3,4]
+    
+    for iterable in [list, tuple, set, deque]:
+        i = iter(iterable(values))
+        AreEqual(next(i), 1)
+        AreEqual(next(i), 2)
+        AreEqual(next(i), 3)
+        AreEqual(next(i), 4)
+        AssertError(StopIteration, next, i)
+        
+        i = iter(iterable(values))
+        AreEqual(next(i, False), 1)
+        AreEqual(next(i, False), 2)
+        AreEqual(next(i, False), 3)
+        AreEqual(next(i, False), 4)
+        AreEqual(next(i, False), False)
+        AreEqual(next(i, False), False)
+    
+    i = iter('abcdE')
+    AreEqual(next(i), 'a')
+    AreEqual(next(i), 'b')
+    AreEqual(next(i), 'c')
+    AreEqual(next(i), 'd')
+    AreEqual(next(i), 'E')
+    AssertError(StopIteration, next, i)
+    
+    i = iter('edcbA')
+    AreEqual(next(i, False), 'e')
+    AreEqual(next(i, False), 'd')
+    AreEqual(next(i, False), 'c')
+    AreEqual(next(i, False), 'b')
+    AreEqual(next(i, False), 'A')
+    AreEqual(next(i, False), False)
+    AreEqual(next(i, False), False)
+
 def test_sys_flags():
     import sys
     AssertContains(dir(sys), 'flags')
@@ -620,5 +658,16 @@ def test_sys_flags():
         AreEqual(sys.flags.py3k_warning, 1)
     else:
         AreEqual(sys.flags.py3k_warning, 0)
+
+def test__functools_reduce():
+    import _functools
+    
+    words = ["I", "am", "the", "walrus"]
+    combine = lambda s,t: s + " " + t
+    
+    Assert(hasattr(_functools, "reduce"))
+    
+    AreEqual(_functools.reduce(combine, words), "I am the walrus")
+    AreEqual(_functools.reduce(combine, words), reduce(combine, words))
 
 run_test(__name__)
