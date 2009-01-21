@@ -463,7 +463,7 @@ namespace IronPython.Runtime {
             // These fields do not get reset on "reload(sys)", we populate them once on startup
             SetSystemStateValue("argv", List.FromArrayNoCopy(new object[] { String.Empty }));
             SetSystemStateValue("modules", _modulesDict);
-            SetSystemStateValue("py3kwarning", _options.WarnPy3k);
+            InitializeSysFlags();
 
             _modulesDict["sys"] = _systemState;
 
@@ -476,6 +476,50 @@ namespace IronPython.Runtime {
             SystemExceptionType = SystemExceptionValue = SystemExceptionTraceBack = null;
 
             SysModule.PerformModuleReload(this, _systemState.Dict);
+        }
+
+        private void InitializeSysFlags() {
+            // sys.flags
+            SysModule.SysFlags flags = new SysModule.SysFlags();
+            SetSystemStateValue("flags", flags);
+            flags.debug = _options.Debug ? 1 : 0;
+            flags.py3k_warning = _options.WarnPy3k ? 1 : 0;
+            SetSystemStateValue("py3kwarning", _options.WarnPy3k);
+            switch (_options.DivisionOptions) {
+                case PythonDivisionOptions.Old:
+                    break;
+                case PythonDivisionOptions.New:
+                    flags.division_new = 1;
+                    break;
+                case PythonDivisionOptions.Warn:
+                    flags.division_warning = 1;
+                    break;
+                case PythonDivisionOptions.WarnAll:
+                    flags.division_warning = 2;
+                    break;
+            }
+            flags.inspect = flags.interactive = _options.Inspect ? 1 : 0;
+            if (_options.StripDocStrings) {
+                flags.optimize = 2;
+            } else if (_options.Optimize) {
+                flags.optimize = 1;
+            }
+            flags.dont_write_bytecode = 1;
+            SetSystemStateValue("dont_write_bytecode", true);
+            flags.no_user_site = _options.NoUserSite ? 1 : 0;
+            flags.no_site = _options.NoSite ? 1 : 0;
+            flags.ignore_environment = _options.IgnoreEnvironment ? 1 : 0;
+            switch (_options.IndentationInconsistencySeverity) {
+                case Severity.Warning:
+                    flags.tabcheck = 1;
+                    break;
+                case Severity.Error:
+                    flags.tabcheck = 2;
+                    break;
+            }
+            flags.verbose = _options.Verbose ? 1 : 0;
+            flags.unicode = 1;
+            flags.bytes_warning = _options.BytesWarning ? 1 : 0;
         }
 
         internal LambdaExpression ParseSourceCode(SourceUnit/*!*/ sourceUnit, PythonCompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, out bool disableInterpreter) {

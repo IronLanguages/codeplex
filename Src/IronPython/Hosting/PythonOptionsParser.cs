@@ -35,6 +35,13 @@ namespace IronPython.Hosting {
             ContractUtils.RequiresNotNull(arg, "arg");
 
             switch (arg) {
+                case "-B": break; // dont_write_bytecode always true in IronPython
+                case "-U": break; // unicode always true in IronPython
+
+                case "-b":
+                    LanguageSetup.Options["BytesWarning"] = ScriptingRuntimeHelpers.True;
+                    break;
+
                 case "-c":
                     ConsoleOptions.Command = PeekNextArg();
                     string[] arguments = PopRemainingArgs();
@@ -48,6 +55,7 @@ namespace IronPython.Hosting {
 
                 case "-i":
                     ConsoleOptions.Introspection = true;
+                    LanguageSetup.Options["Inspect"] = ScriptingRuntimeHelpers.True;
                     break;
 
                 case "-m":
@@ -63,10 +71,24 @@ namespace IronPython.Hosting {
                 case "-u": break;
 
                 // TODO: create a trace listener?
-                case "-v": break;
+                case "-v":
+                    LanguageSetup.Options["Verbose"] = ScriptingRuntimeHelpers.True;
+                    break;
 
-                case "-S": ConsoleOptions.SkipImportSite = true; break;
-                case "-E": ConsoleOptions.IgnoreEnvironmentVariables = true; break;
+                case "-S":
+                    ConsoleOptions.SkipImportSite = true;
+                    LanguageSetup.Options["NoSite"] = ScriptingRuntimeHelpers.True;
+                    break;
+
+                case "-s":
+                    LanguageSetup.Options["NoUserSite"] = ScriptingRuntimeHelpers.True;
+                    break;
+
+                case "-E":
+                    ConsoleOptions.IgnoreEnvironmentVariables = true;
+                    LanguageSetup.Options["IgnoreEnvironment"] = ScriptingRuntimeHelpers.True;
+                    break;
+
                 case "-t": LanguageSetup.Options["IndentationInconsistencySeverity"] = Severity.Warning; break;
                 case "-tt": LanguageSetup.Options["IndentationInconsistencySeverity"] = Severity.Error; break;
 
@@ -128,8 +150,10 @@ namespace IronPython.Hosting {
                     LanguageSetup.Options["PythonVersion"] = new Version(2, 6);
                     break;
 
+                case "-d":
                 case "-X:Debug":
                     RuntimeSetup.DebugMode = true;
+                    LanguageSetup.Options["Debug"] = ScriptingRuntimeHelpers.True;
                     break;
 
                 default:

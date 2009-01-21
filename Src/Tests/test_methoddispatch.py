@@ -923,7 +923,7 @@ def test_function():
             line += 'try: c.SM%d(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (i, ",".join(['1'] * (i+1)))
         
         #print line
-        exec line
+        exec line in globals(), locals()
 
         ############ OptimizedFunctionAny ############
         ## 1
@@ -938,7 +938,7 @@ def test_function():
                 line += 'try: c.IDM0(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
             
         #print line
-        exec line
+        exec line in globals(), locals()
     
         line = ""
         for i in range(7):
@@ -951,7 +951,7 @@ def test_function():
                 line += 'try: c.SDM0(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
             
         #print line
-        exec line
+        exec line in globals(), locals()
 
         ## 2
         line = ""
@@ -969,7 +969,7 @@ def test_function():
                 line += 'AreEqual(c.SDM1(%s), "SDM1-x")\n' % (args)
                 
         #print line
-        exec line
+        exec line in globals(), locals()
     
         line = ""
         for i in range(7):
@@ -986,7 +986,7 @@ def test_function():
                 line += 'AreEqual(c.SDM4(%s), "SDM4-x")\n' % (args)
             
         #print line
-        exec line
+        exec line in globals(), locals()
 
         ## 3
         line = ""
@@ -999,7 +999,7 @@ def test_function():
                 line += 'try: o.IDM2(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
                 line += 'try: c.IDM2(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
         #print line
-        exec line
+        exec line in globals(), locals()
     
         line = ""
         for i in range(7):
@@ -1012,7 +1012,7 @@ def test_function():
                 line += 'try: c.SDM2(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line
+        exec line in globals(), locals()
     
         ## 4
         line = ""
@@ -1026,7 +1026,7 @@ def test_function():
                 line += 'try: c.IDM5(o, %s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line
+        exec line in globals(), locals()
 
         line = ""
         for i in range(7):
@@ -1039,7 +1039,7 @@ def test_function():
                 line += 'try: c.SDM5(%s) \nexcept TypeError: pass \nelse: raise AssertionError\n' % (args)
 
         #print line
-        exec line
+        exec line in globals(), locals()
 
         ## 5
         line = ""
@@ -1053,7 +1053,7 @@ def test_function():
                 line += 'AreEqual(c.IDM3(o,%s), "IDM3-x")\n' % (args)
             
         #print line
-        exec line
+        exec line in globals(), locals()
     
         line = ""
         for i in range(7):
@@ -1066,7 +1066,7 @@ def test_function():
                 line += 'AreEqual(c.SDM3(%s), "SDM3-x")\n' % (args)
             
         #print line
-        exec line
+        exec line in globals(), locals()
 
         ############ OptimizedFunctionN ############
         line = ""
@@ -1083,7 +1083,7 @@ def test_function():
             line +=  'AreEqual(c.SPM1(0,%s), "SPM1-%d")\n' % (args, i)
 
         #print line
-        exec line
+        exec line in globals(), locals()
         
     class DispatchAgain2(DispatchAgain): pass
     

@@ -494,7 +494,131 @@ def test__warnings_showwarning():
         sf.close()
 
     except ImportError:
-        # _warnings.showwarning and/or .NET classes unavailable - skip test
+        # _warnings.showwarning and/or .NET classes unavailable in CPython - skip test
         pass
+
+def test_sys_flags():
+    import sys
+    AssertContains(dir(sys), 'flags')
+    
+    # Assertion helpers
+    def IsInt(x):
+        Assert(type(x) == int)
+    def IsFlagInt(x):
+        Assert(x in [0,1,2])
+    
+    # Check repr
+    AreEqual(repr(type(sys.flags)), "<type 'sys.flags'>")
+    Assert(repr(sys.flags).startswith("sys.flags(debug="))
+    Assert(repr(sys.flags).endswith(")"))
+    
+    # Check attributes
+    attrs = set(dir(sys.flags))
+    structseq_attrs = set(["n_fields", "n_sequence_fields", "n_unnamed_fields"])
+    flag_attrs = set(['bytes_warning', 'debug', 'division_new', 'division_warning', 'dont_write_bytecode', 'ignore_environment', 'inspect', 'interactive', 'no_site', 'no_user_site', 'optimize', 'py3k_warning', 'tabcheck', 'unicode', 'verbose'])
+    expected_attrs = structseq_attrs.union(flag_attrs, dir(object), dir(tuple))
+    expected_attrs -= set(["index", "count", "__iter__", "__getnewargs__"]) # tuple fields that don't appear in sys.flags
+    
+    AreEqual(attrs, set(dir(type(sys.flags))))
+    attrs -= set(['__iter__']) # ignore '__iter__', which appears in IPy but not CPy
+    AreEqual(expected_attrs - attrs, set()) # check for missing attrs
+    AreEqual(attrs - expected_attrs, set()) # check for too many attrs
+    
+    for attr in structseq_attrs.union(flag_attrs):
+        IsInt(getattr(sys.flags, attr))
+    for attr in flag_attrs:
+        IsFlagInt(getattr(sys.flags, attr))
+    AreEqual(sys.flags.n_sequence_fields, len(flag_attrs))
+    AreEqual(sys.flags.n_fields, sys.flags.n_sequence_fields)
+    AreEqual(sys.flags.n_unnamed_fields, 0)
+    
+    # Test tuple-like functionality
+    
+    # __add__
+    x = sys.flags + ()
+    y = sys.flags + (7,)
+    z = sys.flags + (6,5,4,3,2)
+    
+    # __len__
+    AreEqual(len(sys.flags), len(flag_attrs))
+    AreEqual(len(sys.flags), len(x))
+    AreEqual(len(sys.flags), len(y) - 1)
+    AreEqual(len(sys.flags), len(z) - 5)
+    
+    # __eq__
+    AreEqual(sys.flags, x)
+    Assert(sys.flags == x)
+    Assert(x == sys.flags)
+    Assert(sys.flags == sys.flags)
+    # __ne__
+    AssertFalse(sys.flags != sys.flags)
+    Assert(sys.flags != z)
+    Assert(z != sys.flags)
+    # __ge__
+    Assert(sys.flags >= sys.flags)
+    Assert(sys.flags >= x)
+    Assert(x >= sys.flags)
+    AssertFalse(sys.flags >= y)
+    Assert(z >= sys.flags)
+    # __le__
+    Assert(sys.flags <= sys.flags)
+    Assert(sys.flags <= x)
+    Assert(x <= sys.flags)
+    Assert(sys.flags <= y)
+    AssertFalse(y <= sys.flags)
+    # __gt__
+    AssertFalse(sys.flags > sys.flags)
+    AssertFalse(sys.flags > x)
+    AssertFalse(x > sys.flags)
+    AssertFalse(sys.flags > y)
+    Assert(z > sys.flags)
+    # __lt__
+    AssertFalse(sys.flags < sys.flags)
+    AssertFalse(sys.flags < x)
+    AssertFalse(x < sys.flags)
+    Assert(sys.flags < y)
+    AssertFalse(y < sys.flags)
+    
+    # __mul__
+    AreEqual(sys.flags * 2, x * 2)
+    AreEqual(sys.flags * 5, x * 5)
+    # __rmul__
+    AreEqual(5 * sys.flags, x * 5)
+    
+    # __contains__
+    AreEqual(0 in sys.flags, 0 in x)
+    AreEqual(1 in sys.flags, 1 in x)
+    AreEqual(2 in sys.flags, 2 in x)
+    AssertFalse(3 in sys.flags)
+    
+    # __getitem__
+    for i in range(len(sys.flags)):
+        AreEqual(sys.flags[i], x[i])
+    # __getslice__
+    AreEqual(sys.flags[:], x[:])
+    AreEqual(sys.flags[2:], x[2:])
+    AreEqual(sys.flags[3:6], x[3:6])
+    AreEqual(sys.flags[1:-1], x[1:-1])
+    AreEqual(sys.flags[-7:11], x[-7:11])
+    AreEqual(sys.flags[-10:-5], x[-10:-5])
+    
+    # other sequence ops
+    AreEqual(set(sys.flags), set(x))
+    AreEqual(list(sys.flags), list(x))
+    count = 0
+    for f in sys.flags:
+        count += 1
+        IsFlagInt(f)
+    AreEqual(count, len(sys.flags))
+    
+    # sanity check
+    if (sys.dont_write_bytecode):
+        AreEqual(sys.flags.dont_write_bytecode, 1)
+    else:
+        AreEqual(sys.flags.dont_write_bytecode, 0)
+    if (sys.py3kwarning):
+        AreEqual(sys.flags.py3k_warning, 1)
+    else:
+        AreEqual(sys.flags.py3k_warning, 0)
 
 run_test(__name__)
