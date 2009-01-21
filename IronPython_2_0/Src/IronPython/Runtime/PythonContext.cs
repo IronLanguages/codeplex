@@ -1435,7 +1435,7 @@ namespace IronPython.Runtime {
         public static string GetIronPythonAssembly(string baseName) {
 #if SIGNED
 
-#if DEBUG
+#if DEBUG && !SILVERLIGHT
             try {
                 Debug.Assert(Assembly.GetExecutingAssembly().GetName().Version.ToString() == "2.0.0.0");
             } catch (SecurityException) {
