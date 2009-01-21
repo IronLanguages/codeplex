@@ -2911,9 +2911,7 @@ def test_delslice_missing_values():
     AreEqual(setVal, slice(0, 2147483647))
     test_slice(foo)
 
-#disabled because of a bug
 def test_oldclass_and_direct():   
-    return
     
     """tests slicing OldInstance's and directly passing a slice object"""
     class OldStyle:
@@ -2946,20 +2944,23 @@ def test_oldclass_and_direct():
     
     # using the slice syntax
     AreEqual(NewStyle()[:-1], slice(None, -1, None))
-    AreEqual(OldStyleWithLen()[:-1], slice(0, 9, None))
-    AreEqual(OldStyleWithLenAndGetSlice()[:-1], (0, 9))
+    #Dev10 588465
+    #AreEqual(OldStyleWithLen()[:-1], slice(0, 9, None))
+    #AreEqual(OldStyleWithLenAndGetSlice()[:-1], (0, 9))
     AreEqual(OldStyle()[:-1:1], slice(None, -1, 1))
     
     # need __len__ to be defined for negative indexing
     try:
         OldStyle()[:-1],
-        AssertUnreachable()
+        #Dev10 588465
+        #AssertUnreachable()
     except AttributeError:
         pass
     
     try:
         OldStyle()[-1:],
-        AssertUnreachable()
+        #Dev10 588465
+        #AssertUnreachable()
     except AttributeError:
         pass
         
@@ -2970,7 +2971,8 @@ def test_oldclass_and_direct():
                  ]:
         try:
             OldStyle()[x:y],
-            AssertUnreachable()
+            #Dev10 588465
+            #AssertUnreachable()
         except AttributeError:
             pass
     
@@ -3055,9 +3057,7 @@ def test_oldclass_and_direct_set():
     OldStyle()[-1::] = 123
     AreEqual(setVal, (slice(-1, None, None), 123))
 
-#disabled because of a bug
 def test_oldclass_and_direct_delete():
-    return
     """tests slicing OldInstance's and directly passing a slice object"""
     global setVal
     class OldStyle:
@@ -3101,9 +3101,11 @@ def test_oldclass_and_direct_delete():
     del NewStyle()[:-1]
     AreEqual(setVal, (slice(None, -1, None)))
     del OldStyleWithLen()[:-1]
-    AreEqual(setVal, (slice(0, 9, None)))
+    #Dev10 588465
+    #AreEqual(setVal, (slice(0, 9, None)))
     del OldStyleWithLenAndGetSlice()[:-1]
-    AreEqual(setVal, (0, 9))
+    #Dev10 588465
+    #AreEqual(setVal, (0, 9))
     del OldStyle()[:-1:1]
     AreEqual(setVal, (slice(None, -1, 1)))
     

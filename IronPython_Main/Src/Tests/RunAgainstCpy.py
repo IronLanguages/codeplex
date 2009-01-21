@@ -56,10 +56,6 @@ EXCLUDE_LIST = ["test_fuzz_parser.py"]
 #under CPython 2.5.  For now, this is just disabled.
 EXCLUDE_LIST.append("test_math.py")
 
-#CPython parser bug - exec's within nested functions break if there's a range/xrange object
-#being used.  See http://bugs.python.org/?@action=confrego&otk=0OBxdGSFLQ23ML6hbXxCOiRetuge1EpJ
-EXCLUDE_LIST.append("test_methoddispatch.py")
-
 # doesn't run on CPy 2.5
 EXCLUDE_LIST.append("test_python26.py")
 EXCLUDE_LIST.append("test_bytes.py")

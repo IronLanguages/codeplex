@@ -35,11 +35,18 @@ namespace IronPython {
         private readonly ReadOnlyCollection<string>/*!*/ _arguments;
         private readonly ReadOnlyCollection<string>/*!*/ _warningFilters;
         private readonly bool _warnPy3k;
+        private readonly bool _bytesWarning;
+        private readonly bool _debug;
         private readonly int _recursionLimit;
         private readonly Severity _indentationInconsistencySeverity;
         private readonly PythonDivisionOptions _division;
         private readonly bool _stripDocStrings;
         private readonly bool _optimize;
+        private readonly bool _inspect;
+        private readonly bool _noUserSite;
+        private readonly bool _noSite;
+        private readonly bool _ignoreEnvironment;
+        private readonly bool _verbose;
         private readonly Version _version;
 
         public ReadOnlyCollection<string>/*!*/ Arguments {
@@ -69,6 +76,34 @@ namespace IronPython {
 
         public bool WarnPy3k {
             get { return _warnPy3k; }
+        }
+
+        public bool BytesWarning {
+            get { return _bytesWarning; }
+        }
+
+        public bool Debug {
+            get { return _debug; }
+        }
+
+        public bool Inspect {
+            get { return _inspect; }
+        }
+
+        public bool NoUserSite {
+            get { return _noUserSite; }
+        }
+
+        public bool NoSite {
+            get { return _noSite; }
+        }
+
+        public bool IgnoreEnvironment {
+            get { return _ignoreEnvironment; }
+        }
+
+        public bool Verbose {
+            get { return _verbose; }
         }
 
         public int RecursionLimit {
@@ -106,6 +141,13 @@ namespace IronPython {
             _warningFilters = GetStringCollectionOption(options, "WarningFilters", ';', ',') ?? EmptyStringCollection;
 
             _warnPy3k = GetOption(options, "WarnPy3k", false);
+            _bytesWarning = GetOption(options, "BytesWarning", false);
+            _debug = GetOption(options, "Debug", false);
+            _inspect = GetOption(options, "Inspect", false);
+            _noUserSite = GetOption(options, "NoUserSite", false);
+            _noSite = GetOption(options, "NoSite", false);
+            _ignoreEnvironment = GetOption(options, "IgnoreEnvironment", false);
+            _verbose = GetOption(options, "Verbose", false);
             _optimize = GetOption(options, "Optimize", false);
             _stripDocStrings = GetOption(options, "StripDocStrings", false);
             _division = GetOption(options, "DivisionOptions", PythonDivisionOptions.Old);
