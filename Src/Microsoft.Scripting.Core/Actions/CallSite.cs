@@ -23,6 +23,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Microsoft.Runtime.CompilerServices {
 
@@ -52,7 +53,7 @@ namespace Microsoft.Runtime.CompilerServices {
     /// dynamic site targets. The first parameter of the delegate (T) below must be
     /// of this type.
     /// </summary>
-    public abstract class CallSite {
+    public class CallSite {
 
         // Cache of CallSite constructors for a given delegate type
         private static CacheDict<Type, Func<CallSiteBinder, CallSite>> _SiteCtors;
@@ -68,6 +69,11 @@ namespace Microsoft.Runtime.CompilerServices {
         internal CallSite(CallSiteBinder binder) {
             _binder = binder;
         }
+
+        /// <summary>
+        /// used by Matchmaker sites to indicate rule match.
+        /// </summary>
+        internal bool _match;
 
         /// <summary>
         /// Class responsible for binding dynamic operations on the dynamic site.
@@ -111,15 +117,20 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <summary>
         /// The update delegate. Called when the dynamic site experiences cache miss.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
-        public readonly T Update;
+        /// <returns>The update delegate.</returns>
+        public T Update {
+            get {
+                Debug.Assert(_CachedUpdate != null, "all normal sites should have Update cached once there is an instance.");
+                return _CachedUpdate;
+            }
+        }
 
         /// <summary>
         /// The Level 0 cache - a delegate specialized based on the site history.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1051:DoNotDeclareVisibleInstanceFields")]
         public T Target;
+
 
         /// <summary>
         /// The Level 1 cache - a history of the dynamic site.
@@ -137,12 +148,7 @@ namespace Microsoft.Runtime.CompilerServices {
 
         private CallSite(CallSiteBinder binder)
             : base(binder) {
-            Target = Update = GetUpdateDelegate();
-        }
-
-        internal CallSite(CallSiteBinder binder, T update)
-            : base(binder) {
-            Target = Update = update;
+            Target = GetUpdateDelegate();
         }
 
         /// <summary>
@@ -307,40 +313,14 @@ namespace Microsoft.Runtime.CompilerServices {
             vars.Add(originalRule);
 
             ////
-            //// Create matchmaker and its site. We'll need them regardless.
-            //// 
-            //// **** THIS DIFFERS FROM THE GENERATED CODE TO NOT EXPOSE the Matchmaker class
-            //// **** Instead we close over the match bool here and create a delegate each time
-            //// **** through.  This is less efficient than caching the delegate but avoids
-            //// **** exposing the large Matchmaker class.
+            //// Create matchmaker site. We'll need it regardless.
             ////
-            //bool match = true;
-            //site = CreateMatchmaker(
-            //    @this,
-            //    (mm_site, %(matchmakerArgs)s) => {
-            //        match = false;
-            //        %(returnDefault)s;
-            //    }
-            //);
-            var match = Expression.Variable(typeof(bool), "match");
-            vars.Add(match);
-            var resetMatch = Expression.Assign(match, Expression.Constant(true));
-            body.Add(resetMatch);
+            //site = CallSiteOps.CreateMatchmaker();
             body.Add(
                 Expression.Assign(
                     site,
                     Expression.Call(
-                        typeof(CallSiteOps),
-                        "CreateMatchmaker",
-                        typeArgs,
-                        @this,
-                        Expression.Lambda<T>(
-                            Expression.Block(
-                                Expression.Assign(match, Expression.Constant(false)),
-                                Expression.Default(@return.Type)
-                            ),
-                            new ReadOnlyCollection<ParameterExpression>(@params)
-                        )
+                        typeof(CallSiteOps).GetMethod("CreateMatchmaker")
                     )
                 )
             );
@@ -361,27 +341,38 @@ namespace Microsoft.Runtime.CompilerServices {
             //            // if we produce another monomorphic
             //            // rule we should try and share code between the two.
             //            originalRule = rule;
-            //        }else{
+            //        } else {
             //            %(setResult)s ruleTarget(site, %(args)s);
-            //            if (match) {
+            //            if (CallSiteOps.GetMatch(site)) {
             //                %(returnResult)s;
-            //            }        
-            //                    
+            //            }
+            //
             //            // Rule didn't match, try the next one
-            //            match = true;            
+            //            CallSiteOps.ClearMatch(site);
             //        }                
             //    }
             //}
             Expression invokeRule;
+
+            Expression getMatch = Expression.Call(
+                typeof(CallSiteOps).GetMethod("GetMatch"),
+                site
+            );
+
+            Expression resetMatch = Expression.Call(
+                typeof(CallSiteOps).GetMethod("ClearMatch"),
+                site
+            );
+
             if (@return.Type == typeof(void)) {
                 invokeRule = Expression.Block(
                     Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params)),
-                    IfThen(match, Expression.Return(@return))
+                    IfThen(getMatch, Expression.Return(@return))
                 );
             } else {
                 invokeRule = Expression.Block(
                     Expression.Assign(result, Expression.Invoke(ruleTarget, new ReadOnlyCollection<Expression>(@params))),
-                    IfThen(match, Expression.Return(@return, result))
+                    IfThen(getMatch, Expression.Return(@return, result))
                 );
             }
 
@@ -401,10 +392,12 @@ namespace Microsoft.Runtime.CompilerServices {
                     Helpers.Convert(startingTarget, typeof(object)),
                     Helpers.Convert(ruleTarget, typeof(object))
                 ),
-                Expression.Void(Expression.Assign(originalRule, rule)),
+                Expression.Void(
+                    Expression.Assign(originalRule, rule)
+                ),
                 Expression.Block(
                     invokeRule,
-                    Expression.Void(resetMatch)
+                    resetMatch
                 )
             );
 
@@ -463,7 +456,7 @@ namespace Microsoft.Runtime.CompilerServices {
             //                return result;
             //            }
             //        } finally {
-            //            if (match) {
+            //            if (CallSiteOps.GetMatch(site)) {
             //                //
             //                // Rule worked. Add it to level 1 cache
             //                //
@@ -480,13 +473,14 @@ namespace Microsoft.Runtime.CompilerServices {
             //        }
             //
             //        // Rule didn't match, try the next one
-            //        match = true;
+            //        CallSiteOps.ClearMatch(site);
             //    }
             //}
 
             var tryRule = Expression.TryFinally(
                 invokeRule,
-                IfThen(match,
+                IfThen(
+                    getMatch,
                     Expression.Block(
                         Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule),
                         Expression.Call(typeof(CallSiteOps), "MoveRule", typeArgs, @this, rule)
@@ -590,7 +584,7 @@ namespace Microsoft.Runtime.CompilerServices {
             tryRule = Expression.TryFinally(
                 invokeRule,
                 IfThen(
-                    match,
+                    getMatch,
                     Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule)
                 )
             );

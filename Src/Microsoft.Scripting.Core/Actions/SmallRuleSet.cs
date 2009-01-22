@@ -15,13 +15,14 @@
 using System; using Microsoft;
 
 
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
+
 
 
 namespace Microsoft.Scripting {
@@ -104,19 +105,29 @@ namespace Microsoft.Scripting {
                 body[i] = _rules[i].Binding;
             }
 
-            var @params = CallSiteRule<T>.Parameters.AddFirst(Expression.Parameter(typeof(CallSite), "$site"));
+            var site = Expression.Parameter(typeof(CallSite), "$site");
+            var @params = CallSiteRule<T>.Parameters.AddFirst(site);
+
+            Expression Update = Expression.Invoke(
+                Expression.Property(
+                    Helpers.Convert(site, siteType),
+                    typeof(CallSite<T>).GetProperty("Update")
+                ),
+                new ReadOnlyCollection<Expression>(@params)
+            );
 
             body[_rules.Length] = Expression.Label(
                 CallSiteRule<T>.ReturnLabel,
-                Expression.Call(
-                    Expression.Field(
-                        Expression.Convert(@params[0], siteType),
-                        siteType.GetField("Update")
+                Expression.Condition(
+                    Expression.Call(
+                        typeof(CallSiteOps).GetMethod("NeedsUpdate"),
+                        @params.First()
                     ),
-                    targetType.GetMethod("Invoke"),
-                    new ReadOnlyCollection<Expression>(@params)
+                    Expression.Default(Update.Type),
+                    Update
                 )
             );
+
 
             return new Expression<T>(
                 "_stub_",
