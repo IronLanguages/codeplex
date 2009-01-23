@@ -41,7 +41,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region Instruction helpers
 
         internal static void EmitLoadArg(this ILGenerator il, int index) {
-            ContractUtils.Requires(index >= 0, "index");
+            Debug.Assert(index >= 0);
 
             switch (index) {
                 case 0:
@@ -67,7 +67,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         internal static void EmitLoadArgAddress(this ILGenerator il, int index) {
-            ContractUtils.Requires(index >= 0, "index");
+            Debug.Assert(index >= 0);
 
             if (index <= Byte.MaxValue) {
                 il.Emit(OpCodes.Ldarga_S, (byte)index);
@@ -77,7 +77,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         internal static void EmitStoreArg(this ILGenerator il, int index) {
-            ContractUtils.Requires(index >= 0, "index");
+            Debug.Assert(index >= 0);
 
             if (index <= Byte.MaxValue) {
                 il.Emit(OpCodes.Starg_S, (byte)index);
@@ -460,6 +460,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return true;
             }
             return false;
+        }
+
+        internal static void EmitConstant(this ILGenerator il, object value) {
+            Debug.Assert(value != null);
+            EmitConstant(il, value, value.GetType());
         }
 
         //CONFORMING

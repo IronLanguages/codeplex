@@ -204,7 +204,6 @@
       <Compile Include="Ast\NewArrayExpression.cs" />
       <Compile Include="Ast\NewExpression.cs" />
       <Compile Include="Ast\SourceFileInformation.cs" />
-      <Compile Include="Ast\SwitchBuilder.cs" />
       <Compile Include="Ast\SymbolConstantExpression.cs" />
       <Compile Include="Ast\ThrowStatement.cs" />
       <Compile Include="Ast\TryStatementBuilder.cs" />
