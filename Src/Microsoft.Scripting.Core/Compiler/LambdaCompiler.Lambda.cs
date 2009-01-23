@@ -41,7 +41,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             } else if(_typeBuilder != null) {
                 // store into field in our type builder, we will initialize
                 // the value only once.
-                FieldBuilder fb = _typeBuilder.DefineField("constantArray" + typeof(T).Name.Replace('.', '_').Replace('+', '_') + Interlocked.Increment(ref _Counter), typeof(T[]), FieldAttributes.Static | FieldAttributes.Private);
+                FieldBuilder fb = CreateStaticField("ConstantArray", typeof(T[]));
                 Label l = _ilg.DefineLabel();
                 _ilg.Emit(OpCodes.Ldsfld, fb);
                 _ilg.Emit(OpCodes.Ldnull);
@@ -149,7 +149,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _scope.Exit();
 
             // Validate labels
-            Debug.Assert(_labelBlock.Parent == null && _labelBlock.Kind == LabelBlockKind.Block);
+            Debug.Assert(_labelBlock.Parent == null && _labelBlock.Kind == LabelScopeKind.Lambda);
             foreach (LabelInfo label in _labelInfo.Values) {
                 label.ValidateFinish();
             }
