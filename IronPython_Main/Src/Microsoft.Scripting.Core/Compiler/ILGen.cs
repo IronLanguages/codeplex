@@ -249,11 +249,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle"));
         }
 
-        internal static void EmitUnbox(this ILGenerator il, Type type) {
-            ContractUtils.RequiresNotNull(type, "type");
-            il.Emit(OpCodes.Unbox_Any, type);
-        }
-
         #endregion
 
         #region Fields, properties and methods

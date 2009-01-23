@@ -56,7 +56,6 @@ using System.Security;
 
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
-
 #if !SILVERLIGHT
 [assembly: AssemblyVersion("0.9.5.1")]
 [assembly: AssemblyFileVersion("1.0.0.00")]
