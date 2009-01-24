@@ -89,6 +89,14 @@ namespace Microsoft.Linq.Expressions {
 
             return Expression.Invoke(lambda, arguments ?? _arguments);
         }
+
+        internal LambdaExpression LambdaOperand {
+            get {
+                return (_lambda.NodeType == ExpressionType.Quote)
+                    ? (LambdaExpression)((UnaryExpression)_lambda).Operand
+                    : (_lambda as LambdaExpression);
+            }
+        }
     }
 
     public partial class Expression {

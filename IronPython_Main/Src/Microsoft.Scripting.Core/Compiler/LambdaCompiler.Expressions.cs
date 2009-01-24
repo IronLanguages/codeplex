@@ -99,16 +99,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitInvocationExpression(Expression expr) {
             InvocationExpression node = (InvocationExpression)expr;
 
-            // Note: If node.Expression is a lambda, ExpressionCompiler inlines
-            // the lambda here as an optimization. We don't, for various
-            // reasons:
+            // Optimization: inline code for literal lambda's directly
             //
-            // * It's not necessarily optimal for large statement trees (JIT
-            //   does better with small methods)
-            // * We support returning from anywhere,
-            // * The frame wouldn't show up in the stack trace,
-            // * Possibly other subtle semantic differences
+            // This is worth it because otherwise we end up with a extra call
+            // to DynamicMethod.CreateDelegate, which is expensive.
             //
+            if (node.LambdaOperand != null) {
+                EmitInlinedInvoke(node);
+                return;
+            }
+
             expr = node.Expression;
             if (typeof(LambdaExpression).IsAssignableFrom(expr.Type)) {
                 // if the invoke target is a lambda expression tree, first compile it into a delegate
@@ -117,6 +117,26 @@ namespace Microsoft.Linq.Expressions.Compiler {
             expr = Expression.Call(expr, expr.Type.GetMethod("Invoke"), node.Arguments);
 
             EmitExpression(expr);
+        }
+
+        private void EmitInlinedInvoke(InvocationExpression invoke) {
+            var lambda = invoke.LambdaOperand;
+
+            // This is tricky: we need to emit the arguments outside of the
+            // scope, but set them inside the scope. Fortunately, using the IL
+            // stack it is entirely doable.
+
+            // 1. Emit invoke arguments
+            List<WriteBack> wb = EmitArguments(lambda.Type.GetMethod("Invoke"), invoke);
+
+            // 2. Create the nested LambdaCompiler
+            var inner = new LambdaCompiler(this, lambda);
+
+            // 3. Emit the body
+            inner.EmitLambdaBody(_scope, true);
+
+            // 4. Emit writebacks if needed
+            EmitWriteBack(wb);
         }
 
         #endregion

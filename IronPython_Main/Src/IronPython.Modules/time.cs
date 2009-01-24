@@ -52,7 +52,7 @@ namespace IronPython.Modules {
         private const int MaxIndex = 9;
 
         private const int minYear = 1900;   // minimum year for python dates (CLS dates are bigger)
-        private const double epochDifference = 62135568000.0; // Difference between CLS epoch and UNIX epoch
+        private const double epochDifference = 62135596800.0; // Difference between CLS epoch and UNIX epoch, == System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc).Ticks / TimeSpan.TicksPerSecond
         private const double ticksPerSecond = (double)TimeSpan.TicksPerSecond;
 
         public static readonly int altzone;
@@ -86,9 +86,14 @@ namespace IronPython.Modules {
             altzone = (int)-TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalSeconds;
             timezone = altzone;
             if (daylight != 0) {
-                timezone += (int)dayTime.Delta.TotalSeconds;
+                // GetUtcOffset includes adjustments for timezones.  If we're in daylight saving time then
+                // we need to adjust timezone so it is the correct time.  Otherwise we need to adjust altzone
+                if (TimeZone.CurrentTimeZone.IsDaylightSavingTime(DateTime.Now)) {
+                    timezone += (int)dayTime.Delta.TotalSeconds;
+                } else {
+                    altzone -= (int)dayTime.Delta.TotalSeconds;
+                }
             }
-
 #else
             daylight = TimeZoneInfo.Local.SupportsDaylightSavingTime ? 1 : 0;
             tzname = PythonTuple.MakeTuple(TimeZoneInfo.Local.StandardName, TimeZoneInfo.Local.DaylightName);
@@ -97,11 +102,11 @@ namespace IronPython.Modules {
 #endif
         }
 
-        private static long TimestampToTicks(double seconds) {
+        internal static long TimestampToTicks(double seconds) {
             return (long)((seconds + epochDifference) * ticksPerSecond);
         }
 
-        private static double TicksToTimestamp(long ticks) {
+        internal static double TicksToTimestamp(long ticks) {
             return (ticks / ticksPerSecond) - epochDifference;
         }
 
@@ -146,7 +151,7 @@ namespace IronPython.Modules {
         }
 
         public static double time() {
-            return DateTimeToTimestamp(DateTime.Now);
+            return TicksToTimestamp(DateTime.Now.ToUniversalTime().Ticks);
         }
 
         public static PythonTuple localtime() {
@@ -157,6 +162,8 @@ namespace IronPython.Modules {
             if (seconds == null) return localtime();
 
             DateTime dt = TimestampToDateTime(GetTimestampFromObject(seconds));
+            dt = dt.AddSeconds(-timezone);
+
             return GetDateTimeTuple(dt, dt.IsDaylightSavingTime());
         }
 
@@ -167,13 +174,13 @@ namespace IronPython.Modules {
         public static PythonTuple gmtime(object seconds) {
             if (seconds == null) return gmtime();
 
-            DateTime dt = TimestampToDateTime(GetTimestampFromObject(seconds));
+            DateTime dt = new DateTime(TimestampToTicks(GetTimestampFromObject(seconds)), DateTimeKind.Unspecified);
             
-            return GetDateTimeTuple(dt.ToUniversalTime(), false);
+            return GetDateTimeTuple(dt, false);
         }
 
         public static double mktime(CodeContext/*!*/ context, PythonTuple localTime) {
-            return TicksToTimestamp(GetDateTimeFromTuple(context, localTime).Ticks);
+            return TicksToTimestamp(GetDateTimeFromTuple(context, localTime).AddSeconds(timezone).Ticks);
         }
 
         public static string strftime(CodeContext/*!*/ context, string format) {
@@ -181,7 +188,7 @@ namespace IronPython.Modules {
         }
 
         public static string strftime(CodeContext/*!*/ context, string format, PythonTuple dateTime) {
-            return strftime(context, format, GetDateTimeFromTuple(context, dateTime));
+            return strftime(context, format, GetDateTimeFromTupleNoDst(context, dateTime));
         }
 
         public static object strptime(CodeContext/*!*/ context, string @string) {
@@ -520,18 +527,33 @@ namespace IronPython.Modules {
         }
 
         private static DateTime GetDateTimeFromTuple(CodeContext/*!*/ context, PythonTuple t) {
-            if (t == null) return DateTime.Now;
+            int[] ints;
+            DateTime res = GetDateTimeFromTupleNoDst(context, t, out ints);
 
-            int[] ints = ValidateDateTimeTuple(context, t);
-            DateTime res = new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
-
-            switch (ints[IsDaylightSavingsIndex]) {
-                // automatic detection
-                case -1: res = RemoveDst(res); break;
-                // is daylight savings time, force adjustment
-                case 1: res = RemoveDst(res, true); break;
+            if (ints != null) {
+                switch (ints[IsDaylightSavingsIndex]) {
+                    // automatic detection
+                    case -1: res = RemoveDst(res); break;
+                    // is daylight savings time, force adjustment
+                    case 1: res = RemoveDst(res, true); break;
+                }
             }
             return res;
+        }
+
+        private static DateTime GetDateTimeFromTupleNoDst(CodeContext context, PythonTuple t) {
+            int[] dummy;
+            return GetDateTimeFromTupleNoDst(context, t, out dummy);
+        }
+
+        private static DateTime GetDateTimeFromTupleNoDst(CodeContext context, PythonTuple t, out int[] ints) {
+            if (t == null) {
+                ints = null;
+                return DateTime.Now;
+            }
+
+            ints = ValidateDateTimeTuple(context, t);
+            return new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
         }
 
         private static int[] ValidateDateTimeTuple(CodeContext/*!*/ context, PythonTuple t) {

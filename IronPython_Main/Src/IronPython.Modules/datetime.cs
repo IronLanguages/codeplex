@@ -21,12 +21,14 @@ using Microsoft.Runtime.CompilerServices;
 
 using System.Runtime.InteropServices;
 using System.Text;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -386,6 +388,8 @@ namespace IronPython.Modules {
 
             public static date fromtimestamp(double timestamp) {
                 DateTime dt = PythonTime.TimestampToDateTime(timestamp);
+                dt = dt.AddSeconds(-PythonTime.timezone);
+
                 return new date(dt.Year, dt.Month, dt.Day);
             }
 
@@ -744,6 +748,7 @@ namespace IronPython.Modules {
 
             public static object fromtimestamp(double timestamp, [DefaultParameterValue(null)] tzinfo tz) {
                 DateTime dt = PythonTime.TimestampToDateTime(timestamp);
+                dt = dt.AddSeconds(-PythonTime.timezone);
 
                 if (tz != null) {
                     dt = dt.ToUniversalTime();
@@ -755,8 +760,7 @@ namespace IronPython.Modules {
             }
 
             public static datetime utcfromtimestamp(double timestamp) {
-                DateTime dt = PythonTime.TimestampToDateTime(timestamp);
-                dt = dt.ToUniversalTime();
+                DateTime dt = new DateTime(PythonTime.TimestampToTicks(timestamp), DateTimeKind.Utc);
                 return new datetime(dt, 0, null);
             }
 

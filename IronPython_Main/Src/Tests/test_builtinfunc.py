@@ -113,6 +113,26 @@ def test_reversed():
     AssertError(TypeError, reversed, None)
     AssertError(TypeError, reversed, ToReverse)
     
+    # no __len__ on class, reversed should throw
+    class x(object):
+        def __getitem__(self, index): return 2
+    
+    def __len__(): return 42
+
+    a = x()
+    a.__len__ = __len__
+    AssertError(TypeError, reversed, a)
+
+    # no __len__ on class, reversed should throw
+    class x(object):
+        def __len__(self): return 42
+
+    def __getitem__(index): return 2    
+    a = x()
+    a.__getitem__ = __getitem__
+    AssertError(TypeError, reversed, a)
+
+
 def test_reduce():
     def add(x,y): return x+y;
     Assert(reduce(add, [2,3,4]) == 9)

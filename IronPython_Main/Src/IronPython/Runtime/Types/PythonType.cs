@@ -65,6 +65,14 @@ namespace IronPython.Runtime.Types {
         private CallSite<Func<CallSite, CodeContext, object, object>> _dirSite;
         private CallSite<Func<CallSite, CodeContext, object, string, object>> _getAttributeSite;
         private CallSite<Func<CallSite, CodeContext, object, object, string, object, object>> _setAttrSite;
+        private CallSite<Func<CallSite, object, int>> _hashSite;
+        private CallSite<Func<CallSite, CodeContext, object, object>> _lenSite;
+        private CallSite<Func<CallSite, object, object, bool>> _eqSite;
+        private CallSite<Func<CallSite, object, object, int>> _compareSite;
+        private Dictionary<SymbolId, CallSite<Func<CallSite, object, CodeContext, object>>> _tryGetMemSite;
+        private Dictionary<SymbolId, CallSite<Func<CallSite, object, CodeContext, object>>> _tryGetMemSiteShowCls;
+
+        private PythonTypeSlot _lenSlot;                    // cached length slot, cleared when the type is mutated
 
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
@@ -78,6 +86,9 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public PythonType(CodeContext/*!*/ context, string name, PythonTuple bases, IAttributesCollection dict) {
             InitializeUserType(context, name, bases, dict);
+        }
+
+        internal PythonType() {
         }
 
         /// <summary>
@@ -631,6 +642,165 @@ namespace IronPython.Runtime.Types {
             return _instanceCtor.CreateInstance(context, args, names);
         }
 
+        internal int Hash(object o) {
+            EnsureHashSite();
+
+            object res = _hashSite.Target(_hashSite, o);
+            if (res is int) {
+                return (int)res;
+            } else if (res is BigInteger) {
+                // Python 2.5 defines the result of returning a long as hashing the long
+                return TypeCache.BigInteger.Hash(res);
+            }
+
+            return Converter.ConvertToInt32(res);
+        }
+
+        internal bool TryGetLength(object o, out int length) {
+            EnsureLengthSite();
+
+            PythonTypeSlot lenSlot = _lenSlot;
+            CodeContext ctx = Context.DefaultBinderState.Context;
+            if (lenSlot == null && !PythonOps.TryResolveTypeSlot(ctx, this, Symbols.Length, out lenSlot)) {
+                length = 0;
+                return false;                
+            }
+
+            object func;
+            if (!lenSlot.TryGetBoundValue(ctx, o, this, out func)) {
+                length = 0;
+                return false;
+            }
+
+            object res = _lenSite.Target(_lenSite, ctx, func);
+            if (!(res is int)) {
+                throw PythonOps.ValueError("__len__ must return int");
+            }
+
+            length = (int)res;
+            return true;
+        }
+
+        internal bool EqualRetBool(object self, object other) {
+            if (_eqSite == null) {
+                Interlocked.CompareExchange(
+                    ref _eqSite,
+                    Context.CreateComparisonSite(StandardOperators.Equal),
+                    null
+                );
+            }
+
+            return _eqSite.Target(_eqSite, self, other);
+        }
+
+        internal int Compare(object self, object other) {
+            if (_compareSite == null) {
+                Interlocked.CompareExchange(
+                    ref _compareSite,
+                    Context.MakeSortCompareSite(),
+                    null
+                );
+            }
+
+            return _compareSite.Target(_compareSite, self, other);
+        }
+
+        internal bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
+            CallSite<Func<CallSite, object, CodeContext, object>> site = GetTryGetMemberSite(context, name);
+
+            try {
+                ret = site.Target(site, o, context);
+                return ret != OperationFailed.Value;
+            } catch (MissingMemberException) {
+                ret = null;
+                return false;
+            }
+        }
+
+        private CallSite<Func<CallSite, object, CodeContext, object>> GetTryGetMemberSite(CodeContext context, SymbolId name) {
+            CallSite<Func<CallSite, object, CodeContext, object>> site;
+            if (PythonOps.IsClsVisible(context)) {
+                if (_tryGetMemSiteShowCls == null) {
+                    Interlocked.CompareExchange(
+                        ref _tryGetMemSiteShowCls,
+                        new Dictionary<SymbolId, CallSite<Func<CallSite, object, CodeContext, object>>>(),
+                        null
+                    );
+                }
+
+                lock (_tryGetMemSiteShowCls) {
+                    if (!_tryGetMemSiteShowCls.TryGetValue(name, out site)) {
+                        _tryGetMemSiteShowCls[name] = site = CallSite<Func<CallSite, object, CodeContext, object>>.Create(
+                            new PythonGetMemberBinder(
+                                PythonContext.GetContext(context).DefaultClsBinderState,
+                                SymbolTable.IdToString(name),
+                                true
+                            )
+                        );
+                    }
+                }
+            } else {
+                if (_tryGetMemSite == null) {
+                    Interlocked.CompareExchange(
+                        ref _tryGetMemSite,
+                        new Dictionary<SymbolId, CallSite<Func<CallSite, object, CodeContext, object>>>(),
+                        null
+                    );
+                }
+
+                lock (_tryGetMemSite) {
+                    if (!_tryGetMemSite.TryGetValue(name, out site)) {
+                        _tryGetMemSite[name] = site = CallSite<Func<CallSite, object, CodeContext, object>>.Create(
+                            new PythonGetMemberBinder(
+                                PythonContext.GetContext(context).DefaultBinderState,
+                                SymbolTable.IdToString(name),
+                                true
+                            )
+                        );
+                    }
+                }
+            }
+            return site;
+        }
+
+        internal CallSite<Func<CallSite, object, int>>  HashSite {
+            get {
+                EnsureHashSite();
+
+                return _hashSite;
+            }
+        }
+
+        private void EnsureHashSite() {
+            if(_hashSite == null) {
+                Interlocked.CompareExchange(
+                    ref _hashSite,
+                    CallSite<Func<CallSite, object, int>>.Create(
+                        new PythonOperationBinder(
+                            Context.DefaultBinderState,
+                            OperatorStrings.Hash
+                        )
+                    ),
+                    null
+                );
+            }
+        }
+
+        private void EnsureLengthSite() {
+            if (_lenSite == null) {
+                Interlocked.CompareExchange(
+                    ref _lenSite,
+                    CallSite<Func<CallSite, CodeContext, object, object>>.Create(
+                        new PythonInvokeBinder(
+                            Context.DefaultBinderState,
+                            new CallSignature(0)
+                        )
+                    ),
+                    null
+                );
+            }
+        }
+
         /// <summary>
         /// Gets the underlying system type that is backing this type.  All instances of this
         /// type are an instance of the underlying system type.
@@ -778,6 +948,12 @@ namespace IronPython.Runtime.Types {
         internal PythonContext PythonContext {
             get {
                 return _pythonContext;
+            }
+        }
+
+        internal PythonContext/*!*/ Context {
+            get {
+                return _pythonContext ?? DefaultContext.DefaultPythonContext;
             }
         }
 
@@ -1441,7 +1617,7 @@ namespace IronPython.Runtime.Types {
 
             // then let the user intercept and rewrite the type - the user can't create
             // instances of this type yet.
-            _underlyingSystemType = __clitype__();
+            _underlyingSystemType = __clrtype__();
             
             // finally assign the ctors from the real type the user provided
             _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
@@ -1486,7 +1662,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public virtual Type __clitype__() {
+        public virtual Type __clrtype__() {
             return _underlyingSystemType;
         }
 
@@ -1779,6 +1955,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
+            _lenSlot = null;
             _version = GetNextVersion();
         }
 
