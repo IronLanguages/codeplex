@@ -23,14 +23,16 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using IronPython.Runtime;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -799,9 +801,9 @@ namespace IronPython.Modules {
                     throw PythonExceptions.CreateThrowable(WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
                 }
 
-                long st_atime = (long)PythonTime.DateTimeToTimestamp(fi.LastAccessTime);
-                long st_ctime = (long)PythonTime.DateTimeToTimestamp(fi.CreationTime);
-                long st_mtime = (long)PythonTime.DateTimeToTimestamp(fi.LastWriteTime);
+                long st_atime = (long)PythonTime.TicksToTimestamp(fi.LastAccessTime.ToUniversalTime().Ticks);
+                long st_ctime = (long)PythonTime.TicksToTimestamp(fi.CreationTime.ToUniversalTime().Ticks);
+                long st_mtime = (long)PythonTime.TicksToTimestamp(fi.LastWriteTime.ToUniversalTime().Ticks);
                 mode |= S_IREAD;
                 if ((fi.Attributes & FileAttributes.ReadOnly) == 0) {
                     mode |= S_IWRITE;
@@ -942,8 +944,8 @@ namespace IronPython.Modules {
                     fi.LastAccessTime = DateTime.Now;
                     fi.LastWriteTime = DateTime.Now;
                 } else if (times.__len__() == 2) {
-                    DateTime atime = PythonTime.TimestampToDateTime(Converter.ConvertToDouble(times[0]));
-                    DateTime mtime = PythonTime.TimestampToDateTime(Converter.ConvertToDouble(times[1]));
+                    DateTime atime = new DateTime(PythonTime.TimestampToTicks(Converter.ConvertToDouble(times[0])), DateTimeKind.Utc);
+                    DateTime mtime = new DateTime(PythonTime.TimestampToTicks(Converter.ConvertToDouble(times[1])), DateTimeKind.Utc);
 
                     fi.LastAccessTime = atime;
                     fi.LastWriteTime = mtime;

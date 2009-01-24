@@ -199,6 +199,39 @@ def test_protected_ctor_inheritance_cp20021():
         for cls in [myzero, myone, mytwo1, mytwo2, mythree1, mythree2, myfour1, myfour2]:
             cls()
 
+def test_re_paren_in_char_list_cp20191():
+    import re
+    format_re = re.compile(r'(?P<order1>[<>|=]?)(?P<repeats> *[(]?[ ,0-9]*[)]? *)(?P<order2>[<>|=]?)(?P<dtype>[A-Za-z0-9.]*)')
+    
+    AreEqual(format_re.match('a3').groups(), ('', '', '', 'a3'))
+
+def test_struct_uint_bad_value_cp20039():
+    import _struct
+    AreEqual(_struct.Struct('L').pack(4294967296), '\x00\x00\x00\x00')
+    AreEqual(_struct.Struct('L').pack(-1), '\x00\x00\x00\x00')
+    AreEqual(_struct.Struct('L').pack('abc'), '\x00\x00\x00\x00')
+
+def test_reraise_backtrace_cp20051():
+    def foo():
+        some_exception_raising_code()
+
+    try:
+        try:
+            foo()
+        except:
+            print "Exception"
+            raise
+    except Exception, e:
+        import sys
+        excinfo = sys.exc_info()[2]
+        frameCount = 0
+        while excinfo:
+            excinfo = excinfo.tb_next
+            frameCount += 1
+        
+		# CPython reports 2 frames, IroPython includes the re-raise and reports 3
+        Assert(frameCount >= 2)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

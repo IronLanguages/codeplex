@@ -846,7 +846,7 @@ namespace IronPython.Modules {
             public RegexOptions Options = RegexOptions.CultureInvariant;
         }
 
-        private static char[] _preParsedChars = new[] { '(', '{' };
+        private static char[] _preParsedChars = new[] { '(', '{', '[', ']' };
         /// <summary>
         /// Preparses a regular expression text returning a ParsedRegex class
         /// that can be used for further regular expressions.
@@ -857,6 +857,7 @@ namespace IronPython.Modules {
             //string newPattern;
             int cur = 0, nameIndex;
             int curGroup = 0;
+            bool isCharList = false;
             bool containsNamedGroup = false;
 
             for (; ; ) {
@@ -879,75 +880,91 @@ namespace IronPython.Modules {
                 if (nameIndex == -1) break;
                 if (nameIndex == pattern.Length - 1) break;
 
-                if (pattern[nameIndex] == '{') {
-                    if (pattern[++nameIndex] == ',') {
-                        // no beginning specified for the n-m quntifier, add the
-                        // default 0 value.
-                        pattern = pattern.Insert(nameIndex, "0");
-                    }
-                } else {
-                    switch (pattern[++nameIndex]) {
-                        case '?':
-                            // extension syntax
-                            if (nameIndex == pattern.Length - 1) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
+                switch (pattern[nameIndex]) {
+                    case '{':
+                        if (pattern[++nameIndex] == ',') {
+                            // no beginning specified for the n-m quntifier, add the
+                            // default 0 value.
+                            pattern = pattern.Insert(nameIndex, "0");
+                        }
+                        break;
+                    case '[':
+                        nameIndex++;
+                        isCharList = true;
+                        break;
+                    case ']':
+                        nameIndex++;
+                        isCharList = false;
+                        break;
+                    case '(':
+                        // make sure we're not dealing with [(]
+                        if (!isCharList) {
                             switch (pattern[++nameIndex]) {
-                                case 'P':
-                                    //  named regex, .NET doesn't expect the P so we'll remove it;
-                                    //  also, once we see a named group i.e. ?P then we need to start artificially 
-                                    //  naming all unnamed groups from then on---this is to get around the fact that 
-                                    //  the CLR RegEx support orders all the unnamed groups before all the named 
-                                    //  groups, even if the named groups are before the unnamed ones in the pattern;
-                                    //  the artificial naming preserves the order of the groups and thus the order of
-                                    //  the matches
-                                    if (nameIndex + 1 < pattern.Length && pattern[nameIndex + 1] == '=') {
-                                        // match whatever was previously matched by the named group
+                                case '?':
+                                    // extension syntax
+                                    if (nameIndex == pattern.Length - 1) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
+                                    switch (pattern[++nameIndex]) {
+                                        case 'P':
+                                            //  named regex, .NET doesn't expect the P so we'll remove it;
+                                            //  also, once we see a named group i.e. ?P then we need to start artificially 
+                                            //  naming all unnamed groups from then on---this is to get around the fact that 
+                                            //  the CLR RegEx support orders all the unnamed groups before all the named 
+                                            //  groups, even if the named groups are before the unnamed ones in the pattern;
+                                            //  the artificial naming preserves the order of the groups and thus the order of
+                                            //  the matches
+                                            if (nameIndex + 1 < pattern.Length && pattern[nameIndex + 1] == '=') {
+                                                // match whatever was previously matched by the named group
 
-                                        // remove the (?P=
-                                        pattern = pattern.Remove(nameIndex - 2, 4);
-                                        pattern = pattern.Insert(nameIndex - 2, "\\k<");
-                                        int tmpIndex = nameIndex;
-                                        while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
-                                            tmpIndex++;
+                                                // remove the (?P=
+                                                pattern = pattern.Remove(nameIndex - 2, 4);
+                                                pattern = pattern.Insert(nameIndex - 2, "\\k<");
+                                                int tmpIndex = nameIndex;
+                                                while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
+                                                    tmpIndex++;
 
-                                        if (tmpIndex == pattern.Length) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
+                                                if (tmpIndex == pattern.Length) throw PythonExceptions.CreateThrowable(error(context), "unexpected end of regex");
 
-                                        pattern = pattern.Substring(0, tmpIndex) + ">" + pattern.Substring(tmpIndex + 1);
-                                    } else {
-                                        containsNamedGroup = true;
-                                        pattern = pattern.Remove(nameIndex, 1);
+                                                pattern = pattern.Substring(0, tmpIndex) + ">" + pattern.Substring(tmpIndex + 1);
+                                            } else {
+                                                containsNamedGroup = true;
+                                                pattern = pattern.Remove(nameIndex, 1);
+                                            }
+                                            break;
+                                        case 'i': res.Options |= RegexOptions.IgnoreCase; break;
+                                        case 'L':
+                                            res.Options &= ~(RegexOptions.CultureInvariant);
+                                            RemoveOption(ref pattern, ref nameIndex);
+                                            break;
+                                        case 'm': res.Options |= RegexOptions.Multiline; break;
+                                        case 's': res.Options |= RegexOptions.Singleline; break;
+                                        case 'u':
+                                            // specify unicode; not relevant and not valid under .NET as we're always unicode
+                                            // -- so the option needs to be removed
+                                            RemoveOption(ref pattern, ref nameIndex);
+                                            break;
+                                        case 'x': res.Options |= RegexOptions.IgnorePatternWhitespace; break;
+                                        case ':': break; // non-capturing
+                                        case '=': break; // look ahead assertion
+                                        case '<': break; // positive look behind assertion
+                                        case '!': break; // negative look ahead assertion
+                                        case '#': break; // inline comment
+                                        case '(':  // yes/no if group exists, we don't support this
+                                        default: throw PythonExceptions.CreateThrowable(error(context), "Unrecognized extension " + pattern[nameIndex]);
                                     }
                                     break;
-                                case 'i': res.Options |= RegexOptions.IgnoreCase; break;
-                                case 'L':
-                                    res.Options &= ~(RegexOptions.CultureInvariant);
-                                    RemoveOption(ref pattern, ref nameIndex);
+                                default:
+                                    // just another group
+                                    curGroup++;
+                                    if (containsNamedGroup) {
+                                        // need to name this unnamed group
+                                        pattern = pattern.Insert(nameIndex, "?<Named" + GetRandomString() + ">");
+                                    }
                                     break;
-                                case 'm': res.Options |= RegexOptions.Multiline; break;
-                                case 's': res.Options |= RegexOptions.Singleline; break;
-                                case 'u':
-                                    // specify unicode; not relevant and not valid under .NET as we're always unicode
-                                    // -- so the option needs to be removed
-                                    RemoveOption(ref pattern, ref nameIndex);
-                                    break;
-                                case 'x': res.Options |= RegexOptions.IgnorePatternWhitespace; break;
-                                case ':': break; // non-capturing
-                                case '=': break; // look ahead assertion
-                                case '<': break; // positive look behind assertion
-                                case '!': break; // negative look ahead assertion
-                                case '#': break; // inline comment
-                                case '(':  // yes/no if group exists, we don't support this
-                                default: throw PythonExceptions.CreateThrowable(error(context), "Unrecognized extension " + pattern[nameIndex]);
                             }
-                            break;
-                        default:
-                            // just another group
-                            curGroup++;
-                            if (containsNamedGroup) {
-                                // need to name this unnamed group
-                                pattern = pattern.Insert(nameIndex, "?<Named" + GetRandomString() + ">");
-                            }
-                            break;
-                    }
+                        } else {
+                            nameIndex++;
+                        }
+                        break;
                 }
 
                 cur = nameIndex;

@@ -66,7 +66,7 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        internal bool IsExpandable {
+        public bool IsExpandable {
             get {
                 return _expandable;
             }

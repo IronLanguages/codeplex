@@ -149,6 +149,16 @@ namespace IronPython.Modules {
                                 WriteUInt(res, _isLittleEndian, GetUIntValue(context, curObj++, values));
                             }
                             break;
+                        case FormatType.UnsignedLong:
+                            for (int j = 0; j < curFormat.Count; j++) {
+                                WriteUInt(res, _isLittleEndian, GetULongValue(context, _isStandardized, curObj++, values));
+                            }
+                            break;
+                        case FormatType.Pointer:
+                            for (int j = 0; j < curFormat.Count; j++) {
+                                WritePointer(res, _isLittleEndian, GetPointer(context, curObj++, values));
+                            }
+                            break;
                         case FormatType.LongLong:
                             for (int j = 0; j < curFormat.Count; j++) {
                                 WriteLong(res, _isLittleEndian, GetLongValue(context, curObj++, values));
@@ -156,7 +166,7 @@ namespace IronPython.Modules {
                             break;
                         case FormatType.UnsignedLongLong:
                             for (int j = 0; j < curFormat.Count; j++) {
-                                WriteULong(res, _isLittleEndian, GetULongValue(context, curObj++, values));
+                                WriteULong(res, _isLittleEndian, GetULongLongValue(context, curObj++, values));
                             }
                             break;
                         case FormatType.Double:
@@ -257,8 +267,18 @@ namespace IronPython.Modules {
                             }
                             break;
                         case FormatType.UnsignedInt:
+                        case FormatType.UnsignedLong:
                             for (int j = 0; j < curFormat.Count; j++) {
                                 res.Add(BigIntegerOps.__int__(BigInteger.Create(CreateUIntValue(context, ref curIndex, _isLittleEndian, data))));
+                            }
+                            break;                        
+                        case FormatType.Pointer:
+                            for (int j = 0; j < curFormat.Count; j++) {
+                                if (IntPtr.Size == 4) {
+                                    res.Add(CreateIntValue(context, ref curIndex, _isLittleEndian, data));
+                                } else {
+                                    res.Add(BigIntegerOps.__int__(BigInteger.Create(CreateLongValue(context, ref curIndex, _isLittleEndian, data))));
+                                }
                             }
                             break;
                         case FormatType.LongLong:
@@ -378,8 +398,11 @@ namespace IronPython.Modules {
                             count = 1;
                             break;
                         case 'I': // unsigned int
-                        case 'L': // unsigned long
                             res.Add(new Format(FormatType.UnsignedInt, count));
+                            count = 1;
+                            break;
+                        case 'L': // unsigned long
+                            res.Add(new Format(FormatType.UnsignedLong, count));
                             count = 1;
                             break;
                         case 'q': // long long
@@ -407,11 +430,9 @@ namespace IronPython.Modules {
                             count = 1;
                             break;
                         case 'P': // void *
-                            if (IntPtr.Size == 4) {
-                                goto case 'I';
-                            }
-
-                            goto case 'Q';
+                            res.Add(new Format(FormatType.Pointer, count));
+                            count = 1;
+                            break;
                         case ' ':   // white space, ignore
                         case '\t':
                             break;
@@ -505,6 +526,7 @@ namespace IronPython.Modules {
 
             Int,
             UnsignedInt,
+            UnsignedLong,
             Float,
 
             LongLong,
@@ -513,6 +535,7 @@ namespace IronPython.Modules {
 
             CString,
             PascalString,
+            Pointer,
         }
 
         private static int GetNativeSize(FormatType c) {
@@ -529,12 +552,15 @@ namespace IronPython.Modules {
                     return 2;
                 case FormatType.Int:
                 case FormatType.UnsignedInt:
+                case FormatType.UnsignedLong:
                 case FormatType.Float:
                     return 4;
                 case FormatType.LongLong:
                 case FormatType.UnsignedLongLong:
                 case FormatType.Double:
                     return 8;
+                case FormatType.Pointer:
+                    return IntPtr.Size;
                 default:
                     throw new InvalidOperationException(c.ToString());
             }
@@ -608,6 +634,14 @@ namespace IronPython.Modules {
                 res.Append((char)((val >> 16) & 0xff));
                 res.Append((char)((val >> 8) & 0xff));
                 res.Append((char)(val & 0xff));
+            }
+        }
+
+        private static void WritePointer(StringBuilder res, bool fLittleEndian, IntPtr val) {
+            if (IntPtr.Size == 4) {
+                WriteInt(res, fLittleEndian, val.ToInt32());
+            } else {
+                WriteLong(res, fLittleEndian, val.ToInt64());
             }
         }
 
@@ -769,8 +803,41 @@ namespace IronPython.Modules {
         internal static uint GetUIntValue(CodeContext/*!*/ context, int index, object[] args) {
             object val = GetValue(context, index, args);
             uint res;
-            if (Converter.TryConvertToUInt32(val, out res)) return res;
-            throw Error(context, "expected uint value");
+            if (Converter.TryConvertToUInt32(val, out res)) {
+                return res;
+            }
+            throw Error(context, "expected unsigned int value");
+        }
+
+        internal static uint GetULongValue(CodeContext/*!*/ context, bool isStandardized, int index, object[] args) {
+            object val = GetValue(context, index, args);
+            uint res;
+            if (Converter.TryConvertToUInt32(val, out res)) {
+                return res;
+            }
+
+            if (isStandardized) {
+                throw Error(context, "expected unsigned long value");
+            }
+
+            PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "'L' format requires 0 <= number <= 4294967295");
+            return (uint)0;
+        }
+
+        internal static IntPtr GetPointer(CodeContext/*!*/ context, int index, object[] args) {
+            object val = GetValue(context, index, args);
+            if (IntPtr.Size == 4) {
+                uint res;
+                if (Converter.TryConvertToUInt32(val, out res)) {
+                    return new IntPtr(res);
+                }
+            } else {
+                long res;
+                if (Converter.TryConvertToInt64(val, out res)) {
+                    return new IntPtr(res);
+                }
+            }
+            throw Error(context, "expected pointer value");
         }
 
         internal static long GetLongValue(CodeContext/*!*/ context, int index, object[] args) {
@@ -780,7 +847,7 @@ namespace IronPython.Modules {
             throw Error(context, "expected long value");
         }
 
-        internal static ulong GetULongValue(CodeContext/*!*/ context, int index, object[] args) {
+        internal static ulong GetULongLongValue(CodeContext/*!*/ context, int index, object[] args) {
             object val = GetValue(context, index, args);
             ulong res;
             if (Converter.TryConvertToUInt64(val, out res)) return res;

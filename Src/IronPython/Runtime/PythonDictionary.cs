@@ -955,20 +955,19 @@ namespace IronPython.Runtime {
     public sealed class DictionaryItemEnumerator : IEnumerator, IEnumerator<object> {
         private readonly int _size;
         private readonly DictionaryStorage _dict;
-        private readonly object[] _keys;
-        private readonly object[] _values;
+        private readonly List<object> _keys;
+        private readonly List<object> _values;
         private int _pos;
 
         internal DictionaryItemEnumerator(DictionaryStorage dict) {
-            _dict = dict;
-            _size = dict.Count;
-            _keys = new object[_size];
-            _values = new object[_size];
-            int i = 0;
+            _dict = dict;            
+            _keys = new List<object>(dict.Count);
+            _values = new List<object>(dict.Count);
             foreach (KeyValuePair<object, object> kvp in dict.GetItems()) {
-                _keys[i] = kvp.Key;
-                _values[i++] = kvp.Value;
+                _keys.Add(kvp.Key);
+                _values.Add(kvp.Value);
             }
+            _size = _values.Count;
             _pos = -1;
         }
 

@@ -38,6 +38,132 @@ namespace Microsoft.Scripting {
 
 
         [Obsolete("pregenerated CallSite<T>.Update delegate", true)]
+        internal static TRet UpdateAndExecute0<TRet>(CallSite site) {
+            //
+            // Declare the locals here upfront. It actually saves JIT stack space.
+            //
+            var @this = (CallSite<Func<CallSite, TRet>>)site;
+            CallSiteRule<Func<CallSite, TRet>>[] applicable;
+            CallSiteRule<Func<CallSite, TRet>> rule;
+            Func<CallSite, TRet> ruleTarget, startingTarget = @this.Target;
+            TRet result;
+
+            CallSiteRule<Func<CallSite, TRet>> originalRule = null;
+
+            //
+            // Create matchmaker and its site. We'll need them regardless.
+            //
+            site = CallSiteOps.CreateMatchmaker();
+
+            //
+            // Level 1 cache lookup
+            //
+            if ((applicable = CallSiteOps.GetRules(@this)) != null) {
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
+
+                    //
+                    // Execute the rule
+                    //
+                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                    if ((object)startingTarget == (object)ruleTarget) {
+                        // if we produce another monomorphic
+                        // rule we should try and share code between the two.
+                        originalRule = rule;
+                    }else{
+                        result = ruleTarget(site);
+                        if (CallSiteOps.GetMatch(site)) {
+                            return result;
+                        }        
+
+                        // Rule didn't match, try the next one
+                        CallSiteOps.ClearMatch(site);            
+                    }                
+                }
+            }
+
+            //
+            // Level 2 cache lookup
+            //
+
+            //
+            // Any applicable rules in level 2 cache?
+            //
+            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
+
+                    //
+                    // Execute the rule
+                    //
+                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                    try {
+                        result = ruleTarget(site);
+                        if (CallSiteOps.GetMatch(site)) {
+                            return result;
+                        }
+                    } finally {
+                        if (CallSiteOps.GetMatch(site)) {
+                            //
+                            // Rule worked. Add it to level 1 cache
+                            //
+                            CallSiteOps.AddRule(@this, rule);
+                            // and then move it to the front of the L2 cache
+                            @this.RuleCache.MoveRule(rule);
+                        }
+                    }
+
+                    if ((object)startingTarget == (object)ruleTarget) {
+                        // If we've gone megamorphic we can still template off the L2 cache
+                        originalRule = rule;
+                    }
+
+                    // Rule didn't match, try the next one
+                    CallSiteOps.ClearMatch(site);
+                }
+            }
+
+
+            //
+            // Miss on Level 0, 1 and 2 caches. Create new rule
+            //
+
+            rule = null;
+            var args = new object[] {  };
+
+            for (; ; ) {
+                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+
+                //
+                // Execute the rule on the matchmaker site
+                //
+
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
+
+                try {
+                    result = ruleTarget(site);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
+                    }
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // The rule worked. Add it to level 1 cache.
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                    }
+                }
+
+                // Rule we got back didn't work, try another one
+                CallSiteOps.ClearMatch(site);
+            }
+        }
+
+
+
+        [Obsolete("pregenerated CallSite<T>.Update delegate", true)]
         internal static TRet UpdateAndExecute1<T0, TRet>(CallSite site, T0 arg0) {
             //
             // Declare the locals here upfront. It actually saves JIT stack space.
@@ -48,7 +174,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, TRet>> originalRule = null;
 
             //
@@ -60,8 +185,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -92,8 +217,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -175,7 +300,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, TRet>> originalRule = null;
 
             //
@@ -187,8 +311,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -219,8 +343,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -302,7 +426,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, TRet>> originalRule = null;
 
             //
@@ -314,8 +437,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -346,8 +469,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -429,7 +552,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, TRet>> originalRule = null;
 
             //
@@ -441,8 +563,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -473,8 +595,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -556,7 +678,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, TRet>> originalRule = null;
 
             //
@@ -568,8 +689,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -600,8 +721,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -683,7 +804,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, T5, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, TRet>> originalRule = null;
 
             //
@@ -695,8 +815,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -727,8 +847,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -810,7 +930,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, TRet>> originalRule = null;
 
             //
@@ -822,8 +941,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -854,8 +973,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -937,7 +1056,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, TRet>> originalRule = null;
 
             //
@@ -949,8 +1067,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -981,8 +1099,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1064,7 +1182,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, TRet>> originalRule = null;
 
             //
@@ -1076,8 +1193,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1108,8 +1225,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1191,7 +1308,6 @@ namespace Microsoft.Scripting {
             Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet> ruleTarget, startingTarget = @this.Target;
             TRet result;
 
-            int count, index;
             CallSiteRule<Func<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TRet>> originalRule = null;
 
             //
@@ -1203,8 +1319,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1235,8 +1351,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1317,7 +1433,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0>> rule;
             Action<CallSite, T0> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0>> originalRule = null;
 
             //
@@ -1329,8 +1444,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1361,8 +1476,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1443,7 +1558,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1>> rule;
             Action<CallSite, T0, T1> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1>> originalRule = null;
 
             //
@@ -1455,8 +1569,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1487,8 +1601,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1569,7 +1683,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2>> rule;
             Action<CallSite, T0, T1, T2> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2>> originalRule = null;
 
             //
@@ -1581,8 +1694,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1613,8 +1726,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1695,7 +1808,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3>> rule;
             Action<CallSite, T0, T1, T2, T3> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3>> originalRule = null;
 
             //
@@ -1707,8 +1819,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1739,8 +1851,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1821,7 +1933,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4>> rule;
             Action<CallSite, T0, T1, T2, T3, T4> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4>> originalRule = null;
 
             //
@@ -1833,8 +1944,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1865,8 +1976,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1947,7 +2058,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5>> rule;
             Action<CallSite, T0, T1, T2, T3, T4, T5> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5>> originalRule = null;
 
             //
@@ -1959,8 +2069,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -1991,8 +2101,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2073,7 +2183,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6>> rule;
             Action<CallSite, T0, T1, T2, T3, T4, T5, T6> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6>> originalRule = null;
 
             //
@@ -2085,8 +2194,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2117,8 +2226,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2199,7 +2308,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>> rule;
             Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7>> originalRule = null;
 
             //
@@ -2211,8 +2319,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2243,8 +2351,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2325,7 +2433,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>> rule;
             Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8>> originalRule = null;
 
             //
@@ -2337,8 +2444,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2369,8 +2476,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2451,7 +2558,6 @@ namespace Microsoft.Scripting {
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>> rule;
             Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> ruleTarget, startingTarget = @this.Target;
 
-            int count, index;
             CallSiteRule<Action<CallSite, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>> originalRule = null;
 
             //
@@ -2463,8 +2569,8 @@ namespace Microsoft.Scripting {
             // Level 1 cache lookup
             //
             if ((applicable = CallSiteOps.GetRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule
@@ -2495,8 +2601,8 @@ namespace Microsoft.Scripting {
             // Any applicable rules in level 2 cache?
             //
             if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
-                for (index = 0, count = applicable.Length; index < count; index++) {
-                    rule = applicable[index];
+                for (int i = 0; i < applicable.Length; i++) {
+                    rule = applicable[i];
 
                     //
                     // Execute the rule

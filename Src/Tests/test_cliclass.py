@@ -1335,10 +1335,10 @@ def test_underlying_type():
     global called
     called = None
     class MyType(type):
-        def __clitype__(self):
+        def __clrtype__(self):
             global called
             called = True
-            return super(MyType, self).__clitype__()
+            return super(MyType, self).__clrtype__()
     
     class x(object):
         __metaclass__ = MyType
@@ -1358,8 +1358,8 @@ def test_underlying_type():
         # more complex case, actually create a new type and override the
         # ctors
         class MyType(type):
-            def __clitype__(self):
-                baseType = super(MyType, self).__clitype__()
+            def __clrtype__(self):
+                baseType = super(MyType, self).__clrtype__()
                 t = gen.DefinePublicType(self.__name__, baseType, True)
                 
                 ctors = baseType.GetConstructors()
@@ -1389,8 +1389,8 @@ def test_underlying_type():
         
         # more complex case, make a static .NET type which can be created
         class MyType(type):
-            def __clitype__(self):
-                baseType = super(MyType, self).__clitype__()
+            def __clrtype__(self):
+                baseType = super(MyType, self).__clrtype__()
                 t = gen.DefinePublicType(self.__name__, baseType, True)
                 
                 ctors = baseType.GetConstructors()

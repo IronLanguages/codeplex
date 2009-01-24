@@ -40,21 +40,23 @@ namespace IronPython.Runtime {
                 return PythonCalls.Call(context, reversed);
             }
 
-            object getitem;
-            object len;
-            if (!PythonOps.TryGetBoundAttr(o, Symbols.GetItem, out getitem) ||
-                !PythonOps.TryGetBoundAttr(o, Symbols.Length, out len) ||
-                o is PythonDictionary) {
+            object boundFunc;
+
+            PythonTypeSlot getitem;
+            PythonType pt = DynamicHelpers.GetPythonType(o);
+            if(!pt.TryResolveSlot(context, Symbols.GetItem, out getitem) ||
+                !getitem.TryGetBoundValue(context, o, pt, out boundFunc)
+                || o is PythonDictionary) {
                 throw PythonOps.TypeError("argument to reversed() must be a sequence");
             }
 
-            object length = PythonCalls.Call(context, len);
-            if (!(length is int)) {
-                throw PythonOps.ValueError("__len__ must return int");
+            int length;
+            if (!DynamicHelpers.GetPythonType(o).TryGetLength(o, out length)) {
+                throw PythonOps.TypeError("object of type '{0}' has no len()", DynamicHelpers.GetPythonType(o).Name);
             }
 
             if (type.UnderlyingSystemType == typeof(ReversedEnumerator)) {
-                return new ReversedEnumerator((int)length, getitem);
+                return new ReversedEnumerator((int)length, boundFunc);
             }
 
             return type.CreateInstance(context, length, getitem);

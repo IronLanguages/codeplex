@@ -507,7 +507,7 @@ namespace IronPython.Runtime.Operations {
             if (x is int && y is int) { return ((int)x) == ((int)y); }
             if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
-            return DefaultContext.DefaultPythonContext.Equal(x, y);
+            return DynamicHelpers.GetPythonType(x).EqualRetBool(x, y);
         }
 
         public static bool EqualRetBool(CodeContext/*!*/ context, object x, object y) {
@@ -515,7 +515,7 @@ namespace IronPython.Runtime.Operations {
             if (x is int && y is int) { return ((int)x) == ((int)y); }
             if (x is string && y is string) { return ((string)x).Equals((string)y); }
 
-            return PythonContext.GetContext(context).Equal(x, y);
+            return DynamicHelpers.GetPythonType(x).EqualRetBool(x, y); 
         }
 
         public static int Compare(object x, object y) {
@@ -525,9 +525,7 @@ namespace IronPython.Runtime.Operations {
         public static int Compare(CodeContext/*!*/ context, object x, object y) {
             if (x == y) return 0;
 
-            CallSite<Func<CallSite, object, object, int>> compareSite = PythonContext.GetContext(context).CompareSite;
-            
-            return compareSite.Target(compareSite, x, y);
+            return DynamicHelpers.GetPythonType(x).Compare(x, y);
         }
 
         public static object CompareEqual(int res) {
@@ -937,7 +935,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
-            return PythonContext.GetContext(context).TryGetBoundAttr(context, o, name, out ret);
+            return DynamicHelpers.GetPythonType(o).TryGetBoundAttr(context, o, name, out ret);
         }
 
         public static void DeleteAttr(CodeContext/*!*/ context, object o, SymbolId name) {
@@ -960,7 +958,17 @@ namespace IronPython.Runtime.Operations {
         }
         
         public static object GetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name) {
-            return PythonContext.GetContext(context).GetAttr(context, o, name);
+            object ret;
+            if (!DynamicHelpers.GetPythonType(o).TryGetBoundAttr(context, o, name, out ret)) {
+                if (o is OldClass) {
+                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                        ((OldClass)o).__name__, SymbolTable.IdToString(name));
+                } else {
+                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetPythonType(o).Name, SymbolTable.IdToString(name));
+                }
+            }
+
+            return ret;
         }
 
         public static void ObjectSetAttribute(CodeContext/*!*/ context, object o, SymbolId name, object value) {
@@ -2029,7 +2037,10 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static Exception MakeRethrownException(CodeContext/*!*/ context) {
             PythonTuple t = GetExceptionInfo(context);
-            return MakeException(context, t[0], t[1], t[2]);
+            
+            Exception e = MakeException(context, t[0], t[1], t[2]);
+            ExceptionHelpers.UpdateForRethrow(e);
+            return e;
         }
 
         /// <summary>
@@ -3227,6 +3238,10 @@ namespace IronPython.Runtime.Operations {
             ContractUtils.RequiresNotNull(main, "main");
 
             var pythonEngine = Python.CreateEngine();
+            
+            pythonEngine.Runtime.LoadAssembly(typeof(string).Assembly);
+            pythonEngine.Runtime.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
+
             var pythonContext = (PythonContext)HostingHelpers.GetLanguageContext(pythonEngine);
 
             foreach (var scriptCode in ScriptCode.LoadFromAssembly(pythonContext.DomainManager, precompiled)) {

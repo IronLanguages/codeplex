@@ -22,17 +22,20 @@ using Microsoft.Runtime.CompilerServices;
 
 using System.Runtime.InteropServices;
 using System.Text;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Compiler;
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
@@ -1597,25 +1600,45 @@ namespace IronPython.Runtime {
             return line;
         }
 
-        public static object reduce(CodeContext/*!*/ context, object func, object seq) {
+        public static object reduce(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData, object func, object seq) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
             if (!i.MoveNext()) {
                 throw PythonOps.TypeError("reduce() of empty sequence with no initial value");
             }
+            EnsureReduceData(context, siteData);
+
+            CallSite<Func<CallSite, CodeContext, object, object, object, object>> site = siteData.Data;
+
             object ret = i.Current;
             while (i.MoveNext()) {
-                ret = PythonCalls.Call(context, func, ret, i.Current);
+                ret = site.Target(site, context, func, ret, i.Current);
             }
             return ret;
         }
 
-        public static object reduce(CodeContext/*!*/ context, object func, object seq, object initializer) {
+        public static object reduce(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData, object func, object seq, object initializer) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
+            EnsureReduceData(context, siteData);
+            
+            CallSite<Func<CallSite, CodeContext, object, object, object, object>> site = siteData.Data;
+            
             object ret = initializer;
             while (i.MoveNext()) {
-                ret = PythonCalls.Call(context, func, ret, i.Current);
+                ret = site.Target(site, context, func, ret, i.Current);
             }
             return ret;
+        }
+
+        private static void EnsureReduceData(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData) {
+            if (siteData.Data == null) {
+                siteData.Data = CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
+                    new PythonInvokeBinder(
+                        PythonContext.GetContext(context).DefaultBinderState,
+                        new CallSignature(2)
+                    )
+                );
+
+            }
         }
 
         public static object reload(CodeContext/*!*/ context, Scope/*!*/ scope) {
