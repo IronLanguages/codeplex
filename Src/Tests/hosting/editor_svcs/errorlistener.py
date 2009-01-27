@@ -52,7 +52,7 @@ class MyErrorListener(ErrorListener):
         self.__errors.append((msg, bad, errorCode, severity))
 
 def compile_expression(expression):
-    source = engine.CreateScriptSourceFromString(expression) 
+    source = engine.CreateScriptSourceFromString(expression, SourceCodeKind.Expression) 
     return compile_source(source)
     
 def compile_file(stmts):
