@@ -17,14 +17,14 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Reflection;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
-using System.Text;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions {
-    //CONFORMING
+
     /// <summary>
     /// Represents a constructor call.
     /// </summary>
@@ -105,7 +105,7 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        //CONFORMING
+
         /// <summary>
         /// Creates a new <see cref="NewExpression"/> that represents calling the specified constructor that takes no arguments. 
         /// </summary>
@@ -115,7 +115,7 @@ namespace Microsoft.Linq.Expressions {
             return New(constructor, (IEnumerable<Expression>)null);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a new <see cref="NewExpression"/> that represents calling the specified constructor that takes no arguments. 
         /// </summary>
@@ -126,7 +126,7 @@ namespace Microsoft.Linq.Expressions {
             return New(constructor, (IEnumerable<Expression>)arguments);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a new <see cref="NewExpression"/> that represents calling the specified constructor that takes no arguments. 
         /// </summary>
@@ -137,13 +137,13 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(constructor, "constructor");
             ContractUtils.RequiresNotNull(constructor.DeclaringType, "constructor.DeclaringType");
             TypeUtils.ValidateType(constructor.DeclaringType);
-            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
+            var argList = arguments.ToReadOnly();
             ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
 
             return new NewExpression(constructor, argList, null);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a new <see cref="NewExpression"/> that represents calling the specified constructor with the specified arguments. The members that access the constructor initialized fields are specified. 
         /// </summary>
@@ -153,13 +153,13 @@ namespace Microsoft.Linq.Expressions {
         /// <returns>A <see cref="NewExpression"/> that has the <see cref="NodeType"/> property equal to <see cref="P:New"/> and the <see cref="P:Constructor"/>, <see cref="P:Arguments"/> and <see cref="P:Members"/> properties set to the specified value.</returns>
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, IEnumerable<MemberInfo> members) {
             ContractUtils.RequiresNotNull(constructor, "constructor");
-            ReadOnlyCollection<MemberInfo> memberList = members.ToReadOnly();
-            ReadOnlyCollection<Expression> argList = arguments.ToReadOnly();
+            var memberList = members.ToReadOnly();
+            var argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, ref memberList);
             return new NewExpression(constructor, argList, memberList);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a new <see cref="NewExpression"/> that represents calling the specified constructor with the specified arguments. The members that access the constructor initialized fields are specified. 
         /// </summary>
@@ -168,10 +168,10 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="members">An Array of <see cref="MemberInfo"/> objects to use to populate the Members collection.</param>
         /// <returns>A <see cref="NewExpression"/> that has the <see cref="NodeType"/> property equal to <see cref="P:New"/> and the <see cref="P:Constructor"/>, <see cref="P:Arguments"/> and <see cref="P:Members"/> properties set to the specified value.</returns>
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, params MemberInfo[] members) {
-            return New(constructor, arguments, members.ToReadOnly());
+            return New(constructor, arguments, (IEnumerable<MemberInfo>)members);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="NewExpression"/> that represents calling the parameterless constructor of the specified type. 
         /// </summary>
@@ -194,7 +194,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
 
-        //CONFORMING
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static void ValidateNewArgs(ConstructorInfo constructor, ref ReadOnlyCollection<Expression> arguments, ref ReadOnlyCollection<MemberInfo> members) {
             ParameterInfo[] pis;
@@ -257,10 +257,10 @@ namespace Microsoft.Linq.Expressions {
                     }
                 }
                 if (newArguments != null) {
-                    arguments = new ReadOnlyCollection<Expression>(newArguments);
+                    arguments = new TrueReadOnlyCollection<Expression>(newArguments);
                 }
                 if (newMembers != null) {
-                    members = new ReadOnlyCollection<MemberInfo>(newMembers);
+                    members = new TrueReadOnlyCollection<MemberInfo>(newMembers);
                 }
             } else if (arguments != null && arguments.Count > 0) {
                 throw Error.IncorrectNumberOfConstructorArguments();
@@ -269,7 +269,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        //CONFORMING
+
         private static void ValidateAnonymousTypeMember(ref MemberInfo member, out Type memberType) {
             switch (member.MemberType) {
                 case MemberTypes.Field:

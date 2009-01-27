@@ -18,6 +18,9 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions {
 
@@ -71,7 +74,7 @@ namespace Microsoft.Linq.Expressions {
             if (newNodes == null) {
                 return nodes;
             }
-            return new ReadOnlyCollection<Expression>(newNodes);
+            return new TrueReadOnlyCollection<Expression>(newNodes);
         }
 
         internal Expression[] VisitArguments(IArgumentProvider nodes) {
@@ -119,7 +122,7 @@ namespace Microsoft.Linq.Expressions {
             if (newNodes == null) {
                 return nodes;
             }
-            return new ReadOnlyCollection<T>(newNodes);
+            return new TrueReadOnlyCollection<T>(newNodes);
         }
 
         /// <summary>
@@ -172,7 +175,7 @@ namespace Microsoft.Linq.Expressions {
             if (newNodes == null) {
                 return nodes;
             }
-            return new ReadOnlyCollection<T>(newNodes);
+            return new TrueReadOnlyCollection<T>(newNodes);
         }
 
         /// <summary>

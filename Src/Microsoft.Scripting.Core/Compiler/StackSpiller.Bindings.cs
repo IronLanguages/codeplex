@@ -17,6 +17,9 @@ using System; using Microsoft;
 
 using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -80,7 +83,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         for (int i = 0; i < _bindings.Count; i++) {
                             newBindings[i] = _bindingRewriters[i].AsBinding();
                         }
-                        return Expression.MemberBind(_binding.Member, new ReadOnlyCollection<MemberBinding>(newBindings));
+                        return Expression.MemberBind(_binding.Member, new TrueReadOnlyCollection<MemberBinding>(newBindings));
                 }
                 throw ContractUtils.Unreachable;
             }
@@ -148,7 +151,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                                 newInits[i] = Expression.ElementInit(_inits[i].AddMethod, cr[0, -1]);
                             }
                         }
-                        return Expression.ListBind(_binding.Member, new ReadOnlyCollection<ElementInit>(newInits));
+                        return Expression.ListBind(_binding.Member, new TrueReadOnlyCollection<ElementInit>(newInits));
                 }
                 throw ContractUtils.Unreachable;
             }

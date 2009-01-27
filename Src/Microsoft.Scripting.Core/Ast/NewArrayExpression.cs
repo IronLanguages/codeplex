@@ -18,10 +18,12 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
-using System.Text;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions {
-    //CONFORMING
+
     /// <summary>
     /// Represents creating a new array and possibly initializing the elements of the new array.
     /// </summary>
@@ -95,7 +97,7 @@ namespace Microsoft.Linq.Expressions {
 
         #region NewArrayInit
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
         /// </summary>
@@ -144,7 +146,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
             if (newList != null) {
-                initializerList = new ReadOnlyCollection<Expression>(newList);
+                initializerList = new TrueReadOnlyCollection<Expression>(newList);
             }
 
             return NewArrayExpression.Make(ExpressionType.NewArrayInit, type.MakeArrayType(), initializerList);
@@ -154,7 +156,7 @@ namespace Microsoft.Linq.Expressions {
 
         #region NewArrayBounds
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="NewArrayExpression"/> that represents creating an array that has a specified rank. 
         /// </summary>
@@ -165,7 +167,7 @@ namespace Microsoft.Linq.Expressions {
             return NewArrayBounds(type, (IEnumerable<Expression>)bounds);
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="NewArrayExpression"/> that represents creating an array that has a specified rank. 
         /// </summary>

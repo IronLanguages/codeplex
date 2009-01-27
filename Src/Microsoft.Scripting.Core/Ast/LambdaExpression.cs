@@ -18,11 +18,10 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Utils;
-using System.Text;
 using System.Threading;
 
 namespace Microsoft.Linq.Expressions {
@@ -273,7 +272,7 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="name">The name of the lambda. Used for generating debugging info.</param>
         /// <returns>An <see cref="Expression{TDelegate}"/> that has the <see cref="P:NodeType"/> property equal to <see cref="P:Lambda"/> and the <see cref="P:Body"/> and <see cref="P:Parameters"/> properties set to the specified values.</returns>
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, String name, IEnumerable<ParameterExpression> parameters) {
-            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
+            var parameterList = parameters.ToReadOnly();
             ValidateLambdaArgs(typeof(TDelegate), ref body, parameterList);
             return new Expression<TDelegate>(name, body, parameterList);
         }
@@ -331,7 +330,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(body, "body");
 
-            ReadOnlyCollection<ParameterExpression> parameterList = parameters.ToReadOnly();
+            var parameterList = parameters.ToReadOnly();
 
             bool binder = body.Type == typeof(void);
 
@@ -362,7 +361,7 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="delegateType">A <see cref="Type"/> representing the delegate signature for the lambda.</param>
         /// <returns>A <see cref="LambdaExpression"/> that has the <see cref="P:NodeType"/> property equal to Lambda and the <see cref="P:Body"/> and <see cref="P:Parameters"/> properties set to the specified values.</returns>
         public static LambdaExpression Lambda(Type delegateType, Expression body, string name, IEnumerable<ParameterExpression> parameters) {
-            ReadOnlyCollection<ParameterExpression> paramList = parameters.ToReadOnly();
+            var paramList = parameters.ToReadOnly();
             ValidateLambdaArgs(delegateType, ref body, paramList);
 
             return Lambda(ExpressionType.Lambda, delegateType, name, body, paramList);
@@ -424,6 +423,7 @@ namespace Microsoft.Linq.Expressions {
         /// <returns>The type of a System.Func delegate that has the specified type arguments.</returns>
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
+            ContractUtils.RequiresNotNullItems(typeArgs, "typeArgs");
             Type result = DelegateHelpers.GetFuncType(typeArgs);
             if (result == null) {
                 throw Error.IncorrectNumberOfTypeArgsForFunc();
@@ -438,6 +438,7 @@ namespace Microsoft.Linq.Expressions {
         /// <returns>The type of a System.Action delegate that has the specified type arguments.</returns>
         public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
+            ContractUtils.RequiresNotNullItems(typeArgs, "typeArgs");
             Type result = DelegateHelpers.GetActionType(typeArgs);
             if (result == null) {
                 throw Error.IncorrectNumberOfTypeArgsForAction();
@@ -457,6 +458,7 @@ namespace Microsoft.Linq.Expressions {
         /// to System.Void to produce an Action.</remarks>
         public static Type GetDelegateType(params Type[] typeArgs) {
             ContractUtils.RequiresNotEmpty(typeArgs, "typeArgs");
+            ContractUtils.RequiresNotNullItems(typeArgs, "typeArgs");
             return DelegateHelpers.MakeDelegateType(typeArgs);
         }
     }

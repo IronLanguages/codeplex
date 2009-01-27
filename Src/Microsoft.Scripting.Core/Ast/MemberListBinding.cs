@@ -12,17 +12,17 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
+
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection;
-using System.Text;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Linq.Expressions {
-    //CONFORMING
+
     /// <summary>
     /// Represents initializing the elements of a collection member of a newly created object. 
     /// </summary>
@@ -43,7 +43,7 @@ namespace Microsoft.Linq.Expressions {
     
 
     public partial class Expression {
-        //CONFORMING
+
         ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> where the member is a field or property.</summary>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> that has the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.BindingType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.MemberBindingType.ListBinding" /> and the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> and <see cref="P:Microsoft.Linq.Expressions.MemberListBinding.Initializers" /> properties set to the specified values.</returns>
         ///<param name="member">A <see cref="T:System.Reflection.MemberInfo" /> that represents a field or property to set the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> property equal to.</param>
@@ -55,9 +55,9 @@ namespace Microsoft.Linq.Expressions {
         public static MemberListBinding ListBind(MemberInfo member, params ElementInit[] initializers) {
             ContractUtils.RequiresNotNull(member, "member");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListBind(member, initializers.ToReadOnly());
+            return ListBind(member, (IEnumerable<ElementInit>)initializers);
         }
-        //CONFORMING
+
         ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> where the member is a field or property.</summary>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> that has the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.BindingType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.MemberBindingType.ListBinding" /> and the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> and <see cref="P:Microsoft.Linq.Expressions.MemberListBinding.Initializers" /> properties set to the specified values.</returns>
         ///<param name="member">A <see cref="T:System.Reflection.MemberInfo" /> that represents a field or property to set the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> property equal to.</param>
@@ -71,11 +71,11 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(initializers, "initializers");
             Type memberType;
             ValidateGettableFieldOrPropertyMember(member, out memberType);
-            ReadOnlyCollection<ElementInit> initList = initializers.ToReadOnly();
+            var initList = initializers.ToReadOnly();
             ValidateListInitArgs(memberType, initList);
             return new MemberListBinding(member, initList);
         }
-        //CONFORMING
+
         ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> object based on a specified property accessor method.</summary>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> that has the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.BindingType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.MemberBindingType.ListBinding" />, the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> property set to the <see cref="T:System.Reflection.MemberInfo" /> that represents the property accessed in <paramref name="propertyAccessor" />, and <see cref="P:Microsoft.Linq.Expressions.MemberListBinding.Initializers" /> populated with the elements of <paramref name="initializers" />.</returns>
         ///<param name="propertyAccessor">A <see cref="T:System.Reflection.MethodInfo" /> that represents a property accessor method.</param>
@@ -87,9 +87,9 @@ namespace Microsoft.Linq.Expressions {
         public static MemberListBinding ListBind(MethodInfo propertyAccessor, params ElementInit[] initializers) {
             ContractUtils.RequiresNotNull(propertyAccessor, "propertyAccessor");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            return ListBind(propertyAccessor, initializers.ToReadOnly());
+            return ListBind(propertyAccessor, (IEnumerable<ElementInit>)initializers);
         }
-        //CONFORMING
+
         ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> based on a specified property accessor method.</summary>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MemberListBinding" /> that has the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.BindingType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.MemberBindingType.ListBinding" />, the <see cref="P:Microsoft.Linq.Expressions.MemberBinding.Member" /> property set to the <see cref="T:System.Reflection.MemberInfo" /> that represents the property accessed in <paramref name="propertyAccessor" />, and <see cref="P:Microsoft.Linq.Expressions.MemberListBinding.Initializers" /> populated with the elements of <paramref name="initializers" />.</returns>
         ///<param name="propertyAccessor">A <see cref="T:System.Reflection.MethodInfo" /> that represents a property accessor method.</param>
@@ -104,7 +104,6 @@ namespace Microsoft.Linq.Expressions {
             return ListBind(GetProperty(propertyAccessor), initializers);
         }
 
-        //CONFORMING
         private static void ValidateListInitArgs(Type listType, ReadOnlyCollection<ElementInit> initializers) {
             if (!typeof(IEnumerable).IsAssignableFrom(listType)) {
                 throw Error.TypeNotIEnumerable(listType);

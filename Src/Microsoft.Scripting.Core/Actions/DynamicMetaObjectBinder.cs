@@ -180,7 +180,7 @@ namespace Microsoft.Scripting {
                     typeof(object),
                     delegateType,
                     this,
-                    new ReadOnlyCollection<Expression>(exprs)
+                    new TrueReadOnlyCollection<Expression>(exprs)
                 ),
                 rs
             );
