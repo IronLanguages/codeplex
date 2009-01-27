@@ -30,7 +30,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitQuote((UnaryExpression)expr);
         }
 
-        //CONFORMING
+
         private void EmitQuote(UnaryExpression quote) {
             // emit the quoted expression as a runtime constant
             EmitConstant(quote.Operand, quote.Type);
@@ -71,7 +71,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitUnary((UnaryExpression)expr);
         }
 
-        //CONFORMING
+
         private void EmitUnary(UnaryExpression node) {
             if (node.Method != null) {
                 EmitUnaryMethod(node);
@@ -86,7 +86,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        //CONFORMING
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private void EmitUnaryOperator(ExpressionType op, Type operandType, Type resultType) {
             bool operandIsNullable = TypeUtils.IsNullableType(operandType);
@@ -272,7 +272,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             EmitConvert((UnaryExpression)expr);
         }
 
-        //CONFORMING
+
         private void EmitConvert(UnaryExpression node) {
             if (node.Method != null) {
                 // User-defined conversions are only lifted if both source and
@@ -319,7 +319,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        //CONFORMING
+
         private void EmitUnaryMethod(UnaryExpression node) {
             if (node.IsLifted) {
                 ParameterExpression v = Expression.Variable(TypeUtils.GetNonNullableType(node.Operand.Type), null);

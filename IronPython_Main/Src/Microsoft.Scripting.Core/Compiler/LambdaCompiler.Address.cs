@@ -16,11 +16,10 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
@@ -71,7 +70,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        //CONFORMING
+
         private void AddressOf(BinaryExpression node, Type type) {
             Debug.Assert(node.NodeType == ExpressionType.ArrayIndex && node.Method == null);
 
@@ -108,7 +107,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
         }
 
-        //CONFORMING
+
         private void AddressOf(MemberExpression node, Type type) {
             if (type == node.Type) {
                 // emit "this", if any
@@ -157,7 +156,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             FreeLocal(temp);
         }
 
-        //CONFORMING
+
         private void AddressOf(MethodCallExpression node, Type type) {
             // An array index of a multi-dimensional array is represented by a call to Array.Get,
             // rather than having its own array-access node. This means that when we are trying to

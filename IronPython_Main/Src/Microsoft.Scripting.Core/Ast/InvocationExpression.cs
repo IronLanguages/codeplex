@@ -17,11 +17,8 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using System.Text;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -112,7 +109,7 @@ namespace Microsoft.Linq.Expressions {
         ///<exception cref="T:System.InvalidOperationException">
         ///<paramref name="arguments" /> does not contain the same number of elements as the list of parameters for the delegate represented by <paramref name="expression" />.</exception>
         public static InvocationExpression Invoke(Expression expression, params Expression[] arguments) {
-            return Invoke(expression, arguments.ToReadOnly());
+            return Invoke(expression, (IEnumerable<Expression>)arguments);
         }
 
         ///<summary>Creates an <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" />.</summary>

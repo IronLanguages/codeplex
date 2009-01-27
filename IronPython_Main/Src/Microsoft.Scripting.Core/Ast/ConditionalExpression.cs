@@ -15,11 +15,8 @@
 using System; using Microsoft;
 
 
-using Microsoft.Scripting.Utils;
-using System.Text;
-
 namespace Microsoft.Linq.Expressions {
-    //CONFORMING
+
     /// <summary>
     /// Represents an expression that has a conditional operator.
     /// </summary>
@@ -99,7 +96,7 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="ConditionalExpression"/>.
         /// </summary>

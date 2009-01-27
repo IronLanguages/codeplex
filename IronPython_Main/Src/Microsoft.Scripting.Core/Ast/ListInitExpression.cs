@@ -17,9 +17,11 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection;
-using System.Text;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -106,6 +108,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(initializers, "initializers");
             return ListInit(newExpression, initializers as IEnumerable<Expression>);
         }
+
         /// <summary>
         /// Creates a <see cref="ListInitExpression"/> that uses a method named "Add" to add elements to a collection.
         /// </summary>
@@ -115,10 +118,12 @@ namespace Microsoft.Linq.Expressions {
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<Expression> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<Expression> initializerlist = initializers.ToReadOnly();
+
+            var initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
+
             MethodInfo addMethod = FindMethod(newExpression.Type, "Add", null, new Expression[] { initializerlist[0] }, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             return ListInit(newExpression, addMethod, initializers);
         }
@@ -138,7 +143,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.RequiresNotNull(initializers, "initializers");
             return ListInit(newExpression, addMethod, initializers as IEnumerable<Expression>);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="ListInitExpression"/> that uses a specified method to add elements to a collection. 
         /// </summary>
@@ -152,7 +157,8 @@ namespace Microsoft.Linq.Expressions {
             }
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<Expression> initializerlist = initializers.ToReadOnly();
+
+            var initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }
@@ -160,7 +166,7 @@ namespace Microsoft.Linq.Expressions {
             for (int i = 0; i < initializerlist.Count; i++) {
                 initList[i] = ElementInit(addMethod, initializerlist[i]);
             }
-            return ListInit(newExpression, new ReadOnlyCollection<ElementInit>(initList));
+            return ListInit(newExpression, new TrueReadOnlyCollection<ElementInit>(initList));
         }
 
         /// <summary>
@@ -193,7 +199,7 @@ namespace Microsoft.Linq.Expressions {
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) {
             ContractUtils.RequiresNotNull(newExpression, "newExpression");
             ContractUtils.RequiresNotNull(initializers, "initializers");
-            ReadOnlyCollection<ElementInit> initializerlist = initializers.ToReadOnly();
+            var initializerlist = initializers.ToReadOnly();
             if (initializerlist.Count == 0) {
                 throw Error.ListInitializerWithZeroMembers();
             }

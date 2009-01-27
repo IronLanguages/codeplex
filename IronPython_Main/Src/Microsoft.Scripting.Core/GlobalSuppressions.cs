@@ -11,3 +11,5 @@
 //UnhandledExpressionType is used by Microsoft.Linq.Expressions.OldExpressionVisitor 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Scope = "member", Target = "Microsoft.Linq.Expressions.Error.#UnhandledExpressionType(System.Object)")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Scope = "member", Target = "Microsoft.Linq.Expressions.Strings.#UnhandledExpressionType(System.Object)")]
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Scope = "member", Target = "Microsoft.Linq.Expressions.Error.#InvalidNullValue(System.Object)")]
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Scope = "member", Target = "Microsoft.Linq.Expressions.Error.#InvalidObjectType(System.Object,System.Object)")]

@@ -395,7 +395,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             var node = (DynamicExpression)expr;
-            
+
             var site = CallSite.Create(node.DelegateType, node.Binder);
             Type siteType = site.GetType();
 
@@ -838,10 +838,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private void EmitLift(ExpressionType nodeType, Type resultType, MethodCallExpression mc, IList<ParameterExpression> parameters, IList<Expression> arguments) {
+        private void EmitLift(ExpressionType nodeType, Type resultType, MethodCallExpression mc, ParameterExpression[] paramList, Expression[] argList) {
             Debug.Assert(TypeUtils.GetNonNullableType(resultType) == TypeUtils.GetNonNullableType(mc.Type));
-            ReadOnlyCollection<ParameterExpression> paramList = new ReadOnlyCollection<ParameterExpression>(parameters);
-            ReadOnlyCollection<Expression> argList = new ReadOnlyCollection<Expression>(arguments);
 
             switch (nodeType) {
                 default:
@@ -852,7 +850,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         Label exit = _ilg.DefineLabel();
                         Label exitNull = _ilg.DefineLabel();
                         LocalBuilder anyNull = _ilg.DeclareLocal(typeof(bool));
-                        for (int i = 0, n = paramList.Count; i < n; i++) {
+                        for (int i = 0, n = paramList.Length; i < n; i++) {
                             ParameterExpression v = paramList[i];
                             Expression arg = argList[i];
                             if (TypeUtils.IsNullableType(arg.Type)) {
@@ -927,7 +925,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _ilg.Emit(OpCodes.Ldc_I4_1);
                         _ilg.Emit(OpCodes.Stloc, allNull);
 
-                        for (int i = 0, n = paramList.Count; i < n; i++) {
+                        for (int i = 0, n = paramList.Length; i < n; i++) {
                             ParameterExpression v = paramList[i];
                             Expression arg = argList[i];
                             _scope.AddLocal(this, v);

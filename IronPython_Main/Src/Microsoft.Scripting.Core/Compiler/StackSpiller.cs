@@ -19,6 +19,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -452,7 +455,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 Result result = cr.Finish(node);
                 return new Result(result.Action | spiller._lambdaRewrite, result.Node);
             }
-      
+
             cr = new ChildRewriter(this, stack, node.Arguments.Count + 1);
 
             // first argument starts on stack as provided
@@ -513,10 +516,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // UnaryExpression
         private Result RewriteUnaryExpression(Expression expr, Stack stack) {
             UnaryExpression node = (UnaryExpression)expr;
-            
+
             Debug.Assert(node.NodeType != ExpressionType.Quote, "unexpected Quote");
             Debug.Assert(node.NodeType != ExpressionType.Throw, "unexpected Throw");
-            
+
             // Operand is emitted on top of the stack as is
             Result expression = RewriteExpression(node.Operand, stack);
             if (expression.Action != RewriteAction.None) {
@@ -562,7 +565,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                             newInits[i] = Expression.ElementInit(inits[i].AddMethod, cr[0, -1]);
                         }
                     }
-                    expr = Expression.ListInit((NewExpression)rewrittenNew, new ReadOnlyCollection<ElementInit>(newInits));
+                    expr = Expression.ListInit((NewExpression)rewrittenNew, new TrueReadOnlyCollection<ElementInit>(newInits));
                     break;
                 case RewriteAction.SpillStack:
                     ParameterExpression tempNew = MakeTemp(rewrittenNew.Type);
@@ -611,7 +614,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     for (int i = 0; i < bindings.Count; i++) {
                         newBindings[i] = bindingRewriters[i].AsBinding();
                     }
-                    expr = Expression.MemberInit((NewExpression)rewrittenNew, new ReadOnlyCollection<MemberBinding>(newBindings));
+                    expr = Expression.MemberInit((NewExpression)rewrittenNew, new TrueReadOnlyCollection<MemberBinding>(newBindings));
                     break;
                 case RewriteAction.SpillStack:
                     ParameterExpression tempNew = MakeTemp(rewrittenNew.Type);

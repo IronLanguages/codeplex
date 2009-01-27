@@ -12,11 +12,11 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
-using System.Reflection;
-using System.Text;
+
+
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -68,7 +68,7 @@ namespace Microsoft.Linq.Expressions {
             return Bind(GetProperty(propertyAccessor), expression);
         }
         
-        //CONFORMING
+
         private static void ValidateSettableFieldOrPropertyMember(MemberInfo member, out Type memberType) {
             FieldInfo fi = member as FieldInfo;
             if (fi == null) {

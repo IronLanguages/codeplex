@@ -16,11 +16,9 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
-using System.Text;
-using Microsoft.Scripting;
 
 namespace Microsoft.Linq.Expressions {
-    //CONFORMING
+
     /// <summary>
     /// Represents an expression that has a constant value.
     /// </summary>
@@ -104,7 +102,7 @@ namespace Microsoft.Linq.Expressions {
              return value ? ConstantExpression.TrueLiteral : ConstantExpression.FalseLiteral;
         }
         
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="ConstantExpression"/> that has the <see cref="P:ConstantExpression.Value"/> property set to the specified value. .
         /// </summary>
@@ -145,7 +143,7 @@ namespace Microsoft.Linq.Expressions {
             return ConstantExpression.Make(value, value == null ? typeof(object) : value.GetType());
         }
 
-        //CONFORMING
+
         /// <summary>
         /// Creates a <see cref="ConstantExpression"/> that has the <see cref="P:ConstantExpression.Value"/> 
         /// and <see cref="P:ConstantExpression.Type"/> properties set to the specified values. .
