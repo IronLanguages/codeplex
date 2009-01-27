@@ -55,14 +55,14 @@ namespace IronPython.Compiler {
         private string _moduleName;
 
         /// <summary>
-        /// Creates a new PythonCompilerOptions with the default langauge features enabled.
+        /// Creates a new PythonCompilerOptions with the default language features enabled.
         /// </summary>
         public PythonCompilerOptions()
             : this(PythonLanguageFeatures.Default) {
         }
 
         /// <summary>
-        /// Creates a new PythonCompilerOptions with the specified langauge features enabled.
+        /// Creates a new PythonCompilerOptions with the specified language features enabled.
         /// </summary>
         public PythonCompilerOptions(PythonLanguageFeatures features) {
             _languageFeatures = features;

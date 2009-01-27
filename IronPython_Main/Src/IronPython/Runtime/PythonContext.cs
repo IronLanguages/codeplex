@@ -129,6 +129,7 @@ namespace IronPython.Runtime {
         private ClrModule.ReferencesList _referencesList;
         private string _floatFormat, _doubleFormat;
         private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
+        private CodeContext _defaultContext;
 
         private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
@@ -142,8 +143,8 @@ namespace IronPython.Runtime {
 
             DefaultContext.CreateContexts(manager, this);
 
-            CodeContext defaultCtx = new CodeContext(new Scope(), this);
-            PythonBinder binder = new PythonBinder(manager, this, defaultCtx);
+            _defaultContext = new CodeContext(new Scope(), this);
+            PythonBinder binder = new PythonBinder(manager, this, _defaultContext);
             Binder = binder;
             _defaultBinderState = new BinderState(binder, DefaultContext.Default);
 
@@ -545,12 +546,16 @@ namespace IronPython.Runtime {
                         break;
 
                     case SourceCodeKind.File:
-                        ast = parser.ParseFile(true);
+                        ast = parser.ParseFile(true, false);
+                        break;
+
+                    case SourceCodeKind.Statements:
+                        ast = parser.ParseFile(false, false);
                         break;
 
                     default:
-                    case SourceCodeKind.Statements:
-                        ast = parser.ParseFile(false);
+                    case SourceCodeKind.AutoDetect:
+                        ast = parser.ParseFile(true, true);
                         break;
                 }
 
@@ -1587,6 +1592,10 @@ namespace IronPython.Runtime {
                 result = GetMemberNamesSite.Target(GetMemberNamesSite, obj);
             }
             return result;
+        }
+
+        protected override string/*!*/ FormatObject(DynamicOperations/*!*/ operations, object obj) {
+            return PythonOps.Repr(_defaultContext, obj) ?? "None";
         }
 
         internal object GetSystemStateValue(string name) {

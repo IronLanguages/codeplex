@@ -374,10 +374,14 @@ namespace IronPython.Compiler {
 
         #region Public parser interface
 
+        public PythonAst ParseFile(bool makeModule) {
+            return ParseFile(makeModule, false);
+        }
+        
         //single_input: Newline | simple_stmt | compound_stmt Newline
         //eval_input: testlist Newline* ENDMARKER
         //file_input: (Newline | stmt)* ENDMARKER
-        public PythonAst ParseFile(bool makeModule) {
+        public PythonAst ParseFile(bool makeModule, bool returnValue) {
             StartParsing();
 
             List<Statement> l = new List<Statement>();
@@ -434,6 +438,13 @@ namespace IronPython.Compiler {
             }
 
             Statement[] stmts = l.ToArray();
+
+            if (returnValue && stmts.Length > 0) {
+                ExpressionStatement exprStmt = stmts[stmts.Length - 1] as ExpressionStatement;
+                if (exprStmt != null) {
+                    stmts[stmts.Length - 1] = new ReturnStatement(exprStmt.Expression);
+                }
+            }
 
             SuiteStatement ret = new SuiteStatement(stmts);
             ret.SetLoc(_sourceUnit.MakeLocation(SourceLocation.MinValue), GetEnd());

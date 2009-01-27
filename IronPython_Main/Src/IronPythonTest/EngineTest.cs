@@ -218,7 +218,7 @@ namespace IronPythonTest {
 
         private void TestEngine(ScriptEngine scriptEngine, Dictionary<string, object> options) {
             // basic smoke tests that the engine is alive and working
-            AreEqual((int)scriptEngine.CreateScriptSourceFromString("42").Execute(scriptEngine.CreateScope()), 42);
+            AreEqual((int)scriptEngine.Execute("42"), 42);
 
             if(options != null) {
                 PythonOptions po = (PythonOptions)Microsoft.Scripting.Hosting.Providers.HostingHelpers.CallEngine<object, LanguageOptions>(
@@ -275,42 +275,42 @@ namespace IronPythonTest {
             scope.SetVariable(clspartName, clsPart);
 
             // field: assign and get back
-            _pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("if 100 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("clsPart.Field = 100", scope);
+            _pe.Execute("if 100 != clsPart.Field: raise AssertionError('test failed')", scope);
             AreEqual(100, clsPart.Field);
 
             // property: assign and get back
-            _pe.CreateScriptSourceFromString("clsPart.Property = clsPart.Field", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("if 100 != clsPart.Property: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("clsPart.Property = clsPart.Field", scope);
+            _pe.Execute("if 100 != clsPart.Property: raise AssertionError('test failed')", scope);
             AreEqual(100, clsPart.Property);
 
             // method: Event not set yet
-            _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("if -1 != a: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("a = clsPart.Method(2)", scope);
+            _pe.Execute("if -1 != a: raise AssertionError('test failed')", scope);
 
             // method: add python func as event handler
-            _pe.CreateScriptSourceFromString("def f(x) : return x * x", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("clsPart.Event += f", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("if 4 != a: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("def f(x) : return x * x", scope);
+            _pe.Execute("clsPart.Event += f", scope);
+            _pe.Execute("a = clsPart.Method(2)", scope);
+            _pe.Execute("if 4 != a: raise AssertionError('test failed')", scope);
 
             // ===============================================
 
             // reset the same variable with instance of the same type
             scope.SetVariable(clspartName, new ClsPart());
-            _pe.CreateScriptSourceFromString("if 0 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("if 0 != clsPart.Field: raise AssertionError('test failed')", scope);
 
             // add cls method as event handler
             scope.SetVariable("clsMethod", new IntIntDelegate(Negate));
-            _pe.CreateScriptSourceFromString("clsPart.Event += clsMethod", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements).Execute(scope);
-            _pe.CreateScriptSourceFromString("if -2 != a: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("clsPart.Event += clsMethod", scope);
+            _pe.Execute("a = clsPart.Method(2)", scope);
+            _pe.Execute("if -2 != a: raise AssertionError('test failed')", scope);
 
             // ===============================================
 
             // reset the same variable with integer
             scope.SetVariable(clspartName, 1);
-            _pe.CreateScriptSourceFromString("if 1 != clsPart: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
+            _pe.Execute("if 1 != clsPart: raise AssertionError('test failed')", scope);
             AreEqual((int)scope.GetVariable(clspartName), 1);
 
             ScriptSource su = _pe.CreateScriptSourceFromString("");
@@ -324,19 +324,28 @@ namespace IronPythonTest {
             ScriptScope scope2 = _env.CreateScope();
             ScriptScope scope3 = _env.CreateScope();
 
-            _pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements).Execute(scope1);
-            _pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements).Execute(scope2);
+            _pe.Execute("x = 0", scope1);
+            _pe.Execute("x = 1", scope2);
 
             scope3.SetVariable("x", 2);
 
-            AreEqual(0, _pe.CreateScriptSourceFromString("x").Execute<int>(scope1));
+            AreEqual(0, _pe.Execute<int>("x", scope1));
             AreEqual(0, (int)scope1.GetVariable("x"));
 
-            AreEqual(1, _pe.CreateScriptSourceFromString("x").Execute<int>(scope2));
+            AreEqual(1, _pe.Execute<int>("x", scope2));
             AreEqual(1, (int)scope2.GetVariable("x"));
 
-            AreEqual(2, _pe.CreateScriptSourceFromString("x").Execute<int>(scope3));
+            AreEqual(2, _pe.Execute<int>("x", scope3));
             AreEqual(2, (int)scope3.GetVariable("x"));
+        }
+
+        public void ScenarioObjectOperations() {
+            var ops = _pe.Operations;
+            AreEqual("(1, 2, 3)", ops.Format(new PythonTuple(new object[] { 1, 2, 3 })));
+
+            var scope = _pe.CreateScope();
+            scope.SetVariable("ops", ops);
+            AreEqual("[1, 2, 3]", _pe.Execute<string>("ops.Format([1,2,3])", scope));
         }
 
         public void ScenarioCP712() {
@@ -375,7 +384,6 @@ namespace IronPythonTest {
             x = pc.CreateSnippet("x", SourceCodeKind.Expression).Execute(otherModule.Scope);
             AreEqual(1, (int)x);
         }
-
 
         class CustomDictionary : IDictionary<string, object> {
             // Make "customSymbol" always be accessible. This could have been accomplished just by
@@ -493,46 +501,46 @@ namespace IronPythonTest {
             ScriptScope customModule = _pe.Runtime.CreateScope(customGlobals);            
 
             // Evaluate
-            AreEqual(_pe.CreateScriptSourceFromString("customSymbol + 1").Execute<int>(customModule), CustomDictionary.customSymbolValue + 1);
+            AreEqual(_pe.Execute<int>("customSymbol + 1", customModule), CustomDictionary.customSymbolValue + 1);
 
             // Execute
-            _pe.CreateScriptSourceFromString("customSymbolPlusOne = customSymbol + 1", SourceCodeKind.Statements).Execute(customModule);
-            AreEqual(_pe.CreateScriptSourceFromString("customSymbolPlusOne").Execute<int>(customModule), CustomDictionary.customSymbolValue + 1);
+            _pe.Execute("customSymbolPlusOne = customSymbol + 1", customModule);
+            AreEqual(_pe.Execute<int>("customSymbolPlusOne", customModule), CustomDictionary.customSymbolValue + 1);
             AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
 
             // Compile
-            CompiledCode compiledCode = _pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2", SourceCodeKind.Statements).Compile();
+            CompiledCode compiledCode = _pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2").Compile();
 
             compiledCode.Execute(customModule);
-            AreEqual(_pe.CreateScriptSourceFromString("customSymbolPlusTwo").Execute<int>(customModule), CustomDictionary.customSymbolValue + 2);
+            AreEqual(_pe.Execute<int>("customSymbolPlusTwo", customModule), CustomDictionary.customSymbolValue + 2);
             AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
 
             // check overriding of Add
             try {
-                _pe.CreateScriptSourceFromString("customSymbol = 1", SourceCodeKind.Statements).Execute(customModule);
+                _pe.Execute("customSymbol = 1", customModule);
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                _pe.CreateScriptSourceFromString(@"global customSymbol
-customSymbol = 1", SourceCodeKind.Statements).Execute(customModule);
+                _pe.Execute(@"global customSymbol
+customSymbol = 1", customModule);
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // check overriding of Remove
             try {
-                _pe.CreateScriptSourceFromString("del customSymbol", SourceCodeKind.Statements).Execute(customModule);
+                _pe.Execute("del customSymbol", customModule);
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                _pe.CreateScriptSourceFromString(@"global customSymbol
-del customSymbol", SourceCodeKind.Statements).Execute(customModule);
+                _pe.Execute(@"global customSymbol
+del customSymbol", customModule);
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // vars()
-            IDictionary vars = _pe.CreateScriptSourceFromString("vars()").Execute<IDictionary>(customModule);
+            IDictionary vars = _pe.Execute<IDictionary>("vars()", customModule);
             AreEqual(true, vars.Contains("customSymbol"));
 
             // Miscellaneous APIs
@@ -543,24 +551,43 @@ del customSymbol", SourceCodeKind.Statements).Execute(customModule);
         // Evaluate
         public void ScenarioEvaluate() {
             ScriptScope scope = _env.CreateScope();
-            AreEqual(10, (int)_pe.CreateScriptSourceFromString("4+6").Execute(scope));
-            AreEqual(10, _pe.CreateScriptSourceFromString("4+6").Execute<int>(scope));
 
-            AreEqual("abab", (string)_pe.CreateScriptSourceFromString("'ab' * 2").Execute(scope));
-            AreEqual("abab", _pe.CreateScriptSourceFromString("'ab' * 2").Execute<string>(scope));
+            AreEqual(10, _pe.CreateScriptSourceFromString("4+6").Execute<int>(scope));
+            AreEqual(null, _pe.CreateScriptSourceFromString("if True: pass").Execute(scope));
+
+            AreEqual(10, _pe.CreateScriptSourceFromString("4+6", SourceCodeKind.AutoDetect).Execute<int>(scope));
+            AreEqual(null, _pe.CreateScriptSourceFromString("if True: pass", SourceCodeKind.AutoDetect).Execute(scope));
+
+            AreEqual(10, _pe.CreateScriptSourceFromString("4+6", SourceCodeKind.Expression).Execute<int>(scope));
+            AssertExceptionThrown<SyntaxErrorException>(() => _pe.CreateScriptSourceFromString("if True: pass", SourceCodeKind.Expression).Execute(scope));
+            
+            AreEqual(null, _pe.CreateScriptSourceFromString("4+6", SourceCodeKind.File).Execute(scope));
+            AreEqual(null, _pe.CreateScriptSourceFromString("if True: pass", SourceCodeKind.File).Execute(scope));
+
+            AreEqual(null, _pe.CreateScriptSourceFromString("4+6", SourceCodeKind.SingleStatement).Execute(scope));
+            AreEqual(null, _pe.CreateScriptSourceFromString("if True: pass", SourceCodeKind.SingleStatement).Execute(scope));
+
+            AreEqual(null, _pe.CreateScriptSourceFromString("4+6", SourceCodeKind.Statements).Execute(scope));
+            AreEqual(null, _pe.CreateScriptSourceFromString("if True: pass", SourceCodeKind.Statements).Execute(scope));
+
+            AreEqual(10, (int)_pe.Execute("4+6", scope));
+            AreEqual(10, _pe.Execute<int>("4+6", scope));
+
+            AreEqual("abab", (string)_pe.Execute("'ab' * 2", scope));
+            AreEqual("abab", _pe.Execute<string>("'ab' * 2", scope));
 
             ClsPart clsPart = new ClsPart();
             scope.SetVariable(clspartName, clsPart);
-            AreEqual(clsPart, _pe.CreateScriptSourceFromString("clsPart").Execute(scope) as ClsPart);
-            AreEqual(clsPart, _pe.CreateScriptSourceFromString("clsPart").Execute<ClsPart>(scope));
+            AreEqual(clsPart, _pe.Execute("clsPart", scope) as ClsPart);
+            AreEqual(clsPart, _pe.Execute<ClsPart>("clsPart", scope));
 
-            _pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements).Execute(scope);
-            AreEqual(100, (int)_pe.CreateScriptSourceFromString("clsPart.Field").Execute(scope));
-            AreEqual(100, _pe.CreateScriptSourceFromString("clsPart.Field").Execute<int>(scope));
+            _pe.Execute("clsPart.Field = 100", scope);
+            AreEqual(100, (int)_pe.Execute("clsPart.Field", scope));
+            AreEqual(100, _pe.Execute<int>("clsPart.Field", scope));
 
             // Ensure that we can get back a delegate to a Python method
-            _pe.CreateScriptSourceFromString("def IntIntMethod(a): return a * 100", SourceCodeKind.Statements).Execute(scope);
-            IntIntDelegate d = _pe.CreateScriptSourceFromString("IntIntMethod").Execute<IntIntDelegate>(scope);
+            _pe.Execute("def IntIntMethod(a): return a * 100", scope);
+            IntIntDelegate d = _pe.Execute<IntIntDelegate>("IntIntMethod", scope);
             AreEqual(d(2), 2 * 100);
         }
 
