@@ -39,7 +39,6 @@ funcs = [
     Func('acos'), Func('asin'), Func('atan'), Func('atan2', 2),
     Func('ceil', 1, 'Ceiling'), Func('cos'), Func('cosh'), Func('exp'),
     Func('fabs', 1, 'Abs'), Func('floor'),
-    Func('log'), Func('log10'),
     Func('pow', 2), Func('sin'), Func('sinh'),
     Func('sqrt'), Func('tan'), Func('tanh'),
 ]

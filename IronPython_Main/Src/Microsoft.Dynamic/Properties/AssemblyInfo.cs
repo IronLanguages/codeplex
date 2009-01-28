@@ -21,7 +21,7 @@ using Microsoft.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 
-[assembly: System.Security.SecurityCritical]
+[assembly: System.Security.SecurityTransparent]
 
 #if MICROSOFT_SCRIPTING_CORE
 

@@ -427,10 +427,10 @@ def test_long_log():
     
     AssertError(ValueError, math.log, 0L)
     AssertError(ValueError, math.log, -1L)
-    AssertError(OverflowError, math.log, 2L, 1e666)
+    AreEqual(math.log(2L, 1e666), 0.0)
     AssertError(ValueError, math.log, 2L, -1e666)
-    AssertError(OverflowError, math.log, 1L, 0.0)
-    AssertError(OverflowError, math.log, 2L, 0.0)
+    AssertError(ValueError, math.log, 1L, 0.0)
+    AssertError(ValueError, math.log, 2L, 0.0)
     AssertError(ZeroDivisionError, math.log, 2L, 1.0)
 
     #Make sure that an object is converted to float before being passed into log funcs
