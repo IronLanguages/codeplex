@@ -195,7 +195,8 @@ def test_cp14539():
         for i in xrange(3):
             AreEqual(ex.Visible, False)
             ex.Visible = True
-            AreEqual(ex.Visible, True)
+            if not is_stress:
+                AreEqual(ex.Visible, True)
             ex.Visible = False
         
     finally:
