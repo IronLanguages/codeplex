@@ -78,7 +78,21 @@ namespace IronPython.Modules {
             return Check(Complex64.Hypot(v, w));
         }
 
+        public static double log(double v0) {
+            if (v0 == 0.0) {
+                throw PythonOps.ValueError("math domain error");
+            }
+            return Check(Math.Log(v0));
+        }
+
         public static double log(double v0, double v1) {
+            if (v0 <= 0.0 || v1 == 0.0) {
+                throw PythonOps.ValueError("math domain error");
+            } else if (v1 == 1.0) {
+                throw PythonOps.ZeroDivisionError("float division");
+            } else if (v1 == Double.PositiveInfinity) {
+                return 0.0;
+            }
             return Check(Math.Log(v0, v1));
         }
 
@@ -98,14 +112,13 @@ namespace IronPython.Modules {
         }
 
         public static double log(BigInteger value, double newBase) {
-            if (newBase == 0 || newBase == Double.PositiveInfinity) {
-                throw PythonOps.OverflowError("math range error");
-            } else if (newBase < 0) {
-                throw PythonOps.ValueError("math range error");
+            if (newBase <= 0.0 || value <= 0) {
+                throw PythonOps.ValueError("math domain error");
             } else if (newBase == 1.0) {
                 throw PythonOps.ZeroDivisionError("float division");
-            } 
-
+            } else if (newBase == Double.PositiveInfinity) {
+                return 0.0;
+            }
             return Check(value.Log(newBase));
         }
 
@@ -118,6 +131,13 @@ namespace IronPython.Modules {
             } else {
                 return log(Converter.ConvertToBigInteger(value), newBase);
             }
+        }
+
+        public static double log10(double v0) {
+            if (v0 <= 0.0) {
+                throw PythonOps.ValueError("math domain error");
+            }
+            return Check(Math.Log10(v0));
         }
 
         public static double log10(BigInteger value) {

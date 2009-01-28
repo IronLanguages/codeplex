@@ -52,12 +52,6 @@ namespace IronPython.Modules {
         public static double floor(double v0) {
             return Check(Math.Floor(v0));
         }
-        public static double log(double v0) {
-            return Check(Math.Log(v0));
-        }
-        public static double log10(double v0) {
-            return Check(Math.Log10(v0));
-        }
         public static double pow(double v0, double v1) {
             return Check(Math.Pow(v0, v1));
         }

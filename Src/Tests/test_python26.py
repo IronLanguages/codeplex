@@ -671,4 +671,26 @@ def test_functools_reduce():
     AreEqual(_functools.reduce(combine, words), "I am the walrus")
     AreEqual(_functools.reduce(combine, words), reduce(combine, words))
 
+def test_log():
+    import math
+    
+    zeros = [-1, -1.0, -1L, 0, 0.0, 0L]
+    nonzeros = [2, 2.0, 2L]
+    ones = [1, 1.0, 1L]
+    
+    AreNotEqual(type(zeros[0]), type(zeros[2]))
+    
+    for z0 in zeros:
+        AssertError(ValueError, math.log, z0)
+        AssertError(ValueError, math.log10, z0)
+        for z in zeros:
+            AssertError(ValueError, math.log, z0, z)
+        for n in nonzeros + ones:
+            AssertError(ValueError, math.log, z0, n)
+            AssertError(ValueError, math.log, n, z0)
+    
+    for one in ones:
+        for n in nonzeros:
+            AssertError(ZeroDivisionError, math.log, n, 1)
+
 run_test(__name__)
