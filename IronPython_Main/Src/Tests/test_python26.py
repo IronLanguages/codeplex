@@ -392,7 +392,8 @@ def test_tuple_count():
     AreEqual(t.count(2), 1)
     AreEqual(t.count(3), 4)
 
-def test__warnings():
+@skip("multiple_execute")
+def test_warnings():
     import sys
     from collections import deque
     from _warnings import (filters, default_action, once_registry, warn, warn_explicit)
@@ -467,7 +468,7 @@ def test__warnings():
     # remove generated files
     cleanup()
 
-def test__warnings_showwarning():
+def test_warnings_showwarning():
     try:
         from _warnings import showwarning
         from System.IO import StringWriter
@@ -659,7 +660,7 @@ def test_sys_flags():
     else:
         AreEqual(sys.flags.py3k_warning, 0)
 
-def test__functools_reduce():
+def test_functools_reduce():
     import _functools
     
     words = ["I", "am", "the", "walrus"]

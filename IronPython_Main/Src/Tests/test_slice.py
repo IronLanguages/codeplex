@@ -2736,9 +2736,11 @@ def test_getslice_missing_values():
     AreEqual(foo()[:], slice(0, 2147483647))
     test_slice(foo)
 
+@skip("multiple_execute") #http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=20845
 def test_setslice_missing_values():
     # missing values are different from passing None explicitly
     class myint(int): pass
+    
     class mylong(long): pass
     
     global setVal
@@ -2784,7 +2786,7 @@ def test_setslice_missing_values():
     AreEqual(setVal, (0, 1, 123))
     foo()[False:True] = 123
     AreEqual(setVal, (0, 1, 123))
-
+    
     def test_slice(foo):
         foo()[None:] = 123
         AreEqual(setVal, (slice(None, None), 123))
@@ -2818,7 +2820,7 @@ def test_setslice_missing_values():
             global setVal
             setVal = index, value
         def __len__(self): return 42
-
+    
     foo()[:] = 123
     AreEqual(setVal, (slice(0, 2147483647), 123))
     test_slice(foo)

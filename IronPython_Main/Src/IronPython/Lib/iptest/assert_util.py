@@ -570,6 +570,11 @@ is_snap = False
 if not is_silverlight and get_environ_variable("THISISSNAP")!=None: 
     is_snap = True
 
+is_stress = False
+#If the 'THISISSTRESS' env variable is set we're running tests in the stress lab.
+if not is_silverlight and get_environ_variable("THISISSTRESS")!=None: 
+    is_stress = True
+
 is_vista = False
 #ipy.bat sets IS_VISTA
 if not is_silverlight and get_environ_variable("IS_VISTA")=="1":
