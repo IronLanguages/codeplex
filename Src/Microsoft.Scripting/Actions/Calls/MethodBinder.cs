@@ -851,9 +851,9 @@ namespace Microsoft.Scripting.Actions.Calls {
             private DynamicMetaObject RestrictOne(DynamicMetaObject obj, ParameterWrapper forParam) {
                 if (forParam.Type == typeof(object)) {
                     // don't use Restrict as it'll box & unbox.
-                    return new DynamicMetaObject(obj.Expression, BindingRestrictions.GetTypeRestriction(obj.Expression, obj.LimitType));
+                    return new DynamicMetaObject(obj.Expression, BindingRestrictionsHelpers.GetRuntimeTypeRestriction(obj.Expression, obj.GetLimitType()));
                 } else {
-                    return obj.Restrict(obj.LimitType);
+                    return obj.Restrict(obj.GetLimitType());
                 }
             }
 

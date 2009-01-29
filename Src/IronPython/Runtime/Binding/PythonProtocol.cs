@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            DynamicMetaObject self = target.Restrict(target.LimitType);
+            DynamicMetaObject self = target.Restrict(target.GetLimitType());
 
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(null, target);
             PythonType pt = DynamicHelpers.GetPythonType(target.Value);
@@ -179,7 +179,7 @@ namespace IronPython.Runtime.Binding {
             // look for __call__, if it's present dispatch to it.  Otherwise fall back to the
             // default binder
             PythonTypeSlot callSlot;
-            if (!typeof(Delegate).IsAssignableFrom(target.LimitType) &&
+            if (!typeof(Delegate).IsAssignableFrom(target.GetLimitType()) &&
                 pt.TryResolveSlot(state.Context, Symbols.Call, out callSlot)) {
                 Expression[] callArgs = ArrayUtils.Insert(
                     BinderState.GetCodeContext(call),

@@ -82,29 +82,29 @@ namespace IronPython.Runtime.Binding {
                             res = TryToGenericInterfaceConversion(self, type, typeof(IEnumerable), typeof(IEnumerableOfTWrapper<>));
                         }
                     } else if (type == typeof(IEnumerable)) {
-                        if (self.LimitType == typeof(string)) {
+                        if (self.GetLimitType() == typeof(string)) {
                             // replace strings normal enumeration with our own which returns strings instead of chars.
                             res = new DynamicMetaObject(
                                 Ast.Call(
                                     typeof(StringOps).GetMethod("ConvertToIEnumerable"),
                                     AstUtils.Convert(self.Expression, typeof(string))
                                 ),
-                                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(string))
+                                BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(string))
                             );
-                        } else if (!typeof(IEnumerable).IsAssignableFrom(self.LimitType) && IsIndexless(self)) {
-                            res = PythonProtocol.ConvertToIEnumerable(this, self.Restrict(self.LimitType));
+                        } else if (!typeof(IEnumerable).IsAssignableFrom(self.GetLimitType()) && IsIndexless(self)) {
+                            res = PythonProtocol.ConvertToIEnumerable(this, self.Restrict(self.GetLimitType()));
                         }
                     } else if (type == typeof(IEnumerator) ) {
-                        if (!typeof(IEnumerator).IsAssignableFrom(self.LimitType) && 
-                            !typeof(IEnumerable).IsAssignableFrom(self.LimitType) &&
+                        if (!typeof(IEnumerator).IsAssignableFrom(self.GetLimitType()) && 
+                            !typeof(IEnumerable).IsAssignableFrom(self.GetLimitType()) &&
                             IsIndexless(self)) {
-                            res = PythonProtocol.ConvertToIEnumerator(this, self.Restrict(self.LimitType));
+                            res = PythonProtocol.ConvertToIEnumerator(this, self.Restrict(self.GetLimitType()));
                         }
                     }
                     break;
             }
 
-            if (type.IsEnum && Enum.GetUnderlyingType(type) == self.LimitType) {
+            if (type.IsEnum && Enum.GetUnderlyingType(type) == self.GetLimitType()) {
                 // numeric type to enum, this is ok if the value is zero
                 object value = Activator.CreateInstance(type);
 
@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Condition(
                         Ast.Equal(
                             AstUtils.Convert(self.Expression, Enum.GetUnderlyingType(type)),
-                            Ast.Constant(Activator.CreateInstance(self.LimitType))
+                            Ast.Constant(Activator.CreateInstance(self.GetLimitType()))
                         ),
                         Ast.Constant(value),
                         Ast.Call(
@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Binding {
                             AstUtils.Convert(self.Expression, typeof(object))
                         )
                     ),
-                    self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, self.LimitType)),
+                    self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, self.GetLimitType())),
                     value
                 );
             }
@@ -129,9 +129,9 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static bool IsIndexless(DynamicMetaObject/*!*/ arg) {
-            return arg.LimitType != typeof(OldInstance) &&
-                arg.LimitType != typeof(BuiltinFunction) &&
-                arg.LimitType != typeof(BuiltinMethodDescriptor);
+            return arg.GetLimitType() != typeof(OldInstance) &&
+                arg.GetLimitType() != typeof(BuiltinFunction) &&
+                arg.GetLimitType() != typeof(BuiltinMethodDescriptor);
         }
 
         public override object CacheIdentity {
@@ -215,7 +215,7 @@ namespace IronPython.Runtime.Binding {
 
             // we can only produce a conversion if we have a string value...
             if (strVal != null) {
-                self = self.Restrict(self.RuntimeType);
+                self = self.Restrict(self.GetRuntimeType());
 
                 Expression getLen = Ast.Property(
                     AstUtils.Convert(
@@ -260,19 +260,19 @@ namespace IronPython.Runtime.Binding {
                 res = Defer(self);
             } else {
                 if (self.HasValue) {
-                    self = self.Restrict(self.RuntimeType);
+                    self = self.Restrict(self.GetRuntimeType());
                 } 
 
-                if (self.LimitType == typeof(DynamicNull)) {
+                if (self.GetLimitType() == typeof(DynamicNull)) {
                     // None has no __nonzero__ and no __len__ but it's always false
                     res = MakeNoneToBoolConversion(self);
-                } else if (self.LimitType == typeof(bool)) {
+                } else if (self.GetLimitType() == typeof(bool)) {
                     // nothing special to convert from bool to bool
                     res = self;
-                } else if (typeof(IStrongBox).IsAssignableFrom(self.LimitType)) {
+                } else if (typeof(IStrongBox).IsAssignableFrom(self.GetLimitType())) {
                     // Explictly block conversion of References to bool
                     res = MakeStrongBoxToBoolConversionError(self);
-                } else if (self.LimitType.IsPrimitive || self.LimitType.IsEnum) {
+                } else if (self.GetLimitType().IsPrimitive || self.GetLimitType().IsEnum) {
                     // optimization - rather than doing a method call for primitives and enums generate
                     // the comparison to zero directly.
                     res = MakePrimitiveToBoolComparison(self);
@@ -301,7 +301,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static DynamicMetaObject/*!*/ MakePrimitiveToBoolComparison(DynamicMetaObject/*!*/ self) {
-            object zeroVal = Activator.CreateInstance(self.LimitType);
+            object zeroVal = Activator.CreateInstance(self.GetLimitType());
 
             return new DynamicMetaObject(
                 Ast.NotEqual(

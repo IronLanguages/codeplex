@@ -154,7 +154,7 @@ namespace IronPython.Runtime.Binding {
                         DynamicUtils.GetExpressions(ArrayUtils.RemoveFirst(args))
                     )
                 ),
-                BindingRestrictions.Combine(args).Merge(args[0].Restrict(args[0].LimitType).Restrictions)
+                BindingRestrictions.Combine(args).Merge(args[0].Restrict(args[0].GetLimitType()).Restrictions)
             );
         }
 
@@ -185,7 +185,7 @@ namespace IronPython.Runtime.Binding {
                         DynamicUtils.GetExpressions(args)
                     )
                 ),
-                BindingRestrictions.Combine(args).Merge(target.Restrict(target.LimitType).Restrictions)
+                BindingRestrictions.Combine(args).Merge(target.Restrict(target.GetLimitType()).Restrictions)
             );
         }
 

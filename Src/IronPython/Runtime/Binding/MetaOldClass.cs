@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Binding {
             if (operation.Operation == StandardOperators.IsCallable) {
                 return new DynamicMetaObject(
                     Ast.Constant(true),
-                    Restrictions.Merge(BindingRestrictions.GetTypeRestriction(Expression, typeof(OldClass)))
+                    Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(Expression, typeof(OldClass)))
                 );
             }
 

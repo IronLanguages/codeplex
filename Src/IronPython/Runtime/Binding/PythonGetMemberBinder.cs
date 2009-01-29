@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         public override DynamicMetaObject/*!*/ Bind(DynamicMetaObject/*!*/ target, DynamicMetaObject/*!*/[]/*!*/ args) {
             Debug.Assert(args.Length == 1);
-            Debug.Assert(args[0].LimitType == typeof(CodeContext));
+            Debug.Assert(args[0].GetLimitType() == typeof(CodeContext));
 
             // we don't have CodeContext if an IDO falls back to us when we ask them to produce the Call
             DynamicMetaObject cc = args[0];
@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(object),
                     self.Expression
                 ),
-                self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, self.LimitType))
+                self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, self.GetLimitType()))
             );
         }
 
@@ -101,7 +101,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             bool isNoThrow = ((options & GetMemberOptions.IsNoThrow) != 0) ? true : false;
-            Type limitType = self.LimitType;
+            Type limitType = self.GetLimitType() ;
 
             if (limitType == typeof(DynamicNull) || PythonBinder.IsPythonType(limitType)) {
                 // look up in the PythonType so that we can 
@@ -123,14 +123,14 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            if (self.LimitType == typeof(OldInstance)) {
+            if (self.GetLimitType() == typeof(OldInstance)) {
                 if ((options & GetMemberOptions.IsNoThrow) != 0) {
                     return new DynamicMetaObject(
                         Ast.Field(
                             null,
                             typeof(OperationFailed).GetField("Value")
                         ),
-                        self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
+                        self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(OldInstance)))
                     );
                 } else {
                     return new DynamicMetaObject(
@@ -145,7 +145,7 @@ namespace IronPython.Runtime.Binding {
                                 )
                             )
                         ),
-                        self.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self.Expression, typeof(OldInstance)))
+                        self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(OldInstance)))
                     );
                 }
             }

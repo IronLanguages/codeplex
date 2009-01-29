@@ -175,6 +175,18 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The method takes a DynamicMetaObject, and returns an instance restriction for testing null if the object
+        /// holds a null value, otherwise returns a type restriction.
+        /// </summary>
+        internal static BindingRestrictions GetTypeRestriction(DynamicMetaObject obj) {
+            if (obj.Value == null && obj.HasValue) {
+                return BindingRestrictions.GetInstanceRestriction(obj.Expression, null);
+            } else {
+                return BindingRestrictions.GetTypeRestriction(obj.Expression, obj.LimitType);
+            }
+        }
+
+        /// <summary>
         /// Creates the binding restriction that checks the expression for object instance identity.
         /// </summary>
         /// <param name="expression">The expression to test.</param>
@@ -258,10 +270,6 @@ namespace Microsoft.Scripting {
         /// Creates one type identity test 
         /// </summary>
         private static Expression CreateTypeRestriction(Expression expression, Type rt) {
-            // Null is special. True if expression produces null.
-            if (rt == typeof(DynamicNull)) {
-                return Expression.Equal(expression, Expression.Constant(null));
-            }
             return Expression.TypeEqual(expression, rt);
         }
 

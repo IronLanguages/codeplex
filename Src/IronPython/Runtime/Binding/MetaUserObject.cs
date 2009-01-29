@@ -199,7 +199,7 @@ namespace IronPython.Runtime.Binding {
                     )
                 );
 
-                if (typeof(Extensible<>).MakeGenericType(convertToAction.Type).IsAssignableFrom(self.LimitType)) {
+                if (typeof(Extensible<>).MakeGenericType(convertToAction.Type).IsAssignableFrom(self.GetLimitType())) {
                     // if we're doing a conversion to the underlying type and we're an 
                     // Extensible<T> of that type:
 
@@ -234,7 +234,7 @@ namespace IronPython.Runtime.Binding {
                             convertToAction.Defer(this).Expression
                         )
                     ),
-                    self.Restrict(self.RuntimeType).Restrictions
+                    self.Restrict(self.GetRuntimeType()).Restrictions
                 );
             }
 
@@ -250,8 +250,8 @@ namespace IronPython.Runtime.Binding {
                     Ast.Condition(
                         Ast.Equal(tmp, self.Expression),
                         Ast.Property(
-                            Ast.Convert(self.Expression, self.LimitType),
-                            self.LimitType.GetProperty("Value")
+                            Ast.Convert(self.Expression, self.GetLimitType()),
+                            self.GetLimitType().GetProperty("Value")
                         ),
                         Binders.Convert(
                             BinderState.GetBinderState(convertToAction),

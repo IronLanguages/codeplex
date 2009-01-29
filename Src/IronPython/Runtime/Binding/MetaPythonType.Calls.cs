@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Binding {
 
             DynamicMetaObject self = new RestrictedMetaObject(
                 AstUtils.Convert(Expression, LimitType),
-                BindingRestrictions.GetTypeRestriction(Expression, LimitType),
+                BindingRestrictionsHelpers.GetRuntimeTypeRestriction(Expression, LimitType),
                 Value
             );
             ArgumentValues ai = new ArgumentValues(BindingHelpers.GetCallSignature(call), self, args);
@@ -138,7 +138,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             // then get the statement for calling __init__
-            ParameterExpression allocatedInst = Ast.Variable(createExpr.LimitType, "newInst");
+            ParameterExpression allocatedInst = Ast.Variable(createExpr.GetLimitType(), "newInst");
             Expression tmpRead = allocatedInst;
             DynamicMetaObject initCall = initAdapter.MakeInitCall(
                 state.Binder,
@@ -616,12 +616,12 @@ namespace IronPython.Runtime.Binding {
         }
 
         private BindingRestrictions/*!*/ GetErrorRestrictions(ArgumentValues/*!*/ ai) {
-            BindingRestrictions res = Restrict(RuntimeType).Restrictions;
+            BindingRestrictions res = Restrict(this.GetRuntimeType()).Restrictions;
             res = res.Merge(GetInstanceRestriction(ai));
 
             foreach (DynamicMetaObject mo in ai.Arguments) {
-                if (mo.HasValue) {                    
-                    res = res.Merge(mo.Restrict(mo.RuntimeType).Restrictions);
+                if (mo.HasValue) {
+                    res = res.Merge(mo.Restrict(mo.GetRuntimeType()).Restrictions);
                 }
             }
 

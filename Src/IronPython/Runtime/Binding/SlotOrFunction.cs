@@ -24,6 +24,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -66,7 +67,7 @@ namespace IronPython.Runtime.Binding {
 
         public Type/*!*/ ReturnType {
             get {
-                return _target.LimitType;
+                return _target.GetLimitType();
             }
         }
 
@@ -169,7 +170,7 @@ namespace IronPython.Runtime.Binding {
                                 )
                             )
                         ),
-                        BindingRestrictions.Combine(types).Merge(BindingRestrictions.GetTypeRestriction(types[0].Expression, types[0].LimitType))
+                        BindingRestrictions.Combine(types).Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(types[0].Expression, types[0].GetLimitType()))
                     )
                 );
             }

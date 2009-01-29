@@ -215,12 +215,12 @@ namespace IronPython.Runtime.Binding {
 
         private static void RestrictTypes(DynamicMetaObject/*!*/[] types) {
             for (int i = 0; i < types.Length; i++) {
-                types[i] = types[i].Restrict(types[i].LimitType);
+                types[i] = types[i].Restrict(types[i].GetLimitType());
             }
         }
 
         private static DynamicMetaObject/*!*/ MakeHashOperation(OperationBinder/*!*/ operation, DynamicMetaObject/*!*/ self) {
-            self = self.Restrict(self.LimitType);
+            self = self.Restrict(self.GetLimitType());
 
             BinderState state = BinderState.GetBinderState(operation);
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(state, Symbols.Hash, self);
@@ -286,7 +286,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static DynamicMetaObject/*!*/ MakeUnaryOperation(OperationBinder/*!*/ operation, DynamicMetaObject/*!*/ self) {
-            self = self.Restrict(self.LimitType);
+            self = self.Restrict(self.GetLimitType());
 
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.OperatorToSymbol(operation.Operation), self);
 
@@ -299,7 +299,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static DynamicMetaObject/*!*/ MakeUnaryNotOperation(OperationBinder/*!*/ operation, DynamicMetaObject/*!*/ self) {
-            self = self.Restrict(self.LimitType);
+            self = self.Restrict(self.GetLimitType());
 
             SlotOrFunction nonzero = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.NonZero, self);
             SlotOrFunction length = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.Length, self);
@@ -308,7 +308,7 @@ namespace IronPython.Runtime.Binding {
 
             if (!nonzero.Success && !length.Success) {
                 // always False or True for None
-                notExpr = self.LimitType == typeof(DynamicNull) ? Ast.Constant(true) : Ast.Constant(false);
+                notExpr = (self.GetLimitType() == typeof(DynamicNull)) ? Ast.Constant(true) : Ast.Constant(false);
             } else {
                 SlotOrFunction target = nonzero.Success ? nonzero : length;
 
@@ -371,14 +371,14 @@ namespace IronPython.Runtime.Binding {
         private static DynamicMetaObject/*!*/ MakeMemberNamesOperation(OperationBinder/*!*/ operation, DynamicMetaObject[] args) {
             DynamicMetaObject self = args[0];
             CodeContext context;
-            if (args.Length > 1 && args[0].LimitType == typeof(CodeContext)) {
+            if (args.Length > 1 && args[0].GetLimitType() == typeof(CodeContext)) {
                 self = args[1];
                 context = (CodeContext)args[0].Value;
             } else {
                 context = BinderState.GetBinderState(operation).Context;
             }
 
-            if (typeof(IMembersList).IsAssignableFrom(self.LimitType)) {
+            if (typeof(IMembersList).IsAssignableFrom(self.GetLimitType())) {
                 return BinderState.GetBinderState(operation).Binder.DoOperation(operation.Operation, BinderState.GetCodeContext(operation), args);
             }
 
@@ -449,11 +449,11 @@ namespace IronPython.Runtime.Binding {
             DynamicMetaObject self = args[0];
             
             // only applies when called from a Python site
-            if (typeof(Delegate).IsAssignableFrom(self.LimitType) ||
-                typeof(MethodGroup).IsAssignableFrom(self.LimitType)) {
+            if (typeof(Delegate).IsAssignableFrom(self.GetLimitType()) ||
+                typeof(MethodGroup).IsAssignableFrom(self.GetLimitType())) {
                 return new DynamicMetaObject(
                     Ast.Constant(true),
-                    self.Restrict(self.LimitType).Restrictions
+                    self.Restrict(self.GetLimitType()).Restrictions
                 );
             }
 
@@ -471,7 +471,7 @@ namespace IronPython.Runtime.Binding {
 
             return new DynamicMetaObject(
                 isCallable,
-                self.Restrict(self.LimitType).Restrictions
+                self.Restrict(self.GetLimitType()).Restrictions
             );
         }
 
@@ -513,7 +513,7 @@ namespace IronPython.Runtime.Binding {
 
             if (oper == StandardOperators.Multiply && 
                 IsSequence(types[0]) && 
-                !PythonOps.IsNonExtensibleNumericType(types[1].LimitType)) {
+                !PythonOps.IsNonExtensibleNumericType(types[1].GetLimitType())) {
                 // class M:
                 //      def __rmul__(self, other):
                 //          print "CALLED"
@@ -574,9 +574,9 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static bool IsSequence(DynamicMetaObject/*!*/ metaObject) {
-            if (typeof(List).IsAssignableFrom(metaObject.LimitType) ||
-                typeof(PythonTuple).IsAssignableFrom(metaObject.LimitType) ||
-                typeof(String).IsAssignableFrom(metaObject.LimitType)) {
+            if (typeof(List).IsAssignableFrom(metaObject.GetLimitType()) ||
+                typeof(PythonTuple).IsAssignableFrom(metaObject.GetLimitType()) ||
+                typeof(String).IsAssignableFrom(metaObject.GetLimitType())) {
                 return true;
             }
             return false;
@@ -1069,9 +1069,9 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static DynamicMetaObject FastPathCompare(DynamicMetaObject/*!*/[] types) {
-            if (types[0].LimitType == types[1].LimitType) {
+            if (types[0].GetLimitType() == types[1].GetLimitType()) {
                 // fast paths for comparing some types which don't define __cmp__
-                if (types[0].LimitType == typeof(List)) {
+                if (types[0].GetLimitType() == typeof(List)) {
                     types[0] = types[0].Restrict(typeof(List));
                     types[1] = types[1].Restrict(typeof(List));
 
@@ -1083,7 +1083,7 @@ namespace IronPython.Runtime.Binding {
                         ),
                         BindingRestrictions.Combine(types)
                     );
-                } else if (types[0].LimitType == typeof(PythonTuple)) {
+                } else if (types[0].GetLimitType() == typeof(PythonTuple)) {
                     types[0] = types[0].Restrict(typeof(PythonTuple));
                     types[1] = types[1].Restrict(typeof(PythonTuple));
 
@@ -1095,7 +1095,7 @@ namespace IronPython.Runtime.Binding {
                         ),
                         BindingRestrictions.Combine(types)
                     );
-                } else if (types[0].LimitType == typeof(double)) {
+                } else if (types[0].GetLimitType() == typeof(double)) {
                     types[0] = types[0].Restrict(typeof(double));
                     types[1] = types[1].Restrict(typeof(double));
 
@@ -1222,7 +1222,7 @@ namespace IronPython.Runtime.Binding {
         /// a __*item__ method.  
         private static DynamicMetaObject/*!*/ MakeIndexerOperation(OperationBinder/*!*/ operation, DynamicMetaObject/*!*/[]/*!*/ types) {
             SymbolId item, slice;
-            DynamicMetaObject indexedType = types[0].Restrict(types[0].LimitType);
+            DynamicMetaObject indexedType = types[0].Restrict(types[0].GetLimitType());
             BinderState state = BinderState.GetBinderState(operation);
             BuiltinFunction itemFunc = null;
             PythonTypeSlot itemSlot = null;
@@ -1284,7 +1284,7 @@ namespace IronPython.Runtime.Binding {
         private static DynamicMetaObject/*!*/[]/*!*/ ConvertArgs(DynamicMetaObject/*!*/[]/*!*/ types) {
             DynamicMetaObject[] res = new DynamicMetaObject[types.Length];
             for (int i = 0; i < types.Length; i++) {
-                res[i] = types[i].Restrict(types[i].LimitType);
+                res[i] = types[i].Restrict(types[i].GetLimitType());
             }
             return res;
         }
@@ -1296,15 +1296,15 @@ namespace IronPython.Runtime.Binding {
             DynamicMetaObject[] args;
             if (op == StandardOperators.SetSlice) {
                 args = new DynamicMetaObject[] { 
-                    types[0].Restrict(types[0].LimitType),
+                    types[0].Restrict(types[0].GetLimitType()),
                     GetSetSlice(types), 
-                    types[types.Length- 1].Restrict(types[types.Length - 1].LimitType)
+                    types[types.Length- 1].Restrict(types[types.Length - 1].GetLimitType())
                 };
             } else {
                 Debug.Assert(op == StandardOperators.GetSlice || op == StandardOperators.DeleteSlice);
 
                 args = new DynamicMetaObject[] { 
-                    types[0].Restrict(types[0].LimitType),
+                    types[0].Restrict(types[0].GetLimitType()),
                     GetGetOrDeleteSlice(state, types)
                 };
             }
@@ -1435,7 +1435,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             public override DynamicMetaObject[] GetTupleArguments(DynamicMetaObject[] arguments) {
-                if (arguments[0].LimitType == typeof(OldInstance)) {
+                if (arguments[0].GetLimitType() == typeof(OldInstance)) {
                     // old instances are special in that they take only a single parameter
                     // in their indexer but accept multiple parameters as tuples.
                     return base.GetTupleArguments(arguments);
@@ -1573,31 +1573,31 @@ namespace IronPython.Runtime.Binding {
                 Debug.Assert(args.Length > 2);  // index 1 and 2 should be our slice indexes, we might have another arg if we're a setter
                 args = ArrayUtils.Copy(args);
                 for (int i = 1; i < 3; i++) {
-                    args[i] = args[i].Restrict(args[i].LimitType);
+                    args[i] = args[i].Restrict(args[i].GetLimitType());
 
-                    if (args[i].LimitType == typeof(MissingParameter)) {
+                    if (args[i].GetLimitType() == typeof(MissingParameter)) {
                         switch (i) {
                             case 1: args[i] = new DynamicMetaObject(Ast.Constant(0), args[i].Restrictions); break;
                             case 2: args[i] = new DynamicMetaObject(Ast.Constant(Int32.MaxValue), args[i].Restrictions); break;
                         }
-                    } else if (args[i].LimitType == typeof(int)) {
+                    } else if (args[i].GetLimitType() == typeof(int)) {
                         args[i] = MakeIntTest(args[0], args[i]);
-                    } else if (args[i].LimitType.IsSubclassOf(typeof(Extensible<int>))) {
+                    } else if (args[i].GetLimitType().IsSubclassOf(typeof(Extensible<int>))) {
                         args[i] = MakeIntTest(
                             args[0],
                             new DynamicMetaObject(
                                 Ast.Property(
                                     args[i].Expression,
-                                    args[i].LimitType.GetProperty("Value")
+                                    args[i].GetLimitType().GetProperty("Value")
                                 ),
                                 args[i].Restrictions
                             )
                         );
-                    } else if (args[i].LimitType == typeof(BigInteger)) {
+                    } else if (args[i].GetLimitType() == typeof(BigInteger)) {
                         args[i] = MakeBigIntTest(args[0], args[i]);
-                    } else if (args[i].LimitType.IsSubclassOf(typeof(Extensible<BigInteger>))) {
-                        args[i] = MakeBigIntTest(args[0], new DynamicMetaObject(Ast.Property(args[i].Expression, args[i].LimitType.GetProperty("Value")), args[i].Restrictions));
-                    } else if (args[i].LimitType == typeof(bool)) {
+                    } else if (args[i].GetLimitType().IsSubclassOf(typeof(Extensible<BigInteger>))) {
+                        args[i] = MakeBigIntTest(args[0], new DynamicMetaObject(Ast.Property(args[i].Expression, args[i].GetLimitType().GetProperty("Value")), args[i].Restrictions));
+                    } else if (args[i].GetLimitType() == typeof(bool)) {
                         args[i] = new DynamicMetaObject(
                             Ast.Condition(args[i].Expression, Ast.Constant(1), Ast.Constant(0)),
                             args[i].Restrictions
@@ -1704,7 +1704,7 @@ namespace IronPython.Runtime.Binding {
                 DynamicMetaObject[] tupleArgs = Callable.GetTupleArguments(args);
                 return Callable.CompleteRuleTarget(tupleArgs, delegate() {
                     PythonTypeSlot indexSlot;
-                    if (args[1].LimitType != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.Context, Symbols.Index, out indexSlot)) {
+                    if (args[1].GetLimitType() != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.Context, Symbols.Index, out indexSlot)) {
                         args[1] = new DynamicMetaObject(
                             Ast.Dynamic(
                                 new PythonInvokeBinder(
@@ -1747,8 +1747,8 @@ namespace IronPython.Runtime.Binding {
 
         private static bool IsIndexType(BinderState/*!*/ state, DynamicMetaObject/*!*/ obj) {
             bool numeric = true;
-            if (obj.LimitType != typeof(MissingParameter) &&
-                !PythonOps.IsNumericType(obj.LimitType)) {
+            if (obj.GetLimitType() != typeof(MissingParameter) &&
+                !PythonOps.IsNumericType(obj.GetLimitType())) {
 
                 PythonType curType = MetaPythonObject.GetPythonType(obj);
                 PythonTypeSlot dummy;
@@ -1809,7 +1809,7 @@ namespace IronPython.Runtime.Binding {
             DynamicMetaObject[] newArgs = (DynamicMetaObject[])args.Clone();
             for (int i = 1; i < newArgs.Length; i++) {
                 if (!IsIndexType(state, newArgs[i])) {
-                    newArgs[i] = newArgs[i].Restrict(newArgs[i].LimitType);
+                    newArgs[i] = newArgs[i].Restrict(newArgs[i].GetLimitType());
                 }
             }
 
