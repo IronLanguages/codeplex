@@ -76,7 +76,7 @@ namespace IronPython.Runtime.Types {
 
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
-        private static readonly Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
+        private static readonly CommonDictionaryStorage _pythonTypes = new CommonDictionaryStorage();
         internal static PythonType _pythonTypeType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
         private static readonly WeakReference[] _emptyWeakRef = new WeakReference[0];
 
@@ -557,17 +557,19 @@ namespace IronPython.Runtime.Types {
         /// <param name="type"></param>
         /// <returns></returns>
         internal static PythonType/*!*/ GetPythonType(Type type) {
-            PythonType res;
+            object res;
             
-            lock (_pythonTypes) {
-                if (!_pythonTypes.TryGetValue(type, out res)) {
-                    res = new PythonType(type);                    
+            if (!_pythonTypes.TryGetValue(type, out res)) {
+                lock (_pythonTypes) {
+                    if (!_pythonTypes.TryGetValue(type, out res)) {
+                        res = new PythonType(type);
 
-                    _pythonTypes[type] = res;
+                        _pythonTypes.Add(type, res);
+                    }
                 }
             }
 
-            return res;
+            return (PythonType)res;
         }
 
         /// <summary>

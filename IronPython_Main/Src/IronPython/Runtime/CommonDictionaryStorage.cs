@@ -25,6 +25,7 @@ using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -55,17 +56,17 @@ namespace IronPython.Runtime {
         private int _count;
         private Func<object, int> _hashFunc;
         private Func<object, object, bool> _eqFunc;
-        private PythonType _keyType;
+        private Type _keyType;
 
         private const int InitialBucketSize = 7;
         private const int ResizeMultiplier = 3;
 
         // pre-created delegate instances shared by all homogeneous dictionaries for primitive types.
         private static readonly Func<object, int> _primitiveHash = PrimitiveHash, _doubleHash = DoubleHash, _intHash = IntHash, _tupleHash = TupleHash, _genericHash = GenericHash;
-        private static readonly Func<object, object, bool> _intEquals = IntEquals, _doubleEquals = DoubleEquals, _stringEquals = StringEquals, _tupleEquals = TupleEquals, _genericEquals = GenericEquals;
+        private static readonly Func<object, object, bool> _intEquals = IntEquals, _doubleEquals = DoubleEquals, _stringEquals = StringEquals, _tupleEquals = TupleEquals, _genericEquals = GenericEquals, _objectEq = System.Object.ReferenceEquals;
 
         // marker type used to indicate we've gone megamorphic
-        private static readonly PythonType HeterogeneousType = new PythonType();
+        private static readonly Type HeterogeneousType = typeof(CommonDictionaryStorage);   // a type we can never see here.
 
         /// <summary>
         /// Creates a new dictionary storage with no buckets
@@ -103,7 +104,7 @@ namespace IronPython.Runtime {
 
             if (t != null) {
                 // homogeneous collection
-                UpdateHelperFunctions(t);
+                UpdateHelperFunctions(t, items[1]);
             }
 
             for (int i = 0; i < items.Length / 2; i++) {
@@ -121,7 +122,7 @@ namespace IronPython.Runtime {
         /// Creates a new dictionary storage with the given set of buckets
         /// and size.  Used when cloning the dictionary storage.
         /// </summary>
-        private CommonDictionaryStorage(Bucket[] buckets, int count, PythonType keyType, Func<object, int> hashFunc, Func<object, object, bool> eqFunc) {
+        private CommonDictionaryStorage(Bucket[] buckets, int count, Type keyType, Func<object, int> hashFunc, Func<object, object, bool> eqFunc) {
             _buckets = buckets;
             _count = count;
             _keyType = keyType;
@@ -153,9 +154,9 @@ namespace IronPython.Runtime {
                 Initialize();
             }
 
-            PythonType t = DynamicHelpers.GetPythonType(key);
+            Type t = CompilerHelpers.GetType(key);
             if (t != _keyType && _keyType != HeterogeneousType) {
-                UpdateHelperFunctions(t);
+                UpdateHelperFunctions(t, key);
             }
 
             AddOne(key, value);
@@ -172,25 +173,29 @@ namespace IronPython.Runtime {
             }
         }
 
-        private void UpdateHelperFunctions(PythonType t) {
+        private void UpdateHelperFunctions(Type t, object key) {
             if (_keyType == null) {
                 // first time through, get the sites for this specific type...
-                if (t == TypeCache.Int32) {
+                if (t == typeof(int)) {
                     _hashFunc = _intHash;
                     _eqFunc = _intEquals;
-                } else if (t == TypeCache.String) {
+                } else if (t == typeof(string)) {
                     _hashFunc = _primitiveHash;
                     _eqFunc = _stringEquals;
-                } else if (t == TypeCache.Double) {
+                } else if (t == typeof(double)) {
                     _hashFunc = _doubleHash;
                     _eqFunc = _doubleEquals;
-                } else if (t == TypeCache.PythonTuple) {
+                } else if (t == typeof(PythonTuple)) {
                     _hashFunc = _tupleHash;
                     _eqFunc = _tupleEquals;
+                } else if(t == typeof(Type).GetType()) {    // this odd check checks for RuntimeType.
+                    _hashFunc = _primitiveHash;
+                    _eqFunc = _objectEq;
                 } else {
                     // random type, but still homogeneous... get a shared site for this type.
-                    var hashSite = DefaultContext.DefaultPythonContext.GetHashSite(t);
-                    var equalSite = DefaultContext.DefaultPythonContext.GetEqualSite(t);
+                    PythonType pt = DynamicHelpers.GetPythonType(key);
+                    var hashSite = DefaultContext.DefaultPythonContext.GetHashSite(pt);
+                    var equalSite = DefaultContext.DefaultPythonContext.GetEqualSite(pt);
 
                     AssignSiteDelegates(hashSite, equalSite);
                 }
@@ -305,7 +310,7 @@ namespace IronPython.Runtime {
 
                 Func<object, int> hashFunc;
                 Func<object, object, bool> eqFunc;
-                if (DynamicHelpers.GetPythonType(key) == _keyType || _keyType == HeterogeneousType) {
+                if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
                     hashFunc = _hashFunc;
                     eqFunc = _eqFunc;
                 } else {
@@ -378,7 +383,7 @@ namespace IronPython.Runtime {
             if (HasAnyValues(buckets)) {
                 int hc;
                 Func<object, object, bool> eqFunc;
-                if (DynamicHelpers.GetPythonType(key) == _keyType || _keyType == HeterogeneousType) {
+                if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
                     hc = _hashFunc(key) & Int32.MaxValue;
                     eqFunc = _eqFunc;
                 } else {
@@ -438,7 +443,7 @@ namespace IronPython.Runtime {
 
         public override bool HasNonStringAttributes() {
             lock (this) {
-                if (_keyType != TypeCache.String && _buckets != null) {
+                if (_keyType != typeof(string) && _buckets != null) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
                         while (curBucket != null) {
