@@ -315,6 +315,52 @@ namespace IronPython.Runtime {
             return PythonOps.Compare(context, x, y);
         }
 
+        // having a cmp overload for double would be nice, but it breaks:
+        // x = 1e66666
+        // y = x/x
+        // cmp(y,y)
+        // which returns 0 because id(y) == id(y).  If we added a double overload
+        // we lose object identity.
+
+        public static int cmp(CodeContext/*!*/ context, int x, int y) {
+            return Int32Ops.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]BigInteger x, [NotNull]BigInteger y) {
+            if ((object)x == (object)y) {
+                return 0;
+            }
+            return BigIntegerOps.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, double x, [NotNull]BigInteger y) {
+            return -BigIntegerOps.Compare(y, x);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]BigInteger x, double y) {
+            return BigIntegerOps.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]string x, [NotNull]string y) {
+            if ((object)x != (object)y) {
+                int res = string.CompareOrdinal(x, y);
+                if (res >= 1) {
+                    return 1;
+                } else if (res <= -1) {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]PythonTuple x, [NotNull]PythonTuple y) {
+            if ((object)x == (object)y) {
+                return 0;
+            }
+            return x.CompareTo(y);
+        }
+
         public static PythonType complex {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(Complex64));
@@ -592,7 +638,16 @@ namespace IronPython.Runtime {
         }
 
         public static int hash(CodeContext/*!*/ context, object o) {
-            return PythonOps.Hash(context, o);
+            return PythonContext.GetContext(context).Hash(o);
+        }
+
+        // this is necessary because overload resolution selects the int form.
+        public static int hash(CodeContext/*!*/ context, char o) {
+            return PythonContext.GetContext(context).Hash(o);
+        }
+
+        public static int hash(CodeContext/*!*/ context, int o) {
+            return o;
         }
 
         public static void help(CodeContext/*!*/ context, object o) {

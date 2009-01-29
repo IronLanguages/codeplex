@@ -2482,6 +2482,25 @@ namespace IronPython.Runtime {
         }
 
         internal int Hash(object o) {
+            if (o != null) {
+                switch (Type.GetTypeCode(o.GetType())) {
+                    case TypeCode.Int32: return Int32Ops.__hash__((int)o);
+                    case TypeCode.String: return o.GetHashCode();
+                    case TypeCode.Double: return DoubleOps.__hash__((double)o);
+                    case TypeCode.Int16: return Int16Ops.__hash__((short)o);
+                    case TypeCode.Int64: return Int64Ops.__hash__((long)o);
+                    case TypeCode.SByte: return SByteOps.__hash__((sbyte)o);
+                    case TypeCode.Single: return SingleOps.__hash__((float)o);
+                    case TypeCode.UInt16: return UInt16Ops.__hash__((ushort)o);
+                    case TypeCode.UInt32: return UInt32Ops.__hash__((uint)o);
+                    case TypeCode.UInt64: return UInt64Ops.__hash__((ulong)o);
+                    case TypeCode.Decimal: return DecimalOps.__hash__((decimal)o);
+                    case TypeCode.DateTime: return ((DateTime)o).GetHashCode();
+                    case TypeCode.Boolean: return ((bool)o).GetHashCode();
+                    case TypeCode.Byte: return ByteOps.__hash__((byte)o);
+                }
+            }
+
             return DynamicHelpers.GetPythonType(o).Hash(o);
         }
 
