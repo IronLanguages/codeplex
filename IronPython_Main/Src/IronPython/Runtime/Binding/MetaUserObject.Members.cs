@@ -589,7 +589,7 @@ namespace IronPython.Runtime.Binding {
 
         private DynamicMetaObject/*!*/ MakeDeleteMemberRule(DeleteBindingInfo/*!*/ info) {
             CodeContext context = BinderState.GetBinderState(info.Action).Context;
-            DynamicMetaObject self = info.Args[0].Restrict(info.Args[0].RuntimeType);
+            DynamicMetaObject self = info.Args[0].Restrict(info.Args[0].GetRuntimeType());
 
             IPythonObject sdo = info.Args[0].Value as IPythonObject;
             if (info.Action.Name == "__class__") {

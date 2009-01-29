@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Binding {
                 return DynamicHelpers.GetPythonType(value.Value);
             }
 
-            return DynamicHelpers.GetPythonTypeFromType(value.LimitType);
+            return DynamicHelpers.GetPythonTypeFromType(value.GetLimitType());
         }
 
         public static Expression MakeTypeTests(DynamicMetaObject metaSelf, params DynamicMetaObject/*!*/[] args) {

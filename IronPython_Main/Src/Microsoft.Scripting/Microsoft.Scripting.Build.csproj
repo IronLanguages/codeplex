@@ -380,6 +380,7 @@
       <Compile Include="Runtime\BaseSymbolDictionary.cs" />
       <Compile Include="Runtime\BinderOps.cs" />
       <Compile Include="Runtime\BinderType.cs" />
+      <Compile Include="Runtime\BindingRestrictionsHelpers.cs" />
       <Compile Include="Runtime\CallTargets.cs" />
       <Compile Include="Runtime\CallTypes.cs" />
       <Compile Include="Runtime\Cast.cs" />
@@ -396,6 +397,7 @@
       <Compile Include="Runtime\DlrConfiguration.cs" />
       <Compile Include="Runtime\DocumentationAttribute.cs" />
       <Compile Include="Runtime\DynamicLanguageProviderAttribute.cs" />
+      <Compile Include="Runtime\DynamicNull.cs" />
       <Compile Include="Runtime\DynamicOperations.cs" />
       <Compile Include="Runtime\DynamicRuntimeHostingProvider.cs" />
       <Compile Include="Runtime\DynamicStackFrame.cs" />

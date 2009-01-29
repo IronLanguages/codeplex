@@ -134,7 +134,7 @@ namespace IronPython.Runtime.Binding {
 
         private DynamicMetaObject/*!*/ MakeSelfCall(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[]/*!*/ args) {
             BindingRestrictions selfRestrict = Restrictions.Merge(
-                BindingRestrictions.GetTypeRestriction(
+                BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
                     Expression,
                     typeof(BuiltinFunction)
                 )
@@ -209,7 +209,7 @@ namespace IronPython.Runtime.Binding {
             Assert.NotNull(instance, testType);
             object instanceValue = Value.__self__;
 
-            BindingRestrictions restrictions = BindingRestrictions.GetTypeRestriction(instance, testType);
+            BindingRestrictions restrictions = BindingRestrictionsHelpers.GetRuntimeTypeRestriction(instance, testType);
             // cast the instance to the correct type
             if (CompilerHelpers.IsStrongBox(instanceValue)) {
                 instance = ReadStrongBoxValue(instance);

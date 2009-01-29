@@ -132,7 +132,7 @@ namespace IronPython.Runtime.Binding {
                 case "__class__":
                 case "__bases__":
                 case "__name__":
-                    DynamicMetaObject self = Restrict(RuntimeType);
+                    DynamicMetaObject self = Restrict(this.GetRuntimeType());
                     ValidationInfo valInfo = MakeMetaTypeTest(self.Expression);
 
                     return BindingHelpers.AddDynamicTestAndDefer(

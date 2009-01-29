@@ -404,7 +404,7 @@ namespace IronPython.Runtime.Types {
                            args[index].Expression,
                            Ast.Constant(Name)
                         ),
-                        BindingRestrictions.GetTypeRestriction(dict.Expression, dict.LimitType),
+                        BindingRestrictionsHelpers.GetRuntimeTypeRestriction(dict.Expression, dict.GetLimitType()),
                         PythonOps.UserMappingToPythonDictionary(BinderState.GetBinderState(call).Context, dict.Value, Name)
                     );
 
@@ -421,7 +421,7 @@ namespace IronPython.Runtime.Types {
                             typeof(object),
                             DynamicUtils.GetExpressions(dynamicArgs)
                         ),
-                        BindingRestrictions.Combine(dynamicArgs).Merge(BindingRestrictions.GetTypeRestriction(dict.Expression, dict.LimitType))
+                        BindingRestrictions.Combine(dynamicArgs).Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(dict.Expression, dict.GetLimitType()))
                     );
                 }
             }

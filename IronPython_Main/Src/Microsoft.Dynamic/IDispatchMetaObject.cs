@@ -181,8 +181,9 @@ namespace Microsoft.Scripting {
 
         private DynamicMetaObject TryPropertyPut(SetMemberBinder binder, DynamicMetaObject value) {
             ComMethodDesc method;
-            if (_self.TryGetPropertySetter(binder.Name, out method, value.LimitType) ||
-                _self.TryGetPropertySetterExplicit(binder.Name, out method, value.LimitType)) {
+            bool holdsNull = value.Value == null && value.HasValue;
+            if (_self.TryGetPropertySetter(binder.Name, out method, value.LimitType, holdsNull) ||
+                _self.TryGetPropertySetterExplicit(binder.Name, out method, value.LimitType, holdsNull)) {
                 BindingRestrictions restrictions = IDispatchRestriction();
                 Expression dispatch =
                     Expression.Property(

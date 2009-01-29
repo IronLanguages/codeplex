@@ -64,7 +64,7 @@ namespace Microsoft.Scripting {
         protected virtual ComUnwrappedMetaObject UnwrapSelf() {
             return new ComUnwrappedMetaObject(
                 ComObject.RcwFromComObject(Expression),
-                Restrictions.Merge(BindingRestrictions.GetTypeRestriction(Expression, LimitType)),
+                Restrictions.Merge(ComBinderHelpers.GetTypeRestrictionForDynamicMetaObject(this)),
                 ((ComObject)Value).RuntimeCallableWrapper
             );
         }

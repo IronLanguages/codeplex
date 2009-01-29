@@ -12,10 +12,9 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-
-
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Represents the type of a null value.
     /// </summary>

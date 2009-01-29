@@ -215,10 +215,10 @@ namespace IronPython.Runtime.Binding {
                     Ast.Constant(_func.Value.FunctionCompatibility)
                 );
 
-                return BindingRestrictions.GetTypeRestriction(
+                return BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
                     _func.Expression, typeof(PythonFunction)
                 ).Merge(
-                    BindingRestrictions.GetTypeRestriction(
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("FunctionGetTarget"),
                             Ast.Convert(_func.Expression, typeof(PythonFunction))
@@ -670,15 +670,15 @@ namespace IronPython.Runtime.Binding {
             private DynamicMetaObject/*!*/ MakeDictionaryCopy(DynamicMetaObject/*!*/ userDict) {
                 Debug.Assert(_dict == null);
 
-                userDict = userDict.Restrict(userDict.LimitType);
+                userDict = userDict.Restrict(userDict.GetLimitType());
                 _temps.Add(_dict = Ast.Variable(typeof(PythonDictionary), "$dict"));                
 
                 EnsureInit();
 
                 string methodName;
-                if (typeof(PythonDictionary).IsAssignableFrom(userDict.LimitType)) {
+                if (typeof(PythonDictionary).IsAssignableFrom(userDict.GetLimitType())) {
                     methodName = "CopyAndVerifyPythonDictionary";
-                } else if (typeof(IDictionary).IsAssignableFrom(userDict.LimitType)) {
+                } else if (typeof(IDictionary).IsAssignableFrom(userDict.GetLimitType())) {
                     methodName = "CopyAndVerifyDictionary";
                 } else {
                     methodName = "CopyAndVerifyUserMapping";
@@ -690,7 +690,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod(methodName),
                             GetFunctionParam(),
-                            AstUtils.Convert(userDict.Expression, userDict.LimitType)
+                            AstUtils.Convert(userDict.Expression, userDict.GetLimitType())
                         )
                     )
                 );
@@ -924,14 +924,14 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonFunction)
                     )
                 ),
-                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
+                BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 
         private DynamicMetaObject MakeIsCallableRule(DynamicMetaObject/*!*/ self) {
             return new DynamicMetaObject(
                 Ast.Constant(true),
-                BindingRestrictions.GetTypeRestriction(self.Expression, typeof(PythonFunction))
+                BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }
 

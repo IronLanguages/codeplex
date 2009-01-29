@@ -248,7 +248,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal bool TryGetPropertySetterExplicit(string name, out ComMethodDesc method, Type limitType) {
+        internal bool TryGetPropertySetterExplicit(string name, out ComMethodDesc method, Type limitType, bool holdsNull) {
             EnsureScanDefinedMethods();
 
             int dispId;
@@ -263,7 +263,7 @@ namespace Microsoft.Scripting {
                 ComMethodDesc putref = new ComMethodDesc(name, dispId, ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF);
                 _comTypeDesc.AddPutRef(name, putref);
 
-                if (ComBinderHelpers.PreferPut(limitType)) {
+                if (ComBinderHelpers.PreferPut(limitType, holdsNull)) {
                     method = put;
                 } else {
                     method = putref;
@@ -589,10 +589,10 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal bool TryGetPropertySetter(string name, out ComMethodDesc method, Type limitType) {
+        internal bool TryGetPropertySetter(string name, out ComMethodDesc method, Type limitType, bool holdsNull) {
             EnsureScanDefinedMethods();
 
-            if (ComBinderHelpers.PreferPut(limitType)) {
+            if (ComBinderHelpers.PreferPut(limitType, holdsNull)) {
                 return _comTypeDesc.TryGetPut(name, out method) ||
                     _comTypeDesc.TryGetPutRef(name, out method);
             } else {

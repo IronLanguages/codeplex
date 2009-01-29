@@ -443,7 +443,7 @@ namespace Microsoft.Scripting {
             private BindingRestrictions GetRestrictions() {
                 Debug.Assert(Restrictions == BindingRestrictions.Empty, "We don't merge, restrictions are always empty");
 
-                return BindingRestrictions.GetTypeRestriction(Expression, LimitType);
+                return BindingRestrictions.GetTypeRestriction(this);
             }
 
             public new ExpandoObject Value {
