@@ -155,9 +155,12 @@ class CodeWriter:
         self.writeline("} finally {")
         self.indent()
 
-    def exit_block(self):
+    def exit_block(self, text=None, **kw):
         self.dedent()
-        self.writeline('}')
+        if text:
+            self.writeline("} " + text, **kw)
+        else:
+            self.writeline('}')
 
     def text(self):
         return '\n'.join(self.lines)

@@ -63,7 +63,7 @@ namespace Microsoft.Runtime.CompilerServices {
             // A stack of variables that are defined in nested scopes. We search
             // this first when resolving a variable in case a nested scope shadows
             // one of our variable instances.
-            private readonly Stack<Set<ParameterExpression>> _hiddenVars = new Stack<Set<ParameterExpression>>();
+            private readonly Stack<Set<ParameterExpression>> _shadowedVars = new Stack<Set<ParameterExpression>>();
 
             internal ExpressionQuoter(HoistedLocals scope, object[] locals) {
                 _scope = scope;
@@ -71,9 +71,9 @@ namespace Microsoft.Runtime.CompilerServices {
             }
 
             protected internal override Expression VisitLambda<T>(Expression<T> node) {
-                _hiddenVars.Push(new Set<ParameterExpression>(node.Parameters));
+                _shadowedVars.Push(new Set<ParameterExpression>(node.Parameters));
                 Expression b = Visit(node.Body);
-                _hiddenVars.Pop();
+                _shadowedVars.Pop();
                 if (b == node.Body) {
                     return node;
                 }
@@ -81,9 +81,13 @@ namespace Microsoft.Runtime.CompilerServices {
             }
 
             protected internal override Expression VisitBlock(BlockExpression node) {
-                _hiddenVars.Push(new Set<ParameterExpression>(node.Variables));
+                if (node.Variables.Count > 0) {
+                    _shadowedVars.Push(new Set<ParameterExpression>(node.Variables));
+                }
                 var b = Visit(node.Expressions);
-                _hiddenVars.Pop();
+                if (node.Variables.Count > 0) {
+                    _shadowedVars.Pop();
+                }
                 if (b == node.Expressions) {
                     return node;
                 }
@@ -91,10 +95,14 @@ namespace Microsoft.Runtime.CompilerServices {
             }
 
             protected override CatchBlock VisitCatchBlock(CatchBlock node) {
-                _hiddenVars.Push(new Set<ParameterExpression>(new[] { node.Variable }));
+                if (node.Variable != null) {
+                    _shadowedVars.Push(new Set<ParameterExpression>(new[] { node.Variable }));
+                }
                 Expression b = Visit(node.Body);
                 Expression f = Visit(node.Filter);
-                _hiddenVars.Pop();
+                if (node.Variable != null) {
+                    _shadowedVars.Pop();
+                }
                 if (b == node.Body && f == node.Filter) {
                     return node;
                 }
@@ -145,9 +153,33 @@ namespace Microsoft.Runtime.CompilerServices {
                 return Expression.Field(Expression.Constant(box), "Value");
             }
 
+            // Currently we support jumping into RHS of assignment, but
+            // only if the lvalue is a parameter. So we need to do the
+            // reduction a bit differently.
+            //
+            // If that feature goes away, this method can be removed.
+            //
+            protected internal override Expression VisitBinary(BinaryExpression node) {
+                if (node.NodeType == ExpressionType.Assign &&
+                    node.Left.NodeType == ExpressionType.Parameter) {
+
+                    var variable = (ParameterExpression)node.Left;
+                    IStrongBox box = GetBox(variable);
+                    if (box != null) {
+                        return Expression.Block(
+                            new[] { variable },
+                            Expression.Assign(variable, Visit(node.Right)), 
+                            Expression.Assign(Expression.Field(Expression.Constant(box), "Value"), variable),
+                            variable
+                        );
+                    }
+                }
+                return base.VisitBinary(node);
+            }
+
             private IStrongBox GetBox(ParameterExpression variable) {
                 // Skip variables that are shadowed by a nested scope/lambda
-                foreach (Set<ParameterExpression> hidden in _hiddenVars) {
+                foreach (Set<ParameterExpression> hidden in _shadowedVars) {
                     if (hidden.Contains(variable)) {
                         return null;
                     }

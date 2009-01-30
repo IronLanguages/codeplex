@@ -127,8 +127,10 @@ namespace Microsoft.Linq.Expressions {
         /// <remarks><paramref name="type"/> must be non-null and match the type of <paramref name="variable"/> (if it is supplied).</remarks>
         public static CatchBlock MakeCatchBlock(Type type, ParameterExpression variable, Expression body, Expression filter) {
             ContractUtils.RequiresNotNull(type, "type");
-            ContractUtils.Requires(variable == null || variable.Type.Equals(type), "variable");
-            Expression.RequireVariableNotByRef(variable, "variable");
+            ContractUtils.Requires(variable == null || variable.Type == type, "variable");
+            if (variable != null && variable.IsByRef) {
+                throw Error.VariableMustNotBeByRef(variable, variable.Type);
+            }
             RequiresCanRead(body, "body");
             if (filter != null) {
                 RequiresCanRead(filter, "filter");

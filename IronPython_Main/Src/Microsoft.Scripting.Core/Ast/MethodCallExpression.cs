@@ -492,9 +492,7 @@ namespace Microsoft.Linq.Expressions {
         ///<param name="method">A <see cref="T:System.Reflection.MethodInfo" /> to set the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Method" /> property equal to.</param>
         ///<param name="arg0">The <see cref="Expression" /> that represents the first argument.</param>
         ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="method" /> is null.-or-<paramref name="instance" /> is null and <paramref name="method" /> represents an instance method.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="instance" />.Type is not assignable to the declaring type of the method represented by <paramref name="method" />.</exception>
+        ///<paramref name="method" /> is null.</exception>
         public static MethodCallExpression Call(MethodInfo method, Expression arg0) {            
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(arg0, "arg0");            
@@ -514,9 +512,7 @@ namespace Microsoft.Linq.Expressions {
         ///<param name="arg0">The <see cref="Expression" /> that represents the first argument.</param>
         ///<param name="arg1">The <see cref="Expression" /> that represents the second argument.</param>
         ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="method" /> is null.-or-<paramref name="instance" /> is null and <paramref name="method" /> represents an instance method.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="instance" />.Type is not assignable to the declaring type of the method represented by <paramref name="method" />.</exception>
+        ///<paramref name="method" /> is null.</exception>
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(arg0, "arg0");
@@ -539,9 +535,7 @@ namespace Microsoft.Linq.Expressions {
         ///<param name="arg1">The <see cref="Expression" /> that represents the second argument.</param>
         ///<param name="arg2">The <see cref="Expression" /> that represents the third argument.</param>
         ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="method" /> is null.-or-<paramref name="instance" /> is null and <paramref name="method" /> represents an instance method.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="instance" />.Type is not assignable to the declaring type of the method represented by <paramref name="method" />.</exception>
+        ///<paramref name="method" /> is null.</exception>
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(arg0, "arg0");
@@ -567,9 +561,7 @@ namespace Microsoft.Linq.Expressions {
         ///<param name="arg2">The <see cref="Expression" /> that represents the third argument.</param>
         ///<param name="arg3">The <see cref="Expression" /> that represents the fourth argument.</param>
         ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="method" /> is null.-or-<paramref name="instance" /> is null and <paramref name="method" /> represents an instance method.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="instance" />.Type is not assignable to the declaring type of the method represented by <paramref name="method" />.</exception>
+        ///<paramref name="method" /> is null.</exception>
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2, Expression arg3) {
             ContractUtils.RequiresNotNull(method, "method");
             ContractUtils.RequiresNotNull(arg0, "arg0");
@@ -598,9 +590,7 @@ namespace Microsoft.Linq.Expressions {
         ///<param name="arg3">The <see cref="Expression" /> that represents the fourth argument.</param>
         ///<param name="arg4">The <see cref="Expression" /> that represents the five argument.</param>
         ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="method" /> is null.-or-<paramref name="instance" /> is null and <paramref name="method" /> represents an instance method.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="instance" />.Type is not assignable to the declaring type of the method represented by <paramref name="method" />.</exception>
+        ///<paramref name="method" /> is null.</exception>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MethodCallExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.Call" /> and the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Object" /> and <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Method" /> properties set to the specified values.</returns>
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) {
             ContractUtils.RequiresNotNull(method, "method");
@@ -961,14 +951,10 @@ namespace Microsoft.Linq.Expressions {
 
         #region ArrayIndex
 
-        ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.BinaryExpression" /> that represents applying an array index operator to an array of rank one.</summary>
+        ///<summary>Creates a <see cref="T:Microsoft.Linq.Expressions.MethodCallExpression" /> that represents applying an array index operator to a multi-dimensional array.</summary>
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.BinaryExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.ArrayIndex" /> and the <see cref="P:Microsoft.Linq.Expressions.BinaryExpression.Left" /> and <see cref="P:Microsoft.Linq.Expressions.BinaryExpression.Right" /> properties set to the specified values.</returns>
-        ///<param name="array">An <see cref="T:Microsoft.Linq.Expressions.Expression" /> to set the <see cref="P:Microsoft.Linq.Expressions.BinaryExpression.Left" /> property equal to.</param>
+        ///<param name="array">An array of <see cref="T:Microsoft.Linq.Expressions.Expression" /> instances - indexes for the array index operation.</param>
         ///<param name="indexes">An array that contains <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects to use to populate the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Arguments" /> collection.</param>
-        ///<exception cref="T:System.ArgumentNullException">
-        ///<paramref name="array" /> or <paramref name="index" /> is null.</exception>
-        ///<exception cref="T:System.ArgumentException">
-        ///<paramref name="array" />.Type does not represent an array type.-or-<paramref name="array" />.Type represents an array type whose rank is not 1.-or-<paramref name="index" />.Type does not represent the <see cref="T:System.Int32" /> type.</exception>
         public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) {
             return ArrayIndex(array, (IEnumerable<Expression>)indexes);
         }

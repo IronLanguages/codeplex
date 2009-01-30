@@ -116,7 +116,17 @@ def gen_run_method(cw, n, is_void):
     cw.enter_block('public %s Run%s%d%s(%s)' % (ret_type, name_extra, n,
                                                 types, 
                                                 ','.join(param_names)))
-    cw.write('var frame = MakeFrame();')
+        
+    cw.enter_block('if (_compiled != null)')
+    args = ', '.join(['arg%d' % i for i in xrange(n)])
+    if is_void:
+        cw.write('((Action%s)_compiled)(%s);' % (types, args))
+        cw.write('return;')
+    else:
+        cw.write('return ((Func%s)_compiled)(%s);' % (types, args))
+    cw.exit_block()
+    
+    cw.write('var frame = PrepareToRun();')
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
     

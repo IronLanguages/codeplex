@@ -19,7 +19,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 // Note: can't move to Utils because name conflicts with Microsoft.Linq.Set
-namespace Microsoft.Linq.Expressions.Compiler {
+namespace Microsoft.Linq.Expressions {
     
     /// <summary>
     /// A simple hashset, built on Dictionary{K, V}
@@ -47,6 +47,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             foreach (T t in list) {
                 Add(t);
             }
+        }
+
+        internal Set(int capacity) {
+            _data = new Dictionary<T, object>(capacity);
         }
 
         public void Add(T item) {

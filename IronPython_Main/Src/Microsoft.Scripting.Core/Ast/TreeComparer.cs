@@ -16,12 +16,10 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
 
@@ -191,7 +189,7 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// Constants that were templated in original tree.
         /// </summary>
-        private Microsoft.Linq.Expressions.Compiler.Set<int> _templated;
+        private Set<int> _templated;
 
         /// <summary>
         /// New tree requires more general template.
@@ -209,14 +207,14 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         private List<KeyValuePair<ConstantExpression, int>> _replacementList;
 
-        private TreeComparer(Microsoft.Linq.Expressions.Compiler.Set<int> templated) {
+        private TreeComparer(Set<int> templated) {
             _templated = templated;
         }
 
         internal static TreeCompareResult CompareTrees(
                 Expression left, 
                 Expression right, 
-                Microsoft.Linq.Expressions.Compiler.Set<int> templated,
+                Set<int> templated,
                 out List<KeyValuePair<ConstantExpression, int>> ReplacementList){
 
 

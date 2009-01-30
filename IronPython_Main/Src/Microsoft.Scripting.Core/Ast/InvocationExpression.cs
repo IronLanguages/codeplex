@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using System.Reflection;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -125,6 +126,17 @@ namespace Microsoft.Linq.Expressions {
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> arguments) {
             RequiresCanRead(expression, "expression");
 
+            var args = arguments.ToReadOnly();
+            var mi = GetInvokeMethod(expression);
+            ValidateArgumentTypes(mi, ExpressionType.Invoke, ref args);
+            return new InvocationExpression(expression, args, mi.ReturnType);
+        }
+
+        /// <summary>
+        /// Gets the delegate's Invoke method; used by InvocationExpression.
+        /// </summary>
+        /// <param name="expression">The expression to be invoked.</param>
+        internal static MethodInfo GetInvokeMethod(Expression expression) {
             Type delegateType = expression.Type;
             if (delegateType == typeof(Delegate)) {
                 throw Error.ExpressionTypeNotInvocable(delegateType);
@@ -136,10 +148,7 @@ namespace Microsoft.Linq.Expressions {
                 delegateType = exprType.GetGenericArguments()[0];
             }
 
-            var mi = delegateType.GetMethod("Invoke");
-            var args = arguments.ToReadOnly();
-            ValidateArgumentTypes(mi, ExpressionType.Invoke, ref args);
-            return new InvocationExpression(expression, args, mi.ReturnType);
+            return delegateType.GetMethod("Invoke");
         }
     }
 }

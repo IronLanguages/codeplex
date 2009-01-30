@@ -17,10 +17,6 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Reflection.Emit;
-using System.Text;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Utils {
@@ -42,7 +38,7 @@ namespace Microsoft.Scripting.Utils {
             if (cmp.Equals(first, second)) {
                 return first;
             }
-            var set = new Microsoft.Linq.Expressions.Compiler.Set<T>(cmp);
+            var set = new Set<T>(cmp);
             for (T t = first; t != null; t = parent(t)) {
                 set.Add(t);
             }
