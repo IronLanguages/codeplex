@@ -388,6 +388,7 @@ namespace Microsoft.Linq.Expressions {
                 if (pis.Length != parameters.Count) {
                     throw Error.IncorrectNumberOfLambdaDeclarationParameters();
                 }
+                var set = new Set<ParameterExpression>(pis.Length);
                 for (int i = 0, n = pis.Length; i < n; i++) {
                     ParameterExpression pex = parameters[i];
                     ParameterInfo pi = pis[i];
@@ -403,6 +404,10 @@ namespace Microsoft.Linq.Expressions {
                     if (!TypeUtils.AreReferenceAssignable(pex.Type, pType)) {
                         throw Error.ParameterExpressionNotValidAsDelegate(pex.Type, pType);
                     }
+                    if (set.Contains(pex)) {
+                        throw Error.DuplicateVariable(pex);
+                    }
+                    set.Add(pex);
                 }
             } else if (parameters.Count > 0) {
                 throw Error.IncorrectNumberOfLambdaDeclarationParameters();

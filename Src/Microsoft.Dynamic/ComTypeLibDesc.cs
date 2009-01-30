@@ -77,8 +77,14 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            // cached the typelib using the guid as the dictionary key
+            // cache the typelib using the guid as the dictionary key
             lock (_CachedTypeLibDesc) {
+                //check if we are late and somebody already added the key.
+                ComTypeLibDesc curLibDesc;
+                if (_CachedTypeLibDesc.TryGetValue(typeLibAttr.guid, out curLibDesc)) {
+                    return curLibDesc;
+                }
+
                 _CachedTypeLibDesc.Add(typeLibAttr.guid, typeLibDesc);
             }
 
