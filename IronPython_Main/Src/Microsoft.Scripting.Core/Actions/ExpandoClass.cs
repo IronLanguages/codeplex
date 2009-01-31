@@ -66,7 +66,7 @@ namespace Microsoft.Scripting {
             lock (this) {
                 List<WeakReference> infos = GetTransitionList(hashCode);
 
-                for(int i = 0; i<infos.Count; i++) {
+                for (int i = 0; i < infos.Count; i++) {
                     ExpandoClass klass = infos[i].Target as ExpandoClass;
                     if (klass == null) {
                         infos.RemoveAt(i);
@@ -146,10 +146,9 @@ namespace Microsoft.Scripting {
             }
         }
 
-
         /// <summary>
         /// Gets the index at which the value should be stored for the specified name
-        /// case sensitively.
+        /// case sensitively. Returns the index even if the member is marked as deleted.
         /// </summary>
         internal int GetValueIndexCaseSensitive(string name) {
             for (int i = 0; i < _keys.Length; i++) {
@@ -160,7 +159,6 @@ namespace Microsoft.Scripting {
                     return i;
                 }
             }
-
             return -1;
         }
 

@@ -191,6 +191,15 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// A string like  "Named arguments should follow positional ones when calling COM methods."
+        /// </summary>
+        internal static string NamedArgsShouldFollowPositional {
+            get {
+                return "Named arguments should follow positional ones when calling COM methods.";
+            }
+        }
+
+        /// <summary>
         /// A string like  "Could not get dispatch ID for {0} (error: {1})."
         /// </summary>
         internal static string CouldNotGetDispId(object p0, object p1) {
@@ -327,6 +336,13 @@ namespace Microsoft.Scripting {
         /// </summary>
         internal static Exception UnsupportedEnumType() {
             return new InvalidOperationException(Strings.UnsupportedEnumType);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "Named arguments should follow positional ones when calling COM methods."
+        /// </summary>
+        internal static Exception NamedArgsShouldFollowPositional() {
+            return new InvalidOperationException(Strings.NamedArgsShouldFollowPositional);
         }
 
         /// <summary>

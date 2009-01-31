@@ -161,7 +161,8 @@ def test_args_m2():
     AreEqual(m2("a", "b"),              None)
     AreEqual(m2(arg1="a", arg2="b"),    None)
     AreEqual(m2("a", *["b"]),           None)
-    AreEqual(m2(arg2="b", *["a"]),      None)
+    # Named arguments should follow positional ones when calling COM methods.
+    AssertError(SystemError, lambda: m2(arg2="b", *["a"]))
     AreEqual(m2(*["a", "b"]),           None)
     AreEqual(m2("a", "b", **{}),        None)
     AreEqual(m2(*["a", "b"], **{}),     None)
