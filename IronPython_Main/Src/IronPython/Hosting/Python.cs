@@ -206,6 +206,30 @@ namespace IronPython.Hosting {
             return GetPythonService(engine).ImportModule(engine, moduleName);
         }
 
+        /// <summary>
+        /// Sets sys.exec_prefix, sys.executable and sys.version and adds the prefix to sys.path
+        /// </summary>
+        public static void SetHostVariables(this ScriptRuntime/*!*/ runtime, string/*!*/ prefix, string/*!*/ executable, string/*!*/ version) {
+            ContractUtils.RequiresNotNull(runtime, "runtime");
+            ContractUtils.RequiresNotNull(prefix, "prefix");
+            ContractUtils.RequiresNotNull(executable, "executable");
+            ContractUtils.RequiresNotNull(version, "version");
+
+            GetPythonContext(GetEngine(runtime)).SetHostVariables(prefix, executable, version);
+        }
+
+        /// <summary>
+        /// Sets sys.exec_prefix, sys.executable and sys.version and adds the prefix to sys.path
+        /// </summary>
+        public static void SetHostVariables(this ScriptEngine/*!*/ engine, string/*!*/ prefix, string/*!*/ executable, string/*!*/ version) {
+            ContractUtils.RequiresNotNull(engine, "engine");
+            ContractUtils.RequiresNotNull(prefix, "prefix");
+            ContractUtils.RequiresNotNull(executable, "executable");
+            ContractUtils.RequiresNotNull(version, "version");
+
+            GetPythonContext(engine).SetHostVariables(prefix, executable, version);
+        }
+
         #endregion
 
         #region Private helpers
@@ -255,6 +279,10 @@ namespace IronPython.Hosting {
                 (context, arg) => ((PythonContext)context).GetPythonService(arg),
                 engine
             );
+        }
+
+        private static PythonContext/*!*/ GetPythonContext(ScriptEngine/*!*/ engine) {
+            return HostingHelpers.GetLanguageContext(engine) as PythonContext;
         }
 
         #endregion

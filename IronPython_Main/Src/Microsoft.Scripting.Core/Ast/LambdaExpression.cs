@@ -332,22 +332,16 @@ namespace Microsoft.Linq.Expressions {
 
             var parameterList = parameters.ToReadOnly();
 
-            bool binder = body.Type == typeof(void);
-
             int paramCount = parameterList.Count;
-            Type[] typeArgs = new Type[paramCount + (binder ? 0 : 1)];
+            Type[] typeArgs = new Type[paramCount + 1];
             for (int i = 0; i < paramCount; i++) {
                 ContractUtils.RequiresNotNull(parameterList[i], "parameter");
-                typeArgs[i] = parameterList[i].Type;
+                Type pType = parameterList[i].Type;
+                typeArgs[i] = parameterList[i].IsByRef ? pType.MakeByRefType() : pType;
             }
+            typeArgs[paramCount] = body.Type;
 
-            Type delegateType;
-            if (binder)
-                delegateType = GetActionType(typeArgs);
-            else {
-                typeArgs[paramCount] = body.Type;
-                delegateType = GetFuncType(typeArgs);
-            }
+            Type delegateType = DelegateHelpers.MakeDelegateType(typeArgs);
 
             return Lambda(ExpressionType.Lambda, delegateType, name, body, parameterList);
         }
