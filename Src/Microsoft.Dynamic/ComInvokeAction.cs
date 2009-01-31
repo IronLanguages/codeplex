@@ -92,7 +92,7 @@ namespace Microsoft.Scripting {
                     BindingRestrictions.Empty,
                     argValues[i]
                 );
-                arginfos[i] = Expression.ByRefArgument(i);
+                arginfos[i] = Expression.ByRefPositionalArgument(i);
             }
 
 

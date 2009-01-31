@@ -12,9 +12,8 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-
-
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
@@ -93,7 +92,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonType]
+    [PythonType("property")]
     public class PythonProperty : PythonTypeSlot {
         private object _fget, _fset, _fdel, _doc;
 
@@ -111,15 +110,7 @@ namespace IronPython.Runtime {
                         [DefaultParameterValue(null)]object fset,
                         [DefaultParameterValue(null)]object fdel,
                         [DefaultParameterValue(null)]object doc) {
-            _fget = fget; _fset = fset; _fdel = fdel;
-
-                        
-            if (doc == null) {
-                PythonOps.TryGetBoundAttr(_fget, Symbols.Doc, out doc);
-            }
-            
-            _doc = doc;
-            
+            _fget = fget; _fset = fset; _fdel = fdel; _doc = doc;
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -146,7 +137,12 @@ namespace IronPython.Runtime {
         }
         
         [SpecialName, PropertyMethod, WrapperDescriptor]
-        public static object Get__doc__(PythonProperty self) {
+        public static object Get__doc__(CodeContext context, PythonProperty self) {
+            if (self._doc == null && PythonOps.HasAttr(context, self._fget, (SymbolId)"__doc__")) {
+                return PythonOps.GetBoundAttr(context, self._fget, (SymbolId)"__doc__");
+            } else if (self._doc == null) {
+                System.Console.WriteLine("No attribute __doc__");
+            }
             return self._doc;
         }
 
@@ -216,6 +212,24 @@ namespace IronPython.Runtime {
             } else {
                 throw PythonOps.AttributeError("undeletable attribute");
             }
+        }
+
+        public PythonProperty getter(object fget) {
+            PythonProperty res = new PythonProperty();
+            res.__init__(fget, _fset, _fdel, _doc);
+            return res;
+        }
+
+        public PythonProperty setter(object fset) {
+            PythonProperty res = new PythonProperty();
+            res.__init__(_fget, fset, _fdel, _doc);
+            return res;
+        }
+
+        public PythonProperty deleter(object fdel) {
+            PythonProperty res = new PythonProperty();
+            res.__init__(_fget, _fset, fdel, _doc);
+            return res;
         }
     }
 

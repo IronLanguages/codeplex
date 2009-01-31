@@ -35,15 +35,14 @@ namespace Microsoft.Scripting {
         public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
-            if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args, false);
-            }
-
             ComMethodDesc method;
             if (_self.TryGetMemberMethod(binder.Name, out method) ||
                 _self.TryGetMemberMethodExplicit(binder.Name, out method)) {
 
-                return BindComInvoke(args, method, binder.Arguments);
+                IList<ArgumentInfo> argInfos = binder.Arguments;
+                ComBinderHelpers.ProcessArgumentsForCom(ref args, ref argInfos);
+
+                return BindComInvoke(args, method, argInfos);
             }
 
             return base.BindInvokeMember(binder, args);
@@ -52,13 +51,12 @@ namespace Microsoft.Scripting {
         public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
-            if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args, false);
-            }
-
             ComMethodDesc method;
-            if (_self.TryGetGetItem(out method)){
-                return BindComInvoke(args, method, binder.Arguments);
+            if (_self.TryGetGetItem(out method)) {
+                IList<ArgumentInfo> argInfos = binder.Arguments;
+                ComBinderHelpers.ProcessArgumentsForCom(ref args, ref argInfos);
+
+                return BindComInvoke(args, method, argInfos);
             }
 
             return base.BindInvoke(binder, args);
@@ -106,7 +104,7 @@ namespace Microsoft.Scripting {
         private DynamicMetaObject BindGetMember(ComMethodDesc method) {
             if (method.IsDataMember) {
                 if (method.Parameters.Length == 0) {
-                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method,new ArgumentInfo[0]);
+                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0]);
                 }
             }
 
@@ -136,15 +134,16 @@ namespace Microsoft.Scripting {
             );
         }
 
-        public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {           
+        public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-            if (indexes.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, indexes, false);
-            }
+
 
             ComMethodDesc getItem;
-            if (_self.TryGetGetItem(out getItem)){
-                return BindComInvoke(indexes, getItem, binder.Arguments);
+            if (_self.TryGetGetItem(out getItem)) {
+                IList<ArgumentInfo> argInfos = binder.Arguments;
+                ComBinderHelpers.ProcessArgumentsForCom(ref indexes, ref argInfos);
+
+                return BindComInvoke(indexes, getItem, argInfos);
             }
 
             return base.BindGetIndex(binder, indexes);
@@ -153,18 +152,20 @@ namespace Microsoft.Scripting {
         public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
-            if (indexes.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, indexes.AddLast(value), true);
-            }
-
             ComMethodDesc setItem;
             if (_self.TryGetSetItem(out setItem)) {
-                return BindComInvoke(indexes.AddLast(value), setItem, binder.Arguments);
+                IList<ArgumentInfo> argInfos = binder.Arguments;
+                ComBinderHelpers.ProcessArgumentsForCom(ref indexes, ref argInfos);
+
+                // add an arginfo for the value
+                argInfos = argInfos.AddLast(Expression.PositionalArg(argInfos.Count));
+
+                return BindComInvoke(indexes.AddLast(value), setItem, argInfos);
             }
 
             return base.BindSetIndex(binder, indexes, value);
         }
-        
+
         public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value) {
             ContractUtils.RequiresNotNull(binder, "binder");
 
@@ -192,7 +193,7 @@ namespace Microsoft.Scripting {
                     );
 
                 return new ComInvokeBinder(
-                    new ArgumentInfo[0],
+                    new ArgumentInfo[] { Expression.PositionalArg(0) },
                     new[] { value },
                     restrictions,
                     Expression.Constant(method),

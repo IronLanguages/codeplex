@@ -35,20 +35,16 @@ namespace Microsoft.Scripting {
         }
 
         public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {
-            return BindGetOrInvoke(binder, indexes, binder.Arguments) ??
+            return BindGetOrInvoke(indexes, binder.Arguments) ??
                 base.BindGetIndex(binder, indexes);
         }
 
         public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
-            return BindGetOrInvoke(binder, args, binder.Arguments) ??
+            return BindGetOrInvoke(args, binder.Arguments) ??
                 base.BindInvoke(binder, args);
         }
 
-        private DynamicMetaObject BindGetOrInvoke(CallSiteBinder binder, DynamicMetaObject[] args, IList<ArgumentInfo> argInfos) {
-            if (args.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, args, false);
-            }
-
+        private DynamicMetaObject BindGetOrInvoke(DynamicMetaObject[] args, IList<ArgumentInfo> argInfos) {
             ComMethodDesc method;
             var target = _callable.DispatchComObject;
             var name = _callable.MemberName;
@@ -56,6 +52,7 @@ namespace Microsoft.Scripting {
             if (target.TryGetMemberMethod(name, out method) ||
                 target.TryGetMemberMethodExplicit(name, out method)) {
 
+                ComBinderHelpers.ProcessArgumentsForCom(ref args, ref argInfos);
                 return BindComInvoke(method, args, argInfos);
             }
             return null;
@@ -63,10 +60,6 @@ namespace Microsoft.Scripting {
 
 
         public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
-            if (indexes.Any(arg => ComBinderHelpers.IsStrongBoxArg(arg))) {
-                return ComBinderHelpers.RewriteStrongBoxAsRef(binder, this, indexes.AddLast(value), true);
-            }
-
             ComMethodDesc method;
             var target = _callable.DispatchComObject;
             var name = _callable.MemberName;
@@ -75,7 +68,12 @@ namespace Microsoft.Scripting {
             if (target.TryGetPropertySetter(name, out method, value.LimitType, holdsNull) ||
                 target.TryGetPropertySetterExplicit(name, out method, value.LimitType, holdsNull)) {
 
-                return BindComInvoke(method, indexes.AddLast(value), binder.Arguments);
+                IList<ArgumentInfo> argInfos = binder.Arguments;
+                ComBinderHelpers.ProcessArgumentsForCom(ref indexes, ref argInfos);
+                // add an arginfo for the value
+                argInfos = argInfos.AddLast(Expression.PositionalArg(argInfos.Count));
+
+                return BindComInvoke(method, indexes.AddLast(value), argInfos);
             }
 
             return base.BindSetIndex(binder, indexes, value);
