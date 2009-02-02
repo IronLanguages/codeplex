@@ -165,8 +165,7 @@ namespace Microsoft.Scripting.Actions {
         /// Produces a rule for comparing a value to null - supports comparing object references and nullable types.
         /// </summary>
         private static DynamicMetaObject TryNullComparisonRule(DynamicMetaObject[] args) {
-
-            Type otherType = args[0].GetLimitType();
+            Type otherType = args[1].GetLimitType();
 
             BindingRestrictions restrictions = BindingRestrictionsHelpers.GetRuntimeTypeRestriction(args[0].Expression, args[0].GetLimitType()).Merge(BindingRestrictions.Combine(args));
 

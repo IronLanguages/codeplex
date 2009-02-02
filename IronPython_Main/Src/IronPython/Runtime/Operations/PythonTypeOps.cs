@@ -221,7 +221,7 @@ namespace IronPython.Runtime.Operations {
 
         private static Type ConvertToType(PythonType pythonType) {
             if (pythonType.IsNull) {
-                return DynamicNull.Type;
+                return typeof(DynamicNull);
             } else {
                 return pythonType.UnderlyingSystemType;
             }
