@@ -208,7 +208,7 @@ namespace Microsoft.Scripting {
 
                 //try to find the member, including the deleted members
                 int index = klass.GetValueIndex(name, ignoreCase, Value);
-                string methodName = ignoreCase ? "ExpandoGetValueIgnoreCase" : "ExpandoGetValue";
+                string methodName = ignoreCase ? "ExpandoTryGetValueIgnoreCase" : "ExpandoTryGetValue";
 
                 ParameterExpression value = Expression.Parameter(typeof(object), "value");
 
@@ -310,7 +310,7 @@ namespace Microsoft.Scripting {
                 int index = Value.Class.GetValueIndex(binder.Name, false, Value);
 
                 Expression tryDelete = Expression.Call(
-                    typeof(RuntimeOps).GetMethod("ExpandoDeleteValue"),
+                    typeof(RuntimeOps).GetMethod("ExpandoTryDeleteValue"),
                     GetLimitedSelf(),
                     Expression.Constant(Value.Class),
                     Expression.Constant(index)
@@ -520,7 +520,7 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <param name="value">The out parameter containing the value of the member.</param>
         /// <returns>True if the member exists in the expando object, otherwise false.</returns>
         [Obsolete("used by generated code", true)]
-        public static bool ExpandoGetValue(ExpandoObject expando, object indexClass, int index, string name, out object value) {
+        public static bool ExpandoTryGetValue(ExpandoObject expando, object indexClass, int index, string name, out object value) {
             ContractUtils.RequiresNotNull(expando, "expando");
             return expando.TryGetValue((ExpandoClass)indexClass, index, false, name, out value);
         }
@@ -535,7 +535,7 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <param name="value">The out parameter containing the value of the member.</param>
         /// <returns>True if the member exists in the expando object, otherwise false.</returns>
         [Obsolete("used by generated code", true)]
-        public static bool ExpandoGetValueIgnoreCase(ExpandoObject expando, object indexClass, int index, string name, out object value) {
+        public static bool ExpandoTryGetValueIgnoreCase(ExpandoObject expando, object indexClass, int index, string name, out object value) {
             ContractUtils.RequiresNotNull(expando, "expando");
             return expando.TryGetValue((ExpandoClass)indexClass, index, true, name, out value);
         }
@@ -561,7 +561,7 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <param name="index">The index of the member.</param>
         /// <returns>true if the item was successfully removed; otherwise, false.</returns>
         [Obsolete("used by generated code", true)]
-        public static bool ExpandoDeleteValue(ExpandoObject expando, object indexClass, int index) {
+        public static bool ExpandoTryDeleteValue(ExpandoObject expando, object indexClass, int index) {
             ContractUtils.RequiresNotNull(expando, "expando");
             return expando.TryDeleteValue((ExpandoClass)indexClass, index);
         }
