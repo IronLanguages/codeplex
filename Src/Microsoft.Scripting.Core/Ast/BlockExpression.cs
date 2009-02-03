@@ -43,6 +43,16 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        /// <summary>
+        /// Gets the last expression in this block.
+        /// </summary>
+        public Expression Result {
+            get {
+                Debug.Assert(ExpressionCount > 0);
+                return GetExpression(ExpressionCount - 1);
+            }
+        }
+
         internal BlockExpression() {
         }
 
