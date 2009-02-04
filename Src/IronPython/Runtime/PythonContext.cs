@@ -906,7 +906,7 @@ namespace IronPython.Runtime {
             // adds __builtin__ variable if necessary.  Python adds the module directly to
             // __main__ and __builtin__'s dictionary for all other modules.  Our callers
             // pass the appropriate flags to control this behavior.
-            if ((options & ModuleOptions.NoBuiltins) == 0 && !scope.ContainsName(Symbols.Builtins)) {
+            if ((options & ModuleOptions.NoBuiltins) == 0 && !scope.Dict.ContainsKey(Symbols.Builtins)) {
                 if ((options & ModuleOptions.ModuleBuiltins) != 0) {
                     module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance);
                 } else {

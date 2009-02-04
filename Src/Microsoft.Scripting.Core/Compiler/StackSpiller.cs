@@ -198,29 +198,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             return cr.Finish(node);
         }
 
-        private Result RewriteArrayIndexAssignment(BinaryExpression node, Stack stack) {
-            Debug.Assert(node.Left.NodeType == ExpressionType.ArrayIndex);
-            BinaryExpression arrayIndex = (BinaryExpression)node.Left;
-
-            ChildRewriter cr = new ChildRewriter(this, stack, 3);
-
-            cr.Add(arrayIndex.Left);
-            cr.Add(arrayIndex.Right);
-            cr.Add(node.Right);
-
-            if (cr.Rewrite) {
-                node = new AssignBinaryExpression(
-                    Expression.ArrayIndex(
-                        cr[0],   // array
-                        cr[1]    // index                             
-                    ),
-                    cr[2]        // value
-                );
-            }
-
-            return cr.Finish(node);
-        }
-
         // BinaryExpression: AndAlso, OrElse
         private Result RewriteLogicalBinaryExpression(Expression expr, Stack stack) {
             BinaryExpression node = (BinaryExpression)expr;
@@ -306,8 +283,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return RewriteVariableAssignment(node, stack);
                 case ExpressionType.Extension:
                     return RewriteExtensionAssignment(node, stack);
-                case ExpressionType.ArrayIndex:
-                    return RewriteArrayIndexAssignment(node, stack);
                 default:
                     throw Error.InvalidLvalue(node.Left.NodeType);
             }

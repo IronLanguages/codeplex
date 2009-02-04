@@ -112,7 +112,7 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // 6. array_temp[i]
-                MSAst.Expression element = Ast.ArrayIndex(
+                MSAst.Expression element = Ast.ArrayAccess(
                     array_temp,                             // array expression
                     Ast.Constant(i)                         // index
                 );

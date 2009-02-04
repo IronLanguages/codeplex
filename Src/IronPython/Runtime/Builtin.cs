@@ -1046,14 +1046,14 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, object func, [NotNull]string enumerator) {
-            List ret = new List();
-            CallSite<Func<CallSite, CodeContext, object, object, object>> mapSite = null;
-
-            if (func != null) {
-                mapSite = MakeMapSite<object, object>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object>>> storage, object func, [NotNull]string enumerator) {
+            CallSite<Func<CallSite, CodeContext, object, object, object>> mapSite;
+            if (storage.Data == null && func != null) {
+                storage.Data = MakeMapSite<object, object>(context);
             }
+            mapSite = storage.Data;
 
+            List ret = new List(enumerator.Length);
             foreach (char o in enumerator) {
                 if (func == null) {
                     ret.AddNoLock(ScriptingRuntimeHelpers.CharToString(o));
@@ -1065,8 +1065,12 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite = MakeMapSite<PythonType, object>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonType, object, object>>> storage, [NotNull]PythonType/*!*/ func, [NotNull]IEnumerable enumerator) {
+            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<PythonType, object>(context);
+            }
+            mapSite = storage.Data;
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -1075,8 +1079,12 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite = MakeMapSite<BuiltinFunction, object>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>>> storage, [NotNull]BuiltinFunction/*!*/ func, [NotNull]IEnumerable enumerator) {
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<BuiltinFunction, object>(context);
+            }
+            mapSite = storage.Data;
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -1085,20 +1093,38 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]string enumerator) {
-            CallSite<Func<CallSite, CodeContext, BuiltinFunction, string, object>> mapSite = MakeMapSite<BuiltinFunction, string>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonFunction, object, object>>> storage, [NotNull]PythonFunction/*!*/ func, [NotNull]IList enumerator) {
+            CallSite<Func<CallSite, CodeContext, PythonFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<PythonFunction, object>(context);
+            }
+            mapSite = storage.Data;
 
-            List ret = new List();
+            List ret = new List(enumerator.Count);
+            foreach (object o in enumerator) {
+                ret.AddNoLock(mapSite.Target(mapSite, context, func, o));
+            }
+            return ret;
+        }
+
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>>> storage, [NotNull]BuiltinFunction/*!*/ func, [NotNull]string enumerator) {
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<BuiltinFunction, object>(context);
+            }
+            mapSite = storage.Data;
+
+            List ret = new List(enumerator.Length);
             foreach (char o in enumerator) {
                 ret.AddNoLock(mapSite.Target(mapSite, context, func, ScriptingRuntimeHelpers.CharToString(o)));
             }
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]string enumerator) {
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonType, object, object>>> storage, [NotNull]PythonType/*!*/ func, [NotNull]string enumerator) {
             CallSite<Func<CallSite, CodeContext, PythonType, string, object>> mapSite = MakeMapSite<PythonType, string>(context);
 
-            List ret = new List();
+            List ret = new List(enumerator.Length);
             foreach (char o in enumerator) {
                 ret.AddNoLock(mapSite.Target(mapSite, context, func, ScriptingRuntimeHelpers.CharToString(o)));
             }
@@ -1898,8 +1924,18 @@ namespace IronPython.Runtime {
                 } else {
                     pco = new PythonCompilerOptions(PythonLanguageFeatures.Default);
                 }
-            } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
-                pco = new PythonCompilerOptions(PythonLanguageFeatures.TrueDivision);
+            } else if (((cflags & (CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT | CompileFlags.CO_FUTURE_WITH_STATEMENT)) != 0)) {
+                PythonLanguageFeatures langFeat = PythonLanguageFeatures.Default;
+                if ((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0) {
+                    langFeat |= PythonLanguageFeatures.TrueDivision;
+                }
+                if ((cflags & CompileFlags.CO_FUTURE_WITH_STATEMENT) != 0) {
+                    langFeat |= PythonLanguageFeatures.AllowWithStatement;
+                }
+                if ((cflags & CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT) != 0) {
+                    langFeat |= PythonLanguageFeatures.AbsoluteImports;
+                }
+                pco = new PythonCompilerOptions(langFeat);
             } else {
                 pco = DefaultContext.DefaultPythonContext.GetPythonCompilerOptions();
             }
@@ -1920,7 +1956,8 @@ namespace IronPython.Runtime {
             CompileFlags cflags = 0;
             if (flags != null) {
                 cflags = (CompileFlags)Converter.ConvertToInt32(flags);
-                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_DONT_IMPLY_DEDENT)) != 0) {
+                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_DONT_IMPLY_DEDENT | 
+                    CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT | CompileFlags.CO_FUTURE_WITH_STATEMENT)) != 0) {
                     throw PythonOps.ValueError("unrecognized flags");
                 }
             }

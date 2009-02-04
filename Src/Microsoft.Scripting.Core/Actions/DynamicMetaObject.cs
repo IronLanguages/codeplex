@@ -260,51 +260,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Performs the binding of the dynamic binary operation on member.
-        /// </summary>
-        /// <param name="binder">An instance of the <see cref="BinaryOperationOnMemberBinder"/> that represents the details of the dynamic operation.</param>
-        /// <param name="value">An instance of the <see cref="DynamicMetaObject"/> representing the right hand side value of the operation.</param>
-        /// <returns>The new <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
-        public virtual DynamicMetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, DynamicMetaObject value) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackBinaryOperationOnMember(this, value);
-        }
-
-
-        /// <summary>
-        /// Performs the binding of the dynamic binary operation on index.
-        /// </summary>
-        /// <param name="binder">An instance of the <see cref="BinaryOperationOnIndexBinder"/> that represents the details of the dynamic operation.</param>
-        /// <param name="indexes">An array of <see cref="DynamicMetaObject"/> instances - indexes for the delete index operation.</param>
-        /// <param name="value">An instance of the <see cref="DynamicMetaObject"/> representing the right hand side value of the operation.</param>
-        /// <returns>The new <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
-        public virtual DynamicMetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackBinaryOperationOnIndex(this, indexes, value);
-        }
-
-        /// <summary>
-        /// Performs the binding of the dynamic unary operation on index.
-        /// </summary>
-        /// <param name="binder">An instance of the <see cref="UnaryOperationOnIndexBinder"/> that represents the details of the dynamic operation.</param>
-        /// <param name="indexes">An array of <see cref="DynamicMetaObject"/> instances - indexes for the delete index operation.</param>
-        /// <returns>The new <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
-        public virtual DynamicMetaObject BindUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, DynamicMetaObject[] indexes) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackUnaryOperationOnIndex(this, indexes);
-        }
-
-        /// <summary>
-        /// Performs the binding of the dynamic unary operation on member.
-        /// </summary>
-        /// <param name="binder">An instance of the <see cref="UnaryOperationOnMemberBinder"/> that represents the details of the dynamic operation.</param>
-        /// <returns>The new <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
-        public virtual DynamicMetaObject BindUnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
-            ContractUtils.RequiresNotNull(binder, "binder");
-            return binder.FallbackUnaryOperationOnMember(this);
-        }
-
-        /// <summary>
         /// Returns the enumeration of all dynamic member names.
         /// </summary>
         /// <returns>The list of dynamic member names.</returns>

@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Utils {
             return (mi.IsConstructor) ? mi.DeclaringType : ((MethodInfo)mi).ReturnType;
         }
 
-        private static CacheDict<MethodBase, ParameterInfo[]> _ParamInfoCache = new CacheDict<MethodBase, ParameterInfo[]>(75);
+        private static readonly CacheDict<MethodBase, ParameterInfo[]> _ParamInfoCache = new CacheDict<MethodBase, ParameterInfo[]>(75);
         
         internal static ParameterInfo[] GetParametersCached(this MethodBase method) {
             ParameterInfo[] pis;

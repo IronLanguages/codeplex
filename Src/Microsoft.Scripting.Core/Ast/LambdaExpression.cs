@@ -199,6 +199,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private static void EnsureLambdaFastPathInitialized() {
+            // NOTE: this must be Interlocked assigment since we use _exprCtors for locking.
             Interlocked.CompareExchange(
                 ref _exprCtors,
                 new CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>>(200),

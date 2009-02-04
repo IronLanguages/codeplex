@@ -103,7 +103,7 @@ namespace Microsoft.Scripting {
 
         private readonly IDispatch _dispatchObject;
         private ComTypeDesc _comTypeDesc;
-        private static Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
+        private static readonly Dictionary<Guid, ComTypeDesc> _CacheComTypeDesc = new Dictionary<Guid, ComTypeDesc>();
 
         internal IDispatchComObject(IDispatch rcw)
             : base(rcw) {

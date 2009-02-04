@@ -82,7 +82,7 @@ namespace Microsoft.Scripting {
             ArgumentInfo[] arginfos = new ArgumentInfo[argLen];
 
             for (int i = 0; i < argLen; i++) {
-                Expression argExpr = Expression.ArrayIndex(
+                Expression argExpr = Expression.ArrayAccess(
                     argAsArrayExpr,
                     Expression.Constant(i)
                 );

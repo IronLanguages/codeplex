@@ -96,21 +96,21 @@ def test_0_1_args():
     f(1, *(2, 3))
     f(*(1, 2, 3, 4))
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(arg = 1))# msg
-    AssertErrorWithMessage(TypeError, "M202() takes at least 1 argument (2 given)", lambda: f(1, arg = 2))# msg
+    AssertErrorWithMessage(TypeError, "M202() takes at least 0 arguments (2 given)", lambda: f(1, arg = 2))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(**{'arg': 3}))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'other'", lambda: f(**{'other': 4}))
     
     f = o.M203
     f()
-    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (1 given)", lambda: f(1)) #CP 18379
-    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (1 given)", lambda: f({'a':1})) #CP 18379
+    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (1 given)", lambda: f(1)) #CP 18379
+    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (1 given)", lambda: f({'a':1})) #CP 18379
     f(a=1)
     f(a=1, b=2)
     f(**{})
     f(**{'a':2, 'b':3})
     f(a=1, **{'b':2, 'c':5})
     AssertErrorWithMessage(TypeError, "M203() got multiple values for keyword argument 'a'", lambda: f(a=1, **{'a':2, 'c':5}))
-    AssertErrorWithMessage(TypeError, "M203() takes at least 1 argument (3 given)", lambda: f(*(1,2,3)))
+    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (3 given)", lambda: f(*(1,2,3)))
     
 
 def test_optional():
@@ -231,7 +231,7 @@ def test_two_args():
     
     #public void M351(int x, [ParamDictionary] IAttributesCollection arg) { Flag<object>.Set(arg); }
     f = o.M351
-    AssertErrorWithMessage(TypeError, "M351() takes at least 2 arguments (0 given)", lambda: f())
+    AssertErrorWithMessage(TypeError, "M351() takes at least 1 argument (0 given)", lambda: f())
     f(1); AreEqual(Flag[object].Value1, {})
     f(1, a=3); AreEqual(Flag[object].Value1, {'a':3})
     f(1, a=3,b=4); AreEqual(Flag[object].Value1, {'a':3, 'b':4})

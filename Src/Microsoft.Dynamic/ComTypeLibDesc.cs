@@ -35,7 +35,7 @@ namespace Microsoft.Scripting {
         Dictionary<string, ComTypeEnumDesc> _enums;
         string _typeLibName;
 
-        private static Dictionary<Guid, ComTypeLibDesc> _CachedTypeLibDesc = new Dictionary<Guid, ComTypeLibDesc>();
+        private static readonly Dictionary<Guid, ComTypeLibDesc> _CachedTypeLibDesc = new Dictionary<Guid, ComTypeLibDesc>();
 
         private ComTypeLibDesc() {
             _enums = new Dictionary<string, ComTypeEnumDesc>();
