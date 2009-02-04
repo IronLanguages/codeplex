@@ -260,7 +260,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.NotEqual(
                         Ast.Assign(
                             info.Result,
-                            Ast.ArrayIndex(
+                            Ast.ArrayAccess(
                                 Ast.Call(
                                     Ast.Convert(info.Self, typeof(IObjectWithSlots)),
                                     typeof(IObjectWithSlots).GetMethod("GetSlots")

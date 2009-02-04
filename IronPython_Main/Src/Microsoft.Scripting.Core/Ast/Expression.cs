@@ -32,7 +32,7 @@ namespace Microsoft.Linq.Expressions {
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract partial class Expression {
-        private static CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type, MethodInfo>(40);
+        private static readonly CacheDict<Type, MethodInfo> _LambdaDelegateCache = new CacheDict<Type, MethodInfo>(40);
         private static CacheDict<Type, Func<Expression, string, IEnumerable<ParameterExpression>, LambdaExpression>> _exprCtors;
         private static MethodInfo _lambdaCtorMethod;
 
@@ -388,7 +388,6 @@ namespace Microsoft.Linq.Expressions {
                     }
                     break;
                 case ExpressionType.Parameter:
-                case ExpressionType.ArrayIndex:
                     canWrite = true;
                     break;
             }

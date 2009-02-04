@@ -210,6 +210,18 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
+            if (res.GetLimitType() != typeof(bool) && res.GetLimitType() != typeof(void)) {
+                res = new DynamicMetaObject(
+                    Binders.Convert(
+                        state,
+                        typeof(bool),
+                        ConversionResultKind.ExplicitCast,
+                        res.Expression
+                    ),
+                    res.Restrictions
+                );
+            }
+
             return res;
         }
 
@@ -1297,7 +1309,7 @@ namespace IronPython.Runtime.Binding {
             if (op == StandardOperators.SetSlice) {
                 args = new DynamicMetaObject[] { 
                     types[0].Restrict(types[0].GetLimitType()),
-                    GetSetSlice(types), 
+                    GetSetSlice(state, types), 
                     types[types.Length- 1].Restrict(types[types.Length - 1].GetLimitType())
                 };
             } else {
@@ -1793,15 +1805,22 @@ namespace IronPython.Runtime.Binding {
             throw new InvalidOperationException();
         }
 
-        private static DynamicMetaObject/*!*/ GetSetSlice(DynamicMetaObject/*!*/[]/*!*/ args) {
+        private static DynamicMetaObject/*!*/ GetSetSlice(BinderState state, DynamicMetaObject/*!*/[]/*!*/ args) {
+            DynamicMetaObject[] newArgs = (DynamicMetaObject[])args.Clone();
+            for (int i = 1; i < newArgs.Length; i++) {
+                if (!IsIndexType(state, newArgs[i])) {
+                    newArgs[i] = newArgs[i].Restrict(newArgs[i].GetLimitType());
+                }
+            }
+
             return new DynamicMetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    AstUtils.Convert(GetSetParameter(args, 1), typeof(object)),
-                    AstUtils.Convert(GetSetParameter(args, 2), typeof(object)),
-                    AstUtils.Convert(GetSetParameter(args, 3), typeof(object))
+                    AstUtils.Convert(GetSetParameter(newArgs, 1), typeof(object)),
+                    AstUtils.Convert(GetSetParameter(newArgs, 2), typeof(object)),
+                    AstUtils.Convert(GetSetParameter(newArgs, 3), typeof(object))
                 ),
-                BindingRestrictions.Combine(args)
+                BindingRestrictions.Combine(newArgs)
             );
         }
 

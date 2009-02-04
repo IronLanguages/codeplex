@@ -553,6 +553,15 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool CompareTypesEqual(object x, object y) {
+            if (x == null && y == null) return true;
+            if (x == null) return false;
+            if (y == null) return false;
+
+            if (DynamicHelpers.GetPythonType(x) == DynamicHelpers.GetPythonType(y)) {
+                // avoid going to the ID dispenser if we have the same types...
+                return x == y;
+            }
+
             return PythonOps.CompareTypes(x, y) == 0;
         }
 
@@ -785,7 +794,15 @@ namespace IronPython.Runtime.Operations {
             ICollection ic = o as ICollection;
             if (ic != null) return ic.Count;
 
-            int res = (int)PythonContext.InvokeUnaryOperator(DefaultContext.Default, UnaryOperators.Length, o, "len() of unsized object");
+            object len = PythonContext.InvokeUnaryOperator(DefaultContext.Default, UnaryOperators.Length, o, "len() of unsized object");
+            
+            int res;
+            if (len is int) {
+                res = (int)len;
+            } else {
+                res = Converter.ConvertToInt32(len);
+            }
+
             if (res < 0) {
                 throw PythonOps.ValueError("__len__ should return >= 0, got {0}", res);
             }

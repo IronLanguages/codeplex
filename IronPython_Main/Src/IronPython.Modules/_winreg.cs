@@ -20,16 +20,20 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 
-using IronPython.Runtime;
-
-using Microsoft.Scripting.Math; 
+using Microsoft.Scripting.Math;
 using Microsoft.Win32;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Types;
 
 #if !SILVERLIGHT //Registry not available in silverlight.
 
 [assembly: PythonModule("_winreg", typeof(IronPython.Modules.PythonWinReg))]
 namespace IronPython.Modules {
     public static class PythonWinReg {
+        public static PythonType error = PythonExceptions.WindowsError;
+
         #region Constants
 
         public static BigInteger HKEY_CLASSES_ROOT = 0x80000000L;

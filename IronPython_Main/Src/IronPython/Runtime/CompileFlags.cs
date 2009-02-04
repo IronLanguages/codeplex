@@ -22,6 +22,7 @@ namespace IronPython.Runtime {
         CO_DONT_IMPLY_DEDENT = 0x0200,   // report errors if statement isn't dedented.
         CO_GENERATOR_ALLOWED = 0x1000,   //  generators
         CO_FUTURE_DIVISION = 0x2000,   //  division
-        
+        CO_FUTURE_ABSOLUTE_IMPORT = 0x4000, // absolute imports by default
+        CO_FUTURE_WITH_STATEMENT = 0x8000,  // with statement
     }
 }

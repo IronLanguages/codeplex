@@ -198,62 +198,6 @@ namespace Microsoft.Scripting {
             throw new NotSupportedException();
         }
 
-        /// <summary>
-        /// Provides the implementation of performing a binary operation on a member.  Derived classes
-        /// can override this method to custmize behavior.  When not overridden the call site
-        /// requesting the binder determines the behavior.
-        /// </summary>
-        /// <param name="binder">The binder provided by the call site.</param>
-        /// <param name="value">The right operand for the operation.</param>
-        /// <param name="result">The result of the operation.</param>
-        /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public virtual bool TryBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, object value, out object result) {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Provides the implementation of performing a binary operation on an index.
-        /// Derived classes can override this method to custmize behavior.  When not overridden
-        /// the call site requesting the binder determines the behavior.
-        /// </summary>
-        /// <param name="binder">The binder provided by the call site.</param>
-        /// <param name="indexes">The indexes to be used.</param>
-        /// <param name="value">The right operand for the operation.</param>
-        /// <param name="result">The result of the operation.</param>
-        /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public virtual bool TryBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, object[] indexes, object value, out object result) {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Provides the implementation of performing a unary operation on member.
-        /// Derived classes can override this method to custmize behavior.  When not overridden
-        /// the call site requesting the binder determines the behavior.
-        /// </summary>
-        /// <param name="binder">The binder provided by the call site.</param>
-        /// <param name="result">The result of the operation.</param>
-        /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public virtual bool TryUnaryOperationOnMember(UnaryOperationOnMemberBinder binder, out object result) {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Provides the implementation of performing a binary operation on an index.  Derived
-        /// classes can override this method to custmize behavior.  When not overridden the call
-        /// site requesting the binder determines the behavior.
-        /// </summary>
-        /// <param name="binder">The binder provided by the call site.</param>
-        /// <param name="indexes">The indexes to be used.</param>
-        /// <param name="result">The result of the operation.</param>
-        /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public virtual bool TryUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, object[] indexes, out object result) {
-            throw new NotSupportedException();
-        }
-
         #endregion
 
         #region MetaDynamic
@@ -376,39 +320,6 @@ namespace Microsoft.Scripting {
                 }
 
                 return base.BindDeleteIndex(binder, indexes);
-            }
-
-            public override DynamicMetaObject BindBinaryOperationOnMember(BinaryOperationOnMemberBinder binder, DynamicMetaObject value) {
-                if (IsOverridden("TryBinaryOperationOnMember")) {
-                    return CallMethodWithResult("TryBinaryOperationOnMember", binder, GetArgs(value), (e) => binder.FallbackBinaryOperationOnMember(this, value, e));
-                }
-
-                return base.BindBinaryOperationOnMember(binder, value);
-            }
-
-            public override DynamicMetaObject BindBinaryOperationOnIndex(BinaryOperationOnIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
-                if (IsOverridden("TryBinaryOperationOnIndex")) {
-                    return CallMethodWithResult("TryBinaryOperationOnIndex", binder, GetArgArray(indexes, value), (e) => binder.FallbackBinaryOperationOnIndex(this, indexes, value, e));
-                }
-
-                return base.BindBinaryOperationOnIndex(binder, indexes, value);
-            }
-
-
-            public override DynamicMetaObject BindUnaryOperationOnMember(UnaryOperationOnMemberBinder binder) {
-                if (IsOverridden("TryUnaryOperationOnMember")) {
-                    return CallMethodWithResult("TryUnaryOperationOnMember", binder, NoArgs, (e) => binder.FallbackUnaryOperationOnMember(this, e));
-                }
-
-                return base.BindUnaryOperationOnMember(binder);
-            }
-
-            public override DynamicMetaObject BindUnaryOperationOnIndex(UnaryOperationOnIndexBinder binder, DynamicMetaObject[] indexes) {
-                if (IsOverridden("TryUnaryOperationOnIndex")) {
-                    return CallMethodWithResult("TryUnaryOperationOnIndex", binder, GetArgArray(indexes), (e) => binder.FallbackUnaryOperationOnIndex(this, indexes, e));
-                }
-
-                return base.BindUnaryOperationOnIndex(binder, indexes);
             }
 
             private delegate DynamicMetaObject Fallback(DynamicMetaObject errorSuggestion);

@@ -3303,5 +3303,23 @@ def test_finalizer():
     import gc
     gc.collect()
     AreEqual(called, False)
+
+
+def test_len():
+    class l(object):
+        def __int__(self):
+            return 42
+
+    vals = (l(), 42L, 42.0)
+    if is_cli:
+        from iptest.type_util import clr_all_types
+        vals += tuple(t(42) for t in clr_all_types)
     
+    for x in vals:
+        class C(object):
+            def __len__(self):
+                return x
+        AreEqual(len(C()), 42)
+
+
 run_test(__name__)

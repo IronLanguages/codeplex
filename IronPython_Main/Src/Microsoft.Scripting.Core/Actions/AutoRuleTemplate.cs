@@ -131,7 +131,7 @@ namespace Microsoft.Scripting {
                         Expression.Assign(
                             local,
                             Helpers.Convert(
-                                Expression.ArrayIndex(constsArg, Expression.Constant(i)),
+                                Expression.ArrayAccess(constsArg, Expression.Constant(i)),
                                 curConstType
                             )
                         )

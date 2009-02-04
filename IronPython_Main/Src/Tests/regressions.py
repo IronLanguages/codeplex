@@ -232,6 +232,10 @@ def test_reraise_backtrace_cp20051():
 		# CPython reports 2 frames, IroPython includes the re-raise and reports 3
         Assert(frameCount >= 2)
 
+def test_winreg_error_cp17050():
+    import _winreg
+    AreEqual(_winreg.error, WindowsError)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)
