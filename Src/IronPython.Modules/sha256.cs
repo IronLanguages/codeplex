@@ -31,17 +31,25 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [Documentation("SHA256 hash algorithm")]
     public static class PythonSha256 {
-        private static readonly SHA256 hasher256 = new SHA256Managed();
+        [ThreadStatic]
+        private static SHA256 _hasher256;
         private const int blockSize = 64;
 
         public const string __doc__ = "SHA256 hash algorithm";
 
+        private static SHA256 GetHasher() {
+            if (_hasher256 == null) {
+                _hasher256 = new SHA256Managed();
+            }
+            return _hasher256;
+        }
+
         public static Sha256Object sha256(object data) {
-            return new Sha256Object(hasher256, data);
+            return new Sha256Object(data);
         }
 
         public static Sha256Object sha256() {
-            return new Sha256Object(hasher256);
+            return new Sha256Object();
         }
 
         public static Sha256Object sha224(object data) {
@@ -58,23 +66,28 @@ namespace IronPython.Modules {
             , ICloneable 
 #endif
         {
-            internal Sha256Object(HashAlgorithm hasher) : this(hasher, new byte[0]) { }
+            internal Sha256Object() : this(new byte[0]) { }
 
-            internal Sha256Object(HashAlgorithm hasher, object initialData)
-                : base(hasher) {
+            internal Sha256Object(object initialData) {
                 _bytes = new byte[0];
                 update(initialData);
             }
 
-            private Sha256Object(HashAlgorithm hasher, byte[] initialBytes)
-                : base(hasher) {
+            private Sha256Object(byte[] initialBytes) {
                 _bytes = new byte[0];
                 update(initialBytes);
             }
 
+            internal override HashAlgorithm Hasher {
+                get {
+                    return GetHasher();
+                }
+            }
+
+
             [Documentation("copy() -> object (copy of this object)")]
             public Sha256Object copy() {
-                return new Sha256Object(_hasher, _bytes);
+                return new Sha256Object(_bytes);
             }
 #if !SILVERLIGHT
             object ICloneable.Clone() {
@@ -90,12 +103,16 @@ namespace IronPython.Modules {
     }
 
     public class HashBase {
-        internal HashAlgorithm _hasher;
         internal byte[] _bytes;
         private byte[] _hash;
 
-        internal HashBase(HashAlgorithm hasher) {
-            _hasher = hasher;
+        internal HashBase() {
+        }
+
+        internal virtual HashAlgorithm Hasher {
+            get {
+                throw new NotImplementedException();
+            }
         }
 
         internal void update(byte[] newBytes) {
@@ -103,7 +120,7 @@ namespace IronPython.Modules {
             Array.Copy(_bytes, updatedBytes, _bytes.Length);
             Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
             _bytes = updatedBytes;
-            _hash = _hasher.ComputeHash(_bytes);
+            _hash = Hasher.ComputeHash(_bytes);
         }
 
         [Documentation("update(string) -> None (update digest with string data)")]

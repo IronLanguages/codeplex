@@ -39,7 +39,7 @@ namespace Microsoft.Linq.Expressions {
         /// Gets the static type of the expression that this <see cref="Expression" /> represents.
         /// </summary>
         /// <returns>The <see cref="Type"/> that represents the static type of the expression.</returns>
-        protected override Type GetExpressionType() {
+        protected override Type TypeImpl() {
             return typeof(IList<IStrongBox>);
         }
 
@@ -48,7 +48,7 @@ namespace Microsoft.Linq.Expressions {
         /// ExpressionType.Extension when overriding this method.
         /// </summary>
         /// <returns>The <see cref="ExpressionType"/> of the expression.</returns>
-        protected override ExpressionType GetNodeKind() {
+        protected override ExpressionType NodeTypeImpl() {
             return ExpressionType.RuntimeVariables;
         }
 

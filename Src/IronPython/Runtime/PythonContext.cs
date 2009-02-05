@@ -61,12 +61,12 @@ namespace IronPython.Runtime {
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private readonly BinderState _defaultBinderState, _defaultClsBinderState;
+#if !SILVERLIGHT
+        private readonly AssemblyResolveHolder _resolveHolder;
+#endif
         private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
 
         // conditional variables for silverlight/desktop CLR features
-#if !SILVERLIGHT
-        private static int _hookedAssemblyResolve;
-#endif
         private Hosting.PythonService _pythonService;
         private string _initialExecutable, _initialPrefix = GetInitialPrefix();
 
@@ -140,7 +140,7 @@ namespace IronPython.Runtime {
             : base(manager) {
             _options = new PythonOptions(options);
             _builtinsDict = CreateBuiltinTable();
-
+            
             DefaultContext.CreateContexts(manager, this);
 
             _defaultContext = new CodeContext(new Scope(), this);
@@ -186,6 +186,7 @@ namespace IronPython.Runtime {
 
             List path = new List(_options.SearchPaths);
 #if !SILVERLIGHT
+            _resolveHolder = new AssemblyResolveHolder(this);
             try {
                 Assembly entryAssembly = Assembly.GetEntryAssembly();
                 // Can be null if called from unmanaged code (VS integration scenario)
@@ -208,14 +209,12 @@ namespace IronPython.Runtime {
 
             PythonFunction.SetRecursionLimit(_options.RecursionLimit);
 
-#if !SILVERLIGHT // AssemblyResolve
-            try {
-                if (Interlocked.Exchange(ref _hookedAssemblyResolve, 1) == 0) {
-                    HookAssemblyResolve();
-                }
-            } catch (System.Security.SecurityException) {
-                // We may not have SecurityPermissionFlag.ControlAppDomain. 
-                // If so, we will not look up sys.path for module loads
+#if !SILVERLIGHT
+            object asmResolve;
+            if (options == null || 
+                !options.TryGetValue("NoAssemblyResolveHook", out asmResolve) || 
+                !Convert.ToBoolean(asmResolve)) {
+                HookAssemblyResolve();
             }
 #endif
 
@@ -1023,9 +1022,9 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
+        internal Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
             AssemblyName an = new AssemblyName(args.Name);
-            return DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(an.Name);
+            return LoadAssemblyFromFile(an.Name);
         }
 
         /// <summary>
@@ -1033,11 +1032,43 @@ namespace IronPython.Runtime {
         /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
         /// find the dependencies, unless we can hook into the CLR loader.
         /// </summary>
-        private static void HookAssemblyResolve() {
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(PythonContext.CurrentDomain_AssemblyResolve);
+        private void HookAssemblyResolve() {
+            try {
+                AppDomain.CurrentDomain.AssemblyResolve += _resolveHolder.AssemblyResolveEvent;
+            } catch (System.Security.SecurityException) {
+                // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                // If so, we will not look up sys.path for module loads
+            }
+        }
+        
+        class AssemblyResolveHolder {
+            private readonly WeakReference _context;
+            
+            public AssemblyResolveHolder(PythonContext context) {
+                _context = new WeakReference(context);
+            }
+            
+            internal Assembly AssemblyResolveEvent(object sender, ResolveEventArgs args) {
+                PythonContext context = (PythonContext)_context.Target;
+                if (context != null) {
+                    return context.CurrentDomain_AssemblyResolve(sender, args);
+                } else {
+                    AppDomain.CurrentDomain.AssemblyResolve -= AssemblyResolveEvent;
+                    return null;
+                }
+            }
+        }
+        
+        private void UnhookAssemblyResolve() {
+            try {
+                AppDomain.CurrentDomain.AssemblyResolve -= _resolveHolder.AssemblyResolveEvent;
+            } catch (System.Security.SecurityException) {
+                // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                // If so, we will not look up sys.path for module loads
+            }
         }
 #endif
-        #endregion
+#endregion
 
         public override ICollection<string> GetSearchPaths() {
             List<string> result = new List<string>();
@@ -1060,6 +1091,10 @@ namespace IronPython.Runtime {
 
         public override void Shutdown() {
             object callable;
+
+#if !SILVERLIGHT
+            UnhookAssemblyResolve();
+#endif
 
             try {
                 if (_systemState.TryGetName(Symbols.SysExitFunc, out callable)) {
