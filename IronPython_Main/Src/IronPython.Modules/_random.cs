@@ -49,7 +49,9 @@ namespace IronPython.Modules {
                 }
 
                 byte[] bytes = new byte[count];
-                _rnd.NextBytes(bytes);
+                lock (this) {
+                    _rnd.NextBytes(bytes);
+                }
 
                 if (bits <= 32) {
                     return (int)getfour(bytes, 0, bits);
@@ -73,11 +75,15 @@ namespace IronPython.Modules {
             }
 
             public void jumpahead(int count) {
-                _rnd.NextBytes(new byte[4096]);
+                lock (this) {
+                    _rnd.NextBytes(new byte[4096]);
+                }
             }
 
             public object random() {
-                return _rnd.NextDouble();
+                lock (this) {
+                    return _rnd.NextDouble();
+                }
             }
 
             public void seed() {
@@ -91,13 +97,21 @@ namespace IronPython.Modules {
                 } else {
                     newSeed = s.GetHashCode();
                 }
-                _rnd = new System.Random(newSeed);
+                lock (this) {
+                    _rnd = new System.Random(newSeed);
+                }
             }
 
             public void setstate(object state) {
                 System.Random random = state as System.Random;
-                if (random != null) _rnd = random;
-                else throw IronPython.Runtime.Operations.PythonOps.TypeError("setstate: argument must be value returned from getstate()");
+
+                lock (this) {
+                    if (random != null) {
+                        _rnd = random;
+                    } else {
+                        throw IronPython.Runtime.Operations.PythonOps.TypeError("setstate: argument must be value returned from getstate()");
+                    }
+                }
             }
 
             #endregion

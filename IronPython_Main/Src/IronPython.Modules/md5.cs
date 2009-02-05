@@ -31,12 +31,19 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [Documentation("MD5 hash algorithm")]
     public static class PythonMD5 {
-        private static readonly MD5CryptoServiceProvider _hasher = new MD5CryptoServiceProvider();
-        private static readonly int _digestSize = _hasher.HashSize / 8;
+        [ThreadStatic]
+        private static MD5CryptoServiceProvider _hasher;
+
+        private static MD5CryptoServiceProvider GetHasher() {
+            if (_hasher == null) {
+                _hasher = new MD5CryptoServiceProvider();
+            }
+            return _hasher;
+        }
 
         public static int digest_size {
             [Documentation("Size of the resulting digest in bytes (constant)")]
-            get { return _digestSize; }
+            get { return GetHasher().HashSize / 8; }
         }
 
         [Documentation("new([data]) -> object (new md5 object)")]
@@ -78,7 +85,7 @@ namespace IronPython.Modules {
                 Array.Copy(_bytes, updatedBytes, _bytes.Length);
                 Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
                 _bytes = updatedBytes;
-                _hash = _hasher.ComputeHash(_bytes);
+                _hash = GetHasher().ComputeHash(_bytes);
             }
 
             [Documentation("digest() -> int (current digest value)")]

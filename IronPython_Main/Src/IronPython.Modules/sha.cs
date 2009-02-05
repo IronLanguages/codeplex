@@ -31,18 +31,25 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [Documentation("SHA1 hash algorithm")]
     public static class PythonSha {
-        private static readonly SHA1Managed hasher = new SHA1Managed();
-        private static readonly int digestSize = hasher.HashSize / 8;
+        [ThreadStatic]
+        private static SHA1Managed _hasher;
         private const int blockSize = 64;
+
+        private static SHA1Managed GetHasher() {
+            if (_hasher == null) {
+                _hasher = new SHA1Managed();
+            }
+            return _hasher;
+        }
 
         public static int digest_size {
             [Documentation("Size of the resulting digest in bytes (constant)")]
-            get { return digestSize; }
+            get { return GetHasher().HashSize / 8; }
         }
 
         public static int digestsize {
             [Documentation("Size of the resulting digest in bytes (constant)")]
-            get { return digestSize; }
+            get { return digest_size; }
         }
 
         public static int blocksize {
@@ -68,7 +75,7 @@ namespace IronPython.Modules {
         {
             byte[] _bytes;
             byte[] _hash;
-            public static readonly int digest_size = PythonSha.digestSize;
+            public static readonly int digest_size = PythonSha.digest_size;
             public static readonly int block_size = PythonSha.blocksize;
 
             public sha() : this(new byte[0]) { }
@@ -93,7 +100,7 @@ namespace IronPython.Modules {
                 Array.Copy(_bytes, updatedBytes, _bytes.Length);
                 Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
                 _bytes = updatedBytes;
-                _hash = hasher.ComputeHash(_bytes);
+                _hash = GetHasher().ComputeHash(_bytes);
             }
 
             [Documentation("digest() -> int (current digest value)")]

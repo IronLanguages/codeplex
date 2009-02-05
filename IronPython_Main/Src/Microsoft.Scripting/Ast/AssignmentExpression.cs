@@ -36,11 +36,11 @@ namespace Microsoft.Scripting.Ast {
             _right = right;
         }
 
-        protected override System.Type GetExpressionType() {
+        protected override System.Type TypeImpl() {
             return _right.Type;
         }
 
-        protected override ExpressionType GetNodeKind() {
+        protected override ExpressionType NodeTypeImpl() {
             return ExpressionType.Extension;
         }
 
