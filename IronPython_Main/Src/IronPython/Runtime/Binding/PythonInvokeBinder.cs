@@ -100,10 +100,6 @@ namespace IronPython.Runtime.Binding {
                 Binder.Binder.Call(Signature, new ParameterBinderWithCodeContext(Binder.Binder, codeContext), target, args);
         }
 
-        public override object/*!*/ CacheIdentity {
-            get { return this; }
-        }
-
         #endregion
 
         #region Object Overrides

@@ -49,10 +49,6 @@ namespace IronPython.Runtime.Binding {
             return PythonProtocol.Operation(this, ArrayUtils.Insert(target, args));
         }
 
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
         public override int GetHashCode() {
             return base.GetHashCode() ^ _state.Binder.GetHashCode();
         }
@@ -108,8 +104,12 @@ namespace IronPython.Runtime.Binding {
                 return PythonProtocol.Operation(_opBinder, ArrayUtils.Append(ArrayUtils.Insert(target, indexes), value));
             }
 
-            public override object CacheIdentity {
-                get { return _opBinder; }
+            public override int GetHashCode() {
+                return _opBinder.GetHashCode();
+            }
+
+            public override bool Equals(object obj) {
+                return obj != null && obj.Equals(_opBinder);
             }
         }
 
@@ -131,8 +131,12 @@ namespace IronPython.Runtime.Binding {
                 return PythonProtocol.Operation(_opBinder, ArrayUtils.Insert(target, indexes));
             }
 
-            public override object CacheIdentity {
-                get { return _opBinder; }
+            public override int GetHashCode() {
+                return _opBinder.GetHashCode();
+            }
+
+            public override bool Equals(object obj) {
+                return obj != null && obj.Equals(_opBinder);
             }
         }
 

@@ -25,10 +25,6 @@ using System.Diagnostics;
 
 namespace Microsoft.Scripting {
     internal sealed class  ComInvokeAction : InvokeBinder {
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
         internal ComInvokeAction(params ArgumentInfo[] arguments)
             : base(arguments) {
         }
@@ -119,12 +115,7 @@ namespace Microsoft.Scripting {
                 restrictions
             );
         }
-
-        public override object CacheIdentity {
-            get { return this; }
-        }
     }
-
 }
 
 #endif

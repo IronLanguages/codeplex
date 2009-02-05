@@ -80,10 +80,6 @@ namespace IronPython.Runtime.Binding {
             return ob._state.Binder == _state.Binder && base.Equals(obj);
         }
 
-        public override object/*!*/ CacheIdentity {
-            get { return this; }
-        }
-
         #region IPythonSite Members
 
         public BinderState/*!*/ Binder {

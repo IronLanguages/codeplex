@@ -419,7 +419,7 @@ namespace Microsoft.Linq.Expressions {
         /// <summary>
         /// Creates a Type object that represents a generic System.Func delegate type that has specific type arguments. 
         /// </summary>
-        /// <param name="typeArgs">An array of one to five Type objects that specify the type arguments for the System.Func delegate type.</param>
+        /// <param name="typeArgs">An array of Type objects that specify the type arguments for the System.Func delegate type.</param>
         /// <returns>The type of a System.Func delegate that has the specified type arguments.</returns>
         public static Type GetFuncType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
@@ -432,9 +432,23 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
+        /// Creates a type object that represents a generic System.Func delegate type that has specific type arguments.
+        /// </summary>
+        /// <param name="typeArgs">An array of Type objects that specify the type arguments for the System.Func delegate type.</param>
+        /// <param name="funcType">When this method returns, contains the generic System.Func delegate type that has specific type arguments. Contains null if there is no generic System.Func delegate that matches the <paramref name="typeArgs"/>.This parameter is passed uninitialized.</param>
+        /// <returns>true if generic System.Func delegate type was created for specific <paramref name="typeArgs"/>; false otherwise.</returns>
+        public static bool TryGetFuncType(Type[] typeArgs, out Type funcType) {
+            ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
+            ContractUtils.RequiresNotNullItems(typeArgs, "typeArgs");
+            Type result;
+            funcType = result = DelegateHelpers.GetFuncType(typeArgs);
+            return result != null;
+        }
+
+        /// <summary>
         /// Creates a Type object that represents a generic System.Action delegate type that has specific type arguments. 
         /// </summary>
-        /// <param name="typeArgs">An array of zero to four Type objects that specify the type arguments for the System.Action delegate type.</param>
+        /// <param name="typeArgs">An array of Type objects that specify the type arguments for the System.Action delegate type.</param>
         /// <returns>The type of a System.Action delegate that has the specified type arguments.</returns>
         public static Type GetActionType(params Type[] typeArgs) {
             ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
@@ -444,6 +458,20 @@ namespace Microsoft.Linq.Expressions {
                 throw Error.IncorrectNumberOfTypeArgsForAction();
             }
             return result;
+        }
+
+        /// <summary>
+        /// Creates a type object that represents a generic System.Action delegate type that has specific type arguments.
+        /// </summary>
+        /// <param name="typeArgs">An array of Type objects that specify the type arguments for the System.Action delegate type.</param>
+        /// <param name="actionType">When this method returns, contains the generic System.Action delegate type that has specific type arguments. Contains null if there is no generic System.Action delegate that matches the <paramref name="typeArgs"/>.This parameter is passed uninitialized.</param>
+        /// <returns>true if generic System.Action delegate type was created for specific <paramref name="typeArgs"/>; false otherwise.</returns>
+        public static bool TryGetActionType(Type[] typeArgs, out Type actionType) {
+            ContractUtils.RequiresNotNull(typeArgs, "typeArgs");
+            ContractUtils.RequiresNotNullItems(typeArgs, "typeArgs");
+            Type result;
+            actionType = result = DelegateHelpers.GetActionType(typeArgs);
+            return result != null;
         }
 
         /// <summary>

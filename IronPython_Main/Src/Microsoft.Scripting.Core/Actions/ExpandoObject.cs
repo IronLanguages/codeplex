@@ -30,15 +30,17 @@ namespace Microsoft.Scripting {
     /// Represents an object with members that can be dynamically added and removed at runtime.
     /// </summary>
     public sealed class ExpandoObject : IDynamicObject {
+        internal readonly object LockObject;                        // the readonly field is used for locking the Expando object
         private ExpandoData _data;                                  // the data currently being held by the Expando object
 
-        internal static object Uninitialized = new object();        // A marker object used to identify that a value is uninitialized.
+        internal readonly static object Uninitialized = new object();        // A marker object used to identify that a value is uninitialized.
 
         /// <summary>
         /// Creates a new ExpandoObject with no members.
         /// </summary>
         public ExpandoObject() {
             _data = ExpandoData.Empty;
+            LockObject = new object();
         }
 
         #region Get/Set/Delete Helpers
@@ -85,7 +87,7 @@ namespace Microsoft.Scripting {
         internal void SetValue(ExpandoClass klass, int index, object value) {
             Debug.Assert(index != -1);
 
-            lock (this) {
+            lock (LockObject) {
                 ExpandoData data = _data;
 
                 if (data.Class != klass) {
@@ -117,7 +119,7 @@ namespace Microsoft.Scripting {
                 return false;
             }
 
-            lock (this) {
+            lock (LockObject) {
                 ExpandoData data = _data;
 
                 if (data.Class != klass) {
@@ -169,7 +171,7 @@ namespace Microsoft.Scripting {
         private ExpandoData PromoteClassWorker(ExpandoClass oldClass, ExpandoClass newClass) {
             Debug.Assert(oldClass != newClass);
 
-            lock (this) {
+            lock (LockObject) {
                 if (_data.Class == oldClass) {
                     _data = new ExpandoData(newClass, newClass.GetNewKeys(_data.Data));
                 }
