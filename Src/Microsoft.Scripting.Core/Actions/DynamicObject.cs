@@ -568,10 +568,6 @@ namespace Microsoft.Scripting {
                 public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion) {
                     throw new NotSupportedException();
                 }
-
-                public override object CacheIdentity {
-                    get { throw new NotSupportedException(); }
-                }
             }
         }
 

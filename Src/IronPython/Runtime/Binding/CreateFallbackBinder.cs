@@ -41,10 +41,6 @@ namespace IronPython.Runtime.Binding {
             return _fallback.InvokeFallback(target, args, BindingHelpers.GetCallSignature(this));
         }
 
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
         #region IPythonSite Members
 
         public BinderState Binder {

@@ -294,7 +294,7 @@ namespace Microsoft.Linq.Expressions {
                     var dynLeft = (DynamicExpression)currentLeft;
                     var dynRight = (DynamicExpression)currentRight;
 
-                    if (!dynRight.Binder.CacheIdentity.Equals(dynLeft.Binder.CacheIdentity)) {
+                    if (!dynRight.Binder.Equals(dynLeft.Binder)) {
                         return false;
                     }
                     break;
@@ -316,7 +316,7 @@ namespace Microsoft.Linq.Expressions {
                             return false;
                         }
 
-                        if (!leftSite.Binder.CacheIdentity.Equals(rightSite.Binder.CacheIdentity)) {
+                        if (!leftSite.Binder.Equals(rightSite.Binder)) {
                             return false;
                         }
 

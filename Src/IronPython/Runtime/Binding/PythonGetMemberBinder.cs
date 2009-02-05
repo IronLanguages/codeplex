@@ -182,10 +182,6 @@ namespace IronPython.Runtime.Binding {
             }
         }
 
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
         public override int GetHashCode() {
             return _name.GetHashCode() ^ _state.Binder.GetHashCode() ^ ((int)_options);
         }
@@ -262,11 +258,6 @@ namespace IronPython.Runtime.Binding {
             return ob._state.Binder == _state.Binder &&
                 base.Equals(obj);
         }
-
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
     }
 
     [Flags]

@@ -25,7 +25,9 @@ namespace Microsoft.Linq.Expressions {
     public sealed class MemberAssignment : MemberBinding {
         Expression _expression;
         internal MemberAssignment(MemberInfo member, Expression expression)
+#pragma warning disable 618
             : base(MemberBindingType.Assignment, member) {
+#pragma warning restore 618
             _expression = expression;
         }
         /// <summary>

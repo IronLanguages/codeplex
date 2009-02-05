@@ -134,10 +134,6 @@ namespace IronPython.Runtime.Binding {
                 arg.GetLimitType() != typeof(BuiltinMethodDescriptor);
         }
 
-        public override object CacheIdentity {
-            get { return this; }
-        }
-
         public override int GetHashCode() {
             return base.GetHashCode() ^ _state.Binder.GetHashCode() ^ _kind.GetHashCode();
         }
