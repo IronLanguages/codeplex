@@ -37,7 +37,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected override System.Type TypeImpl() {
-            return _right.Type;
+            //Need to be consistent with AssignBinaryExpression
+            return _left.Type;
         }
 
         protected override ExpressionType NodeTypeImpl() {

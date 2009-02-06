@@ -76,8 +76,7 @@ namespace Microsoft.Scripting {
             return IsIdentityConversion(source, destination) ||
                 IsImplicitNumericConversion(source, destination) ||
                 IsImplicitReferenceConversion(source, destination) ||
-                IsImplicitBoxingConversion(source, destination) ||
-                IsImplicitNullableConversion(source, destination);
+                IsImplicitBoxingConversion(source, destination);
         }
 
         internal static bool IsImplicitlyConvertible(Type source, Type destination, bool considerUserDefined) {
@@ -247,13 +246,6 @@ namespace Microsoft.Scripting {
                 return true;
             if (source.IsEnum && destination == typeof(System.Enum))
                 return true;
-            return false;
-        }
-
-        //CONFORMING
-        private static bool IsImplicitNullableConversion(Type source, Type destination) {
-            if (IsNullableType(destination))
-                return IsImplicitlyConvertible(GetNonNullableType(source), GetNonNullableType(destination));
             return false;
         }
     }

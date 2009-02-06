@@ -136,7 +136,7 @@ def gen_tree_nodes(cw):
 
 def gen_stackspiller_switch(cw):
     
-    no_spill_node_kinds =  ["Quote", "Parameter", "Constant", "RuntimeVariables", "Default"]
+    no_spill_node_kinds =  ["Quote", "Parameter", "Constant", "RuntimeVariables", "Default", "DebugInfo"]
     
     # nodes that need spilling
     for node in expressions:

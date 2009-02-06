@@ -151,6 +151,10 @@ namespace Microsoft.Scripting.Interpreter {
             // We're not going to clear the debug info, as that requires a
             // try-finally for every debug info. Also we'll just use the
             // start line.
+            // TODO: under the new design, we may be able to do the clearance correctly.
+            if (node.IsClear) {
+                return node;
+            }
 
             if (_fileName == null) {
                 _fileName = Expression.Variable(typeof(string), "file");
@@ -168,7 +172,7 @@ namespace Microsoft.Scripting.Interpreter {
                 _lastLineNumber = node.StartLine;
                 return Expression.Block(
                     Expression.Assign(_lineNumber, Expression.Constant(_lastLineNumber)),
-                    Visit(node.Expression)
+                    Expression.Empty()
                 );
             }
 
@@ -177,7 +181,7 @@ namespace Microsoft.Scripting.Interpreter {
             return Expression.Block(
                 Expression.Assign(_fileName, Expression.Constant(_lastDocument.FileName)),
                 Expression.Assign(_lineNumber, Expression.Constant(_lastLineNumber)),
-                Visit(node.Expression)
+                Expression.Empty()
             );
         }
 
