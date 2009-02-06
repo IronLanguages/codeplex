@@ -104,6 +104,10 @@ namespace IronPython.Compiler {
             TrueDivision = trueDivision;
         }
 
+        public PythonCompilerOptions(PythonLanguageFeatures features) {
+            _languageFeatures = features;
+        }
+
         #region ICloneable Members
 
         public override object Clone() {

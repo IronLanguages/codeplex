@@ -178,10 +178,19 @@ namespace Microsoft.Scripting.Actions.Calls {
                 int count = kvp.Key;
                 if (callType == CallTypes.ImplicitInstance) {
                     foreach (MethodCandidate cand in kvp.Value._targets) {
-                        if (!CompilerHelpers.IsStatic(cand.Target.Method)) {
+                        foreach (var x in cand.Parameters) {
+                            if (x.IsParamsArray || x.IsParamsDict) {
+                                count--;
+                            }
+                        }
+                    }
+
+                    foreach (MethodCandidate cand in kvp.Value._targets) {
+                        if (IsInstanceMethod(cand)) {
                             // dispatch includes an instance method, bump
                             // one parameter off.
                             count--;
+                            break;
                         }
                     }
                 }
@@ -216,12 +225,21 @@ namespace Microsoft.Scripting.Actions.Calls {
             int i = 0;
             foreach (KeyValuePair<int, TargetSet> kvp in _targetSets) {
                 int count = kvp.Key;
+                foreach (MethodCandidate cand in kvp.Value._targets) {
+                    foreach (var x in cand.Parameters) {
+                        if (x.IsParamsArray || x.IsParamsDict) {
+                            count--;
+                        }
+                    }
+                }
+
                 if (callType == CallTypes.ImplicitInstance) {
                     foreach (MethodCandidate cand in kvp.Value._targets) {
-                        if (!CompilerHelpers.IsStatic(cand.Target.Method)) {
+                        if (IsInstanceMethod(cand)) {
                             // dispatch includes an instance method, bump
                             // one parameter off.
                             count--;
+                            break;
                         }
                     }
                 }
@@ -232,6 +250,11 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             return new BindingTarget(Name, callType == CallTypes.None ? metaObjects.Length : metaObjects.Length - 1, expectedArgs);
+        }
+
+        private static bool IsInstanceMethod(MethodCandidate cand) {
+            return !CompilerHelpers.IsStatic(cand.Target.Method) ||
+                                        (cand.Target.Method.IsDefined(typeof(ExtensionAttribute), false));
         }
 
         /// <summary>
@@ -835,16 +858,25 @@ namespace Microsoft.Scripting.Actions.Calls {
                 MetaObject[] resObjects = new MetaObject[objects.Length];
                 for (int i = 0; i < objects.Length; i++) {
                     if (_targets.Count > 0 && AreArgumentTypesOverloaded(i, objects.Length, candidates)) {
-                        resObjects[i] = objects[i].Restrict(objects[i].LimitType);
+                        resObjects[i] = RestrictOne(objects[i], parameters[i]);
                     } else if (parameters[i].Type.IsAssignableFrom(objects[i].Expression.Type)) {
                         // we have a strong enough type already
                         resObjects[i] = objects[i];
                     } else {
-                        resObjects[i] = objects[i].Restrict(objects[i].LimitType);
+                        resObjects[i] = RestrictOne(objects[i], parameters[i]);
                     }
                 }
 
                 return resObjects;
+            }
+
+            private MetaObject RestrictOne(MetaObject obj, ParameterWrapper forParam) {
+                if (forParam.Type == typeof(object)) {
+                    // don't use Restrict as it'll box & unbox.
+                    return new MetaObject(obj.Expression, Restrictions.TypeRestriction(obj.Expression, obj.LimitType));
+                } else {
+                    return obj.Restrict(obj.LimitType);
+                }
             }
 
             private static bool AreArgumentTypesOverloaded(int argIndex, int argCount, IList<MethodCandidate> methods) {

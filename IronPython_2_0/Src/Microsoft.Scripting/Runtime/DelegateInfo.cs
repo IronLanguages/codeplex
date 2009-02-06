@@ -17,6 +17,7 @@ using System; using Microsoft;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -25,13 +26,15 @@ namespace Microsoft.Scripting.Runtime {
     internal sealed class DelegateInfo {
         private readonly MethodInfo _method;
         private readonly object[] _constants;
+        private readonly DelegateSignatureInfo _sigInfo; 
         private WeakDictionary<object, WeakReference> _constantMap = new WeakDictionary<object, WeakReference>();
 
-        internal DelegateInfo(MethodInfo method, object[] constants) {
+        internal DelegateInfo(MethodInfo method, object[] constants, DelegateSignatureInfo sigInfo) {
             Assert.NotNull(method, constants);
 
             _method = method;
             _constants = constants;
+            _sigInfo = sigInfo;
         }
 
         internal Delegate CreateDelegate(Type delegateType, object target) {
@@ -59,9 +62,26 @@ namespace Microsoft.Scripting.Runtime {
                     (clone = (object[])cloneRef.Target) == null) {
                     _constantMap[target] = new WeakReference(clone = (object[])_constants.Clone());
 
+                    Type[] siteTypes = _sigInfo.MakeSiteSignature();
+
+                    CallSite callSite = DynamicSiteHelpers.MakeSite(_sigInfo.InvokeBinder, DynamicSiteHelpers.MakeCallSiteType(siteTypes));
+                    Type siteType = callSite.GetType();
+
+                    Type convertSiteType = null;
+                    CallSite convertSite = null;
+
+                    if (_sigInfo.ReturnType != typeof(void)) {
+                        convertSite = DynamicSiteHelpers.MakeSite(_sigInfo.ConvertBinder, DynamicSiteHelpers.MakeCallSiteType(typeof(object), _sigInfo.ReturnType));
+                        convertSiteType = convertSite.GetType();
+                    }
+
                     Debug.Assert(clone[0] == DelegateSignatureInfo.TargetPlaceHolder);
+                    Debug.Assert(clone[1] == DelegateSignatureInfo.CallSitePlaceHolder);
+                    Debug.Assert(clone[2] == DelegateSignatureInfo.ConvertSitePlaceHolder);
 
                     clone[0] = target;
+                    clone[1] = callSite;
+                    clone[2] = convertSite;
                 }
             }
 

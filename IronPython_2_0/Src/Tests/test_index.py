@@ -423,14 +423,18 @@ def test_error():
     AssertErrorWithPartialMessage(TypeError, "'int' object is unsubscriptable", lambda: 1[2])
     
 def test_cp19350_index_restrictions():
+    global keyValue
     class X(object):
         def __setitem__(self, key, value):
-            print repr(key)
+            global keyValue
+            keyValue = key
     
     def f(a, b):
          X()[a, b] = object()
     
     f(1, 2)
+    AreEqual(keyValue, (1, 2))
     f('one', 'two') 
+    AreEqual(keyValue, ('one', 'two'))
 
 run_test(__name__)

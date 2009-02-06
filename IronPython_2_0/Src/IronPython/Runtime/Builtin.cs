@@ -31,6 +31,7 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
+using Microsoft.Scripting.Generation;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
@@ -298,6 +299,52 @@ namespace IronPython.Runtime {
             return PythonOps.Compare(context, x, y);
         }
 
+        // having a cmp overload for double would be nice, but it breaks:
+        // x = 1e66666
+        // y = x/x
+        // cmp(y,y)
+        // which returns 0 because id(y) == id(y).  If we added a double overload
+        // we lose object identity.
+
+        public static int cmp(CodeContext/*!*/ context, int x, int y) {
+            return Int32Ops.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]BigInteger x, [NotNull]BigInteger y) {
+            if ((object)x == (object)y) {
+                return 0;
+            }
+            return BigIntegerOps.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, double x, [NotNull]BigInteger y) {
+            return -BigIntegerOps.Compare(y, x);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]BigInteger x, double y) {
+            return BigIntegerOps.Compare(x, y);
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]string x, [NotNull]string y) {
+            if ((object)x != (object)y) {
+                int res = string.CompareOrdinal(x, y);
+                if (res >= 1) {
+                    return 1;
+                } else if (res <= -1) {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        public static int cmp(CodeContext/*!*/ context, [NotNull]PythonTuple x, [NotNull]PythonTuple y) {
+            if ((object)x == (object)y) {
+                return 0;
+            }
+            return x.CompareTo(y);
+        }
+
         public static PythonType complex {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(Complex64));
@@ -548,7 +595,16 @@ namespace IronPython.Runtime {
         }
 
         public static int hash(CodeContext/*!*/ context, object o) {
-            return PythonOps.Hash(context, o);
+            return PythonContext.GetContext(context).Hash(o);
+        }
+        
+        // this is necessary because overload resolution selects the int form.
+        public static int hash(CodeContext/*!*/ context, char o) {
+            return PythonContext.GetContext(context).Hash(o);
+        }
+
+        public static int hash(CodeContext/*!*/ context, int o) {
+            return o;
         }
 
         public static void help(CodeContext/*!*/ context, object o) {
@@ -924,7 +980,7 @@ namespace IronPython.Runtime {
             );
         }
 
-        public static List map(CodeContext/*!*/ context, object func, IEnumerable enumerator) {
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object>>> storage, object func, IEnumerable enumerator) {
             if (enumerator == null) {
                 throw PythonOps.TypeError("NoneType is not iterable");
             }
@@ -947,12 +1003,15 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, object func, [NotNull]string enumerator) {
-            List ret = new List();
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object>>> storage, object func, [NotNull]string enumerator) {
+            List ret = new List(enumerator.Length);
             CallSite<Func<CallSite, CodeContext, object, object, object>> mapSite = null;
 
             if (func != null) {
-                mapSite = MakeMapSite<object, object>(context);
+                if (storage.Data == null) {
+                    storage.Data = MakeMapSite<object, object>(context);
+                }
+                mapSite = storage.Data;
             }
 
             foreach (char o in enumerator) {
@@ -966,8 +1025,12 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite = MakeMapSite<PythonType, object>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonType, object, object>>> storage, [NotNull]PythonType/*!*/ func, [NotNull]IEnumerable enumerator) {
+            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<PythonType, object>(context);
+            }
+            mapSite = storage.Data;
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -976,8 +1039,12 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]IEnumerable enumerator) {
-            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite = MakeMapSite<BuiltinFunction, object>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>>> storage, [NotNull]BuiltinFunction/*!*/ func, [NotNull]IEnumerable enumerator) {
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<BuiltinFunction, object>(context);
+            }
+            mapSite = storage.Data;
 
             List ret = new List();
             foreach (object o in enumerator) {
@@ -986,22 +1053,44 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]BuiltinFunction/*!*/ func, [NotNull]string enumerator) {
-            CallSite<Func<CallSite, CodeContext, BuiltinFunction, string, object>> mapSite = MakeMapSite<BuiltinFunction, string>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>>> storage, [NotNull]BuiltinFunction/*!*/ func, [NotNull]string enumerator) {
+            CallSite<Func<CallSite, CodeContext, BuiltinFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<BuiltinFunction, object>(context);
+            }
+            mapSite = storage.Data;
 
-            List ret = new List();
+            List ret = new List(enumerator.Length);
             foreach (char o in enumerator) {
                 ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
             }
             return ret;
         }
 
-        public static List map(CodeContext/*!*/ context, [NotNull]PythonType/*!*/ func, [NotNull]string enumerator) {
-            CallSite<Func<CallSite, CodeContext, PythonType, string, object>> mapSite = MakeMapSite<PythonType, string>(context);
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonType, object, object>>> storage, [NotNull]PythonType/*!*/ func, [NotNull]string enumerator) {
+            CallSite<Func<CallSite, CodeContext, PythonType, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<PythonType, object>(context);
+            }
+            mapSite = storage.Data;
 
-            List ret = new List();
+            List ret = new List(enumerator.Length);
             foreach (char o in enumerator) {
                 ret.AddNoLock(mapSite.Target(mapSite, context, func, RuntimeHelpers.CharToString(o)));
+            }
+            return ret;
+        }
+
+        public static List map(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, PythonFunction, object, object>>> storage, [NotNull]PythonFunction/*!*/ func, [NotNull]IList enumerator) {
+            CallSite<Func<CallSite, CodeContext, PythonFunction, object, object>> mapSite;
+            if (storage.Data == null) {
+                storage.Data = MakeMapSite<PythonFunction, object>(context);
+            }
+            mapSite = storage.Data;
+
+            List ret = new List(enumerator.Count);
+            foreach (object o in enumerator) {
+                ret.AddNoLock(mapSite.Target(mapSite, context, func, o));
             }
             return ret;
         }
@@ -1451,27 +1540,48 @@ namespace IronPython.Runtime {
             return line;
         }
 
-        public static object reduce(CodeContext/*!*/ context, object func, object seq) {
+        public static object reduce(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData, object func, object seq) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
+            
+            EnsureReduceData(context, siteData);
+
+            CallSite<Func<CallSite, CodeContext, object, object, object, object>> site = siteData.Data;
+
             if (!i.MoveNext()) {
                 throw PythonOps.TypeError("reduce() of empty sequence with no initial value");
             }
             object ret = i.Current;
             while (i.MoveNext()) {
-                ret = PythonCalls.Call(context, func, ret, i.Current);
+                ret = site.Target(site, context, func, ret, i.Current);
             }
             return ret;
         }
 
-        public static object reduce(CodeContext/*!*/ context, object func, object seq, object initializer) {
+        public static object reduce(CodeContext/*!*/ context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData, object func, object seq, object initializer) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
+            EnsureReduceData(context, siteData);
+
+            CallSite<Func<CallSite, CodeContext, object, object, object, object>> site = siteData.Data;
+
             object ret = initializer;
             while (i.MoveNext()) {
-                ret = PythonCalls.Call(context, func, ret, i.Current);
+                ret = site.Target(site, context, func, ret, i.Current);
             }
             return ret;
         }
 
+        private static void EnsureReduceData(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object, object, object>>> siteData) {
+            if (siteData.Data == null) {
+                siteData.Data = CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
+                    new InvokeBinder(
+                        PythonContext.GetContext(context).DefaultBinderState,
+                        new CallSignature(2)
+                    )
+                );
+
+            }
+        }
+        
         public static object reload(CodeContext/*!*/ context, Scope/*!*/ scope) {
             if (scope == null) {
                 throw PythonOps.TypeError("unexpected type: NoneType");
@@ -1673,9 +1783,19 @@ namespace IronPython.Runtime {
                     pco = new PythonCompilerOptions(true);
                 } else {
                     pco = new PythonCompilerOptions(false);
+               }
+            } else if (((cflags & (CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT | CompileFlags.CO_FUTURE_WITH_STATEMENT)) != 0)) {
+                PythonLanguageFeatures langFeat = PythonLanguageFeatures.Default;
+                if ((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0) {
+                    langFeat |= PythonLanguageFeatures.TrueDivision;
                 }
-            } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
-                pco = new PythonCompilerOptions(true);
+                if ((cflags & CompileFlags.CO_FUTURE_WITH_STATEMENT) != 0) {
+                    langFeat |= PythonLanguageFeatures.AllowWithStatement;
+                }
+                if ((cflags & CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT) != 0) {
+                    langFeat |= PythonLanguageFeatures.AbsoluteImports;
+                }
+                pco = new PythonCompilerOptions(langFeat);
             } else {
                 pco = DefaultContext.DefaultPythonContext.GetPythonCompilerOptions();
             }
@@ -1696,7 +1816,8 @@ namespace IronPython.Runtime {
             CompileFlags cflags = 0;
             if (flags != null) {
                 cflags = (CompileFlags)Converter.ConvertToInt32(flags);
-                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_DONT_IMPLY_DEDENT)) != 0) {
+                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_DONT_IMPLY_DEDENT |
+                    CompileFlags.CO_FUTURE_ABSOLUTE_IMPORT | CompileFlags.CO_FUTURE_WITH_STATEMENT)) != 0) {
                     throw PythonOps.ValueError("unrecognized flags");
                 }
             }

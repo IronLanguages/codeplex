@@ -23,6 +23,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -59,7 +60,7 @@ namespace IronPython.Runtime {
 
         // pre-created delegate instances shared by all homogeneous dictionaries for primitive types.
         private static readonly Func<object, int> _primitiveHash = PrimitiveHash, _doubleHash = DoubleHash, _intHash = IntHash, _tupleHash = TupleHash, _genericHash = GenericHash;
-        private static readonly Func<object, object, bool> _intEquals = IntEquals, _doubleEquals = DoubleEquals, _stringEquals = StringEquals, _tupleEquals = TupleEquals, _genericEquals = GenericEquals;
+        private static readonly Func<object, object, bool> _intEquals = IntEquals, _doubleEquals = DoubleEquals, _stringEquals = StringEquals, _tupleEquals = TupleEquals, _genericEquals = GenericEquals, _objectEq = System.Object.ReferenceEquals;
         private static readonly Type _polymorphicType = typeof(CommonDictionaryStorage);
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace IronPython.Runtime {
 
             if (t != null) {
                 // homogeneous collection
-                UpdateHelperFunctions(t);
+                UpdateHelperFunctions(t, items[1]);
             }
 
             for (int i = 0; i < items.Length / 2; i++) {
@@ -150,7 +151,7 @@ namespace IronPython.Runtime {
 
             Type t = CompilerHelpers.GetType(key);
             if (t != _keyType && _keyType != typeof(CommonDictionaryStorage)) {
-                UpdateHelperFunctions(t);
+                UpdateHelperFunctions(t, key);
             }
 
             AddOne(key, value);
@@ -167,7 +168,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private void UpdateHelperFunctions(Type t) {
+        private void UpdateHelperFunctions(Type t, object key) {
             if (_keyType == null) {
                 // first time through, get the sites for this specific type...
                 if (t == typeof(int)) {
@@ -182,10 +183,15 @@ namespace IronPython.Runtime {
                 } else if (t == typeof(PythonTuple)) {
                     _hashFunc = _tupleHash;
                     _eqFunc = _tupleEquals;
+                } else if (t == typeof(Type).GetType()) {    // this odd check checks for RuntimeType.
+                    _hashFunc = _primitiveHash;
+                    _eqFunc = _objectEq;
                 } else {
+                    PythonType pt = DynamicHelpers.GetPythonType(key);
+
                     // random type, but still homogeneous... get a shared site for this type.
-                    var hashSite = DefaultContext.DefaultPythonContext.GetHashSite(t);
-                    var equalSite = DefaultContext.DefaultPythonContext.GetEqualSite(t);
+                    var hashSite = DefaultContext.DefaultPythonContext.GetHashSite(pt);
+                    var equalSite = DefaultContext.DefaultPythonContext.GetEqualSite(pt);
 
                     AssignSiteDelegates(hashSite, equalSite);
                 }

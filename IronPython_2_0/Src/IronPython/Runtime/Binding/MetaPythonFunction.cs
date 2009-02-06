@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Binding {
         #region IPythonInvokable Members
 
         public MetaObject/*!*/ Invoke(InvokeBinder/*!*/ pythonInvoke, Expression/*!*/ codeContext, MetaObject/*!*/ target, MetaObject/*!*/[]/*!*/ args) {
-            return new FunctionBinderHelper(pythonInvoke, this, args).MakeMetaObject();
+            return new FunctionBinderHelper(pythonInvoke, this, codeContext, args).MakeMetaObject();
         }
 
         #endregion
@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override MetaObject/*!*/ Invoke(InvokeAction/*!*/ call, params MetaObject/*!*/[]/*!*/ args) {
-            return new FunctionBinderHelper(call, this, args).MakeMetaObject();
+            return new FunctionBinderHelper(call, this, null, args).MakeMetaObject();
         }
 
         public override MetaObject/*!*/ Convert(ConvertAction/*!*/ conversion) {
@@ -96,6 +96,7 @@ namespace IronPython.Runtime.Binding {
             private readonly MetaObject/*!*/[]/*!*/ _args;          // the arguments for the function
             private readonly MetaObject/*!*/[]/*!*/ _originalArgs;  // the original arguments for the function
             private readonly MetaAction/*!*/ _call;               // the signature for the method call
+            private readonly Expression _codeContext;               // the code context expression if one is available.
 
             private List<ParameterExpression>/*!*/ _temps;           // temporary variables allocated to create the rule
             private ParameterExpression _dict, _params, _paramsLen;  // splatted dictionary & params + the initial length of the params array, null if not provided.
@@ -107,12 +108,13 @@ namespace IronPython.Runtime.Binding {
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
             private Expression _paramlessCheck;                     // tests when we have no parameters
 
-            public FunctionBinderHelper(MetaAction/*!*/ call, MetaPythonFunction/*!*/ function, MetaObject/*!*/[]/*!*/ args) {
+            public FunctionBinderHelper(MetaAction/*!*/ call, MetaPythonFunction/*!*/ function, Expression codeContext, MetaObject/*!*/[]/*!*/ args) {
                 _call = call;
                 _func = function;
                 _args = args;
                 _originalArgs = args;
                 _temps = new List<ParameterExpression>();
+                _codeContext = codeContext;
 
                 // Remove the passed in instance argument if present
                 int instanceIndex = Signature.IndexOf(ArgumentKind.Instance);
@@ -158,11 +160,17 @@ namespace IronPython.Runtime.Binding {
                     );
                 }
 
-                
+
+                MetaObject[] deferArgs = ArrayUtils.Insert(_func, _originalArgs);
+
+                if (_codeContext != null) {
+                    deferArgs = ArrayUtils.Insert(new MetaObject(_codeContext, Restrictions.Empty), deferArgs);
+                }
+
                 return BindingHelpers.AddDynamicTestAndDefer(
                     _call, 
                     res, 
-                    ArrayUtils.Insert(_func, _originalArgs), 
+                    deferArgs,
                     new ValidationInfo(_deferTest, null),
                     res.Expression.Type     // force defer to our return type, our restrictions guarantee this to be true (only defaults can change, and we restrict to the delegate type)
                 );

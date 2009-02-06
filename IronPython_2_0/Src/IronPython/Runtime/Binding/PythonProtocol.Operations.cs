@@ -212,6 +212,18 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
+            if (res.LimitType != typeof(bool) && res.LimitType != typeof(void)) {
+                res = new MetaObject(
+                    Binders.Convert(
+                        state,
+                        typeof(bool),
+                        ConversionResultKind.ExplicitCast,
+                        res.Expression
+                    ),
+                    res.Restrictions
+                );
+            }
+
             return res;
         }
 
@@ -224,10 +236,71 @@ namespace IronPython.Runtime.Binding {
         private static MetaObject/*!*/ MakeHashOperation(OperationAction/*!*/ operation, MetaObject/*!*/ self) {
             self = self.Restrict(self.LimitType);
 
+            BinderState state = BinderState.GetBinderState(operation);
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.Hash, self);
+            MetaObject res = func.Target;
 
-            return func.Target;
+            if (func.ReturnType != typeof(int)) {
+                if (func.ReturnType == typeof(BigInteger)) {
+                    // Python 2.5 defines the result of returning a long as hashing the long
+                    res = new MetaObject(
+                        HashBigInt(operation, res.Expression),
+                        res.Restrictions
+                    );
+                } else if (func.ReturnType == typeof(object)) {
+                    // need to get the integer value here...
+                    ParameterExpression tempVar = Ast.Parameter(typeof(object), "hashTemp");
+
+                    res = new MetaObject(
+                            Expression.Scope(
+                                Expression.Comma(
+                                    Expression.Assign(tempVar, res.Expression),
+                                    Expression.Condition(
+                                        Expression.TypeIs(tempVar, typeof(int)),
+                                        Expression.Convert(tempVar, typeof(int)),
+                                        Expression.Condition(
+                                            Expression.TypeIs(tempVar, typeof(BigInteger)),
+                                            HashBigInt(operation, tempVar),
+                                            HashConvertToInt(state, tempVar)
+                                        )
+                                    )
+                                ),
+                                new[] { tempVar }
+                            ),
+                            res.Restrictions
+                        );
+                } else {
+                    // need to convert unknown value to object
+                    res = new MetaObject(
+                        HashConvertToInt(state, res.Expression),
+                        res.Restrictions
+                    );
+                }
+            }
+
+            return res;
         }
+
+        private static DynamicExpression/*!*/ HashBigInt(OperationAction/*!*/ operation, Expression/*!*/ expression) {
+            return Ast.Dynamic(
+                operation,
+                typeof(int),
+                expression
+            );
+        }
+
+        private static DynamicExpression/*!*/ HashConvertToInt(BinderState/*!*/ state, Expression/*!*/ expression) {
+            return Ast.Dynamic(
+                new ConversionBinder(
+                    state,
+                    typeof(int),
+                    ConversionResultKind.ExplicitCast
+                ),
+                typeof(int),
+                expression
+            );
+        }
+
 
         private static MetaObject/*!*/ MakeUnaryOperation(OperationAction/*!*/ operation, MetaObject/*!*/ self) {
             self = self.Restrict(self.LimitType);
@@ -1205,16 +1278,25 @@ namespace IronPython.Runtime.Binding {
                 Debug.Assert(IsSlice(op));
 
                 builder = new SliceBuilder(types, callable);
+
+                // slicing is dependent upon the types of the arguments (HasNumericTypes) 
+                // so we must restrict them.
                 args = ConvertArgs(types);
             } else {
                 // we're going to call a __*item__ method.
                 builder = new ItemBuilder(types, callable);
                 if (IsSlice(op)) {
                     // we need to create a new Slice object.
-                    args = GetItemSliceArguments(op, types);
+                    args = GetItemSliceArguments(BinderState.GetBinderState(operation), op, types);
                 } else {
-                    // we just need to pass the arguments as they are
-                    args = ConvertArgs(types);
+                    // no need to restrict the arguments.  We're not
+                    // a slice and so restrictions are not necessary
+                    // here because it's not dependent upon our types.
+                    args = (MetaObject[])types.Clone();
+
+                    // but we do need to restrict based upon the type
+                    // of object we're calling on.
+                    args[0] = types[0].Restrict(types[0].LimitType);
                 }
             }
 
@@ -1235,12 +1317,12 @@ namespace IronPython.Runtime.Binding {
         /// <summary>
         /// Gets the arguments that need to be provided to __*item__ when we need to pass a slice object.
         /// </summary>
-        private static MetaObject/*!*/[]/*!*/ GetItemSliceArguments(string op, MetaObject/*!*/[]/*!*/ types) {
+        private static MetaObject/*!*/[]/*!*/ GetItemSliceArguments(BinderState state, string op, MetaObject/*!*/[]/*!*/ types) {
             MetaObject[] args;
             if (op == StandardOperators.SetSlice) {
                 args = new MetaObject[] { 
                     types[0].Restrict(types[0].LimitType),
-                    GetSetSlice(types), 
+                    GetSetSlice(state, types), 
                     types[types.Length- 1].Restrict(types[types.Length - 1].LimitType)
                 };
             } else {
@@ -1248,7 +1330,7 @@ namespace IronPython.Runtime.Binding {
 
                 args = new MetaObject[] { 
                     types[0].Restrict(types[0].LimitType),
-                    GetGetOrDeleteSlice(types)
+                    GetGetOrDeleteSlice(state, types)
                 };
             }
             return args;
@@ -1413,7 +1495,7 @@ namespace IronPython.Runtime.Binding {
                         );
                     }
                 } else if (customFailure == null || (res = customFailure()) == null) {
-                    res = DefaultBinder.MakeError(Binder.MakeInvalidParametersError(target), Restrictions.Combine(args));
+                    res = DefaultBinder.MakeError(Binder.MakeInvalidParametersError(target), Restrictions.Combine(ConvertArgs(args)));
                 }
 
                 return res;
@@ -1738,27 +1820,41 @@ namespace IronPython.Runtime.Binding {
             throw new InvalidOperationException();
         }
 
-        private static MetaObject/*!*/ GetSetSlice(MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ GetSetSlice(BinderState state, MetaObject/*!*/[]/*!*/ args) {
+            MetaObject[] newArgs = (MetaObject[])args.Clone();
+            for (int i = 1; i < newArgs.Length; i++) {
+                if (!IsIndexType(state, newArgs[i])) {
+                    newArgs[i] = newArgs[i].Restrict(newArgs[i].LimitType);
+                }
+            }
+
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    Ast.ConvertHelper(GetSetParameter(args, 1), typeof(object)),
-                    Ast.ConvertHelper(GetSetParameter(args, 2), typeof(object)),
-                    Ast.ConvertHelper(GetSetParameter(args, 3), typeof(object))
+                    Ast.ConvertHelper(GetSetParameter(newArgs, 1), typeof(object)),
+                    Ast.ConvertHelper(GetSetParameter(newArgs, 2), typeof(object)),
+                    Ast.ConvertHelper(GetSetParameter(newArgs, 3), typeof(object))
                 ),
-                Restrictions.Combine(args)
+                Restrictions.Combine(newArgs)
             );
         }
 
-        private static MetaObject/*!*/ GetGetOrDeleteSlice(MetaObject/*!*/[]/*!*/ args) {
+        private static MetaObject/*!*/ GetGetOrDeleteSlice(BinderState state, MetaObject/*!*/[]/*!*/ args) {
+            MetaObject[] newArgs = (MetaObject[])args.Clone();
+            for (int i = 1; i < newArgs.Length; i++) {
+                if (!IsIndexType(state, newArgs[i])) {
+                    newArgs[i] = newArgs[i].Restrict(newArgs[i].LimitType);
+                }
+            }
+
             return new MetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 1), typeof(object)),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 2), typeof(object)),
-                    Ast.ConvertHelper(GetGetOrDeleteParameter(args, 3), typeof(object))
+                    Ast.ConvertHelper(GetGetOrDeleteParameter(newArgs, 1), typeof(object)),
+                    Ast.ConvertHelper(GetGetOrDeleteParameter(newArgs, 2), typeof(object)),
+                    Ast.ConvertHelper(GetGetOrDeleteParameter(newArgs, 3), typeof(object))
                 ),
-                Restrictions.Combine(args)
+                Restrictions.Combine(newArgs)
             );
         }
 

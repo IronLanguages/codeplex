@@ -59,14 +59,14 @@ namespace IronPython.Runtime {
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private readonly BinderState _defaultBinderState, _defaultClsBinderState;
+#if !SILVERLIGHT
+        private readonly AssemblyResolveHolder _resolveHolder;
+#endif
         private readonly Dictionary<AttrKey, CallSite<Func<CallSite, object, CodeContext, object>>>/*!*/ _tryGetMemSites
             = new Dictionary<AttrKey, CallSite<Func<CallSite, object, CodeContext, object>>>();
         private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
 
         // conditional variables for silverlight/desktop CLR features
-#if !SILVERLIGHT
-        private static int _hookedAssemblyResolve;
-#endif
         private Hosting.PythonService _pythonService;
         private string _initialExecutable, _initialPrefix = GetInitialPrefix();
 
@@ -97,7 +97,7 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, object, IList<string>>> _memberNamesSite;
         private CallSite<Func<CallSite, CodeContext, object, object>> _finalizerSite;
         private CallSite<Func<CallSite, CodeContext, PythonFunction, object>> _functionCallSite;
-        private CallSite<Func<CallSite, object, object, bool>> _greaterThanSite, _lessThanSite, _equalRetBoolSite, _greaterThanEqualSite, _lessThanEqualSite;
+        private CallSite<Func<CallSite, object, object, bool>> _greaterThanSite, _lessThanSite, _greaterThanEqualSite, _lessThanEqualSite;
         private CallSite<Func<CallSite, CodeContext, object, object[], object>> _callSplatSite;
         private CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> _callDictSite;
         private CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> _importSite;
@@ -111,7 +111,7 @@ namespace IronPython.Runtime {
         // conversion sites
         private CallSite<Func<CallSite, object, int>> _intSite;
         private CallSite<Func<CallSite, object, string>> _tryStringSite;
-        private CallSite<Func<CallSite, object, object>> _tryIntSite, _hashSite;
+        private CallSite<Func<CallSite, object, object>> _tryIntSite;
         private CallSite<Func<CallSite, object, IEnumerable>> _tryIEnumerableSite;
         private Dictionary<Type, CallSite<Func<CallSite, object, object>>> _implicitConvertSites;
         private Dictionary<string, CallSite<Func<CallSite, object, object, object>>> _binarySites;
@@ -128,7 +128,6 @@ namespace IronPython.Runtime {
         private ClrModule.ReferencesList _referencesList;
         private string _floatFormat, _doubleFormat;
 
-        private Dictionary<Type, CallSite<Func<CallSite, object, int>>> _hashSites;
         private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
         /// <summary>
@@ -184,6 +183,7 @@ namespace IronPython.Runtime {
 
             List path = new List(_options.SearchPaths);
 #if !SILVERLIGHT
+            _resolveHolder = new AssemblyResolveHolder(this); 
             try {
                 Assembly entryAssembly = Assembly.GetEntryAssembly();
                 // Can be null if called from unmanaged code (VS integration scenario)
@@ -207,13 +207,11 @@ namespace IronPython.Runtime {
             PythonFunction.SetRecursionLimit(_options.RecursionLimit);
 
 #if !SILVERLIGHT // AssemblyResolve
-            try {
-                if (Interlocked.Exchange(ref _hookedAssemblyResolve, 1) == 0) {
-                    HookAssemblyResolve();
-                }
-            } catch (System.Security.SecurityException) {
-                // We may not have SecurityPermissionFlag.ControlAppDomain. 
-                // If so, we will not look up sys.path for module loads
+            object asmResolve;
+            if (options == null ||
+                !options.TryGetValue("NoAssemblyResolveHook", out asmResolve) ||
+                !Convert.ToBoolean(asmResolve)) {
+                HookAssemblyResolve();
             }
 #endif
         }
@@ -850,7 +848,7 @@ namespace IronPython.Runtime {
             // adds __builtin__ variable if necessary.  Python adds the module directly to
             // __main__ and __builtin__'s dictionary for all other modules.  Our callers
             // pass the appropriate flags to control this behavior.
-            if ((options & ModuleOptions.NoBuiltins) == 0 && !scope.ContainsName(Symbols.Builtins)) {
+            if ((options & ModuleOptions.NoBuiltins) == 0 && !scope.Dict.ContainsKey(Symbols.Builtins)) {
                 if ((options & ModuleOptions.ModuleBuiltins) != 0) {
                     module.Scope.SetName(Symbols.Builtins, BuiltinModuleInstance);
                 } else {
@@ -975,9 +973,9 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
+        internal Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
             AssemblyName an = new AssemblyName(args.Name);
-            return DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(an.Name);
+            return LoadAssemblyFromFile(an.Name);
         }
 
         /// <summary>
@@ -985,9 +983,42 @@ namespace IronPython.Runtime {
         /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
         /// find the dependencies, unless we can hook into the CLR loader.
         /// </summary>
-        private static void HookAssemblyResolve() {
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(PythonContext.CurrentDomain_AssemblyResolve);
+        private void HookAssemblyResolve() {
+            try {
+                AppDomain.CurrentDomain.AssemblyResolve += _resolveHolder.AssemblyResolveEvent;
+            } catch (System.Security.SecurityException) {
+                // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                // If so, we will not look up sys.path for module loads
+            }
         }
+
+        class AssemblyResolveHolder {
+            private readonly WeakReference _context;
+
+            public AssemblyResolveHolder(PythonContext context) {
+                _context = new WeakReference(context);
+            }
+
+            internal Assembly AssemblyResolveEvent(object sender, ResolveEventArgs args) {
+                PythonContext context = (PythonContext)_context.Target;
+                if (context != null) {
+                    return context.CurrentDomain_AssemblyResolve(sender, args);
+                } else {
+                    AppDomain.CurrentDomain.AssemblyResolve -= AssemblyResolveEvent;
+                    return null;
+                }
+            }
+        }
+
+        private void UnhookAssemblyResolve() {
+            try {
+                AppDomain.CurrentDomain.AssemblyResolve -= _resolveHolder.AssemblyResolveEvent;
+            } catch (System.Security.SecurityException) {
+                // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                // If so, we will not look up sys.path for module loads
+            }
+        }
+
 #endif
         #endregion
 
@@ -1806,12 +1837,7 @@ namespace IronPython.Runtime {
             get {
                 if (_compareSite == null) {
                     Interlocked.CompareExchange(ref _compareSite,
-                        CallSite<Func<CallSite, object, object, int>>.Create(
-                            new OperationBinder(
-                                DefaultBinderState,
-                                StandardOperators.Compare
-                            )
-                        ),
+                        MakeSortCompareSite(),
                         null
                     );
                 }
@@ -1820,34 +1846,16 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
-            CallSite<Func<CallSite, object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
-
-            try {
-                ret = site.Target(site, o, context);
-            } catch (MissingMemberException) {
-                ret = null;
-                return false;
-            }
-            return ret != OperationFailed.Value;
+        internal CallSite<Func<CallSite, object, object, int>> MakeSortCompareSite() {
+            return CallSite<Func<CallSite, object, object, int>>.Create(
+                new OperationBinder(
+                    DefaultBinderState,
+                    StandardOperators.Compare
+                )
+            );
         }
 
-        internal object GetAttr(CodeContext/*!*/ context, object o, SymbolId name) {
-            CallSite<Func<CallSite, object, CodeContext, object>> site = GetTryGetMemberSite(context, o, name);
-
-            object ret = site.Target(site, o, context);
-
-            if (ret == OperationFailed.Value) {
-                if (o is OldClass) {
-                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((OldClass)o).__name__, SymbolTable.IdToString(name));
-                } else {
-                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetPythonType(o).Name, SymbolTable.IdToString(name));
-                }
-            }
-            return ret;
-        }
-
+        
         private CallSite<Func<CallSite, object, CodeContext, object>> GetTryGetMemberSite(CodeContext context, object o, SymbolId name) {
             AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name, PythonOps.IsClsVisible(context));
 
@@ -2315,7 +2323,7 @@ namespace IronPython.Runtime {
         }
 
         internal bool Equal(object self, object other) {
-            return Comparison(self, other, StandardOperators.Equal, ref _equalRetBoolSite);
+            return DynamicHelpers.GetPythonType(self).EqualRetBool(self, other);
         }
 
         internal bool NotEqual(object self, object other) {
@@ -2334,7 +2342,7 @@ namespace IronPython.Runtime {
             return comparisonSite.Target(comparisonSite, self, other);
         }
 
-        private CallSite<Func<CallSite, object, object, bool>> CreateComparisonSite(string op) {
+        internal CallSite<Func<CallSite, object, object, bool>> CreateComparisonSite(string op) {
             return CallSite<Func<CallSite, object, object, bool>>.Create(
                 Binders.BinaryOperationRetBool(
                     DefaultBinderState,
@@ -2443,28 +2451,26 @@ namespace IronPython.Runtime {
         }
 
         internal int Hash(object o) {
-            if (_hashSite == null) {
-                Interlocked.CompareExchange(
-                    ref _hashSite,
-                    CallSite<Func<CallSite, object, object>>.Create(
-                        new OperationBinder(
-                            DefaultBinderState,
-                            OperatorStrings.Hash
-                        )
-                    ),
-                    null
-                );
+            if (o != null) {
+                switch (Type.GetTypeCode(o.GetType())) {
+                    case TypeCode.Int32: return Int32Ops.__hash__((int)o);
+                    case TypeCode.String: return o.GetHashCode();
+                    case TypeCode.Double: return DoubleOps.__hash__((double)o);
+                    case TypeCode.Int16: return Int16Ops.__hash__((short)o);
+                    case TypeCode.Int64: return Int64Ops.__hash__((long)o);
+                    case TypeCode.SByte: return SByteOps.__hash__((sbyte)o);
+                    case TypeCode.Single: return SingleOps.__hash__((float)o);
+                    case TypeCode.UInt16: return UInt16Ops.__hash__((ushort)o);
+                    case TypeCode.UInt32: return UInt32Ops.__hash__((uint)o);
+                    case TypeCode.UInt64: return UInt64Ops.__hash__((ulong)o);
+                    case TypeCode.Decimal: return DecimalOps.__hash__((decimal)o);
+                    case TypeCode.DateTime: return ((DateTime)o).GetHashCode();
+                    case TypeCode.Boolean: return ((bool)o).GetHashCode();
+                    case TypeCode.Byte: return ByteOps.__hash__((byte)o);
+                }
             }
 
-            object res = _hashSite.Target(_hashSite, o);
-            if (res is int) {
-                return (int)res;
-            } else if (res is BigInteger) {
-                // Python 2.5 defines the result of returning a long as hashing the long
-                return Hash(res);
-            }
-
-            return ConvertToInt32(res);
+            return DynamicHelpers.GetPythonType(o).Hash(o);
         }
 
         internal object Add(object x, object y) {
@@ -2777,17 +2783,8 @@ namespace IronPython.Runtime {
             );
         }
 
-        internal CallSite<Func<CallSite, object, int>> GetHashSite(Type/*!*/ type) {
-            if (_hashSites == null) {
-                Interlocked.CompareExchange(ref _hashSites, new Dictionary<Type, CallSite<Func<CallSite, object, int>>>(), null);
-            }
-
-            CallSite<Func<CallSite, object, int>> res;
-            if (!_hashSites.TryGetValue(type, out res)) {
-                _hashSites[type] = res = MakeHashSite();
-            }
-
-            return res;
+        internal CallSite<Func<CallSite, object, int>> GetHashSite(PythonType/*!*/ type) {
+            return type.HashSite;
         }
 
         internal CallSite<Func<CallSite, object, int>> MakeHashSite() {
