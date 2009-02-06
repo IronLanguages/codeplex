@@ -273,7 +273,7 @@ namespace Microsoft.Scripting {
             CultureInfo ci = CultureInfo.CurrentCulture;
 
             switch (tc) {
-                case TypeCode.Empty: SetAsNull(); break;
+                case TypeCode.Empty: break;
                 case TypeCode.Object: AsUnknown = value; break;
                 case TypeCode.DBNull: SetAsNull(); break;
                 case TypeCode.Boolean: AsBool = value.ToBoolean(ci); break;

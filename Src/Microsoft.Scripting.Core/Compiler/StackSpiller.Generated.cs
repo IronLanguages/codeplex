@@ -177,9 +177,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Block:
                     result = RewriteBlockExpression(node, stack);
                     break;
-                case ExpressionType.DebugInfo:
-                    result = RewriteDebugInfoExpression(node, stack);
-                    break;
                 case ExpressionType.Decrement:
                     result = RewriteUnaryExpression(node, stack);
                     break;
@@ -253,6 +250,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Constant:
                 case ExpressionType.RuntimeVariables:
                 case ExpressionType.Default:
+                case ExpressionType.DebugInfo:
                     return new Result(RewriteAction.None, node);
 
                 // *** END GENERATED CODE ***

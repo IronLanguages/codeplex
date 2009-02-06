@@ -111,7 +111,7 @@ namespace Microsoft.Linq.Expressions {
                         value,
                         typeof(object).GetMethod("GetType")
                     ),
-                    Expression.Constant(_typeOperand, typeof(Type))
+                    Expression.Constant(_typeOperand.GetNonNullableType(), typeof(Type))
                 )
             );
         }
@@ -121,10 +121,8 @@ namespace Microsoft.Linq.Expressions {
             //TypeEqual(null, T) always returns false.
             if (ce.Value == null) {
                 return Expression.Constant(false);
-            } else if (_typeOperand.IsNullableType()) {
-                return Expression.Constant(_typeOperand == ce.Type);
             } else {
-                return Expression.Constant(_typeOperand == ce.Value.GetType());
+                return Expression.Constant(_typeOperand.GetNonNullableType() == ce.Value.GetType());
             }
         }
 

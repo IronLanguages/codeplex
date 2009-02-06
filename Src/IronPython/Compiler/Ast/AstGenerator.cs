@@ -287,18 +287,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceLocation start, SourceLocation end) {
-            if (_document == null || !start.IsValid || !end.IsValid) {
-                return expression;
-            }
-            return MSAst.Expression.DebugInfo(expression, _document, start.Line, start.Column, end.Line, end.Column);
+            return Utils.AddDebugInfo(expression, _document, start, end);
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceSpan location) {
-            if (_document == null || !location.IsValid) {
-                return expression;
-            }
-            return MSAst.Expression.DebugInfo(expression, _document,
-                location.Start.Line, location.Start.Column, location.End.Line, location.End.Column);
+            return Utils.AddDebugInfo(expression, _document, location.Start, location.End);
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfoAndVoid(MSAst.Expression/*!*/ expression, SourceSpan location) {
