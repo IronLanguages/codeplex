@@ -257,7 +257,16 @@ namespace IronPython.Runtime.Binding {
             } else {
                 if (self.HasValue) {
                     self = self.Restrict(self.GetRuntimeType());
-                } 
+                }
+
+                // Optimization: if we already boxed it to a bool, and now
+                // we're unboxing it, remove the unnecessary box.
+                if (self.Expression.NodeType == ExpressionType.Convert && self.Expression.Type == typeof(object)) {
+                    var convert = (UnaryExpression)self.Expression;
+                    if (convert.Operand.Type == typeof(bool)) {
+                        return new DynamicMetaObject(convert.Operand, self.Restrictions);
+                    }
+                }
 
                 if (self.GetLimitType() == typeof(DynamicNull)) {
                     // None has no __nonzero__ and no __len__ but it's always false

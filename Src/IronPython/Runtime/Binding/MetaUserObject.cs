@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Binding {
             Expression context = Ast.Call(
                 typeof(PythonOps).GetMethod("GetPythonTypeContext"),
                 Ast.Property(
-                    Ast.Convert(Expression, typeof(IPythonObject)),
+                    AstUtils.Convert(Expression, typeof(IPythonObject)),
                     "PythonType"
                 )
             );
@@ -250,7 +250,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Condition(
                         Ast.Equal(tmp, self.Expression),
                         Ast.Property(
-                            Ast.Convert(self.Expression, self.GetLimitType()),
+                            AstUtils.Convert(self.Expression, self.GetLimitType()),
                             self.GetLimitType().GetProperty("Value")
                         ),
                         Binders.Convert(

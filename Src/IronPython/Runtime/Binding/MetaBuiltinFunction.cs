@@ -147,7 +147,7 @@ namespace IronPython.Runtime.Binding {
             );
 
             Expression instance = Ast.Property(
-                Ast.Convert(
+                AstUtils.Convert(
                     Expression,
                     typeof(BuiltinFunction)
                 ),
@@ -229,7 +229,7 @@ namespace IronPython.Runtime.Binding {
                 if (Value.DeclaringType.IsInterface && selfType.IsValueType) {
                     // explicit interface implementation dispatch on a value type, don't
                     // unbox the value type before the dispatch.
-                    instance = Ast.Convert(instance, Value.DeclaringType);
+                    instance = AstUtils.Convert(instance, Value.DeclaringType);
                 } else if (selfType.IsValueType) {
                     // We might be calling a a mutating method (like
                     // Rectangle.Intersect). If so, we want it to mutate
@@ -237,18 +237,18 @@ namespace IronPython.Runtime.Binding {
                     instance = Ast.Unbox(instance, selfType);
                 } else {
 #if SILVERLIGHT
-                    instance = Ast.Convert(instance, selfType);
+                    instance = AstUtils.Convert(instance, selfType);
 #else
                     Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Value.DeclaringType) : selfType;
 
-                    instance = Ast.Convert(instance, convType);
+                    instance = AstUtils.Convert(instance, convType);
 #endif
                 }
             } else {
                 // we don't want to cast the enum to its real type, it will unbox it 
                 // and turn it into its underlying type.  We presumably want to call 
                 // a method on the Enum class though - so we cast to Enum instead.
-                instance = Ast.Convert(instance, typeof(Enum));
+                instance = AstUtils.Convert(instance, typeof(Enum));
             }
             return new DynamicMetaObject(
                 instance,
@@ -259,7 +259,7 @@ namespace IronPython.Runtime.Binding {
 
         private MemberExpression/*!*/ ReadStrongBoxValue(Expression instance) {
             return Ast.Field(
-                Ast.Convert(instance, Value.__self__.GetType()),
+                AstUtils.Convert(instance, Value.__self__.GetType()),
                 Value.__self__.GetType().GetField("Value")
             );
         }

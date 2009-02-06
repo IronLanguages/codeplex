@@ -101,7 +101,7 @@ namespace IronPython.Compiler.Ast {
                 ag,
                 _op,
                 left,
-                Ast.Assign(temp, Ast.Convert(rleft, temp.Type)),
+                Ast.Assign(temp, AstUtils.Convert(rleft, temp.Type)),
                 typeof(object),
                 Span
             );

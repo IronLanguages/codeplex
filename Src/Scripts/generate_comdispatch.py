@@ -52,12 +52,7 @@ class VariantType:
         cw.write("[FieldOffset(0)] internal %s %s;" % (self.unmanagedRepresentationType, self.managedFieldName))
 
     def write_ToObject(self, cw):
-        if self.accessorName == 'AsI4':
-            cw.write("case VarEnum.VT_%s: return RuntimeOps.Int32ToObject(%s);" % (self.variantType, self.accessorName))
-        elif self.accessorName == 'AsBool':
-            cw.write("case VarEnum.VT_%s: return %s ? RuntimeOps.True : RuntimeOps.False;" % (self.variantType, self.accessorName))
-        else:
-            cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
+        cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
 
     def write_accessor(self, cw):
         if self.emitAccessors == False :
