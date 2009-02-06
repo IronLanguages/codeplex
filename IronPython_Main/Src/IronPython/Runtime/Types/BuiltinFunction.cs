@@ -36,6 +36,7 @@ using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
 using Ast = Microsoft.Linq.Expressions.Expression;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
 
@@ -458,10 +459,21 @@ namespace IronPython.Runtime.Types {
             }            
 
             // finally add the restrictions for the built-in function and return the result.
-            return new DynamicMetaObject(
+            res = new DynamicMetaObject(
                 res.Expression,
                 functionRestriction.Merge(res.Restrictions)
             );
+
+            // The function can return something typed to boolean or int.
+            // If that happens, we need to apply Python's boxing rules.
+            if (res.Expression.Type == typeof(bool) || res.Expression.Type == typeof(int)) {
+                res = new DynamicMetaObject(
+                    AstUtils.Convert(res.Expression, typeof(object)),
+                    res.Restrictions
+                );
+            }
+
+            return res;
         }
         #endregion
                         

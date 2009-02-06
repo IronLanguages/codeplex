@@ -49,6 +49,13 @@ namespace IronPython.Runtime.Binding {
 
             DynamicMetaObject res = MakeOperationRule(operation, args);
 
+            if (res.Expression.Type.IsValueType) {
+                // Use Python boxing rules if we're return a value type
+                res = new DynamicMetaObject(
+                    AstUtils.Convert(res.Expression, typeof(object)),
+                    res.Restrictions
+                );
+            }
             return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo);
         }
 
