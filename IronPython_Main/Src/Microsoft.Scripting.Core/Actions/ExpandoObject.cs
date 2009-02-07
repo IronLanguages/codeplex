@@ -30,10 +30,13 @@ namespace Microsoft.Scripting {
     /// Represents an object with members that can be dynamically added and removed at runtime.
     /// </summary>
     public sealed class ExpandoObject : IDynamicObject {
-        internal readonly object LockObject;                        // the readonly field is used for locking the Expando object
-        private ExpandoData _data;                                  // the data currently being held by the Expando object
+        internal readonly object LockObject;                          // the readonly field is used for locking the Expando object
+        private ExpandoData _data;                                    // the data currently being held by the Expando object
 
-        internal readonly static object Uninitialized = new object();        // A marker object used to identify that a value is uninitialized.
+        internal readonly static object Uninitialized = new object(); // A marker object used to identify that a value is uninitialized.
+
+        internal const int AmbiguousMatchFound = -2;        // The value is used to indicate there exists ambiguous match in the Expando object
+        internal const int NoMatch = -1;                    // The value is used to indicate there is no matching member
 
         /// <summary>
         /// Creates a new ExpandoObject with no members.
@@ -50,10 +53,10 @@ namespace Microsoft.Scripting {
         /// class has changed a full lookup for the slot will be performed and the correct
         /// value will be retrieved.
         /// </summary>
-        internal bool TryGetValue(ExpandoClass klass, int index, bool caseInsensitive, string name, out object value) {
-            if (index == -1) {
+        internal int TryGetValue(ExpandoClass klass, int index, bool caseInsensitive, string name, out object value) {
+            if (index == ExpandoObject.NoMatch) {
                 value = null;
-                return false;
+                return index;
             }
 
             // read the data now.  The data is immutable so we get a consistent view.
@@ -73,9 +76,19 @@ namespace Microsoft.Scripting {
                 index = data.Class.GetValueIndex(name, caseInsensitive, this);
             }
 
+            if (index < 0) {
+                value = null;
+                return index;
+            }
+
+            if (data.Data[index] == Uninitialized) {
+                value = null;
+                return NoMatch;
+            }
+
             // index is now known to be correct
             value = data.Data[index];
-            return value != Uninitialized;
+            return index;
         }
         
         /// <summary>
@@ -84,57 +97,73 @@ namespace Microsoft.Scripting {
         /// not have the provided slot then the Expando's class will change. Only case sensitive
         /// setter is supported in ExpandoObject.
         /// </summary>
-        internal void SetValue(ExpandoClass klass, int index, object value) {
-            Debug.Assert(index != -1);
+        internal int TrySetValue(ExpandoClass klass, int index, object value, bool caseInsensitive) {
+            Debug.Assert(index >= 0);
 
             lock (LockObject) {
                 ExpandoData data = _data;
 
-                if (data.Class != klass) {
-                    // the class has changed, we need to get the correct index and set
-                    // the value there.  If we don't have the value then we need to
-                    // promote the class - that should only happen when we have multiple
-                    // concurrent writers.
+                if (data.Class != klass || caseInsensitive) {
+                    //the class has changed or we are doing a case-insensitive search, 
+                    //we need to get the correct index and set the value there.  If we 
+                    //don't have the value then we need to promote the class - that 
+                    //should only happen when we have multiple concurrent writers.
                     string name = klass.GetIndexName(index);
-                    index = data.Class.GetValueIndexCaseSensitive(name);
-                    if (index == -1) {
-                        ExpandoClass newClass = data.Class.FindNewClass(name);
+                    index = data.Class.GetValueIndex(name, caseInsensitive, this);
+                    if (index == ExpandoObject.AmbiguousMatchFound) {
+                        return index;
+                    }
+                    if (index == ExpandoObject.NoMatch) {
+                        //Before creating a new class with the new member, need to check 
+                        //if there is the exact same member but is deleted. We should reuse
+                        //the class if there is such a member.
+                        int exactMatch = caseInsensitive ? 
+                            data.Class.GetValueIndexCaseSensitive(name) :
+                            index;
+                        if (exactMatch != ExpandoObject.NoMatch) {
+                            Debug.Assert(data.Data[exactMatch] == Uninitialized);
+                            index = exactMatch;
+                        } else {
+                            ExpandoClass newClass = data.Class.FindNewClass(name);
+                            data = PromoteClassWorker(data.Class, newClass);
+                            //After the class promotion, there must be an exact match,
+                            //so we can do case-sensitive search here.
+                            index = data.Class.GetValueIndexCaseSensitive(name);
 
-                        data = PromoteClassWorker(data.Class, newClass);
-                        index = data.Class.GetValueIndexCaseSensitive(name);
-
-                        Debug.Assert(index != -1);
+                            Debug.Assert(index != ExpandoObject.NoMatch);
+                        }
                     }
                 }
 
                 data.Data[index] = value;
+                return index;
             }           
         }              
 
         /// <summary>
         /// Deletes the data stored for the specified class at the specified index.
         /// </summary>
-        internal bool TryDeleteValue(ExpandoClass klass, int index) {
-            if (index == -1) {
-                return false;
+        internal int TryDeleteValue(ExpandoClass klass, int index, bool caseInsensitive) {
+            if (index == ExpandoObject.NoMatch) {
+                return index;
             }
 
             lock (LockObject) {
                 ExpandoData data = _data;
 
-                if (data.Class != klass) {
-                    // the class has changed, we need to get the correct index.  If there is
-                    // no associated index we simply can't have the value and we return
-                    // false.
-                    index = data.Class.GetValueIndexCaseSensitive(klass.GetIndexName(index));
-                    if (index == -1) {
-                        return false;
+                if (data.Class != klass || caseInsensitive) {
+                    // the class has changed or we are doing a case-insensitive search,
+                    // we need to get the correct index.  If there is no associated index
+                    // we simply can't have the value and we return false.
+                    index = data.Class.GetValueIndex(klass.GetIndexName(index), caseInsensitive, this);
+                    if (index < 0) {
+                        return index;
                     }
                 }
 
                 object oldValue = data.Data[index];
                 data.Data[index] = Uninitialized;
-                return oldValue != Uninitialized;
+                return oldValue == Uninitialized ? ExpandoObject.NoMatch : index;
             }
         }
 
@@ -280,8 +309,8 @@ namespace Microsoft.Scripting {
                 int index;
 
                 ExpandoClass originalClass = GetClassEnsureIndex(binder.Name, out klass, out index);
+                string methodName = binder.IgnoreCase ? "ExpandoTrySetValueIgnoreCase" : "ExpandoTrySetValue";
 
-                //SetMember is always case sensitive
                 return AddDynamicTestAndDefer(
                     binder,
                     new DynamicMetaObject[] { this, value },
@@ -290,7 +319,7 @@ namespace Microsoft.Scripting {
                     new DynamicMetaObject(
                         Helpers.Convert(
                             Expression.Call(
-                                typeof(RuntimeOps).GetMethod("ExpandoSetValue"),
+                                typeof(RuntimeOps).GetMethod(methodName),
                                 GetLimitedSelf(),
                                 Expression.Constant(klass),
                                 Expression.Constant(index),
@@ -309,15 +338,15 @@ namespace Microsoft.Scripting {
             public override DynamicMetaObject BindDeleteMember(DeleteMemberBinder binder) {
                 ContractUtils.RequiresNotNull(binder, "binder");
 
-                int index = Value.Class.GetValueIndex(binder.Name, false, Value);
+                string methodName = binder.IgnoreCase ? "ExpandoTryDeleteValueIgnoreCase" : "ExpandoTryDeleteValue";
+                int index = Value.Class.GetValueIndex(binder.Name, binder.IgnoreCase, Value);
 
                 Expression tryDelete = Expression.Call(
-                    typeof(RuntimeOps).GetMethod("ExpandoTryDeleteValue"),
+                    typeof(RuntimeOps).GetMethod(methodName),
                     GetLimitedSelf(),
                     Expression.Constant(Value.Class),
                     Expression.Constant(index)
                 );
-
                 DynamicMetaObject fallback = binder.FallbackDeleteMember(this);
 
                 DynamicMetaObject target = new DynamicMetaObject(
@@ -329,7 +358,6 @@ namespace Microsoft.Scripting {
                     fallback.Restrictions
                 );
 
-                //DeleteMember is always case sensitive
                 return AddDynamicTestAndDefer(
                     binder,
                     new DynamicMetaObject[] { this },
@@ -423,14 +451,18 @@ namespace Microsoft.Scripting {
                 ExpandoClass originalClass = Value.Class;
 
                 index = originalClass.GetValueIndexCaseSensitive(name);
-                if (index == -1) {
+                if (index == ExpandoObject.AmbiguousMatchFound) {
+                    klass = originalClass;
+                    return null;
+                }
+                if (index == ExpandoObject.NoMatch) {
                     // go ahead and find a new class now...
                     ExpandoClass newClass = originalClass.FindNewClass(name);
 
                     klass = newClass;
                     index = newClass.GetValueIndexCaseSensitive(name);
 
-                    Debug.Assert(index != -1);
+                    Debug.Assert(index != ExpandoObject.NoMatch);
                     return originalClass;
                 } else {
                     klass = originalClass;
@@ -524,7 +556,7 @@ namespace Microsoft.Runtime.CompilerServices {
         [Obsolete("used by generated code", true)]
         public static bool ExpandoTryGetValue(ExpandoObject expando, object indexClass, int index, string name, out object value) {
             ContractUtils.RequiresNotNull(expando, "expando");
-            return expando.TryGetValue((ExpandoClass)indexClass, index, false, name, out value);
+            return expando.TryGetValue((ExpandoClass)indexClass, index, false, name, out value) >= 0;
         }
 
         /// <summary>
@@ -539,7 +571,12 @@ namespace Microsoft.Runtime.CompilerServices {
         [Obsolete("used by generated code", true)]
         public static bool ExpandoTryGetValueIgnoreCase(ExpandoObject expando, object indexClass, int index, string name, out object value) {
             ContractUtils.RequiresNotNull(expando, "expando");
-            return expando.TryGetValue((ExpandoClass)indexClass, index, true, name, out value);
+            int result = expando.TryGetValue((ExpandoClass)indexClass, index, true, name, out value);
+            if (result == ExpandoObject.AmbiguousMatchFound) {
+                throw Error.AmbiguousMatchInExpandoObject();
+            } else {
+                return result >= 0;
+            }
         }
 
         /// <summary>
@@ -549,10 +586,33 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <param name="indexClass">The class of the expando object.</param>
         /// <param name="index">The index of the member.</param>
         /// <param name="value">The value of the member.</param>
+        /// <returns>
+        /// Returns the index for the set member.
+        /// </returns>
         [Obsolete("used by generated code", true)]
-        public static void ExpandoSetValue(ExpandoObject expando, object indexClass, int index, object value) {
+        public static void ExpandoTrySetValue(ExpandoObject expando, object indexClass, int index, object value) {
             ContractUtils.RequiresNotNull(expando, "expando");
-            expando.SetValue((ExpandoClass)indexClass, index, value);
+            expando.TrySetValue((ExpandoClass)indexClass, index, value, false);
+        }
+
+        /// <summary>
+        /// Sets the value of an item in an expando object, ignoring the case of the member name.
+        /// </summary>
+        /// <param name="expando">The expando object.</param>
+        /// <param name="indexClass">The class of the expando object.</param>
+        /// <param name="index">The index of the member.</param>
+        /// <param name="value">The value of the member.</param>
+        /// <returns>
+        /// If there is ambiguous case-insensitive match, returns -2.
+        /// Otherwise returns the index for the set member.
+        /// </returns>
+        [Obsolete("used by generated code", true)]
+        public static void ExpandoTrySetValueIgnoreCase(ExpandoObject expando, object indexClass, int index, object value) {
+            ContractUtils.RequiresNotNull(expando, "expando");
+            int result = expando.TrySetValue((ExpandoClass)indexClass, index, value, true);
+            if (result == ExpandoObject.AmbiguousMatchFound) {
+                throw Error.AmbiguousMatchInExpandoObject();
+            }
         }
 
         /// <summary>
@@ -565,7 +625,25 @@ namespace Microsoft.Runtime.CompilerServices {
         [Obsolete("used by generated code", true)]
         public static bool ExpandoTryDeleteValue(ExpandoObject expando, object indexClass, int index) {
             ContractUtils.RequiresNotNull(expando, "expando");
-            return expando.TryDeleteValue((ExpandoClass)indexClass, index);
+            return expando.TryDeleteValue((ExpandoClass)indexClass, index, false) >= 0;
+        }
+
+        /// <summary>
+        /// Deletes the value of an item in an expando object, ignoring the case of the member name.
+        /// </summary>
+        /// <param name="expando">The expando object.</param>
+        /// <param name="indexClass">The class of the expando object.</param>
+        /// <param name="index">The index of the member.</param>
+        /// <returns>true if the item was successfully removed; otherwise, false.</returns>
+        [Obsolete("used by generated code", true)]
+        public static bool ExpandoTryDeleteValueIgnoreCase(ExpandoObject expando, object indexClass, int index) {
+            ContractUtils.RequiresNotNull(expando, "expando");
+            int result = expando.TryDeleteValue((ExpandoClass)indexClass, index, true);
+            if (result == ExpandoObject.AmbiguousMatchFound) {
+                throw Error.AmbiguousMatchInExpandoObject();
+            } else {
+                return result >= 0;
+            }
         }
 
         /// <summary>

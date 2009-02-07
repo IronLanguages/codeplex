@@ -514,4 +514,5 @@
     <DefineConstants>$(DefineConstants);PRODUCTION_BUILD</DefineConstants>
     <PublishMetaAssemblyPath>$(InternalPath)\sdk\ref\WinFX\$(WINFX_REFS_VERSION)</PublishMetaAssemblyPath>
   </PropertyGroup>
+  <Target Name="AfterCompile" DependsOnTargets="Verify" Condition="'$(SpecSharpVerify)' == 'true'" />
 </Project>
