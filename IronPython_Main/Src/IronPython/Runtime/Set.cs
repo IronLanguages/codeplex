@@ -435,15 +435,14 @@ namespace IronPython.Runtime {
             }
         }
 
-        public void remove(object o) {
-            o = SetHelpers.GetHashableSetIfSet(o);
+        public void remove([NotNull]SetCollection o) {
+            remove(FrozenSetCollection.Make(((IEnumerable)o).GetEnumerator()));
+        }
 
-            PythonOps.Hash(DefaultContext.Default, o);
-            if (!_items.Contains(o)) {
+        public void remove(object o) {
+            if (!_items.RemoveAlwaysHash(o)) {
                 throw PythonOps.KeyError(o);
             }
-
-            _items.Remove(o);
         }
 
         public void discard(object o) {

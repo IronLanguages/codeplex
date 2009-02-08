@@ -301,6 +301,19 @@ namespace IronPython.Runtime {
             return TryRemoveValue(key, out dummy);
         }
 
+        /// <summary>
+        /// Removes an entry from the dictionary and returns true if the
+        /// entry was removed or false.  The key will always be hashed
+        /// so if it is unhashable an exception will be thrown - even
+        /// if the dictionary has no buckets.
+        /// </summary>
+        internal bool RemoveAlwaysHash(object key) {
+            lock (this) {
+                object dummy;
+                return TryRemoveNoLock(key, out dummy);
+            }
+        }
+        
         public override bool TryRemoveValue(object key, out object value) {
             lock (this) {
                 if (!HasAnyValues(_buckets)) {
@@ -308,36 +321,45 @@ namespace IronPython.Runtime {
                     return false;
                 }
 
-                Func<object, int> hashFunc;
-                Func<object, object, bool> eqFunc;
-                if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
-                    hashFunc = _hashFunc;
-                    eqFunc = _eqFunc;
-                } else {
-                    hashFunc = _genericHash;
-                    eqFunc = _genericEquals;
-                }
+                return TryRemoveNoLock(key, out value);
+            }
+        }
 
-                int hc = hashFunc(key) & Int32.MaxValue;
+        private bool TryRemoveNoLock(object key, out object value) {
+            Func<object, int> hashFunc;
+            Func<object, object, bool> eqFunc;
+            if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
+                hashFunc = _hashFunc;
+                eqFunc = _eqFunc;
+            } else {
+                hashFunc = _genericHash;
+                eqFunc = _genericEquals;
+            }
 
-                int index = hc % _buckets.Length;
-                Bucket bucket = _buckets[index];
-                Bucket prev = bucket;
-                while (bucket != null) {
-                    if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
-                        value = bucket.Value;
-                        if (prev == bucket) {
-                            _buckets[index] = bucket.Next;
-                        } else {
-                            prev.Next = bucket.Next;
-                        }
-                        _count--;
+            int hc = hashFunc(key) & Int32.MaxValue;
+            
+            if (_buckets == null) {
+                value = null;
+                return false;
+            }
 
-                        return true;
+            int index = hc % _buckets.Length;
+            Bucket bucket = _buckets[index];
+            Bucket prev = bucket;
+            while (bucket != null) {
+                if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
+                    value = bucket.Value;
+                    if (prev == bucket) {
+                        _buckets[index] = bucket.Next;
+                    } else {
+                        prev.Next = bucket.Next;
                     }
-                    prev = bucket;
-                    bucket = bucket.Next;
+                    _count--;
+
+                    return true;
                 }
+                prev = bucket;
+                bucket = bucket.Next;
             }
             value = null;
             return false;

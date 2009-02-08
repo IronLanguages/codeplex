@@ -77,7 +77,8 @@ namespace IronPython.Runtime.Types {
             get { return _info.Name; }
         }
 
-        internal PropertyInfo Info {
+        public PropertyInfo Info {
+            [PythonHidden]
             get {
                 return _info;
             }

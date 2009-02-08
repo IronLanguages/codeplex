@@ -34,13 +34,13 @@ namespace IronPython.Runtime.Types {
     [PythonType("field#")]
     public sealed class ReflectedField : PythonTypeSlot, ICodeFormattable {
         private readonly NameType _nameType;
-        internal readonly FieldInfo/*!*/ info;
+        internal readonly FieldInfo/*!*/ _info;
 
         public ReflectedField(FieldInfo/*!*/ info, NameType nameType) {
             Debug.Assert(info != null);
 
             this._nameType = nameType;
-            this.info = info;
+            this._info = info;
         }
 
         public ReflectedField(FieldInfo/*!*/ info)
@@ -48,6 +48,13 @@ namespace IronPython.Runtime.Types {
         }
 
         #region Public Python APIs
+
+        public FieldInfo Info {
+            [PythonHidden]
+            get { 
+                return _info; 
+            }
+        }
 
         /// <summary>
         /// Convenience function for users to call directly
@@ -70,30 +77,30 @@ namespace IronPython.Runtime.Types {
         }
 
         public void __set__(object instance, object value) {
-            if (instance == null && info.IsStatic) {
+            if (instance == null && _info.IsStatic) {
                 DoSet(null, value);
-            } else if (!info.IsStatic) {
+            } else if (!_info.IsStatic) {
                 DoSet(instance, value);
             } else {
-                throw PythonOps.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+                throw PythonOps.AttributeErrorForReadonlyAttribute(_info.DeclaringType.Name, SymbolTable.StringToId(_info.Name));
             }
         }
 
         [SpecialName]
         public void __delete__(object instance) {
-            throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+            throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(_info.DeclaringType.Name, SymbolTable.StringToId(_info.Name));
         }
 
         public string __doc__ {
             get {
-                return DocBuilder.DocOneInfo(info);
+                return DocBuilder.DocOneInfo(_info);
             }
         }
 
         public PythonType FieldType {
             [PythonHidden]
             get {
-                return DynamicHelpers.GetPythonTypeFromType(info.FieldType);
+                return DynamicHelpers.GetPythonTypeFromType(_info.FieldType);
             }
         }
 
@@ -104,13 +111,13 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance == null) {
-                if (info.IsStatic) {
-                    value = info.GetValue(null);
+                if (_info.IsStatic) {
+                    value = _info.GetValue(null);
                 } else {
                     value = this;
                 }
             } else {
-                value = info.GetValue(context.LanguageContext.Binder.Convert(instance, info.DeclaringType));
+                value = _info.GetValue(context.LanguageContext.Binder.Convert(instance, _info.DeclaringType));
             }
 
             return true;
@@ -133,12 +140,12 @@ namespace IronPython.Runtime.Types {
 
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
             // field is settable if it is not readonly
-            return (info.Attributes & FieldAttributes.InitOnly) == 0 && !info.IsLiteral;
+            return (_info.Attributes & FieldAttributes.InitOnly) == 0 && !_info.IsLiteral;
         }
 
         internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             if (ShouldSetOrDelete(owner)) {
-                throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+                throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(_info.DeclaringType.Name, SymbolTable.StringToId(_info.Name));
             }
             return false;
         }
@@ -150,14 +157,14 @@ namespace IronPython.Runtime.Types {
         }
 
         internal override Expression/*!*/ MakeGetExpression(PythonBinder/*!*/ binder, Expression/*!*/ codeContext, Expression instance, Expression/*!*/ owner, Expression/*!*/ error) {
-            if (!info.IsPublic || info.DeclaringType.ContainsGenericParameters) {
+            if (!_info.IsPublic || _info.DeclaringType.ContainsGenericParameters) {
                 // fallback to reflection
                 return base.MakeGetExpression(binder, codeContext, instance, owner, error);
             }
             
             if (instance == null) {
-                if (info.IsStatic) {
-                    return Ast.Field(null, info);
+                if (_info.IsStatic) {
+                    return Ast.Field(null, _info);
                 } else {
                     return Ast.Constant(this);
                 }
@@ -165,11 +172,11 @@ namespace IronPython.Runtime.Types {
                 return Ast.Field(
                     binder.ConvertExpression(
                         instance,
-                        info.DeclaringType,
+                        _info.DeclaringType,
                         ConversionResultKind.ExplicitCast,
                         codeContext
                     ),
-                    info
+                    _info
                 );
             }
         }
@@ -181,21 +188,21 @@ namespace IronPython.Runtime.Types {
         private void DoSet(CodeContext context, object instance, object val) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance != null && instance.GetType().IsValueType)
-                throw new ArgumentException(String.Format("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", info.Name, info.DeclaringType.Name));
-            if (info.IsInitOnly || info.IsLiteral)
-                throw new MissingFieldException(String.Format("Cannot set field {1} on type {0}", info.DeclaringType.Name, SymbolTable.StringToId(info.Name)));
+                throw new ArgumentException(String.Format("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", _info.Name, _info.DeclaringType.Name));
+            if (_info.IsInitOnly || _info.IsLiteral)
+                throw new MissingFieldException(String.Format("Cannot set field {1} on type {0}", _info.DeclaringType.Name, SymbolTable.StringToId(_info.Name)));
 
-            info.SetValue(instance, context.LanguageContext.Binder.Convert(val, info.FieldType));
+            _info.SetValue(instance, context.LanguageContext.Binder.Convert(val, _info.FieldType));
         }
 
         private void DoSet(object instance, object val) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance != null && instance.GetType().IsValueType)
-                throw PythonOps.ValueError("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", info.Name, info.DeclaringType.Name);
-            if (info.IsInitOnly || info.IsLiteral)
-                throw PythonOps.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+                throw PythonOps.ValueError("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", _info.Name, _info.DeclaringType.Name);
+            if (_info.IsInitOnly || _info.IsLiteral)
+                throw PythonOps.AttributeErrorForReadonlyAttribute(_info.DeclaringType.Name, SymbolTable.StringToId(_info.Name));
 
-            info.SetValue(instance, Converter.Convert(val, info.FieldType));
+            _info.SetValue(instance, Converter.Convert(val, _info.FieldType));
         }
 
         private bool ShouldSetOrDelete(PythonType type) {
@@ -203,7 +210,7 @@ namespace IronPython.Runtime.Types {
 
             // statics must be assigned through their type, not a derived type.  Non-statics can
             // be assigned through their instances.
-            return (dt != null && info.DeclaringType == dt.UnderlyingSystemType) || !info.IsStatic || info.IsLiteral || info.IsInitOnly;
+            return (dt != null && _info.DeclaringType == dt.UnderlyingSystemType) || !_info.IsStatic || _info.IsLiteral || _info.IsInitOnly;
         }
 
         #endregion
@@ -211,7 +218,7 @@ namespace IronPython.Runtime.Types {
         #region ICodeFormattable Members
 
         public string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return string.Format("<field# {0} on {1}>", info.Name, info.DeclaringType.Name);
+            return string.Format("<field# {0} on {1}>", _info.Name, _info.DeclaringType.Name);
         }
 
         #endregion

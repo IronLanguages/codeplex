@@ -81,7 +81,7 @@ namespace IronPython.Runtime.Binding {
                     if (systemTypeResolution) {
                         res = Fallback(action, value);
                     } else {
-                        MakeSlotSet(bindingInfo, dts);
+                        res = MakeSlotSet(bindingInfo, dts);
                     }
                 }
             }
@@ -287,6 +287,43 @@ namespace IronPython.Runtime.Binding {
                     );
                     return;
                 }
+            }
+
+            // users can subclass PythonProperty so check the type explicitly 
+            // and only in-line the ones we fully understand.
+            if (dts.GetType() == typeof(PythonProperty)) {
+                // properties are mutable so we generate code to get the value rather
+                // than burning it into the rule.
+                Expression getter = Ast.Property(
+                    Ast.Convert(AstUtils.WeakConstant(dts), typeof(PythonProperty)),
+                    "fget"
+                );
+                ParameterExpression tmpGetter = Ast.Variable(typeof(object), "tmpGet");
+                info.Body.AddVariable(tmpGetter);
+
+                info.Body.FinishCondition(
+                    Ast.Block(
+                        Ast.Assign(tmpGetter, getter),
+                        Ast.Condition(
+                            Ast.NotEqual(
+                                tmpGetter,
+                                Ast.Constant(null)
+                            ),
+                            Ast.Dynamic(
+                                new PythonInvokeBinder(
+                                    BinderState.GetBinderState(info.Action),
+                                    new CallSignature(1)
+                                ),
+                                typeof(object),
+                                Ast.Constant(BinderState.GetBinderState(info.Action).Context),
+                                tmpGetter,
+                                info.Self
+                            ),
+                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnreadableProperty")), typeof(object))
+                        )
+                    )
+                );
+                return;
             }
 
             Expression tryGet = Ast.Call(
@@ -540,9 +577,51 @@ namespace IronPython.Runtime.Binding {
         }
 
 
-        private static void MakeSlotSet(SetBindingInfo/*!*/ info, PythonTypeSlot/*!*/ dts) {
+        private static DynamicMetaObject MakeSlotSet(SetBindingInfo/*!*/ info, PythonTypeSlot/*!*/ dts) {
             ParameterExpression tmp = Ast.Variable(info.Args[1].Expression.Type, "res");
             info.Body.AddVariable(tmp);
+
+            // users can subclass PythonProperty so check the type explicitly 
+            // and only in-line the ones we fully understand.
+            if (dts.GetType() == typeof(PythonProperty)) {
+                // properties are mutable so we generate code to get the value rather
+                // than burning it into the rule.
+                Expression setter = Ast.Property(
+                    Ast.Convert(AstUtils.WeakConstant(dts), typeof(PythonProperty)),
+                    "fset"
+                );
+                ParameterExpression tmpSetter = Ast.Variable(typeof(object), "tmpSet");
+                info.Body.AddVariable(tmpSetter);
+
+                info.Body.FinishCondition(
+                    Ast.Block(
+                        Ast.Assign(tmpSetter, setter),
+                        Ast.Condition(
+                            Ast.NotEqual(
+                                tmpSetter,
+                                Ast.Constant(null)
+                            ),
+                            Ast.Block(
+                                Ast.Assign(tmp, info.Args[1].Expression),
+                                Ast.Dynamic(
+                                    new PythonInvokeBinder(
+                                        BinderState.GetBinderState(info.Action),
+                                        new CallSignature(1)
+                                    ),
+                                    typeof(void),
+                                    Ast.Constant(BinderState.GetBinderState(info.Action).Context),
+                                    tmpSetter,
+                                    info.Args[0].Expression,
+                                    AstUtils.Convert(tmp, typeof(object))
+                                ),
+                                tmp
+                            ),
+                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnsetableProperty")), tmp.Type)
+                        )
+                    )
+                );
+                return info.Body.GetMetaObject();
+            }
 
             CodeContext context = BinderState.GetBinderState(info.Action).Context;
             Debug.Assert(context != null);
@@ -569,6 +648,7 @@ namespace IronPython.Runtime.Binding {
                 ),
                 tmp
             );
+            return null;
         }
 
         private static void MakeDictionarySetTarget(SetBindingInfo/*!*/ info) {
@@ -649,7 +729,45 @@ namespace IronPython.Runtime.Binding {
 
         }
 
-        private static void MakeSlotDelete(DeleteBindingInfo/*!*/ info, PythonTypeSlot/*!*/ dts) {
+        private static DynamicMetaObject MakeSlotDelete(DeleteBindingInfo/*!*/ info, PythonTypeSlot/*!*/ dts) {
+
+            // users can subclass PythonProperty so check the type explicitly 
+            // and only in-line the ones we fully understand.
+            if (dts.GetType() == typeof(PythonProperty)) {
+                // properties are mutable so we generate code to get the value rather
+                // than burning it into the rule.
+                Expression deleter = Ast.Property(
+                    Ast.Convert(AstUtils.WeakConstant(dts), typeof(PythonProperty)),
+                    "fdel"
+                );
+                ParameterExpression tmpDeleter = Ast.Variable(typeof(object), "tmpDel");
+                info.Body.AddVariable(tmpDeleter);
+
+                info.Body.FinishCondition(
+                    Ast.Block(
+                        Ast.Assign(tmpDeleter, deleter),
+                        Ast.Condition(
+                            Ast.NotEqual(
+                                tmpDeleter,
+                                Ast.Constant(null)
+                            ),
+                            Ast.Dynamic(
+                                new PythonInvokeBinder(
+                                    BinderState.GetBinderState(info.Action),
+                                    new CallSignature(1)
+                                ),
+                                typeof(void),
+                                Ast.Constant(BinderState.GetBinderState(info.Action).Context),
+                                tmpDeleter,
+                                info.Args[0].Expression
+                            ),
+                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UndeletableProperty")))
+                        )
+                    )
+                );
+                return info.Body.GetMetaObject();
+            }
+
             info.Body.AddCondition(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryDeleteValue"),
@@ -668,6 +786,7 @@ namespace IronPython.Runtime.Binding {
                 ),
                 Ast.Constant(null)
             );
+            return null;
         }
 
         private static void MakeDeleteAttrTarget(DeleteBindingInfo/*!*/ info, IPythonObject self, PythonTypeSlot dts) {

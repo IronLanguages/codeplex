@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -447,19 +448,116 @@ namespace IronPython.Runtime {
 
         #region IValueEquality Members
 
+        private delegate int HashDelegate(object o, ref HashDelegate dlg);
+        private static HashDelegate _strHasher = StringHasher, _intHasher = IntHasher, _genericHasher = GenericHasher, _initialHasher = InitialHasher, _doubleHasher = DoubleHasher;
+
+        private static int InitialHasher(object o, ref HashDelegate dlg) {
+            if (o == null) {
+                return NoneTypeOps.NoneHashCode;
+            }
+
+            switch (Type.GetTypeCode(o.GetType())) {
+                case TypeCode.String:
+                    dlg = _strHasher;
+                    return o.GetHashCode();
+                case TypeCode.Int32:
+                    dlg = _intHasher;
+                    return (int)o;
+                case TypeCode.Double:
+                    dlg = _doubleHasher;
+                    return DoubleOps.__hash__((double)o);
+                default:
+                    if (o is IPythonObject) {
+                        dlg = new OptimizedUserHasher(((IPythonObject)o).PythonType).Hasher;
+                    } else {
+                        dlg = new OptimizedBuiltinHasher(o.GetType()).Hasher;
+                    }
+
+                    return dlg(o, ref dlg);                    
+            }
+        }
+
+        class OptimizedUserHasher {
+            private readonly PythonType _pt;
+
+            public OptimizedUserHasher(PythonType pt) {
+                _pt = pt;
+            }
+
+            public int Hasher(object o, ref HashDelegate dlg) {
+                IPythonObject ipo = o as IPythonObject;
+                if (ipo != null && ipo.PythonType == _pt) {
+                    return _pt.Hash(o);
+                }
+
+                dlg = GenericHasher;
+                return GenericHasher(o, ref dlg);
+            }
+        }
+        
+        class OptimizedBuiltinHasher {
+            private readonly Type _type;
+            private readonly PythonType _pt;
+            
+            public OptimizedBuiltinHasher(Type type) {
+                _type = type;
+                _pt = DynamicHelpers.GetPythonTypeFromType(type);
+            }
+
+            public int Hasher(object o, ref HashDelegate dlg) {
+                if (o != null && o.GetType() == _type) {
+                    return _pt.Hash(o);
+                }
+
+                dlg = GenericHasher;
+                return GenericHasher(o, ref dlg);
+            }
+        }
+
+        private static int GenericHasher(object o, ref HashDelegate dlg) {
+            return PythonOps.Hash(DefaultContext.Default, o);
+        }
+
+        private static int IntHasher(object o, ref HashDelegate dlg) {
+            if (o != null && o.GetType() == typeof(int)) {
+                return o.GetHashCode();
+            }
+
+            dlg = GenericHasher;
+            return GenericHasher(o, ref dlg);
+        }
+
+        private static int DoubleHasher(object o, ref HashDelegate dlg) {
+            if (o != null && o.GetType() == typeof(double)) {
+                return DoubleOps.__hash__((double)o);
+            }
+
+            dlg = GenericHasher;
+            return GenericHasher(o, ref dlg);
+        }
+
+        private static int StringHasher(object o, ref HashDelegate dlg) {
+            if (o != null && o.GetType() == typeof(string)) {
+                return o.GetHashCode();
+            }
+
+            dlg = GenericHasher;
+            return GenericHasher(o, ref dlg);
+        }
+
         int IValueEquality.GetValueHashCode() {
             int hash1 = 6551;
             int hash2 = hash1;
 
+            HashDelegate dlg = _initialHasher;
             for (int i = 0; i < _data.Length; i += 2) {
-                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ PythonOps.Hash(DefaultContext.Default, _data[i]);
+                hash1 = ((hash1 << 27) + ((hash2 + 1) << 1) + (hash1 >> 5)) ^ dlg(_data[i], ref dlg);
 
                 if (i == _data.Length - 1) {
                     break;
                 }
-                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ PythonOps.Hash(DefaultContext.Default, _data[i + 1]);
+                hash2 = ((hash2 << 5) + ((hash1 - 1) >> 1) + (hash2 >> 27)) ^ dlg(_data[i + 1], ref dlg);
             }
-
             return hash1 + (hash2 * 1566083941);
 
         }

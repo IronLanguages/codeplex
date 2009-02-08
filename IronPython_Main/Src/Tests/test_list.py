@@ -143,6 +143,8 @@ def test_reverse():
     x.reverse()
     Assert(x == ['n','o','h','t','y','p',' ','n','o','r','i'])
 
+    # should return listreverseenumerator, not reversed
+    Assert(type(reversed([2,3,4])) != reversed)
 
 def test_equal():
     AreEqual([2,3] == '', False)
@@ -411,5 +413,16 @@ def test_sequence_assign():
     AreEqual(first, 'a')
     AreEqual(pos, 0)
     AreEqual(tokens, [('b', 1), ('c', 2), ('d', 3), ('e', 4), ('f', 5), ('g', 6), ('h', 7), ('i', 8), ('j', 9)])
+
+def test_inheritance():
+    listIter = type(iter([2,3,4]))
+    reverseListIter = type(reversed([2,3,4]))
+
+    for base in (listIter, reverseListIter):
+        def subclass():
+            class x(base): pass
+            
+        AssertError(TypeError, subclass)
+
 
 run_test(__name__)

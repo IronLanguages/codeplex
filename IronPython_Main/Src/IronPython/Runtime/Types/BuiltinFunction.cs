@@ -454,7 +454,8 @@ namespace IronPython.Runtime.Types {
 
             // add any warnings that are applicable for calling this function
             WarningInfo info;
-            if (target.Method != null && BindingWarnings.ShouldWarn(target.Method, out info)) {
+
+            if (target.Method != null && BindingWarnings.ShouldWarn(BinderState.GetBinderState(call).Binder, target.Method, out info)) {
                 res = info.AddWarning(codeContext, res);
             }            
 

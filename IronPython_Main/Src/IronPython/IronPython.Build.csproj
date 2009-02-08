@@ -185,6 +185,7 @@
       <Compile Include="Runtime\NullImporter.cs" />
       <Compile Include="Runtime\ObjectAttributesAdapter.cs" />
       <Compile Include="Runtime\OutputWriter.cs" />
+      <Compile Include="Runtime\Python3Warning.cs" />
       <Compile Include="Runtime\PythonAsciiEncoding.cs" />
       <Compile Include="Runtime\PythonBuffer.cs" />
       <Compile Include="Runtime\PythonContext.cs" />
