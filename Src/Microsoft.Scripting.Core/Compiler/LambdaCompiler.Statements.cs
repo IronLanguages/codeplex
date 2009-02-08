@@ -52,7 +52,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             if (emitAs == EmitAs.Void || node.Type == typeof(void)) {
                 EmitExpressionAsVoid(node.GetExpression(count - 1));
             } else {
-                EmitExpression(node.GetExpression(count - 1));
+                EmitExpressionAsType(node.GetExpression(count - 1), node.Type);
             }
 
             ExitScope(node);
@@ -82,7 +82,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 Debug.Assert(_scope.Node == node);
             }
         }
-                
+
         private static bool HasVariables(object node) {
             var block = node as BlockExpression;
             if (block != null) {
@@ -263,7 +263,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     return false;
             }
         }
-        
+
         // Tries to emit switch as a jmp table
         private bool TryEmitSwitchInstruction(SwitchExpression node) {
             // If we have a comparison, bail
@@ -388,7 +388,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
 
                 _ilg.MarkLabel(labels[i]);
-                EmitExpression(node.Cases[i].Body);
+                EmitExpressionAsType(node.Cases[i].Body, node.Type);
 
                 // Last case doesn't need branch
                 if (node.DefaultBody != null || i < n - 1) {
@@ -399,7 +399,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Default value
             if (node.DefaultBody != null) {
                 _ilg.MarkLabel(@default);
-                EmitExpression(node.DefaultBody);
+                EmitExpressionAsType(node.DefaultBody, node.Type);
             }
 
             _ilg.MarkLabel(end);
@@ -592,7 +592,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         Expression.Void(Expression.Assign(switchIndex, Expression.Constant(-1)))
                     )
                 ),
-                Expression.Switch(switchIndex, node.DefaultBody, null, cases)
+                Expression.Switch(node.Type, switchIndex, node.DefaultBody, null, cases)
             );
 
             // Emit it normally

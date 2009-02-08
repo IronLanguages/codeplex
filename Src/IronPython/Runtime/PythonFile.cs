@@ -1446,6 +1446,7 @@ namespace IronPython.Runtime {
             }
         }
 
+        [Python3Warning("f.xreadlines() not supported in 3.x, try 'for line in f' instead")]
         public PythonFile xreadlines() {
             return this;
         }

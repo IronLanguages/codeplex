@@ -175,6 +175,40 @@ def test_inheritance():
     AreEqual(x.fset, 2)
     AreEqual(x.fdel, 3)
 
+
+    class MyProperty(property):
+        def __init__(self, *args):
+            property.__init__(self, *args)
+        def __get__(self, *args):
+            return 42
+        def __set__(self, inst, value):
+            inst.foo = value
+        def __delete__(self, *args):
+            inst.bar = 'baz'
+            
+    class MyClass(object):
+        x = MyProperty()
+    
+    inst = MyClass()
+    AreEqual(inst.x, 42)
+
+    inst.x = 'abc'
+    AreEqual(inst.foo, 'abc')
+    
+    del inst.x
+    AreEqual(inst.bar, 'baz')
+
+def test_property_mutation():
+    class x(object): pass
+    
+    prop = property()
+    x.foo = prop
+    inst = x()
+    for i in xrange(42):
+        prop.__init__(lambda self: i)
+        AreEqual(inst.foo, i)
+        
+
 def test_property_doc():
     def getter(self):
         """getter doc"""

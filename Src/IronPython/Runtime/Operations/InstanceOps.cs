@@ -371,7 +371,7 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 ReflectedField rf = pts as ReflectedField;
-                if (rf != null && !rf.info.IsInitOnly && !rf.info.IsLiteral) {
+                if (rf != null && !rf._info.IsInitOnly && !rf._info.IsLiteral) {
                     // only bring in read-only fields, if the value can change the user needs to explicitly
                     // import by name
                     return false;

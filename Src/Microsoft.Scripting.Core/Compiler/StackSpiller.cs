@@ -322,7 +322,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             RewriteAction action = test.Action | ifTrue.Action | ifFalse.Action;
             if (action != RewriteAction.None) {
-                expr = Expression.Condition(test.Node, ifTrue.Node, ifFalse.Node);
+                expr = Expression.Condition(test.Node, ifTrue.Node, ifFalse.Node, node.Type);
             }
 
             return new Result(action, expr);
@@ -825,7 +825,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     cases = new ReadOnlyCollection<SwitchCase>(clone);
                 }
 
-                expr = new SwitchExpression(switchValue.Node, defaultBody.Node, node.Comparison, cases);
+                expr = new SwitchExpression(node.Type, switchValue.Node, defaultBody.Node, node.Comparison, cases);
             }
 
             return new Result(action, expr);
@@ -893,7 +893,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     handlers = new ReadOnlyCollection<CatchBlock>(clone);
                 }
 
-                expr = new TryExpression(body.Node, @finally.Node, fault.Node, handlers);
+                expr = new TryExpression(node.Type, body.Node, @finally.Node, fault.Node, handlers);
             }
             return new Result(action, expr);
         }

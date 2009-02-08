@@ -28,11 +28,11 @@ namespace IronPython.Runtime.Binding {
     /// Provides support for emitting warnings when built in methods are invoked at runtime.
     /// </summary>
     internal static class BindingWarnings {
-        public static bool ShouldWarn(MethodBase/*!*/ method, out WarningInfo info) {
+        public static bool ShouldWarn(PythonBinder/*!*/ binder, MethodBase/*!*/ method, out WarningInfo info) {
             Assert.NotNull(method);
 
             ObsoleteAttribute[] os = (ObsoleteAttribute[])method.GetCustomAttributes(typeof(ObsoleteAttribute), true);
-            if (os.Length > 1) {
+            if (os.Length > 0) {
                 info = new WarningInfo(
                     PythonExceptions.DeprecationWarning,
                     String.Format("{0}.{1} has been obsoleted.  {2}",
@@ -43,6 +43,18 @@ namespace IronPython.Runtime.Binding {
                 );
 
                 return true;
+            }
+
+            if (binder.WarnOnPython3000) {
+                Python3WarningAttribute[] py3kwarnings = (Python3WarningAttribute[])method.GetCustomAttributes(typeof(Python3WarningAttribute), true);
+                if (py3kwarnings.Length > 0) {
+                    info = new WarningInfo(
+                        PythonExceptions.DeprecationWarning,
+                        py3kwarnings[0].Message
+                    );
+
+                    return true;
+                }
             }
 
 #if !SILVERLIGHT

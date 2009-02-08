@@ -294,7 +294,7 @@ namespace IronPython.Runtime {
             return new listiterator(this);
         }
 
-        public virtual IEnumerator __reverse__() {
+        public virtual IEnumerator __reversed__() {
             return new listreverseiterator(this);
         }
 
@@ -1301,7 +1301,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    public class listiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
+    public sealed class listiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
         private int _index;
         private readonly List _list;
         private bool _iterating;
@@ -1349,11 +1349,6 @@ namespace IronPython.Runtime {
         #region IDisposable Members
 
         public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing) {
         }
 
         #endregion
@@ -1367,7 +1362,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    public class listreverseiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
+    public sealed class listreverseiterator : IEnumerator, IEnumerable, IEnumerable<object>, IEnumerator<object> {
         private int _index;
         private readonly List _list;
         private bool _iterating;
@@ -1415,13 +1410,8 @@ namespace IronPython.Runtime {
         #region IDisposable Members
 
         public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
-
-        protected virtual void Dispose(bool disposing) {
-        }
-
+        
         #endregion
 
         #region IEnumerable<object> Members

@@ -85,6 +85,7 @@ namespace IronPython.Runtime {
 
         // warnoptions is set by PythonContext and updated on each reload        
 
+        [Python3Warning("'sys.exc_clear() not supported in 3.x; use except clauses'")]
         public static void exc_clear() {
             PythonOps.ClearCurrentException();
         }

@@ -3617,6 +3617,19 @@ namespace IronPython.Runtime.Operations {
             throw TypeError("Cannot convert numeric value {0} to {1}.  The value must be zero.", value, NameConverter.GetTypeName(typeof(T)));
         }
 
+        public static Exception/*!*/ UnreadableProperty() {
+            return PythonOps.AttributeError("unreadable attribute");
+        }
+
+
+        public static Exception/*!*/ UnsetableProperty() {
+            return PythonOps.AttributeError("readonly attribute");
+        }
+
+        public static Exception/*!*/ UndeletableProperty() {
+            return PythonOps.AttributeError("undeletable attribute");
+        }
+
         #endregion        
     }
 }

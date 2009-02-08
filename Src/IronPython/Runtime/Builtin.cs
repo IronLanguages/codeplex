@@ -213,6 +213,7 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("callable(object) -> bool\n\nReturn whether the object is callable (i.e., some kind of function).")]
+        [Python3Warning("callable() is removed in 3.x. instead call hasattr(obj, '__call__')")]
         public static bool callable(CodeContext/*!*/ context, object o) {
             return PythonOps.IsCallable(context, o);
         }
@@ -641,6 +642,10 @@ namespace IronPython.Runtime {
             return PythonContext.GetContext(context).Hash(o);
         }
 
+        public static int hash(CodeContext/*!*/ context, [NotNull]PythonTuple o) {
+            return ((IValueEquality)o).GetValueHashCode();
+        }
+
         // this is necessary because overload resolution selects the int form.
         public static int hash(CodeContext/*!*/ context, char o) {
             return PythonContext.GetContext(context).Hash(o);
@@ -648,6 +653,27 @@ namespace IronPython.Runtime {
 
         public static int hash(CodeContext/*!*/ context, int o) {
             return o;
+        }
+
+        public static int hash(CodeContext/*!*/ context, [NotNull]string o) {
+            return o.GetHashCode();
+        }
+
+        // this is necessary because overload resolution will coerce extensible strings to strings.
+        public static int hash(CodeContext/*!*/ context, [NotNull]ExtensibleString o) {
+            return hash(context, (object)o);
+        }
+
+        public static int hash(CodeContext/*!*/ context, [NotNull]BigInteger o) {
+            return BigIntegerOps.__hash__(o);
+        }
+
+        public static int hash(CodeContext/*!*/ context, [NotNull]Extensible<BigInteger> o) {
+            return hash(context, (object)o);
+        }
+
+        public static int hash(CodeContext/*!*/ context, double o) {
+            return DoubleOps.__hash__(o);
         }
 
         public static void help(CodeContext/*!*/ context, object o) {

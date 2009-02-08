@@ -47,12 +47,6 @@ namespace IronPython.Runtime.Types {
 
         #region Internal APIs
 
-        internal EventInfo/*!*/ Info {
-            get {
-                return _eventInfo;
-            }
-        }
-
         internal override bool TryGetValue(CodeContext/*!*/ context, object instance, PythonType owner, out object value) {
             Assert.NotNull(context, owner);
 
@@ -178,6 +172,13 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         #region Public Python APIs
+
+        public EventInfo/*!*/ Info {
+            [PythonHidden]
+            get {
+                return _eventInfo;
+            }
+        }
 
         /// <summary>
         /// BoundEvent is the object that gets returned when the user gets an event object.  An
