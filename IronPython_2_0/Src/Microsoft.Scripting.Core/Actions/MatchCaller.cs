@@ -52,24 +52,34 @@ namespace Microsoft.Scripting.Actions {
         // onto the delegates and ages them out.
         //
         private static readonly Dictionary<Type, WeakReference> _Callers = new Dictionary<Type, WeakReference>();
+        private static CacheDict<Type, Delegate> _MatchCache = new CacheDict<Type, Delegate>(100);
 
         internal static MatchCallerTarget<T> MakeCaller<T>() {
-            Type target = typeof(T);
-            Type[] args;
-            MethodInfo invoke = target.GetMethod("Invoke");
-
-            // TODO: faster way to test if target is a Func<...> or Action<...>
-            if (target.IsGenericType && DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
-                MethodInfo method;
-                if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(MatchCaller).GetMethod("CallVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
-                } else {
-                    method = typeof(MatchCaller).GetMethod("Call" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
+            lock (_MatchCache) {                
+                Type target = typeof(T);
+                Delegate res;
+                
+                if (_MatchCache.TryGetValue(target, out res)) {
+                    return (MatchCallerTarget<T>)res;
                 }
-                if (method != null) {
-                    method = method.MakeGenericMethod(args);
-                    if (method.GetParametersCached()[0].ParameterType == target) {
-                        return method.CreateDelegate<MatchCallerTarget<T>>();
+
+                Type[] args;
+                MethodInfo invoke = target.GetMethod("Invoke");
+
+                // TODO: faster way to test if target is a Func<...> or Action<...> 
+                if (target.IsGenericType && DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
+                    MethodInfo method;
+                    if (invoke.ReturnType == typeof(void)) {
+                        method = typeof(MatchCaller).GetMethod("CallVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
+                    } else {
+                        method = typeof(MatchCaller).GetMethod("Call" + (args.Length - 1), BindingFlags.NonPublic | BindingFlags.Static);
+                    }
+                    if (method != null) {
+                        method = method.MakeGenericMethod(args);
+                        if (method.GetParametersCached()[0].ParameterType == target) {
+                            res = _MatchCache[target] = method.CreateDelegate(typeof(MatchCallerTarget<T>));
+                            return (MatchCallerTarget<T>)res;
+                        }
                     }
                 }
             }

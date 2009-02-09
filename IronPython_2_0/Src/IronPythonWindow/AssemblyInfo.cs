@@ -61,7 +61,7 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.0.11121.00")]
+[assembly: AssemblyFileVersion("2.0.20209.00")]
 
 // hack in order to pass AssemblyInfoTask 
 // AssemblyVersion attribute has been decorated in AssemblyVersion.cs

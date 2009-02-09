@@ -101,4 +101,12 @@ def test_cli_number_hash():
         else:
             AreEqual(hash(value), hash(long(value)))
 
+
+def test_bigint_hash_subclass():
+    class x(long):
+        def __hash__(self): return 42
+        
+    AreEqual(hash(x()), 42)
+
+
 run_test(__name__)

@@ -34,23 +34,34 @@ namespace Microsoft.Scripting.Actions {
     internal static partial class Matchmaker {
         private static Dictionary<Type, WeakReference> _Matchmakers;
 
+        private static CacheDict<Type, MethodInfo> _MatchCache = new CacheDict<Type, MethodInfo>(100);
+
         internal static T CreateMatchMakingDelegate<T>(StrongBox<bool> box) where T : class {
             Type target = typeof(T);
-            Type[] args;
 
-            MethodInfo invoke = target.GetMethod("Invoke");
-
-            if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
-                MethodInfo method;
-                if (invoke.ReturnType == typeof(void)) {
-                    method = typeof(Matchmaker).GetMethod("MismatchVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
-                } else {
-                    method = typeof(Matchmaker).GetMethod("Mismatch" + (args.Length - 1), BindingFlags.Static | BindingFlags.NonPublic);
+            MethodInfo invoke;
+            lock (_MatchCache) {
+                MethodInfo mi;
+                if (_MatchCache.TryGetValue(target, out mi)) {
+                    return (T)(object)Delegate.CreateDelegate(target, box, mi);
                 }
 
-                if (method != null) {
-                    method = method.MakeGenericMethod(args);
-                    return (T)(object)Delegate.CreateDelegate(target, box, method);
+                Type[] args;
+
+                invoke = target.GetMethod("Invoke");
+
+                if (DynamicSiteHelpers.SimpleSignature(invoke, out args)) {
+                    MethodInfo method;
+                    if (invoke.ReturnType == typeof(void)) {
+                        method = typeof(Matchmaker).GetMethod("MismatchVoid" + args.Length, BindingFlags.NonPublic | BindingFlags.Static);
+                    } else {
+                        method = typeof(Matchmaker).GetMethod("Mismatch" + (args.Length - 1), BindingFlags.Static | BindingFlags.NonPublic);
+                    }
+
+                    if (method != null) {
+                        _MatchCache[target] = method = method.MakeGenericMethod(args);                        
+                        return (T)(object)Delegate.CreateDelegate(target, box, method);
+                    }
                 }
             }
 

@@ -19,6 +19,7 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Com;
 using System.Reflection;
+using System.Runtime.Remoting;
 
 namespace Microsoft.Scripting.Actions {
     public class MetaObject {
@@ -189,6 +190,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static MetaObject ObjectToMetaObject(object argValue, Expression parameterExpression) {
+#if !SILVERLIGHT
+            MarshalByRefObject mbr = argValue as MarshalByRefObject;
+            if (mbr != null && RemotingServices.IsObjectOutOfAppDomain(argValue) && !ComMetaObject.IsComObject(argValue)) {
+                return new MetaObject(
+                    parameterExpression,
+                    Restrictions.ExpressionRestriction(
+                        Expression.Call(
+                            typeof(RemotingServices).GetMethod("IsObjectOutOfAppDomain"),
+                            parameterExpression
+                        )
+                    ),
+                    argValue
+                );
+            }
+#endif
+
             IDynamicObject ido = argValue as IDynamicObject;
             if (ido != null) {
                 return ido.GetMetaObject(parameterExpression);

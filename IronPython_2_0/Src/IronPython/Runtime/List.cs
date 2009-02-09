@@ -1354,8 +1354,6 @@ namespace IronPython.Runtime {
         #region IDisposable Members
 
         public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing) {
@@ -1420,8 +1418,6 @@ namespace IronPython.Runtime {
         #region IDisposable Members
 
         public void Dispose() {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing) {

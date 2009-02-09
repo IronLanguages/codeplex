@@ -149,85 +149,134 @@ namespace Microsoft.Scripting.Actions {
             //
             Type typeofT = typeof(T);               // Calculate this only once
 
-            StrongBox<bool> match = new StrongBox<bool>();
-            CallSite site = CreateMatchmakerCallSite(match);
-            MatchCallerTarget<T> caller = MatchCaller.MakeCaller<T>();
+            
+            CallSite<T> site = CreateMatchmakerCallSite();
+            StrongBox<bool> match = (StrongBox<bool>)((Delegate)(object)site.Target).Target;
+            match.Value = false;
+            try {
+                MatchCallerTarget<T> caller = MatchCaller.MakeCaller<T>();
 
-            //
-            // Capture the site's rule set. Since it can change on the site asynchronously,
-            // this ensures that we work with the same rule set throughout this function.
-            //
-            RuleSet<T> siteRules = _rules;
+                //
+                // Capture the site's rule set. Since it can change on the site asynchronously,
+                // this ensures that we work with the same rule set throughout this function.
+                //
+                RuleSet<T> siteRules = _rules;
 
-            //
-            // Level 1 cache lookup
-            //
-            IList<Rule<T>> history = siteRules.GetRules();
+                //
+                // Level 1 cache lookup
+                //
+                IList<Rule<T>> history = siteRules.GetRules();
 
-            if (history != null) {
-                count = history.Count;
-                for (index = 0; index < count; index++) {
-                    rule = history[index];
+                if (history != null) {
+                    count = history.Count;
+                    for (index = 0; index < count; index++) {
+                        rule = history[index];
 
-                    if (startingTarget == rule.RuleSet.GetTarget()) {
-                        // our rule was previously monomorphic, if we produce another monomorphic
-                        // rule we should try and share code between the two.
-                        originalMonomorphicRule = rule;
-                    }
-
-                    // Reset
-                    match.Value = true;
-
-                    //
-                    // Execute the rule
-                    //
-                    Target = ruleTarget = rule.RuleSet.GetTarget();
-
-                    try {
-                        result = caller(ruleTarget, site, args);
-                        if (match.Value) {
-                            return result;
+                        if (startingTarget == rule.RuleSet.GetTarget()) {
+                            // our rule was previously monomorphic, if we produce another monomorphic
+                            // rule we should try and share code between the two.
+                            originalMonomorphicRule = rule;
                         }
-                    } finally {
-                        if (match.Value) {
-                            //
-                            // Match in Level 1 cache. We saw the arguments that match the rule before and now we
-                            // see them again. The site is polymorphic. Update the delegate and keep running
-                            // (unless the delegate was already asynchronously updated by another thread)
-                            //
-                            if (Target == ruleTarget) {
-                                Interlocked.CompareExchange<T>(ref Target, siteRules.GetTarget(), ruleTarget);
+
+                        // Reset
+                        match.Value = true;
+
+                        //
+                        // Execute the rule
+                        //
+                        Target = ruleTarget = rule.RuleSet.GetTarget();
+
+                        try {
+                            result = caller(ruleTarget, site, args);
+                            if (match.Value) {
+                                return result;
+                            }
+                        } finally {
+                            if (match.Value) {
+                                //
+                                // Match in Level 1 cache. We saw the arguments that match the rule before and now we
+                                // see them again. The site is polymorphic. Update the delegate and keep running
+                                // (unless the delegate was already asynchronously updated by another thread)
+                                //
+                                if (Target == ruleTarget) {
+                                    Interlocked.CompareExchange<T>(ref Target, siteRules.GetTarget(), ruleTarget);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            //
-            // Level 2 cache lookup
-            //
-            Type[] argTypes = TypeUtils.GetTypesForBinding(args);
-            applicable = _cache.FindApplicableRules(_binder, argTypes);
+                //
+                // Level 2 cache lookup
+                //
+                Type[] argTypes = TypeUtils.GetTypesForBinding(args);
+                applicable = _cache.FindApplicableRules(_binder, argTypes);
 
-            //
-            // Any applicable rules in level 2 cache?
-            //
-            if (applicable != null) {
-                count = applicable.Length;
-                for (index = 0; index < count; index++) {
-                    rule = applicable[index];
+                //
+                // Any applicable rules in level 2 cache?
+                //
+                if (applicable != null) {
+                    count = applicable.Length;
+                    for (index = 0; index < count; index++) {
+                        rule = applicable[index];
 
-                    if (startingTarget == rule.RuleSet.GetTarget()) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalMonomorphicRule = rule;
+                        if (startingTarget == rule.RuleSet.GetTarget()) {
+                            // If we've gone megamorphic we can still template off the L2 cache
+                            originalMonomorphicRule = rule;
+                        }
+
+                        // Reset
+                        match.Value = true;
+
+                        //
+                        // Execute the rule
+                        //
+                        Target = ruleTarget = rule.RuleSet.GetTarget();
+
+                        try {
+                            result = caller(ruleTarget, site, args);
+                            if (match.Value) {
+                                return result;
+                            }
+                        } finally {
+                            if (match.Value) {
+                                //
+                                // Rule worked. Add it to level 1 cache
+                                //
+
+                                AddRule(rule);
+                                _cache.MoveRule(_binder, rule, argTypes);
+                            }
+                        }
+
+                        // Rule didn't match, try the next one
                     }
+                }
 
-                    // Reset
+
+                //
+                // Miss on Level 0, 1 and 2 caches. Create new rule
+                //
+
+                for (; ; ) {
+                    // newRule is here just for debugging purposes to compare before & after templating
+                    Rule<T> newRule = rule = CreateNewRule(originalMonomorphicRule, args);
+
+                    //
+                    // Add the rule to the level 2 cache. This is an optimistic add so that cache miss
+                    // on another site can find this existing rule rather than building a new one.  We
+                    // add the originally added rule, not the templated one, to the global cache.  That
+                    // allows sites to template on their own.
+                    //
+                    _cache.AddRule(_binder, argTypes, rule);
+
+                    //
+                    // Execute the rule on the matchmaker site
+                    //
+
+                    // Reset 
                     match.Value = true;
 
-                    //
-                    // Execute the rule
-                    //
                     Target = ruleTarget = rule.RuleSet.GetTarget();
 
                     try {
@@ -238,68 +287,30 @@ namespace Microsoft.Scripting.Actions {
                     } finally {
                         if (match.Value) {
                             //
-                            // Rule worked. Add it to level 1 cache
+                            // The rule worked. Add it to level 1 cache.
                             //
-
                             AddRule(rule);
-                            _cache.MoveRule(_binder, rule, argTypes);
                         }
                     }
 
-                    // Rule didn't match, try the next one
+                    //
+                    // The rule didn't work and since we optimistically added it into the
+                    // level 2 cache. Remove it now since the rule is no good.
+                    //
+                    _cache.RemoveRule(_binder, argTypes, rule);
                 }
-            }
-
-
-            //
-            // Miss on Level 0, 1 and 2 caches. Create new rule
-            //
-
-            for (; ; ) {
-                // newRule is here just for debugging purposes to compare before & after templating
-                Rule<T> newRule = rule = CreateNewRule(originalMonomorphicRule, args);
-
-                //
-                // Add the rule to the level 2 cache. This is an optimistic add so that cache miss
-                // on another site can find this existing rule rather than building a new one.  We
-                // add the originally added rule, not the templated one, to the global cache.  That
-                // allows sites to template on their own.
-                //
-                _cache.AddRule(_binder, argTypes, rule);
-
-                //
-                // Execute the rule on the matchmaker site
-                //
-                
-                // Reset 
-                match.Value = true;
-
-                Target = ruleTarget = rule.RuleSet.GetTarget();
-
-                try {
-                    result = caller(ruleTarget, site, args);
-                    if (match.Value) {
-                        return result;
-                    }
-                } finally {
-                    if (match.Value) {
-                        //
-                        // The rule worked. Add it to level 1 cache.
-                        //
-                        AddRule(rule);
-                    }
-                }
-
-                //
-                // The rule didn't work and since we optimistically added it into the
-                // level 2 cache. Remove it now since the rule is no good.
-                //
-                _cache.RemoveRule(_binder, argTypes, rule);
+            } finally {
+                Interlocked.Exchange(ref _MatchmakerSite, site);
             }
         }
 
-        private CallSite CreateMatchmakerCallSite(StrongBox<bool> box) {
-            return new CallSite<T>(_binder, Matchmaker.CreateMatchMakingDelegate<T>(box));
+        private static CallSite<T> _MatchmakerSite;
+        private CallSite<T> CreateMatchmakerCallSite() {
+            CallSite<T> res;
+            if ((res = Interlocked.Exchange(ref _MatchmakerSite, null)) != null) {
+                return res;
+            }
+            return new CallSite<T>(_binder, Matchmaker.CreateMatchMakingDelegate<T>(new StrongBox<bool>()));
         }
 
         private Rule<T> CreateNewRule(Rule<T> originalMonomorphicRule, object[] args) {

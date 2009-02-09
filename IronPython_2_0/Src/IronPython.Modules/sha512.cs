@@ -83,7 +83,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private Sha384Object(HashAlgorithm hasher, byte[] initialBytes) {
+            private Sha384Object(byte[] initialBytes) {
                 _bytes = new byte[0];
                 update(initialBytes);
             }
