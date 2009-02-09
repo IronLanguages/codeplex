@@ -1380,6 +1380,15 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        /// <summary>
+        /// A string like  "The operation cannot be performed in heterogeneous app domain."
+        /// </summary>
+        internal static string HomogenousAppDomainRequired {
+            get {
+                return "The operation cannot be performed in heterogeneous app domain.";
+            }
+        }
+
     }
     /// <summary>
     ///    Strongly-typed and parameterized exception factory.
@@ -2280,6 +2289,13 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         internal static Exception EnumerationIsDone() {
             return new InvalidOperationException(Strings.EnumerationIsDone);
+        }
+
+        /// <summary>
+        /// InvalidOperationException with message like "The operation cannot be performed in heterogeneous app domain."
+        /// </summary>
+        internal static Exception HomogenousAppDomainRequired() {
+            return new InvalidOperationException(Strings.HomogenousAppDomainRequired);
         }
 
     }
