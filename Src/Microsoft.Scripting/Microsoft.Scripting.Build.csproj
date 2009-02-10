@@ -464,6 +464,7 @@
       <Compile Include="Utils\ArrayUtils.cs" />
       <Compile Include="Utils\AssemblyQualifiedTypeName.cs" />
       <Compile Include="Utils\Assert.cs" />
+      <Compile Include="Utils\CacheDict.cs" />
       <Compile Include="Utils\CheckedDictionaryEnumerator.cs" />
       <Compile Include="Utils\CollectionExtensions.cs" />
       <Compile Include="Utils\CollectionUtils.cs" />

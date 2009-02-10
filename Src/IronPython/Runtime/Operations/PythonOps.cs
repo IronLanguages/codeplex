@@ -19,18 +19,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using System.IO;
+using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Text;
 using System.Threading;
-using IronPython.Compiler;
-using IronPython.Hosting;
-using IronPython.Runtime.Binding;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting.Providers;
@@ -38,6 +32,12 @@ using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Compiler;
+using IronPython.Hosting;
+using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -624,22 +624,22 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object GreaterThanHelper(CodeContext/*!*/ context, object self, object other) {
-            return InternalCompare(context, Operators.GreaterThan, self, other);
+            return InternalCompare(context, PythonOperationKind.GreaterThan, self, other);
         }
 
         public static object LessThanHelper(CodeContext/*!*/ context, object self, object other) {
-            return InternalCompare(context, Operators.LessThan, self, other);
+            return InternalCompare(context, PythonOperationKind.LessThan, self, other);
         }
 
         public static object GreaterThanOrEqualHelper(CodeContext/*!*/ context, object self, object other) {
-            return InternalCompare(context, Operators.GreaterThanOrEqual, self, other);
+            return InternalCompare(context, PythonOperationKind.GreaterThanOrEqual, self, other);
         }
 
         public static object LessThanOrEqualHelper(CodeContext/*!*/ context, object self, object other) {
-            return InternalCompare(context, Operators.LessThanOrEqual, self, other);
+            return InternalCompare(context, PythonOperationKind.LessThanOrEqual, self, other);
         }
 
-        public static object InternalCompare(CodeContext/*!*/ context, Operators op, object self, object other) {
+        internal static object InternalCompare(CodeContext/*!*/ context, PythonOperationKind op, object self, object other) {
             object ret;
             if (PythonTypeOps.TryInvokeBinaryOperator(context, self, other, Symbols.OperatorToSymbol(op), out ret))
                 return ret;
@@ -670,7 +670,7 @@ namespace IronPython.Runtime.Operations {
         public static object PowerMod(CodeContext/*!*/ context, object x, object y, object z) {
             object ret;
             if (z == null) {
-                return PythonContext.GetContext(context).Operation(StandardOperators.Power, x, y);
+                return PythonContext.GetContext(context).Operation(PythonOperationKind.Power, x, y);
             }
             if (x is int && y is int && z is int) {
                 ret = Int32Ops.Power((int)x, (int)y, (int)z);
@@ -3234,8 +3234,40 @@ namespace IronPython.Runtime.Operations {
             return new ConversionBinder(GetBinderState(context), type, kind);
         }
 
-        public static DynamicMetaObjectBinder MakeOperationAction(CodeContext/*!*/ context, string operationName) {
-            return new PythonOperationBinder(GetBinderState(context), operationName);
+        public static DynamicMetaObjectBinder MakeOperationAction(CodeContext/*!*/ context, int operationName) {
+            return new PythonOperationBinder(GetBinderState(context), (PythonOperationKind)operationName);
+        }
+
+        public static DynamicMetaObjectBinder MakeUnaryOperationAction(CodeContext/*!*/ context, ExpressionType expressionType) {
+            return new PythonUnaryOperationBinder(GetBinderState(context), expressionType);
+        }
+
+        public static DynamicMetaObjectBinder MakeBinaryOperationAction(CodeContext/*!*/ context, ExpressionType expressionType) {
+            return new PythonBinaryOperationBinder(GetBinderState(context), expressionType);
+        }
+
+        public static DynamicMetaObjectBinder MakeGetIndexAction(CodeContext/*!*/ context, int argCount) {
+            return new PythonGetIndexBinder(GetBinderState(context), argCount);
+        }
+
+        public static DynamicMetaObjectBinder MakeSetIndexAction(CodeContext/*!*/ context, int argCount) {
+            return new PythonSetIndexBinder(GetBinderState(context), argCount);
+        }
+
+        public static DynamicMetaObjectBinder MakeDeleteIndexAction(CodeContext/*!*/ context, int argCount) {
+            return new PythonDeleteIndexBinder(GetBinderState(context), argCount);
+        }
+
+        public static DynamicMetaObjectBinder MakeGetSliceBinder(CodeContext/*!*/ context) {
+            return new PythonGetSliceBinder(GetBinderState(context));
+        }
+
+        public static DynamicMetaObjectBinder MakeSetSliceBinder(CodeContext/*!*/ context) {
+            return new PythonSetSliceBinder(GetBinderState(context));
+        }
+
+        public static DynamicMetaObjectBinder MakeDeleteSliceBinder(CodeContext/*!*/ context) {
+            return new PythonDeleteSliceBinder(GetBinderState(context));
         }
 
         /// <summary>

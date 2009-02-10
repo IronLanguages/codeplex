@@ -273,7 +273,9 @@ internal static %(methodDeclaration)s {
     //
     // Any applicable rules in level 2 cache?
     //
-    if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+    var cache = CallSiteOps.GetRuleCache(@this);
+
+    if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
         for (int i = 0; i < applicable.Length; i++) {
             rule = applicable[i];
 
@@ -294,7 +296,7 @@ internal static %(methodDeclaration)s {
                     //
                     CallSiteOps.AddRule(@this, rule);
                     // and then move it to the front of the L2 cache
-                    CallSiteOps.MoveRule(@this, rule);
+                    CallSiteOps.MoveRule(cache, rule);
                 }
             }
 
@@ -317,7 +319,7 @@ internal static %(methodDeclaration)s {
     var args = new object[] { %(argelems)s };
    
     for (; ; ) {
-        rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+        rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
         //
         // Execute the rule on the matchmaker site

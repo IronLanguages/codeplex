@@ -133,7 +133,7 @@ namespace IronPython.Compiler.Ast {
                                 enumerator,
                                 typeof(IEnumerator).GetProperty("Current").GetGetMethod()
                             ),
-                            Operators.None
+                            PythonOperationKind.None
                         ),
                         body,
                         ag.UpdateLineNumber(list.Start.Line),

@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Binding {
     /// 
     /// TODO: Lots of CodeConetxt references, need to move CodeContext onto OldClass and pull it from there.
     /// </summary>
-    class MetaOldInstance : MetaPythonObject, IPythonInvokable, IPythonGetable {        
+    class MetaOldInstance : MetaPythonObject, IPythonInvokable, IPythonGetable, IPythonOperable {        
         public MetaOldInstance(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, OldInstance/*!*/ value)
             : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
@@ -76,13 +76,12 @@ namespace IronPython.Runtime.Binding {
             return MakeMemberAccess(member, member.Name, MemberAccess.Delete, this);
         }
 
-        [Obsolete]
-        public override DynamicMetaObject/*!*/ BindOperation(OperationBinder/*!*/ operation, params DynamicMetaObject/*!*/[]/*!*/ args) {
-            if (operation.Operation == StandardOperators.IsCallable) {
-                return MakeIsCallable(operation);
-            }
+        public override DynamicMetaObject BindBinaryOperation(BinaryOperationBinder binder, DynamicMetaObject arg) {
+            return PythonProtocol.Operation(binder, this, arg);
+        }
 
-            return base.BindOperation(operation, args);
+        public override DynamicMetaObject BindUnaryOperation(UnaryOperationBinder binder) {
+            return PythonProtocol.Operation(binder, this);
         }
 
         public override DynamicMetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {
@@ -517,9 +516,27 @@ namespace IronPython.Runtime.Binding {
 
         #endregion
 
-        #region Operations
-        
-        private DynamicMetaObject/*!*/ MakeIsCallable(OperationBinder/*!*/ operation) {
+        #region Helpers
+
+        public new OldInstance/*!*/ Value {
+            get {
+                return (OldInstance)base.Value;
+            }
+        }
+
+        #endregion
+
+        #region IPythonOperable Members
+
+        DynamicMetaObject IPythonOperable.BindOperation(PythonOperationBinder action, DynamicMetaObject[] args) {
+            if (action.Operation == PythonOperationKind.IsCallable) {
+                return MakeIsCallable(action);
+            }
+
+            return null;
+        }
+
+        private DynamicMetaObject/*!*/ MakeIsCallable(PythonOperationBinder/*!*/ operation) {
             DynamicMetaObject self = Restrict(typeof(OldInstance));
 
             return new DynamicMetaObject(
@@ -532,16 +549,6 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-
-        #endregion
-
-        #region Helpers
-
-        public new OldInstance/*!*/ Value {
-            get {
-                return (OldInstance)base.Value;
-            }
-        }
 
         #endregion
     }

@@ -92,33 +92,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Gets a new object array for storing the data that matches this
-        /// ExpandoClass given the old ExpandoClass and the instances associated 
-        /// data array.
-        /// </summary>
-        internal object[] GetNewKeys(object[] oldData) {
-            if (oldData.Length >= _keys.Length) {
-                // we have extra space in our buffer, just initialize it to Uninitialized.
-                oldData[_keys.Length - 1] = ExpandoObject.Uninitialized;
-                return oldData;
-            } 
-
-            // we've grown too much - we need a new object array
-            object[] res = new object[GetAlignedSize(_keys.Length)];
-            Array.Copy(oldData, res, oldData.Length);
-            res[oldData.Length] = ExpandoObject.Uninitialized;
-            return res;            
-        }
-
-        private static int GetAlignedSize(int len) {
-            // the alignment of the array for storage of values (must be a power of two)
-            const int DataArrayAlignment = 8;                   
-
-            // round up and then mask off lower bits
-            return (len + (DataArrayAlignment - 1)) & (~(DataArrayAlignment - 1));
-        }
-        
-        /// <summary>
         /// Gets the lists of transitions that are valid from this ExpandoClass
         /// to an ExpandoClass whos keys hash to the apporopriate hash code.
         /// </summary>

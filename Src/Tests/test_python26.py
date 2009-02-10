@@ -693,4 +693,16 @@ def test_log():
         for n in nonzeros:
             AssertError(ZeroDivisionError, math.log, n, 1)
 
+# A small extension of CPython's test_struct.py, which does not make sure that empty
+# dictionaries are interpreted as false
+def test_struct_bool():
+    import struct
+    for prefix in tuple("<>!=")+('',):
+        format = str(prefix + '?')
+        packed = struct.pack(format, {})
+        unpacked = struct.unpack(format, packed)
+
+        AreEqual(len(unpacked), 1)
+        AssertFalse(unpacked[0])
+
 run_test(__name__)
