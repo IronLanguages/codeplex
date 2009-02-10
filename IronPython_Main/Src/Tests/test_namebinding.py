@@ -922,6 +922,13 @@ try:
     AssertUnreachable("should have thrown")
 except NameError: pass
 
+class C(object):
+    name = None
+    def test(self):
+        print name
+
+AssertError(NameError, C().test)
+
 if not is_interpreted():
     try:
         del __builtin__.pow

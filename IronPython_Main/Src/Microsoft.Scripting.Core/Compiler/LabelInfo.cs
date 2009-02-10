@@ -145,6 +145,10 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             _acrossBlockJump = true;
+            if (_node != null && _node.Type != typeof(void)) {
+                throw Error.NonLocalJumpWithValue(_node.Name);
+            }
+
             if (_definitions.Count > 1) {
                 throw Error.AmbiguousJump(_node.Name);
             }

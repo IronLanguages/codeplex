@@ -416,6 +416,7 @@ namespace Microsoft.Runtime.CompilerServices {
             ////
             //// Level 2 cache lookup
             ////
+            //var cache = @this.Binder.GetRuleCache<%(funcType)s>();
 
             ////
             //// Any applicable rules in level 2 cache?
@@ -457,13 +458,23 @@ namespace Microsoft.Runtime.CompilerServices {
             //    }
             //}
 
+            var cache = Expression.Variable(typeof(RuleCache<T>), "cache");
+            vars.Add(cache);
+
+            body.Add(
+                Expression.Assign(
+                    cache,
+                    Expression.Call(typeof(CallSiteOps), "GetRuleCache", typeArgs, @this)
+                )
+            );
+
             var tryRule = Expression.TryFinally(
                 invokeRule,
                 IfThen(
                     getMatch,
                     Expression.Block(
                         Expression.Call(typeof(CallSiteOps), "AddRule", typeArgs, @this, rule),
-                        Expression.Call(typeof(CallSiteOps), "MoveRule", typeArgs, @this, rule)
+                        Expression.Call(typeof(CallSiteOps), "MoveRule", typeArgs, cache, rule)
                     )
                 )
             );
@@ -476,12 +487,13 @@ namespace Microsoft.Runtime.CompilerServices {
                 Expression.Assign(originalRule, rule)
             );
 
+
             body.Add(
                 IfThen(
                     Expression.NotEqual(
                         Expression.Assign(
                             applicable,
-                            Expression.Call(typeof(CallSiteOps), "FindApplicableRules", typeArgs, @this)
+                            Expression.Call(typeof(CallSiteOps), "FindApplicableRules", typeArgs, cache)
                         ),
                         Expression.Constant(null, applicable.Type)
                     ),
@@ -556,7 +568,7 @@ namespace Microsoft.Runtime.CompilerServices {
                     @this,
                     Expression.Assign(
                         rule,
-                        Expression.Call(typeof(CallSiteOps), "CreateNewRule", typeArgs, @this, rule, originalRule, args)
+                        Expression.Call(typeof(CallSiteOps), "CreateNewRule", typeArgs, cache, @this, rule, originalRule, args)
                     )
                 )
             );

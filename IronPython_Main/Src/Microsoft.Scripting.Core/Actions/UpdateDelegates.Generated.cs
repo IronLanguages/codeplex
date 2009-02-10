@@ -90,7 +90,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -111,7 +113,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -134,7 +136,7 @@ namespace Microsoft.Scripting {
             var args = new object[] {  };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -216,7 +218,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -237,7 +241,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -260,7 +264,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -342,7 +346,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -363,7 +369,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -386,7 +392,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -468,7 +474,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -489,7 +497,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -512,7 +520,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -594,7 +602,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -615,7 +625,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -638,7 +648,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -720,7 +730,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -741,7 +753,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -764,7 +776,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -846,7 +858,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -867,7 +881,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -890,7 +904,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -972,7 +986,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -993,7 +1009,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1016,7 +1032,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1098,7 +1114,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1119,7 +1137,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1142,7 +1160,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1224,7 +1242,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1245,7 +1265,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1268,7 +1288,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1350,7 +1370,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1371,7 +1393,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1394,7 +1416,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1475,7 +1497,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1496,7 +1520,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1519,7 +1543,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1600,7 +1624,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1621,7 +1647,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1644,7 +1670,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1725,7 +1751,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1746,7 +1774,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1769,7 +1797,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1850,7 +1878,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1871,7 +1901,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -1894,7 +1924,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -1975,7 +2005,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -1996,7 +2028,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2019,7 +2051,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -2100,7 +2132,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -2121,7 +2155,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2144,7 +2178,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -2225,7 +2259,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -2246,7 +2282,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2269,7 +2305,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -2350,7 +2386,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -2371,7 +2409,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2394,7 +2432,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -2475,7 +2513,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -2496,7 +2536,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2519,7 +2559,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site
@@ -2600,7 +2640,9 @@ namespace Microsoft.Scripting {
             //
             // Any applicable rules in level 2 cache?
             //
-            if ((applicable = CallSiteOps.FindApplicableRules(@this)) != null) {
+            var cache = CallSiteOps.GetRuleCache(@this);
+
+            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
                 for (int i = 0; i < applicable.Length; i++) {
                     rule = applicable[i];
 
@@ -2621,7 +2663,7 @@ namespace Microsoft.Scripting {
                             //
                             CallSiteOps.AddRule(@this, rule);
                             // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(@this, rule);
+                            CallSiteOps.MoveRule(cache, rule);
                         }
                     }
 
@@ -2644,7 +2686,7 @@ namespace Microsoft.Scripting {
             var args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 };
 
             for (; ; ) {
-                rule = CallSiteOps.CreateNewRule(@this, rule, originalRule, args);
+                rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
 
                 //
                 // Execute the rule on the matchmaker site

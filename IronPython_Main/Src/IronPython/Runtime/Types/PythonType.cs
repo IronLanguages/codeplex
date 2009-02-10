@@ -681,7 +681,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             if (_eqSite == null) {
                 Interlocked.CompareExchange(
                     ref _eqSite,
-                    Context.CreateComparisonSite(StandardOperators.Equal),
+                    Context.CreateComparisonSite(PythonOperationKind.Equal),
                     null
                 );
             }
@@ -774,7 +774,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     CallSite<Func<CallSite, object, int>>.Create(
                         new PythonOperationBinder(
                             Context.DefaultBinderState,
-                            OperatorStrings.Hash
+                            PythonOperationKind.Hash
                         )
                     ),
                     null

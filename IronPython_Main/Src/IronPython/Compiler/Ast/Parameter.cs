@@ -16,11 +16,15 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
+using IronPython.Runtime.Binding;
+
 using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Microsoft.Scripting.Runtime;
 
     public enum ParameterKind {
         Normal,
@@ -122,7 +126,7 @@ namespace IronPython.Compiler.Ast {
                 inner,
                 Span,
                 Variable.Variable,
-                Operators.None
+                PythonOperationKind.None
             );
 
             if (stmt != null) {

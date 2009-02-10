@@ -32,7 +32,7 @@ namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
     
-    class MetaPythonFunction : MetaPythonObject, IPythonInvokable {
+    class MetaPythonFunction : MetaPythonObject, IPythonInvokable, IPythonOperable {
         public MetaPythonFunction(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, PythonFunction/*!*/ value)
             : base(expression, BindingRestrictions.Empty, value) {
             Assert.NotNull(value);
@@ -61,18 +61,6 @@ namespace IronPython.Runtime.Binding {
                 return MakeDelegateTarget(conversion, conversion.Type, Restrict(typeof(PythonFunction)));
             }
             return conversion.FallbackConvert(this);
-        }
-
-        [Obsolete]
-        public override DynamicMetaObject/*!*/ BindOperation(OperationBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
-            switch (action.Operation) {
-                case StandardOperators.CallSignatures:
-                    return MakeCallSignatureRule(this);
-                case StandardOperators.IsCallable:
-                    return MakeIsCallableRule(this);
-            }
-
-            return base.BindOperation(action, args);
         }
 
         public override System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> GetDynamicDataMembers() {
@@ -950,6 +938,21 @@ namespace IronPython.Runtime.Binding {
             get {
                 return (PythonFunction)base.Value;
             }
+        }
+
+        #endregion
+
+        #region IPythonOperable Members
+
+        DynamicMetaObject IPythonOperable.BindOperation(PythonOperationBinder action, DynamicMetaObject[] args) {
+            switch (action.Operation) {
+                case PythonOperationKind.CallSignatures:
+                    return MakeCallSignatureRule(this);
+                case PythonOperationKind.IsCallable:
+                    return MakeIsCallableRule(this);
+            }
+
+            return null;
         }
 
         #endregion

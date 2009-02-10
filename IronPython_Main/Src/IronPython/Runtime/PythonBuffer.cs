@@ -169,7 +169,7 @@ namespace IronPython.Runtime {
             PythonContext context = PythonContext.GetContext(a._context);
 
             return context.Operation(
-                StandardOperators.Add,
+                PythonOperationKind.Add,
                 PythonOps.GetIndex(a._context, a._object, a.GetSlice()), 
                 PythonOps.GetIndex(a._context, b._object, b.GetSlice())
             );
@@ -183,7 +183,7 @@ namespace IronPython.Runtime {
             PythonContext context = PythonContext.GetContext(b._context);
 
             return context.Operation(
-                StandardOperators.Multiply,
+                PythonOperationKind.Multiply,
                 PythonOps.GetIndex(b._context, b._object, b.GetSlice()),
                 n
             );
@@ -193,7 +193,7 @@ namespace IronPython.Runtime {
             PythonContext context = PythonContext.GetContext(b._context);
 
             return context.Operation(
-                StandardOperators.Multiply,
+                PythonOperationKind.Multiply,
                 PythonOps.GetIndex(b._context, b._object, b.GetSlice()),
                 n
             );                

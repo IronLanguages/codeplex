@@ -16,8 +16,6 @@ using System; using Microsoft;
 
 
 using System.Diagnostics;
-using System.Reflection.Emit;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -84,7 +82,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
             }
 
             if (node.DefaultValue != null) {
-                EmitExpression(node.DefaultValue);
+                if (node.Target.Type == typeof(void)) {
+                    EmitExpressionAsVoid(node.DefaultValue);
+                } else {
+                    EmitExpression(node.DefaultValue);
+                }
             }
 
             label.Mark();
@@ -93,7 +95,11 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitGotoExpression(Expression expr) {
             var node = (GotoExpression)expr;
             if (node.Value != null) {
-                EmitExpression(node.Value);
+                if (node.Target.Type == typeof(void)) {
+                    EmitExpressionAsVoid(node.Value);
+                } else {
+                    EmitExpression(node.Value);
+                }
             }
 
             ReferenceLabel(node.Target).EmitJump();           
@@ -153,22 +159,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     }
                     DefineBlockLabels(@switch.DefaultBody);
                     return true;
-                case ExpressionType.Assign:
-                    // Assignment where left side is a variable/parameter is
-                    // safe to jump into
-                    var assign = (BinaryExpression)node;
-                    if (assign.Left.NodeType == ExpressionType.Parameter) {
-                        PushLabelBlock(LabelScopeKind.Statement);
-                        return true;
-                    }
-                    // Otherwise go to the default case
-                    goto default;
 
-                // Should we allow all UnaryExpressions to be treated as
-                // statements? We need to allow at least convert because it's
-                // essential in tree conversion (especially Void conversions)
+                // Remove this when Convert(Void) goes away.
                 case ExpressionType.Convert:
-                case ExpressionType.DebugInfo:
+                    if (node.Type != typeof(void)) {
+                        // treat it as an expression
+                        goto default;
+                    }
+                    PushLabelBlock(LabelScopeKind.Statement);
+                    return true;
+
                 case ExpressionType.Conditional:
                 case ExpressionType.Loop:
                 case ExpressionType.Goto:

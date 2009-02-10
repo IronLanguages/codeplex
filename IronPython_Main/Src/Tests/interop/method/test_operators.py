@@ -147,9 +147,10 @@ def test_negative_scenario():
     AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'InstanceOp' and 'InstanceOp'", lambda: x + y)
     
     x = UnaryWithWrongParamOp()
-    AssertErrorWithMessage(TypeError, "unsupported operand type for Negate: 'UnaryWithWrongParamOp'", lambda: -x)
-    AssertErrorWithMessage(TypeError, "unsupported operand type for Positive: 'UnaryWithWrongParamOp'", lambda: +x)
-    AssertErrorWithMessage(TypeError, "unsupported operand type for OnesComplement: 'UnaryWithWrongParamOp'", lambda: ~x)
+    AssertErrorWithMessage(TypeError, "bad operand type for unary -: 'UnaryWithWrongParamOp'", lambda: -x)
+    AssertErrorWithMessage(TypeError, "bad operand type for unary +: 'UnaryWithWrongParamOp'", lambda: +x)
+    AssertErrorWithMessage(TypeError, "bad operand type for unary ~: 'UnaryWithWrongParamOp'", lambda: ~x)
+    AssertErrorWithMessage(TypeError, "bad operand type for abs(): 'UnaryWithWrongParamOp'", lambda: abs(x))
     
     x = BinaryWithWrongParamOp()
     y = BinaryWithWrongParamOp()
@@ -157,7 +158,7 @@ def test_negative_scenario():
     AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x + y)
     AssertErrorWithMessage(TypeError, "unsupported operand type(s) for /: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x / y)
     
-    AssertErrorWithMessage(TypeError, "unsupported operand type for Positive: 'BinaryWithWrongParamOp'", lambda: +x)
+    AssertErrorWithMessage(TypeError, "bad operand type for unary +: 'BinaryWithWrongParamOp'", lambda: +x)
 
 def test_unusal_signature():
     x = FirstArgOp(2)
