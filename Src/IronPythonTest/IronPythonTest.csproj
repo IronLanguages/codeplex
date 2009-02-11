@@ -1,7 +1,6 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
-  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\Support\silverlight.settings.targets" />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">    <DebugSymbols>false</DebugSymbols>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DefineConstants>TRACE;SIGNED</DefineConstants>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'DelaySigned Silverlight Release' ">    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>    <NoWarn>618</NoWarn>    <NoStdLib>true</NoStdLib>    <DebugType>pdbonly</DebugType>    <PlatformTarget>AnyCPU</PlatformTarget>    <ErrorReport>prompt</ErrorReport>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <SilverlightBuild>true</SilverlightBuild>    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>  </PropertyGroup>
+
+
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -14,27 +13,31 @@
     <WarningLevel>4</WarningLevel>
     <StartupObject>
     </StartupObject>
-    <OldToolsVersion>2.0</OldToolsVersion>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
+    <OldToolsVersion>2.0</OldToolsVersion>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
+    <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
+    <DelaySign>true</DelaySign>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\Bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;$(SignedSym)</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Debug' ">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>..\..\Bin\Silverlight Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;SILVERLIGHT</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;$(SignedSym)</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <NoStdLib>true</NoStdLib>
@@ -44,7 +47,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
-    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <DefineConstants>TRACE;SILVERLIGHT;$(SignedSym)</DefineConstants>
     <NoWarn>618</NoWarn>
     <NoStdLib>true</NoStdLib>
     <DebugType>pdbonly</DebugType>
@@ -100,8 +103,6 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting.Core</Name>
@@ -116,7 +117,6 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
-  <Import Project="..\..\..\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <PropertyGroup>
     <PostBuildEvent>copy /y "$(TargetPath)" "$(ProjectDir)..\tests\"</PostBuildEvent>
   </PropertyGroup>

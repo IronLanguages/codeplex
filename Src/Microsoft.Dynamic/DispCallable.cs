@@ -26,7 +26,7 @@ namespace Microsoft.Scripting {
     /// <summary>
     /// This represents a bound dispmember on a IDispatch object.
     /// </summary>
-    internal sealed class DispCallable : IDynamicObject {
+    internal sealed class DispCallable : IDynamicMetaObjectProvider {
 
         private readonly IDispatchComObject _dispatch;
         private readonly string _memberName;
