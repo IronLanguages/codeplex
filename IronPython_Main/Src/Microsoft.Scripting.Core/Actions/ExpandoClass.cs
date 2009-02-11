@@ -149,62 +149,26 @@ namespace Microsoft.Scripting {
         /// </returns>
         private int GetValueIndexCaseInsensitive(string name, ExpandoObject obj) {
             int caseInsensitiveMatch = ExpandoObject.NoMatch; //the location of the case-insensitive matching member
-            int exactMatch = ExpandoObject.NoMatch;
-            bool hasAmbigousMatch = false;
-            bool isMatch = false;
             lock (obj.LockObject) {
                 for (int i = _keys.Length - 1; i >= 0; i--) {
-                    if (!hasAmbigousMatch) {
-                        //Do case insensitive search if we are not sure if there are ambigous matches
-                        if (string.Equals(
-                            _keys[i],
-                            name,
-                            StringComparison.OrdinalIgnoreCase)) {
-                            //if the matching member is deleted, continue searching
-                            if (!obj.IsDeletedMember(i)) {
-                                if (caseInsensitiveMatch == ExpandoObject.NoMatch) {
-                                    caseInsensitiveMatch = i;
-                                } else {
-                                    hasAmbigousMatch = true;
-                                }
-                            }
-                            isMatch = true;
-                        } else {
-                            isMatch = false;
-                        }
-                    }
-                    //Try searching for exact match if we got a match already and haven't got an exact match.
-                    if (isMatch && caseInsensitiveMatch != ExpandoObject.NoMatch && exactMatch == ExpandoObject.NoMatch) {
-                        if (string.Equals(
-                            _keys[i],
-                            name,
-                            StringComparison.Ordinal)) {
-                            if (obj.IsDeletedMember(i)) {
-                                //We know there is an exact match but it is deleted.
-                                //No need to look for exact match after this.
-                                exactMatch = i;
+                    if (string.Equals(
+                        _keys[i],
+                        name,
+                        StringComparison.OrdinalIgnoreCase)) {
+                        //if the matching member is deleted, continue searching
+                        if (!obj.IsDeletedMember(i)) {
+                            if (caseInsensitiveMatch == ExpandoObject.NoMatch) {
+                                caseInsensitiveMatch = i;
                             } else {
-                                //the exact match has the highest priority
-                                return i;
+                                //Ambigous match, stop searching
+                                return ExpandoObject.AmbiguousMatchFound;
                             }
                         }
                     }
                 }
             }
-            //if there is an available exact match, it should have been returned.
-            if (hasAmbigousMatch) {
-                return ExpandoObject.AmbiguousMatchFound;
-            }
             //There is exactly one member with case insensitive match.
             return caseInsensitiveMatch;
-        }
-
-        /// <summary>
-        /// Gets the name of the specified index.  Used for getting the name to 
-        /// create a new expando class when all we have is the class and old index.
-        /// </summary>
-        internal string GetIndexName(int index) {
-            return _keys[index];
         }
 
         /// <summary>
