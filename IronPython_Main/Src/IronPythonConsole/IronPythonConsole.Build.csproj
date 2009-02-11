@@ -11,6 +11,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
     <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
+    <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
+    <SignedDir Condition="'$(SignAssembly)' == 'true'">Signed</SignedDir>
+    <SignedDir Condition="$(SignAssembly) != true">Unsigned</SignedDir>
+    <DelaySign>true</DelaySign>
   </PropertyGroup>
   <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->     <ItemGroup>
       <!--                    -->
@@ -31,7 +37,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\App.config" />
+    <None Include="..\..\Config\$(SignedDir)\App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">

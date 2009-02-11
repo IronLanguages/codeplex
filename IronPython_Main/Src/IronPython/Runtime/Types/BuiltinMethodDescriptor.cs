@@ -28,7 +28,7 @@ using Ast = Microsoft.Linq.Expressions.Expression;
 namespace IronPython.Runtime.Types {
 
     [PythonType("method_descriptor")]
-    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicObject, ICodeFormattable {
+    public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicMetaObjectProvider, ICodeFormattable {
         internal readonly BuiltinFunction/*!*/ _template;
 
         internal BuiltinMethodDescriptor(BuiltinFunction/*!*/ function) {
@@ -162,9 +162,9 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IDynamicMetaObjectProvider Members
 
-        DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+        DynamicMetaObject/*!*/ IDynamicMetaObjectProvider.GetMetaObject(Expression/*!*/ parameter) {
             return new Binding.MetaBuiltinMethodDescriptor(parameter, BindingRestrictions.Empty, this);
         }
 

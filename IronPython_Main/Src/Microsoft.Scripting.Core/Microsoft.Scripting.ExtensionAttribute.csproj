@@ -1,7 +1,6 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
-  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\..\..\..\Merlin\Main\Support\silverlight.settings.targets" />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">    <DebugType>pdbonly</DebugType>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DefineConstants>TRACE;SIGNED</DefineConstants>    <ErrorReport>prompt</ErrorReport>    <WarningLevel>4</WarningLevel>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <RunCodeAnalysis>false</RunCodeAnalysis>    <DelaySign>true</DelaySign>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <SignAssembly>true</SignAssembly>    <BaseAddress>1929379840</BaseAddress>  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <NoWarn>1591,618</NoWarn>    <NoStdLib>true</NoStdLib>    <DebugType>pdbonly</DebugType>    <PlatformTarget>AnyCPU</PlatformTarget>    <ErrorReport>prompt</ErrorReport>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <SilverlightBuild>true</SilverlightBuild>    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>  </PropertyGroup>
+
+
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -13,12 +12,16 @@
     <RootNamespace>Microsoft.Scripting.ExtensionAttribute</RootNamespace>
     <AssemblyName>Microsoft.Scripting.ExtensionAttribute</AssemblyName>
     <OldToolsVersion>2.0</OldToolsVersion>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
+    <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
+    <DelaySign>true</DelaySign>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\FxCop\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -30,7 +33,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\Bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -40,7 +43,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -91,10 +94,7 @@
     <Compile Include="Properties\ExtensionAssemblyInfo.cs" />
     <Compile Include="Utils\Extension.cs" />
   </ItemGroup>
-  <ItemGroup>
-  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
-  <Import Project="..\..\..\..\..\..\Merlin\Main\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <!-- This task produces a list of Compile items. -->
   <Target Name="GetCompileItems" Outputs="@(CompileItems)">
     <CreateItem Include="%(Compile.Identity)">

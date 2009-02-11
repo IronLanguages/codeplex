@@ -94,7 +94,7 @@ namespace IronPython.Modules {
                             n -= bytes;
                         }
                         if (bytes == 0 || n == 0) {
-                            return StringOps.FromByteArray(result.ToArray());
+                            return result.ToArray().MakeString();
                         }
                     }
                 } catch (Exception e) {
@@ -118,7 +118,7 @@ namespace IronPython.Modules {
                 + "Writes the string s through the SSL connection."
                 )]
             public int write(CodeContext/*!*/ context, string data) {
-                byte[] buffer = StringOps.ToByteArray(data);
+                byte[] buffer = data.MakeByteArray();
                 try {
                     _sslStream.Write(buffer);
                     return buffer.Length;

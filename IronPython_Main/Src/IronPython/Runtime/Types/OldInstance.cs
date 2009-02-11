@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Types {
         ISerializable,
         IWeakReferenceable,
         IMembersList,
-        IDynamicObject
+        IDynamicMetaObjectProvider
     {
 
         private PythonDictionary _dict;
@@ -932,9 +932,9 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IDynamicObject Members
+        #region IDynamicMetaObjectProvider Members
 
-        DynamicMetaObject/*!*/ IDynamicObject.GetMetaObject(Expression/*!*/ parameter) {
+        DynamicMetaObject/*!*/ IDynamicMetaObjectProvider.GetMetaObject(Expression/*!*/ parameter) {
             return new Binding.MetaOldInstance(parameter, BindingRestrictions.Empty, this);
         }
 

@@ -30,7 +30,7 @@ namespace Microsoft.Scripting {
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.
     /// </summary>
-    internal class ComObject : IDynamicObject {
+    internal class ComObject : IDynamicMetaObjectProvider {
         /// <summary>
         /// The runtime-callable wrapper
         /// </summary>
@@ -116,7 +116,7 @@ namespace Microsoft.Scripting {
             get { return new KeyValuePair<string, object>[0]; }
         }
 
-        DynamicMetaObject IDynamicObject.GetMetaObject(Expression parameter) {
+        DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter) {
             return new ComFallbackMetaObject(parameter, BindingRestrictions.Empty, this);
         }
 

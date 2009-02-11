@@ -1,7 +1,6 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
-  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\..\..\..\Merlin\Main\Support\silverlight.settings.targets" />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Release|AnyCPU' ">    <DebugType>pdbonly</DebugType>    <Optimize>true</Optimize>    <OutputPath>..\..\Bin\DelaySigned Release\</OutputPath>    <DocumentationFile>..\..\Bin\DelaySigned Release\Microsoft.Scripting.Core.xml</DocumentationFile>    <DefineConstants>TRACE;SIGNED;MICROSOFT_SCRIPTING_CORE</DefineConstants>    <ErrorReport>prompt</ErrorReport>    <WarningLevel>4</WarningLevel>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <RunCodeAnalysis>false</RunCodeAnalysis>    <DelaySign>true</DelaySign>    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>    <SignAssembly>true</SignAssembly>    <BaseAddress>1929379840</BaseAddress>    <NoWarn>    </NoWarn>  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DelaySigned Silverlight Release|AnyCPU' ">    <OutputPath>..\..\Bin\DelaySigned Silverlight Release\</OutputPath>    <DefineConstants>TRACE;SILVERLIGHT;MICROSOFT_SCRIPTING_CORE</DefineConstants>    <DocumentationFile>..\..\Bin\DelaySigned Silverlight Release\Microsoft.Scripting.Core.xml</DocumentationFile>    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>    <NoWarn>618</NoWarn>    <NoStdLib>true</NoStdLib>    <DebugType>pdbonly</DebugType>    <PlatformTarget>AnyCPU</PlatformTarget>    <ErrorReport>prompt</ErrorReport>    <SignAssembly>true</SignAssembly>    <AssemblyOriginatorKeyFile>..\SilverlightKey.snk</AssemblyOriginatorKeyFile>    <DelaySign>true</DelaySign>    <SilverlightBuild>true</SilverlightBuild>    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.31005.0</SilverlightSdkPath>  </PropertyGroup>
+
+
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -16,12 +15,16 @@
     <DocumentationFile>..\..\Bin\Release\Microsoft.Scripting.Core.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
     <OldToolsVersion>2.0</OldToolsVersion>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
+    <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
+    <DelaySign>true</DelaySign>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\FxCop\</OutputPath>
-    <DefineConstants>TRACE;MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -36,7 +39,7 @@
     <Optimize>false</Optimize>
     <OutputPath>..\..\Bin\Debug\</OutputPath>
     <DocumentationFile>..\..\Bin\Debug\Microsoft.Scripting.Core.xml</DocumentationFile>
-    <DefineConstants>DEBUG;TRACE;MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -49,7 +52,7 @@
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\Release\</OutputPath>
     <DocumentationFile>..\..\Bin\Release\Microsoft.Scripting.Core.xml</DocumentationFile>
-    <DefineConstants>TRACE;MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -119,7 +122,7 @@
     <Compile Include="Actions\CreateInstanceBinder.cs" />
     <Compile Include="Actions\DeleteMemberBinder.cs" />
     <Compile Include="Actions\GetMemberBinder.cs" />
-    <Compile Include="Actions\IDynamicObject.cs" />
+    <Compile Include="Actions\IDynamicMetaObjectProvider.cs" />
     <Compile Include="Actions\InvokeBinder.cs" />
     <Compile Include="Actions\DynamicMetaObject.cs" />
     <Compile Include="Actions\DynamicMetaObjectBinder.cs" />
@@ -225,8 +228,6 @@
     <Compile Include="Stubs.cs" />
   </ItemGroup>
   <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="Microsoft.Scripting.ExtensionAttribute.csproj">
       <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
       <Name>Microsoft.Scripting.ExtensionAttribute</Name>
@@ -238,7 +239,6 @@
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
-  <Import Project="..\..\..\..\..\..\Merlin\Main\Support\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <!-- This task produces a list of Compile items. -->
   <Target Name="GetCompileItems" Outputs="@(CompileItems)">
     <CreateItem Include="%(Compile.Identity)">

@@ -56,6 +56,9 @@ using System.Security;
 
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
+#if SIGNED
+#else
+#endif
 
 #if !SILVERLIGHT
 [assembly: AssemblyVersion("0.9.5.1")]
