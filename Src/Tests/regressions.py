@@ -266,6 +266,30 @@ def test_enumerate_index_increment_cp20016():
     
     AreEqual(filter(f, enumerate(['a', 'b'])), [(0, 'a'), (1, 'b')])
 
+def test_invalid_args_cp20616():
+    test_cases = {
+        lambda: ''.join() : "join() takes exactly one argument (0 given)",
+        lambda: ''.join("", "") : "join() takes exactly one argument (2 given)",
+        lambda: ''.join("", "", "") : "join() takes exactly one argument (3 given)",
+        lambda: ''.replace("", "", "", "") : "replace() takes at most 3 arguments (4 given)",
+    }
+    if is_cli:
+        test_cases.update({
+                            lambda: System.String("").PadRight() : "PadRight() takes at least 1 argument (0 given)",
+                            lambda: System.String("").PadRight(1, "a", "") : "PadRight() takes at most 2 arguments (3 given)",
+                          })
+    #CodePlex 21063
+    if is_cli:
+        for key in test_cases:
+            test_cases[key] = test_cases[key].replace("one", "1")
+    
+    
+    for key in test_cases:
+        temp_lambda = key
+        expected_err_msg = test_cases[key]
+        AssertErrorWithMessage(TypeError, expected_err_msg, temp_lambda)
+
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

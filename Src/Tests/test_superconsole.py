@@ -31,7 +31,7 @@ import clr
 #if this is a debug build and the assemblies are being saved...peverify is run.
 #for the test to pass, Maui assemblies must be in the AssembliesDir
 if is_peverify_run:
-    clr.AddReference("Microsoft.Scripting.Core")
+    AddReferenceToDlrCore()
     clr.AddReference("Microsoft.Scripting")
     from Microsoft.Scripting.Runtime import ScriptDomainManager
     from System.IO import Path

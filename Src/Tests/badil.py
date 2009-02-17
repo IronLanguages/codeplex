@@ -16,7 +16,11 @@
 import clr
 import System
 
-clr.AddReference("Microsoft.Scripting.Core")
+if System.Environment.Version.Major >=4:
+    clr.AddReference("System.Core")
+else:
+    clr.AddReference("Microsoft.Scripting.Core")
+
 clr.AddReference("Microsoft.Scripting")
 clr.AddReference("IronPython")
 

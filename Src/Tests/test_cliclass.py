@@ -1346,7 +1346,7 @@ def test_underlying_type():
     AreEqual(called, True)
     
     import clr
-    clr.AddReference('Microsoft.Scripting')
+    AddReferenceToDlrCore()
     
     from System import Reflection
     from Microsoft.Scripting.Generation import AssemblyGen
