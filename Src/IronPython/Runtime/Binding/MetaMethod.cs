@@ -100,8 +100,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Block(
                             MakeCheckSelf(signature, args),
                             Ast.Dynamic(
-                                new PythonInvokeBinder(
-                                    BinderState.GetBinderState(callAction),
+                                BinderState.GetBinderState(callAction).Invoke(
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
                                 typeof(object),
@@ -141,8 +140,7 @@ namespace IronPython.Runtime.Binding {
 
                 call = new DynamicMetaObject(
                     Ast.Dynamic(
-                        new PythonInvokeBinder(
-                            BinderState.GetBinderState(callAction),
+                        BinderState.GetBinderState(callAction).Invoke(
                             newSig
                         ),
                         typeof(object),

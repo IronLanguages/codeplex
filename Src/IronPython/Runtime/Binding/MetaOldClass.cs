@@ -138,8 +138,7 @@ namespace IronPython.Runtime.Binding {
                             init
                         ),
                         Ast.Dynamic(
-                            new PythonInvokeBinder(
-                                BinderState.GetBinderState(call),
+                            BinderState.GetBinderState(call).Invoke(
                                 signature
                             ),
                             typeof(object),

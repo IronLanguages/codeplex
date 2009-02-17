@@ -134,6 +134,7 @@ namespace IronPython.Runtime {
 
         private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
+
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
         /// </summary>
@@ -214,7 +215,7 @@ namespace IronPython.Runtime {
             object asmResolve;
             if (options == null || 
                 !options.TryGetValue("NoAssemblyResolveHook", out asmResolve) || 
-                !Convert.ToBoolean(asmResolve)) {
+                !System.Convert.ToBoolean(asmResolve)) {
                 HookAssemblyResolve();
             }
 #endif
@@ -1746,36 +1747,45 @@ namespace IronPython.Runtime {
         #region Object Operations
 
         public override ConvertBinder/*!*/ CreateConvertBinder(Type/*!*/ toType, bool explicitCast) {
-            return new ConversionBinder(DefaultBinderState, toType, explicitCast ? ConversionResultKind.ExplicitCast : ConversionResultKind.ImplicitCast);
+            return DefaultBinderState.Convert(toType, explicitCast ? ConversionResultKind.ExplicitCast : ConversionResultKind.ImplicitCast);
         }
 
         public override DeleteMemberBinder/*!*/ CreateDeleteMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new PythonDeleteMemberBinder(DefaultBinderState, name, ignoreCase);
+            if (ignoreCase) {
+                return new PythonDeleteMemberBinder(DefaultBinderState, name, ignoreCase);
+            }
+            return DefaultBinderState.DeleteMember(name);
         }
 
         public override GetMemberBinder/*!*/ CreateGetMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new CompatibilityGetMember(DefaultBinderState, name, ignoreCase);
+            if (ignoreCase) {
+                return new CompatibilityGetMember(DefaultBinderState, name, ignoreCase);
+            }
+            return DefaultBinderState.CompatGetMember(name);
         }
 
         public override InvokeBinder/*!*/ CreateInvokeBinder(params ArgumentInfo/*!*/[]/*!*/ arguments) {
-            return new CompatibilityInvokeBinder(DefaultBinderState, arguments);
+            return DefaultBinderState.CompatInvoke(arguments);
         }
 
         public override BinaryOperationBinder CreateBinaryOperationBinder(ExpressionType operation) {
-            return new PythonBinaryOperationBinder(DefaultBinderState, operation);
+            return DefaultBinderState.BinaryOperation(operation);
         }
 
         public override UnaryOperationBinder CreateUnaryOperationBinder(ExpressionType operation) {
-            return new PythonUnaryOperationBinder(DefaultBinderState, operation);
+            return DefaultBinderState.UnaryOperation(operation);
         }
         
         public override SetMemberBinder/*!*/ CreateSetMemberBinder(string/*!*/ name, bool ignoreCase) {
-            return new PythonSetMemberBinder(DefaultBinderState, name, ignoreCase);
+            if (ignoreCase) {
+                return new PythonSetMemberBinder(DefaultBinderState, name, ignoreCase);
+            }
+            return DefaultBinderState.SetMember(name);
         }
 
         public override CreateInstanceBinder/*!*/ CreateCreateBinder(params ArgumentInfo/*!*/[]/*!*/ arguments) {
-            return new CreateFallback(
-                new CompatibilityInvokeBinder(DefaultBinderState, arguments),
+            return DefaultBinderState.Create(
+                DefaultBinderState.CompatInvoke(arguments),
                 arguments
             );
         }
@@ -1797,10 +1807,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _newUnarySites[(int)oper],
                     CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                        new PythonInvokeBinder(
-                            DefaultBinderState,
-                            new CallSignature(0)
-                        )
+                        DefaultBinderState.InvokeNone
                     ),
                     null
                 );
@@ -1849,8 +1856,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _newTernarySites[(int)oper],
                     CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
-                        new PythonInvokeBinder(
-                            DefaultBinderState,
+                        DefaultBinderState.Invoke(
                             new CallSignature(2)
                         )
                     ),
@@ -1922,11 +1928,10 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, object, int>> MakeSortCompareSite() {
             return CallSite<Func<CallSite, object, object, int>>.Create(
-                            Binders.BinaryOperationBinder(
-                                DefaultBinderState,
-                                PythonOperationKind.Compare
-                            )
-                        );
+                DefaultBinderState.Operation(
+                    PythonOperationKind.Compare
+                )
+            );
         }
 
         internal void SetAttr(CodeContext/*!*/ context, object o, SymbolId name, object value) {
@@ -1939,8 +1944,7 @@ namespace IronPython.Runtime {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_setAttrSites.TryGetValue(key, out site)) {
                     _setAttrSites[key] = site = CallSite<Func<CallSite, object, object, object>>.Create(
-                        new PythonSetMemberBinder(
-                            DefaultBinderState,
+                        DefaultBinderState.SetMember(
                             SymbolTable.IdToString(name)
                         )
                     );
@@ -1961,10 +1965,7 @@ namespace IronPython.Runtime {
             lock (_deleteAttrSites) {
                 if (!_deleteAttrSites.TryGetValue(key, out site)) {
                     _deleteAttrSites[key] = site = CallSite<Func<CallSite, object, object>>.Create(
-                        new PythonDeleteMemberBinder(
-                            DefaultBinderState,
-                            SymbolTable.IdToString(name)
-                        )
+                        DefaultBinderState.DeleteMember(SymbolTable.IdToString(name))
                     );
                 }
             }
@@ -1978,8 +1979,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _metaClassSite,
                         CallSite<Func<CallSite, CodeContext, object, string, PythonTuple, IAttributesCollection, object>>.Create(
-                            new PythonInvokeBinder(
-                                _defaultBinderState,
+                            _defaultBinderState.Invoke(
                                 new CallSignature(3)
                             )
                         ),
@@ -1997,10 +1997,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _writeSite,
                         CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
-                            new PythonInvokeBinder(
-                                _defaultBinderState,
-                                new CallSignature(1)
-                            )
+                            _defaultBinderState.InvokeOne
                         ),
                         null
                     );
@@ -2016,8 +2013,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _getIndexSite,
                         CallSite<Func<CallSite, object, object, object>>.Create(
-                            new PythonGetIndexBinder(
-                                _defaultBinderState,
+                            _defaultBinderState.GetIndex(
                                 1
                             )
                         ),
@@ -2034,8 +2030,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _delIndexSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        new PythonDeleteIndexBinder(
-                            _defaultBinderState,
+                        _defaultBinderState.DeleteIndex(
                             1
                         )
                     ),
@@ -2052,9 +2047,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _delSliceSite,
                     CallSite<Func<CallSite, object, object, object, object>>.Create(
-                        new PythonDeleteSliceBinder(
-                            _defaultBinderState
-                        )
+                        _defaultBinderState.DeleteSlice
                     ),
                     null
                 );
@@ -2069,8 +2062,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _setIndexSite,
                     CallSite<Func<CallSite, object, object, object, object>>.Create(
-                        new PythonSetIndexBinder(
-                            _defaultBinderState,
+                        _defaultBinderState.SetIndex(
                             1
                         )
                     ),
@@ -2086,9 +2078,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _setSliceSite,
                     CallSite<Func<CallSite, object, object, object, object, object>>.Create(
-                        new PythonSetSliceBinder(
-                            _defaultBinderState
-                        )
+                        _defaultBinderState.SetSlice
                     ),
                     null
                 );
@@ -2103,8 +2093,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _equalSite,
                         CallSite<Func<CallSite, object, object, object>>.Create(
-                            new PythonBinaryOperationBinder(
-                                _defaultBinderState,
+                            _defaultBinderState.BinaryOperation(
                                 ExpressionType.Equal
                             )
                         ),
@@ -2122,8 +2111,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _memberNamesSite,
                         CallSite<Func<CallSite, CodeContext, object, IList<string>>>.Create(
-                            Binders.UnaryOperationBinder(
-                                _defaultBinderState,
+                            _defaultBinderState.Operation(
                                 PythonOperationKind.MemberNames
                             )
                         ),
@@ -2157,10 +2145,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _finalizerSite,
                         CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
-                                new CallSignature(0)
-                            )
+                            DefaultBinderState.InvokeNone
                         ),
                         null
                     );
@@ -2176,10 +2161,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _functionCallSite,
                         CallSite<Func<CallSite, CodeContext, PythonFunction, object>>.Create(
-                            new PythonInvokeBinder(
-                                _defaultBinderState,
-                                new CallSignature(0)
-                            )
+                            _defaultBinderState.InvokeNone
                         ),
                         null
                     );
@@ -2226,8 +2208,7 @@ namespace IronPython.Runtime {
         public override string GetDocumentation(object obj) {
             if (_docSite == null) {
                 _docSite = CallSite<Func<CallSite, object, string>>.Create(
-                    Binders.UnaryOperationBinder(
-                        DefaultBinderState,
+                    DefaultBinderState.Operation(
                         PythonOperationKind.Documentation
                     )
                 );
@@ -2289,8 +2270,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, TRet>> MakeTrySite<T, TRet>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, TRet>>.Create(
-                new ConversionBinder(
-                    DefaultBinderState,
+                DefaultBinderState.Convert(
                     typeof(T),
                     kind
                 )
@@ -2326,8 +2306,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, object>> MakeImplicitConvertSite<T>() {
             return CallSite<Func<CallSite, object, object>>.Create(
-                new ConversionBinder(
-                    _defaultBinderState,
+                DefaultBinderState.Convert(
                     typeof(T),
                     ConversionResultKind.ImplicitCast
                 )
@@ -2336,8 +2315,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, T>>.Create(
-                new ConversionBinder(
-                    _defaultBinderState,
+                DefaultBinderState.Convert(
                     typeof(T),
                     kind
                 )
@@ -2363,10 +2341,7 @@ namespace IronPython.Runtime {
             lock (_binarySites) {
                 if (!_binarySites.TryGetValue(operation, out site)) {
                     _binarySites[operation] = site = CallSite<Func<CallSite, object, object, object>>.Create(
-                        Binders.BinaryOperationBinder(
-                            _defaultBinderState,
-                            operation
-                        )
+                        Binders.BinaryOperationBinder(_defaultBinderState, operation)
                     );
                 }
             }
@@ -2469,8 +2444,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _importSite,
                         CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
+                            DefaultBinderState.Invoke(
                                 new CallSignature(5)
                             )
                         ),
@@ -2488,8 +2462,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _oldImportSite,
                         CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
+                            DefaultBinderState.Invoke(
                                 new CallSignature(4)
                             )
                         ),
@@ -2506,8 +2479,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _isCallableSite,
                     CallSite<Func<CallSite, object, bool>>.Create(
-                        Binders.UnaryOperationBinder(
-                            DefaultBinderState,
+                        DefaultBinderState.Operation(
                             PythonOperationKind.IsCallable
                         )
                     ),
@@ -2546,7 +2518,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _addSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        new PythonBinaryOperationBinder(DefaultBinderState, ExpressionType.Add)
+                        DefaultBinderState.BinaryOperation(ExpressionType.Add)
                     ),
                     null
                 );
@@ -2560,7 +2532,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _divModSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        Binders.BinaryOperationBinder(DefaultBinderState, PythonOperationKind.DivMod)
+                        DefaultBinderState.Operation(PythonOperationKind.DivMod)
                     ),
                     null
                 );
@@ -2575,7 +2547,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _rdivModSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        Binders.BinaryOperationBinder(DefaultBinderState, PythonOperationKind.ReverseDivMod)
+                        DefaultBinderState.Operation(PythonOperationKind.ReverseDivMod)
                     ),
                     null
                 );
@@ -2688,10 +2660,7 @@ namespace IronPython.Runtime {
                 if (_propGetSite == null) {
                     Interlocked.CompareExchange(ref _propGetSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
-                                new CallSignature(1)
-                            )
+                            DefaultBinderState.InvokeOne
                         ),
                         null
                     );
@@ -2706,10 +2675,7 @@ namespace IronPython.Runtime {
                 if (_propDelSite == null) {
                     Interlocked.CompareExchange(ref _propDelSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
-                                new CallSignature(1)
-                            )
+                            DefaultBinderState.InvokeOne
                         ),
                         null
                     );
@@ -2724,8 +2690,7 @@ namespace IronPython.Runtime {
                 if (_propSetSite == null) {
                     Interlocked.CompareExchange(ref _propSetSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
-                            new PythonInvokeBinder(
-                                DefaultBinderState,
+                            DefaultBinderState.Invoke(
                                 new CallSignature(2)
                             )
                         ),
@@ -2882,8 +2847,7 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, int>> MakeHashSite() {
             return CallSite<Func<CallSite, object, int>>.Create(
-                Binders.UnaryOperationBinder(
-                    DefaultBinderState,
+                DefaultBinderState.Operation(
                     PythonOperationKind.Hash
                 )
             );
@@ -2894,7 +2858,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _getSignaturesSite,
                     CallSite<Func<CallSite, object, IList<string>>>.Create(
-                        new PythonOperationBinder(DefaultBinderState, PythonOperationKind.CallSignatures)
+                        DefaultBinderState.Operation(PythonOperationKind.CallSignatures)
                     ),
                     null
                 );

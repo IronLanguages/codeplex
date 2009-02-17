@@ -39,10 +39,8 @@ namespace Microsoft.Scripting {
             if (_self.TryGetMemberMethod(binder.Name, out method) ||
                 _self.TryGetMemberMethodExplicit(binder.Name, out method)) {
 
-                IList<ArgumentInfo> argInfos = binder.Arguments;
-                ComBinderHelpers.ProcessArgumentsForCom(ref args, ref argInfos);
-
-                return BindComInvoke(args, method, argInfos);
+                bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref args);
+                return BindComInvoke(args, method, binder.Arguments, isByRef);
             }
 
             return base.BindInvokeMember(binder, args);
@@ -53,19 +51,19 @@ namespace Microsoft.Scripting {
 
             ComMethodDesc method;
             if (_self.TryGetGetItem(out method)) {
-                IList<ArgumentInfo> argInfos = binder.Arguments;
-                ComBinderHelpers.ProcessArgumentsForCom(ref args, ref argInfos);
 
-                return BindComInvoke(args, method, argInfos);
+                bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref args);
+                return BindComInvoke(args, method, binder.Arguments, isByRef);
             }
 
             return base.BindInvoke(binder, args);
         }
 
-        private DynamicMetaObject BindComInvoke(DynamicMetaObject[] args, ComMethodDesc method, IList<ArgumentInfo> arguments) {
+        private DynamicMetaObject BindComInvoke(DynamicMetaObject[] args, ComMethodDesc method, IList<ArgumentInfo> arguments, bool[] isByRef) {
             return new ComInvokeBinder(
                 arguments,
                 args,
+                isByRef,
                 IDispatchRestriction(),
                 Expression.Constant(method),
                 Expression.Property(
@@ -104,7 +102,7 @@ namespace Microsoft.Scripting {
         private DynamicMetaObject BindGetMember(ComMethodDesc method) {
             if (method.IsDataMember) {
                 if (method.ParamCount == 0) {
-                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0]);
+                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0], new bool[]{});
                 }
             }
 
@@ -140,10 +138,9 @@ namespace Microsoft.Scripting {
 
             ComMethodDesc getItem;
             if (_self.TryGetGetItem(out getItem)) {
-                IList<ArgumentInfo> argInfos = binder.Arguments;
-                ComBinderHelpers.ProcessArgumentsForCom(ref indexes, ref argInfos);
 
-                return BindComInvoke(indexes, getItem, argInfos);
+                bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref indexes);
+                return BindComInvoke(indexes, getItem, binder.Arguments, isByRef);
             }
 
             return base.BindGetIndex(binder, indexes);
@@ -154,13 +151,11 @@ namespace Microsoft.Scripting {
 
             ComMethodDesc setItem;
             if (_self.TryGetSetItem(out setItem)) {
-                IList<ArgumentInfo> argInfos = binder.Arguments;
-                ComBinderHelpers.ProcessArgumentsForCom(ref indexes, ref argInfos);
 
-                // add an arginfo for the value
-                argInfos = argInfos.AddLast(Expression.PositionalArg(argInfos.Count));
+                bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref indexes);
+                isByRef = isByRef.AddLast(false);
 
-                return BindComInvoke(indexes.AddLast(value), setItem, argInfos);
+                return BindComInvoke(indexes.AddLast(value), setItem, binder.Arguments, isByRef);
             }
 
             return base.BindSetIndex(binder, indexes, value);
@@ -195,6 +190,7 @@ namespace Microsoft.Scripting {
                 return new ComInvokeBinder(
                     new ArgumentInfo[] { Expression.PositionalArg(0) },
                     new[] { value },
+                    new bool[] {false},
                     restrictions,
                     Expression.Constant(method),
                     dispatch,

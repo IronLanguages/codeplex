@@ -338,8 +338,7 @@ namespace IronPython.Runtime.Binding {
 
                 return new DynamicMetaObject(
                     Ast.Dynamic(
-                        new PythonInvokeBinder(
-                            BinderState,
+                        BinderState.Invoke(
                             GetDynamicNewSignature()
                         ),
                         typeof(object),
@@ -494,8 +493,7 @@ namespace IronPython.Runtime.Binding {
 
                 return new DynamicMetaObject(
                     Ast.Dynamic(
-                        new PythonInvokeBinder(
-                            BinderState,
+                        BinderState.Invoke(
                             Arguments.Signature
                         ),
                         typeof(object),

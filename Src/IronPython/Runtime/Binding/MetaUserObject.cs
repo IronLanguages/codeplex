@@ -192,10 +192,7 @@ namespace IronPython.Runtime.Binding {
                 Expression callExpr = Ast.Call(
                     PythonOps.GetConversionHelper(returner, GetResultKind(convertToAction)),
                     Ast.Dynamic(
-                        new PythonInvokeBinder(
-                            BinderState.GetBinderState(convertToAction),
-                            new CallSignature(0)
-                        ),
+                        BinderState.GetBinderState(convertToAction).InvokeNone,
                         typeof(object),
                         BinderState.GetCodeContext(convertToAction),
                         tmp
@@ -352,8 +349,7 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return _baseMetaObject.BindGetMember(
-                    new CompatibilityGetMember(
-                        BinderState.GetBinderState(action),
+                    BinderState.GetBinderState(action).CompatGetMember(
                         GetGetMemberName(action)
                     )
                 );

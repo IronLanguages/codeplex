@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Binding {
             if (target.Value is IDynamicMetaObjectProvider) {
                 // try creating an instance...
                 return target.BindCreateInstance(
-                    new CreateFallback(this, Arguments),
+                    _state.Create(this, Arguments),
                     args
                 );
             }
