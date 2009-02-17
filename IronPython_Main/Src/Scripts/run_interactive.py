@@ -15,10 +15,14 @@
 
 import sys
 import clr
+import System
 
 sys.path.append(sys.exec_prefix)
 clr.AddReference("Microsoft.Scripting.dll")
-clr.AddReference("Microsoft.Scripting.Core.dll")
+if System.Environment.Version.Major >=4:
+    clr.AddReference("System.Core")
+else:
+    clr.AddReference("Microsoft.Scripting.Core")
 clr.AddReference("IronPython.dll")
 clr.AddReference("IronPython.Modules.dll")
 

@@ -202,6 +202,11 @@ def test_cyclic_pkg():
     AreEqual(cyclic_package.cyclic_submodules1.A, 3)
     AreEqual(cyclic_package.cyclic_submodules1.cyclic_package.cyclic_submodules0.A, 2)
 
+def test_system_core_cp20623():
+    compileCode("cp20623", "import System\nA=System.DateTime(350000000).Second\nprint A")
+    import cp20623
+    AreEqual(cp20623.A, 35)
+    #TODO: need to also generate a standalone exe from cp20623 and try running it
 
 #------------------------------------------------------------------------------        
 run_test(__name__)
