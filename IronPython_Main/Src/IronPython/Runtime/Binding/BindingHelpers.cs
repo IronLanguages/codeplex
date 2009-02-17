@@ -25,6 +25,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Ast = Microsoft.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Collections.Generic;
 
 namespace IronPython.Runtime.Binding {
     
@@ -118,8 +119,7 @@ namespace IronPython.Runtime.Binding {
 
         public static Expression/*!*/ Invoke(Expression codeContext, BinderState/*!*/ binder, Type/*!*/ resultType, CallSignature signature, params Expression/*!*/[]/*!*/ args) {
             return Ast.Dynamic(
-                new PythonInvokeBinder(
-                    binder,
+                binder.Invoke(
                     signature
                 ),
                 resultType,
@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        internal static CallSignature ArgumentArrayToSignature(ReadOnlyCollection<ArgumentInfo/*!*/>/*!*/ args) {
+        internal static CallSignature ArgumentArrayToSignature(IList<ArgumentInfo/*!*/>/*!*/ args) {
             Argument[] ai = new Argument[args.Count];
 
             for (int i = 0; i < ai.Length; i++) {
