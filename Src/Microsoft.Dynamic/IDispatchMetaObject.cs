@@ -75,6 +75,9 @@ namespace Microsoft.Scripting {
         }
 
         public override DynamicMetaObject BindGetMember(GetMemberBinder binder) {
+            ComBinder.ComGetMemberBinder comBinder = binder as ComBinder.ComGetMemberBinder;
+            bool canReturnCallables = comBinder == null ? false : comBinder._CanReturnCallables;
+
             ContractUtils.RequiresNotNull(binder, "binder");
 
             ComMethodDesc method;
@@ -82,7 +85,7 @@ namespace Microsoft.Scripting {
 
             // 1. Try methods
             if (_self.TryGetMemberMethod(binder.Name, out method)) {
-                return BindGetMember(method);
+                return BindGetMember(method, canReturnCallables);
             }
 
             // 2. Try events
@@ -92,18 +95,24 @@ namespace Microsoft.Scripting {
 
             // 3. Try methods explicitly by name
             if (_self.TryGetMemberMethodExplicit(binder.Name, out method)) {
-                return BindGetMember(method);
+                return BindGetMember(method, canReturnCallables);
+
             }
 
             // 4. Fallback
             return base.BindGetMember(binder);
         }
 
-        private DynamicMetaObject BindGetMember(ComMethodDesc method) {
+        private DynamicMetaObject BindGetMember(ComMethodDesc method, bool canReturnCallables) {
             if (method.IsDataMember) {
                 if (method.ParamCount == 0) {
-                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0], new bool[]{});
+                    return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0], new bool[] { });
                 }
+            }
+
+            // ComGetMemberBinder does not expect callables. Try to call always.
+            if (!canReturnCallables) {
+                return BindComInvoke(DynamicMetaObject.EmptyMetaObjects, method, new ArgumentInfo[0], new bool[0]);
             }
 
             return new DynamicMetaObject(
@@ -190,7 +199,7 @@ namespace Microsoft.Scripting {
                 return new ComInvokeBinder(
                     new ArgumentInfo[] { Expression.PositionalArg(0) },
                     new[] { value },
-                    new bool[] {false},
+                    new bool[] { false },
                     restrictions,
                     Expression.Constant(method),
                     dispatch,

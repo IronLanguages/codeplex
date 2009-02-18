@@ -594,10 +594,12 @@ def AddReferenceToDlrCore():
     import System
     if System.Environment.Version.Major >=4:
         clr.AddReference("System.Core")
-        clr.AddReference("System.Dynamic")
+        if not is_silverlight:
+            clr.AddReference("System.Dynamic")
     else:
         clr.AddReference("Microsoft.Scripting.Core")
-        clr.AddReference("Microsoft.Dynamic")
+        if not is_silverlight:
+            clr.AddReference("Microsoft.Dynamic")
 
     
 
