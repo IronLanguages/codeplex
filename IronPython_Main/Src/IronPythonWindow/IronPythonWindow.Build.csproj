@@ -6,6 +6,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>IronPythonWindow</RootNamespace>
     <AssemblyName>ipyw</AssemblyName>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <BinPlaceSymbols>false</BinPlaceSymbols> 
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>

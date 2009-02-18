@@ -6,6 +6,9 @@
     <OutputType>Library</OutputType>
     <RootNamespace>IronPython.Modules</RootNamespace>
     <AssemblyName>IronPython.Modules</AssemblyName>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <BinPlaceSymbols>false</BinPlaceSymbols>
     <WarningsNotAsErrors>618,1616,1685,3005,3008,649</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
