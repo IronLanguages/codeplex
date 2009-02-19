@@ -63,14 +63,6 @@ namespace IronPython.Runtime.Binding {
             return conversion.FallbackConvert(this);
         }
 
-        public override System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> GetDynamicDataMembers() {
-            foreach (KeyValuePair<SymbolId, object> member in Value.__dict__.SymbolAttributes) {
-                if (BindingHelpers.IsDataMember(member.Value)) {
-                    yield return new KeyValuePair<string, object>(SymbolTable.IdToString(member.Key), member.Value);
-                }
-            }
-        }
-
         public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
             foreach (object o in Value.__dict__.Keys) {
                 if (o is string) {
