@@ -31,7 +31,7 @@ def test_sanity():
     '''
     #first check that our native modules are still present and accounted for...
     import binascii
-    import collections
+    import _collections
     import copy_reg
     import cPickle
     import cStringIO
