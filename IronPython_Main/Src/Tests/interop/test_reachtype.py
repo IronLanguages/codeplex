@@ -22,7 +22,7 @@ keywords = ['pass', 'import', 'def', 'exec', 'except']
 bultin_funcs = ['abs', 'type', 'file']
 bultin_types = ['complex', 'StandardError']
 bultin_constants = ['None', 'False']
-modules = ['__builtin__', 'datetime', 'collections', 'site']
+modules = ['__builtin__', 'datetime', '_collections', 'site']
 
 def test_interesting_names_as_namespace():
     # import
@@ -41,7 +41,7 @@ def test_interesting_names_as_namespace():
     # !!! no way to get clr types which have the same name as builtin modules
     import __builtin__; AssertError(AttributeError, lambda: __builtin__.A)
     import datetime; AssertError(AttributeError, lambda: datetime.A)
-    import collections; AssertError(AttributeError, lambda: collections.A)
+    import _collections; AssertError(AttributeError, lambda: _collections.A)
     
     # __import__
     for x in keywords + bultin_constants + bultin_funcs + bultin_types:
@@ -70,7 +70,7 @@ def test_interesting_names_as_class_name():
     
     from NSwInterestingClassName import __builtin__; AreEqual(__builtin__.A, 10)
     from NSwInterestingClassName import datetime; AreEqual(datetime.A, 10)
-    from NSwInterestingClassName import collections; AreEqual(collections.A, 10)
+    from NSwInterestingClassName import _collections; AreEqual(_collections.A, 10)
     
     # import a
     import NSwInterestingClassName

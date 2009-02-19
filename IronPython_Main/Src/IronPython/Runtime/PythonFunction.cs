@@ -670,7 +670,7 @@ namespace IronPython.Runtime {
             private Expression[] GetArgumentsForRule(object[] args) {
                 Expression[] exprArgs = new Expression[_func.NormalArgumentCount + _func.ExtraArguments];
                 List<Expression> extraArgs = null;
-                Dictionary<SymbolId, Expression> namedArgs = null;
+                Dictionary<string, Expression> namedArgs = null;
                 int instanceIndex = Action.Signature.IndexOf(ArgumentType.Instance);
 
                 // walk all the provided args and find out where they go...
@@ -690,7 +690,7 @@ namespace IronPython.Runtime {
                             _extractedKeyword = true;
                             bool foundName = false;
                             for (int j = 0; j < _func.NormalArgumentCount; j++) {
-                                if (_func.ArgNames[j] == SymbolTable.IdToString(Action.Signature.GetArgumentName(i))) {
+                                if (_func.ArgNames[j] == Action.Signature.GetArgumentName(i)) {
                                     if (exprArgs[j] != null) {
                                         // kw-argument provided for already provided normal argument.
                                         return null;
@@ -703,7 +703,7 @@ namespace IronPython.Runtime {
                             }
 
                             if (!foundName) {
-                                if (namedArgs == null) namedArgs = new Dictionary<SymbolId, Expression>();
+                                if (namedArgs == null) namedArgs = new Dictionary<string, Expression>();
                                 namedArgs[Action.Signature.GetArgumentName(i)] = _rule.Parameters[parameterIndex];
                             }
                             continue;
@@ -731,7 +731,7 @@ namespace IronPython.Runtime {
             /// <summary>
             /// Binds any missing arguments to values from params array, kw dictionary, or default values.
             /// </summary>
-            private bool FinishArguments(Expression[] exprArgs, List<Expression> paramsArgs, Dictionary<SymbolId, Expression> namedArgs) {
+            private bool FinishArguments(Expression[] exprArgs, List<Expression> paramsArgs, Dictionary<string, Expression> namedArgs) {
                 int noDefaults = _func.NormalArgumentCount - _func.Defaults.Length; // number of args w/o defaults
 
                 for (int i = 0; i < _func.NormalArgumentCount; i++) {
@@ -818,13 +818,13 @@ namespace IronPython.Runtime {
             /// <summary>
             /// Creates the argument for the dictionary expansion parameter.
             /// </summary>
-            private bool TryFinishDictionary(Expression[] exprArgs, Dictionary<SymbolId, Expression> namedArgs) {
+            private bool TryFinishDictionary(Expression[] exprArgs, Dictionary<string, Expression> namedArgs) {
                 if (_func.ExpandDictPosition != -1) {
                     if (_dict != null) {
                         // used provided a dictionary to be expanded
                         exprArgs[_func.ExpandDictPosition] = _dict;
                         if (namedArgs != null) {
-                            foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
+                            foreach (KeyValuePair<string, Expression> kvp in namedArgs) {
                                 MakeDictionaryAddition(kvp);
                             }
                         }
@@ -842,12 +842,12 @@ namespace IronPython.Runtime {
             /// Adds an unbound keyword argument into the dictionary.
             /// </summary>
             /// <param name="kvp"></param>
-            private void MakeDictionaryAddition(KeyValuePair<SymbolId, Expression> kvp) {
+            private void MakeDictionaryAddition(KeyValuePair<string, Expression> kvp) {
                 _init.Add(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AddDictionaryArgument"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                        Ast.Constant(SymbolTable.IdToString(kvp.Key)),
+                        Ast.Constant(kvp.Key),
                         AstUtils.Convert(kvp.Value, typeof(object)),
                         AstUtils.Convert(_dict, typeof(IAttributesCollection))
                     )
@@ -1111,7 +1111,7 @@ namespace IronPython.Runtime {
             /// Called when the user hasn't supplied a dictionary to be expanded but the
             /// function takes a dictionary to be expanded.
             /// </summary>
-            private Expression MakeDictionary(Dictionary<SymbolId, Expression> namedArgs) {
+            private Expression MakeDictionary(Dictionary<string, Expression> namedArgs) {
                 Debug.Assert(_dict == null);
                 _dict = _rule.GetTemporary(typeof(PythonDictionary), "$dict");
 
@@ -1133,11 +1133,11 @@ namespace IronPython.Runtime {
                 );
 
                 if (namedArgs != null) {
-                    foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
+                    foreach (KeyValuePair<string, Expression> kvp in namedArgs) {
                         dictCreator[count++] = Ast.Call(
                             dictRef,
                             typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
-                            Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object)),
+                            Ast.Constant(kvp.Key, typeof(object)),
                             AstUtils.Convert(kvp.Value, typeof(object))
                         );
                     }
@@ -1264,10 +1264,10 @@ namespace IronPython.Runtime {
                 return Ast.Block(res);
             }
 
-            private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {
+            private void MakeUnexpectedKeywordError(Dictionary<string, Expression> namedArgs) {
                 string name = null;
-                foreach (SymbolId id in namedArgs.Keys) {
-                    name = SymbolTable.IdToString(id);
+                foreach (string id in namedArgs.Keys) {
+                    name = id;
                     break;
                 }
 

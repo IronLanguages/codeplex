@@ -159,17 +159,20 @@ def test_cmp():
     AreEqual(cmp(abig,b), 1)
 
 def test_deque():
-    import collections
-    x = collections.deque([2,3,4,5,6])
+    if is_cli or is_silverlight:
+        from _collections import deque
+    else:
+        from collections import deque
+    x = deque([2,3,4,5,6])
     x.remove(2)
-    AreEqual(x, collections.deque([3,4,5,6]))
+    AreEqual(x, deque([3,4,5,6]))
     x.remove(6)
-    AreEqual(x, collections.deque([3,4,5]))
+    AreEqual(x, deque([3,4,5]))
     x.remove(4)
-    AreEqual(x, collections.deque([3,5]))
+    AreEqual(x, deque([3,5]))
     
     # get a deque w/ head/tail backwards...
-    x = collections.deque([1,2,3,4,5,6,7,8])
+    x = deque([1,2,3,4,5,6,7,8])
     x.popleft()
     x.popleft()
     x.popleft()
@@ -178,21 +181,21 @@ def test_deque():
     x.append(2)
     x.append(3)
     x.append(4)
-    AreEqual(x, collections.deque([5,6,7,8, 1, 2, 3, 4]))
+    AreEqual(x, deque([5,6,7,8, 1, 2, 3, 4]))
     x.remove(5)
-    AreEqual(x, collections.deque([6,7,8, 1, 2, 3, 4]))
+    AreEqual(x, deque([6,7,8, 1, 2, 3, 4]))
     x.remove(4)
-    AreEqual(x, collections.deque([6,7,8, 1, 2, 3]))
+    AreEqual(x, deque([6,7,8, 1, 2, 3]))
     x.remove(8)
-    AreEqual(x, collections.deque([6,7,1, 2, 3]))
+    AreEqual(x, deque([6,7,1, 2, 3]))
     x.remove(2)
-    AreEqual(x, collections.deque([6,7,1, 3]))
+    AreEqual(x, deque([6,7,1, 3]))
 
     class BadCmp:
         def __eq__(self, other):
             raise RuntimeError
     
-    d = collections.deque([1,2, BadCmp()])
+    d = deque([1,2, BadCmp()])
     AssertError(RuntimeError, d.remove, 3)
 
 if isPython25:

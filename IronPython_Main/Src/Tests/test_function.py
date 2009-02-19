@@ -659,7 +659,10 @@ AreEqual(D.classmeth.im_class, MetaType)
 #####################################################################################
 
 from iptest.assert_util import *
-from collections import *
+if is_cli or is_silverlight:
+    from _collections import *
+else:
+    from collections import *
 
 global init
 

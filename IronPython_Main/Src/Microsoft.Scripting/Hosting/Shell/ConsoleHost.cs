@@ -308,18 +308,15 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
-            if (consoleOptions.PrintVersion)
-            {
+            if (consoleOptions.PrintVersion){
                 PrintVersion();
             }
 
-            if (consoleOptions.PrintUsage)
-            {
+            if (consoleOptions.PrintUsage){
                 PrintUsage();
             }
 
-            if (consoleOptions.Exit)
-            {
+            if (consoleOptions.Exit){
                 _exitCode = 0;
                 return;
             }

@@ -659,7 +659,7 @@ def test_unhashable_types():
     class OldUserClass:
         def foo(): pass
     import _weakref
-    import collections
+    from _collections import deque
     
     AssertError(TypeError, hash, slice(None))
     hashcode = System.Object.GetHashCode(slice(None))
@@ -672,8 +672,8 @@ def test_unhashable_types():
     AssertError(TypeError, hash, _weakref.proxy(OldUserClass().foo))
     hashcode = System.Object.GetHashCode(_weakref.proxy(OldUserClass().foo))
     
-    AssertError(TypeError, hash, collections.deque())
-    hashcode = System.Object.GetHashCode(collections.deque())
+    AssertError(TypeError, hash, deque())
+    hashcode = System.Object.GetHashCode(deque())
     
     AssertError(TypeError, hash, dict())
     hashcode = System.Object.GetHashCode(dict())
