@@ -444,7 +444,6 @@
       <Compile Include="Runtime\ReturnFixer.cs" />
       <Compile Include="Runtime\Scope.cs" />
       <Compile Include="Runtime\ScopeExtension.cs" />
-      <Compile Include="Runtime\ScopeMemberAttributes.cs" />
       <Compile Include="Runtime\ScriptCode.cs" />
       <Compile Include="Runtime\ScriptDomainManager.cs" />
       <Compile Include="Runtime\ScriptingRuntimeHelpers.cs" />

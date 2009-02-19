@@ -50,7 +50,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryGetMember(GetMemberBinder binder, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -62,7 +63,7 @@ namespace Microsoft.Scripting {
         /// <param name="value">The value to set.</param>
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         public virtual bool TrySetMember(SetMemberBinder binder, object value) {
-            throw new NotSupportedException();
+            return false;
         }
 
         /// <summary>
@@ -73,7 +74,7 @@ namespace Microsoft.Scripting {
         /// <param name="binder">The binder provided by the call site.</param>
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         public virtual bool TryDeleteMember(DeleteMemberBinder binder) {
-            throw new NotSupportedException();
+            return false;
         }
 
         /// <summary>
@@ -87,7 +88,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -100,7 +102,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryConvert(ConvertBinder binder, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -114,7 +117,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryCreateInstance(CreateInstanceBinder binder, object[] args, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -128,7 +132,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -142,7 +147,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -155,7 +161,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryUnaryOperation(UnaryOperationBinder binder, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -169,7 +176,8 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result) {
-            throw new NotSupportedException();
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -183,7 +191,7 @@ namespace Microsoft.Scripting {
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public virtual bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value) {
-            throw new NotSupportedException();
+            return false;
         }
 
         /// <summary>
@@ -195,7 +203,7 @@ namespace Microsoft.Scripting {
         /// <param name="indexes">The indexes to be deleted.</param>
         /// <returns>true if the operation is complete, false if the call site should determine behavior.</returns>
         public virtual bool TryDeleteIndex(DeleteIndexBinder binder, object[] indexes) {
-            throw new NotSupportedException();
+            return false;
         }
 
         /// <summary>

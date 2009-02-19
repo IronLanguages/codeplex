@@ -65,6 +65,14 @@ namespace Microsoft.Linq.Expressions {
                 return _filter;
             }
         }
+
+        /// <summary>
+        /// Returns a <see cref="String"/> that represents the current <see cref="Object"/>. 
+        /// </summary>
+        /// <returns>A <see cref="String"/> that represents the current <see cref="Object"/>. </returns>
+        public override string ToString() {
+            return ExpressionStringBuilder.CatchBlockToString(this);
+        }
     }
 
     public partial class Expression {
