@@ -15,8 +15,6 @@
 using System; using Microsoft;
 
 
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
@@ -27,29 +25,21 @@ namespace Microsoft.Scripting {
     /// Represents the dynamic get index operation at the call site, providing the binding semantic and the details about the operation.
     /// </summary>
     public abstract class GetIndexBinder : DynamicMetaObjectBinder {
-        private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
+        private readonly CallInfo _callInfo;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GetIndexBinder" />.
         /// </summary>
-        /// <param name="arguments">The signature of the arguments at the call site.</param>
-        protected GetIndexBinder(params ArgumentInfo[] arguments)
-            : this((IEnumerable<ArgumentInfo>)arguments) {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GetIndexBinder" />.
-        /// </summary>
-        /// <param name="arguments">The signature of the arguments at the call site.</param>
-        protected GetIndexBinder(IEnumerable<ArgumentInfo> arguments) {
-            _arguments = arguments.ToReadOnly();
+        /// <param name="callInfo">The signature of the arguments at the call site.</param>
+        protected GetIndexBinder(CallInfo callInfo) {
+            _callInfo = callInfo;
         }
 
         /// <summary>
         /// Gets the signature of the arguments at the call site.
         /// </summary>
-        public ReadOnlyCollection<ArgumentInfo> Arguments {
-            get { return _arguments; }
+        public CallInfo CallInfo {
+            get { return _callInfo; }
         }
 
         /// <summary>
@@ -60,7 +50,7 @@ namespace Microsoft.Scripting {
         [Confined]
         public override bool Equals(object obj) {
             GetIndexBinder ia = obj as GetIndexBinder;
-            return ia != null && ia._arguments.ListEquals(_arguments);
+            return ia != null && ia._callInfo.Equals(_callInfo);
         }
 
         /// <summary>
@@ -69,7 +59,7 @@ namespace Microsoft.Scripting {
         /// <returns>An <see cref="Int32" /> containing the hash code for this instance.</returns>
         [Confined]
         public override int GetHashCode() {
-            return GetIndexBinderHash ^ _arguments.ListHashCode();
+            return GetIndexBinderHash ^ _callInfo.GetHashCode();
         }
 
         /// <summary>

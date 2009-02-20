@@ -189,10 +189,6 @@ namespace Microsoft.Scripting.Utils {
                 return true;
             }
 
-            // Everything can be converted to void
-            if (dest == typeof(void)) {
-                return true;
-            }
             // Nullable conversions
             if (IsNullableType(source) && dest == GetNonNullableType(source)) {
                 return true;

@@ -15,10 +15,8 @@
 using System; using Microsoft;
 
 
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
@@ -30,28 +28,18 @@ namespace Microsoft.Scripting {
     public abstract class InvokeMemberBinder : DynamicMetaObjectBinder {
         private readonly string _name;
         private readonly bool _ignoreCase;
-        private readonly ReadOnlyCollection<ArgumentInfo> _arguments;
+        private readonly CallInfo _callInfo;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InvokeMemberBinder" />.
         /// </summary>
         /// <param name="name">The name of the member to invoke.</param>
         /// <param name="ignoreCase">true if the name should be matched ignoring case; false otherwise.</param>
-        /// <param name="arguments">The signature of the arguments at the call site.</param>
-        protected InvokeMemberBinder(string name, bool ignoreCase, IEnumerable<ArgumentInfo> arguments) {
+        /// <param name="callInfo">The signature of the arguments at the call site.</param>
+        protected InvokeMemberBinder(string name, bool ignoreCase, CallInfo callInfo) {
             _name = name;
             _ignoreCase = ignoreCase;
-            _arguments = arguments.ToReadOnly();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="InvokeMemberBinder" />.
-        /// </summary>
-        /// <param name="name">The name of the member to invoke.</param>
-        /// <param name="ignoreCase">true if the name should be matched ignoring case; false otherwise.</param>
-        /// <param name="arguments">The signature of the arguments at the call site.</param>
-        protected InvokeMemberBinder(string name, bool ignoreCase, params ArgumentInfo[] arguments)
-            : this(name, ignoreCase, (IEnumerable<ArgumentInfo>)arguments) {
+            _callInfo = callInfo;
         }
 
         /// <summary>
@@ -75,10 +63,8 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the signature of the arguments at the call site.
         /// </summary>
-        public ReadOnlyCollection<ArgumentInfo> Arguments {
-            get {
-                return _arguments;
-            }
+        public CallInfo CallInfo {
+            get { return _callInfo; }
         }
 
         /// <summary>
@@ -135,7 +121,7 @@ namespace Microsoft.Scripting {
         [Confined]
         public override bool Equals(object obj) {
             InvokeMemberBinder ca = obj as InvokeMemberBinder;
-            return ca != null && ca._name == _name && ca._ignoreCase == _ignoreCase && ca._arguments.ListEquals(_arguments);
+            return ca != null && ca._name == _name && ca._ignoreCase == _ignoreCase && ca._callInfo.Equals(_callInfo);
         }
 
         /// <summary>
@@ -144,7 +130,7 @@ namespace Microsoft.Scripting {
         /// <returns>An <see cref="Int32" /> containing the hash code for this instance.</returns>
         [Confined]
         public override int GetHashCode() {
-            return InvokeMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0) ^ _arguments.ListHashCode();
+            return InvokeMemberBinderHash ^ _name.GetHashCode() ^ (_ignoreCase ? 0x8000000 : 0) ^ _callInfo.GetHashCode();
         }
     }
 }

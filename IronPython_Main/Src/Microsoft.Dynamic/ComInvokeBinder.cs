@@ -31,7 +31,7 @@ namespace Microsoft.Scripting {
         private readonly Expression _method;        // ComMethodDesc to be called
         private readonly Expression _dispatch;      // IDispatch
 
-        private readonly IList<ArgumentInfo> _arguments;
+        private readonly CallInfo _callInfo;
         private readonly DynamicMetaObject[] _args;
         private readonly bool[] _isByRef;
         private readonly Expression _instance;
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting {
         private ParameterExpression _propertyPutDispId;
 
         internal ComInvokeBinder(
-                IList<ArgumentInfo> arguments, 
+                CallInfo callInfo, 
                 DynamicMetaObject[] args,
                 bool[] isByRef,
                 BindingRestrictions restrictions, 
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting {
                 ComMethodDesc methodDesc
                 ) {
 
-            Debug.Assert(arguments != null, "arguments");
+            Debug.Assert(callInfo != null, "arguments");
             Debug.Assert(args != null, "args");
             Debug.Assert(isByRef != null, "isByRef");
             Debug.Assert(method != null, "method");
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting {
             _dispatch = dispatch;
             _methodDesc = methodDesc;
 
-            _arguments = arguments;
+            _callInfo = callInfo;
             _args = args;
             _isByRef = isByRef;
             _restrictions = restrictions;
@@ -148,7 +148,7 @@ namespace Microsoft.Scripting {
         }
 
         internal DynamicMetaObject Invoke() {
-            _keywordArgNames = GetArgumentNames();
+            _keywordArgNames = _callInfo.ArgumentNames.ToArray();
             _totalExplicitArgs = _args.Length;
             
             Type[] marshalArgTypes = new Type[_args.Length];
@@ -518,26 +518,6 @@ namespace Microsoft.Scripting {
                 res[copy++] = _args[i].Expression;
             }
             return res;
-        }
-
-        /// <summary>
-        /// Gets all of the argument names. The instance argument is not included
-        /// </summary>
-        private string[] GetArgumentNames() {
-            // Get names of named arguments
-            if (_arguments.Count == 0) {
-                return new string[0];
-            } else {
-                ComBinderHelpers.VerifyArgInfos(_arguments);
-
-                var result = new List<string>();
-                foreach (ArgumentInfo arg in _arguments) {
-                    if (arg.ArgumentType == ArgumentKind.Named) {
-                        result.Add(((NamedArgumentInfo)arg).Name);
-                    }
-                }
-                return result.ToArray();
-            }
         }
     }
 }

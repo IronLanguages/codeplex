@@ -65,14 +65,22 @@ numbers = {
     16 : ( 'sixteen',   'sixteenth'   ),
 }
 
-def gsig_1(n):
-    return ", ".join(["T%d" % i for i in range(1, n + 1)])
+def gsig_1(n, varianceAnnotated):
+    if varianceAnnotated: annotation = "in "
+    else: annotation = ""
+    return ", ".join([annotation + "T%d" % i for i in range(1, n + 1)])
 def gparams_1(n):
     return ", ".join(["T%d arg%d" % (i, i) for i in range(1, n + 1)])
-def gsig_1_result(n):
-    return ", ".join(["T%d" % i for i in range(1, n + 1)] + ['TResult'])
+def gsig_1_result(n, varianceAnnotated):
+    if varianceAnnotated: 
+        contraAnnotation = "in "
+        coAnnotation = "out "
+    else: 
+        contraAnnotation = ""
+        coAnnotation = ""
+    return ", ".join([contraAnnotation + "T%d" % i for i in range(1, n + 1)] + [coAnnotation + 'TResult'])
 
-def generate_one_action_type(cw, n):
+def generate_one_action_type(cw, n, varianceAnnotated):
     cw.write("""
 /// <summary>
 /// Encapsulates a method that takes %(alpha)s parameters and does not return a value.
@@ -84,9 +92,9 @@ def generate_one_action_type(cw, n):
         cw.write('/// <param name="arg%(number)d">The %(alphath)s parameter of the method that this delegate encapsulates.</param>', number = i, alphath = numbers[i][1])
     if n > 2:
         cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]')
-    cw.write("public delegate void Action<%(gsig)s>(%(gparms)s);", gsig = gsig_1(n), gparms = gparams_1(n))
+    cw.write("public delegate void Action<%(gsig)s>(%(gparms)s);", gsig = gsig_1(n, varianceAnnotated), gparms = gparams_1(n))
 
-def generate_one_func_type(cw, n):
+def generate_one_func_type(cw, n, varianceAnnotated):
     if n != 1: plural = "s"
     else: plural = ""
     cw.write("""
@@ -101,15 +109,17 @@ def generate_one_func_type(cw, n):
         cw.write('/// <param name="arg%(number)d">The %(alphath)s parameter of the method that this delegate encapsulates.</param>', number = i, alphath = numbers[i][1])
     cw.write("""/// <returns>The return value of the method that this delegate encapsulates.</returns>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]""")
-    cw.write('public delegate TResult Func<%(gsig)s>(%(gparms)s);', gsig = gsig_1_result(n), gparms = gparams_1(n))
+    cw.write('public delegate TResult Func<%(gsig)s>(%(gparms)s);', gsig = gsig_1_result(n, varianceAnnotated), gparms = gparams_1(n))
 
 def gen_func_action(cw, lo, med, hi, func):
     cw.write("#if MICROSOFT_SCRIPTING_CORE")
-    for i in range(lo, med):
-        func(cw, i)
-    cw.write("\n#endif")
+    for i in range(lo, hi):
+        func(cw, i, False)
+    cw.write("#else")
+    #generate the func times with covariance and contravairance annotations
     for i in range(med, hi):
-        func(cw, i)
+        func(cw, i, True)
+    cw.write("\n#endif")
 
 def gen_func_types(cw):
     gen_func_action(cw, 2, 9, 17, generate_one_func_type)
