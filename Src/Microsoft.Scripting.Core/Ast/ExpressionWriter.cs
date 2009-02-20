@@ -18,14 +18,14 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
@@ -134,7 +134,7 @@ namespace Microsoft.Linq.Expressions {
                 LambdaId b = _lambdaIds.Dequeue();
                 WriteLine();
                 WriteLine("//");
-                WriteLine("// LAMBDA: {0}({1})", b.Lambda.Name, b.Id);
+                WriteLine("// LAMBDA: {0}({1})", b.Lambda.Name ?? "", b.Id);
                 WriteLine("//");
                 DumpLambda(b.Lambda);
                 WriteLine();
@@ -913,7 +913,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         private static string GetLambdaInfo(LambdaExpression lambda) {
-            return String.Format(CultureInfo.CurrentCulture, ".lambda {0} {1} ()", lambda.ReturnType, lambda.Name);
+            return String.Format(CultureInfo.CurrentCulture, ".lambda {0} {1} ()", lambda.ReturnType, lambda.Name ?? "");
         }
 
         private void DumpLabel(LabelTarget target) {

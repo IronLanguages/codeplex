@@ -305,7 +305,7 @@ namespace Microsoft.Scripting.Ast {
                     // }
                     handlers[i] = Expression.Catch(
                         exceptionVar,
-                        Expression.Void(Expression.Assign(deferredVar, exceptionVar)),
+                        Utils.Void(Expression.Assign(deferredVar, exceptionVar)),
                         filter
                     );
 
@@ -316,10 +316,9 @@ namespace Microsoft.Scripting.Ast {
                     //     ... catch body ...
                     // }
                     block.Add(
-                        Expression.Condition(
+                        Expression.IfThen(
                             Expression.NotEqual(deferredVar, Expression.Constant(null, deferredVar.Type)),
-                            Expression.Void(catchBody),
-                            Expression.Empty()
+                            catchBody
                         )
                     );
                 }
@@ -379,7 +378,7 @@ namespace Microsoft.Scripting.Ast {
                             ),
                             Expression.Label(finallyReturn)
                         ),
-                        Expression.Catch(all, Expression.Void(Expression.Assign(saved, all)))
+                        Expression.Catch(all, Utils.Void(Expression.Assign(saved, all)))
                     ),
                     Expression.Condition(
                         Expression.Equal(_gotoRouter, Expression.Constant(GotoRouterYielding)),

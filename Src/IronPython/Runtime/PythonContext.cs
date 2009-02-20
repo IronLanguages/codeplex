@@ -1764,8 +1764,8 @@ namespace IronPython.Runtime {
             return DefaultBinderState.CompatGetMember(name);
         }
 
-        public override InvokeBinder/*!*/ CreateInvokeBinder(params ArgumentInfo/*!*/[]/*!*/ arguments) {
-            return DefaultBinderState.CompatInvoke(arguments);
+        public override InvokeBinder/*!*/ CreateInvokeBinder(CallInfo /*!*/ callInfo) {
+            return DefaultBinderState.CompatInvoke(callInfo);
         }
 
         public override BinaryOperationBinder CreateBinaryOperationBinder(ExpressionType operation) {
@@ -1783,10 +1783,10 @@ namespace IronPython.Runtime {
             return DefaultBinderState.SetMember(name);
         }
 
-        public override CreateInstanceBinder/*!*/ CreateCreateBinder(params ArgumentInfo/*!*/[]/*!*/ arguments) {
+        public override CreateInstanceBinder/*!*/ CreateCreateBinder(CallInfo /*!*/ callInfo) {
             return DefaultBinderState.Create(
-                DefaultBinderState.CompatInvoke(arguments),
-                arguments
+                DefaultBinderState.CompatInvoke(callInfo),
+                callInfo
             );
         }
 

@@ -35,16 +35,16 @@ namespace Microsoft.Scripting {
         }
 
         public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {
-            return BindGetOrInvoke(indexes, binder.Arguments) ??
+            return BindGetOrInvoke(indexes, binder.CallInfo) ??
                 base.BindGetIndex(binder, indexes);
         }
 
         public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
-            return BindGetOrInvoke(args, binder.Arguments) ??
+            return BindGetOrInvoke(args, binder.CallInfo) ??
                 base.BindInvoke(binder, args);
         }
 
-        private DynamicMetaObject BindGetOrInvoke(DynamicMetaObject[] args, IList<ArgumentInfo> argInfos) {
+        private DynamicMetaObject BindGetOrInvoke(DynamicMetaObject[] args, CallInfo callInfo) {
             ComMethodDesc method;
             var target = _callable.DispatchComObject;
             var name = _callable.MemberName;
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting {
                 target.TryGetMemberMethodExplicit(name, out method)) {
 
                 bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref args);
-                return BindComInvoke(method, args, argInfos, isByRef);
+                return BindComInvoke(method, args, callInfo, isByRef);
             }
             return null;
         }
@@ -70,18 +70,18 @@ namespace Microsoft.Scripting {
 
                 bool[] isByRef = ComBinderHelpers.ProcessArgumentsForCom(ref indexes);
                 isByRef = isByRef.AddLast(false);
-                return BindComInvoke(method, indexes.AddLast(value), binder.Arguments, isByRef);
+                return BindComInvoke(method, indexes.AddLast(value), binder.CallInfo, isByRef);
             }
 
             return base.BindSetIndex(binder, indexes, value);
         }
 
-        private DynamicMetaObject BindComInvoke(ComMethodDesc method, DynamicMetaObject[] indexes, IList<ArgumentInfo> argInfos, bool[] isByRef) {
+        private DynamicMetaObject BindComInvoke(ComMethodDesc method, DynamicMetaObject[] indexes, CallInfo callInfo, bool[] isByRef) {
             var callable = Expression;
             var dispCall = Helpers.Convert(callable, typeof(DispCallable));
 
             return new ComInvokeBinder(
-                argInfos,
+                callInfo,
                 indexes,
                 isByRef,
                 DispCallableRestrictions(),

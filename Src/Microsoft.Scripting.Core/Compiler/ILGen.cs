@@ -588,14 +588,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 return;
             }
 
-            if (typeFrom == typeof(void)) {
+            if (typeFrom == typeof(void) || typeTo == typeof(void)) {
                 throw ContractUtils.Unreachable;
-            }
-
-            // non-void -> void: pop
-            if (typeTo == typeof(void)) {
-                il.Emit(OpCodes.Pop);
-                return;
             }
 
             bool isTypeFromNullable = TypeUtils.IsNullableType(typeFrom);

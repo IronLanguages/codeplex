@@ -135,9 +135,8 @@ namespace Microsoft.Scripting {
                 )
             );
 
-
             return new Expression<T>(
-                "_stub_",
+                "CallSite.Target",
                 Expression.Block(body),
                 new ReadOnlyCollection<ParameterExpression>(@params)
             );
