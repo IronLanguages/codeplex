@@ -1643,7 +1643,7 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        private void SetSystemStateValue(string name, object value) {
+        internal void SetSystemStateValue(string name, object value) {
             SystemState.Dict[SymbolTable.StringToId(name)] = value;
         }
 
