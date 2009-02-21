@@ -62,6 +62,10 @@ namespace IronPythonTest {
         public static LanguageContext GetContext(CodeContext context) {
             return context.LanguageContext;
         }
+
+        public static int HashObject(object o) {
+            return o.GetHashCode();
+        }
     }
 
     public delegate int IntIntDelegate(int arg);

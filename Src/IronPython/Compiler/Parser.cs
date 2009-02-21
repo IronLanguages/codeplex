@@ -1718,6 +1718,8 @@ namespace IronPython.Compiler {
             Statement ret;
 
             if (MaybeEat(TokenKind.KeywordFinally)) {
+                MarkFunctionContainsFinally();
+
                 finallySuite = ParseSuite();
                 TryStatement tfs = new TryStatement(body, null, elseSuite, finallySuite);
                 tfs.Header = mid;
@@ -1742,6 +1744,9 @@ namespace IronPython.Compiler {
                 }
 
                 if (MaybeEat(TokenKind.KeywordFinally)) {
+                    // If this function has an except block, then it can set the current exception.
+                    MarkFunctionContainsFinally();
+
                     finallySuite = ParseSuite();
                 }
 
@@ -1751,6 +1756,13 @@ namespace IronPython.Compiler {
             }
             ret.SetLoc(start, GetEnd());
             return ret;
+        }
+
+        private void MarkFunctionContainsFinally() {
+            FunctionDefinition current = CurrentFunction;
+            if (current != null) {
+                current.ContainsTryFinally = true;
+            }
         }
 
         //except_clause: 'except' [expression [',' expression]]

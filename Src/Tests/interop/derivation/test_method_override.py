@@ -224,7 +224,9 @@ def test_abstract_methods():
     class C(Class200b): 
         def m200(self): return 300
     x = C()
-    AreEqual(Class200a.m200(x), 300)
+    # CodePlex bug 21222 http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21222    
+    # this should be an error.
+    AreEqual(Class200a.m200(x), 200)
     AreEqual(Class200b.m200(x), 200)
     
 def test_virtual_override_method():
