@@ -782,6 +782,22 @@ def test_excepthook():
     response = ipi.ExecuteLine("raise Exception", True)
     AssertContains(response, "foo (<type 'exceptions.Exception'>, Exception(), <traceback object at")
 
+def test_last_exception():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    # parameterless exception
+    ipi.ExecuteLine("import sys")
+    response = ipi.ExecuteLine("hasattr(sys, 'last_value')")
+    AreEqual(response, 'False')
+    AssertContains(ipi.ExecuteLine("x", True), "NameError")
+    response = ipi.ExecuteLine("sys.last_value")
+    AreEqual(response, "NameError(\"name 'x' is not defined\",)")
+    response = ipi.ExecuteLine("sys.last_type")
+    AreEqual(response, "<type 'exceptions.NameError'>")
+    response = ipi.ExecuteLine("sys.last_traceback")
+    AssertContains(response, "<traceback object at ")
+
 def test_sta_sleep_Warning():
     ipi = IronPythonInstance(executable, exec_prefix, '-c "from System.Threading import Thread;Thread.Sleep(100)"')    
     retval, stdouttext, stderrtext, exitcode = ipi.StartAndRunToCompletion()
