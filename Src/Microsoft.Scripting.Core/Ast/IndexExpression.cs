@@ -23,6 +23,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -203,9 +204,28 @@ namespace Microsoft.Linq.Expressions {
                 pi = FindProperty(type, propertyName, arguments, flags);
             }
             if (pi == null) {
-                throw Error.InstancePropertyNotDefinedForType(propertyName, type);
+                if (arguments == null || arguments.Length == 0) {
+                    throw Error.InstancePropertyWithoutParameterNotDefinedForType(propertyName, type);
+                } else {
+                    throw Error.InstancePropertyWithSpecifiedParametersNotDefinedForType(propertyName, GetArgTypesString(arguments), type);
+                }
             }
             return pi;
+        }
+
+        private static string GetArgTypesString(Expression[] arguments) {
+            StringBuilder argTypesStr = new StringBuilder();
+            var isFirst = true;
+            argTypesStr.Append("(");
+            foreach (var t in arguments.Select(arg => arg.Type)) {
+                if (!isFirst) {
+                    argTypesStr.Append(", ");
+                }
+                argTypesStr.Append(t.Name);
+                isFirst = false;
+            }
+            argTypesStr.Append(")");
+            return argTypesStr.ToString();
         }
 
         private static PropertyInfo FindProperty(Type type, string propertyName, Expression[] arguments, BindingFlags flags) {
