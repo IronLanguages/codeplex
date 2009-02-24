@@ -117,7 +117,7 @@ namespace Microsoft.Scripting {
 
             Expression Update = Expression.Invoke(
                 Expression.Property(
-                    Helpers.Convert(site, siteType),
+                    Expression.Convert(site, siteType),
                     typeof(CallSite<T>).GetProperty("Update")
                 ),
                 new TrueReadOnlyCollection<Expression>(@params)

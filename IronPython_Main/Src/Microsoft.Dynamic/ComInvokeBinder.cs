@@ -133,7 +133,7 @@ namespace Microsoft.Scripting {
         }
 
         private static Type MarshalType(DynamicMetaObject mo, bool isByRef) {
-            Type marshalType = (mo.Value == null && mo.HasValue) ? null : mo.LimitType;
+            Type marshalType = (mo.Value == null && mo.HasValue && !mo.LimitType.IsValueType) ? null : mo.LimitType;
 
             // we are not checking that mo.Expression is writeable or whether evaluating it has no sideeffects
             // the assumption is that whoever matched it with ByRef arginfo took care of this.

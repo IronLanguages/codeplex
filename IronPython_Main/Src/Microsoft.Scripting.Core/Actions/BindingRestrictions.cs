@@ -276,7 +276,7 @@ namespace Microsoft.Scripting {
         private static Expression CreateInstanceRestriction(Expression expression, object value) {
             if (value == null) {
                 return Expression.Equal(
-                    Helpers.Convert(expression, typeof(object)),
+                    Expression.Convert(expression, typeof(object)),
                     Expression.Constant(null)
                 );
             }
@@ -303,7 +303,7 @@ namespace Microsoft.Scripting {
                     ),
                     Expression.Equal(
                         temp,
-                        Helpers.Convert(expression, typeof(object))
+                        Expression.Convert(expression, typeof(object))
                     )
                 )
             );

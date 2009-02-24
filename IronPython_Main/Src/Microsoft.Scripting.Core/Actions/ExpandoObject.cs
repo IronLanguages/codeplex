@@ -654,7 +654,7 @@ namespace Microsoft.Scripting {
                     Expression.Condition(
                         Expression.IsTrue(tryGetValue),
                         value,
-                        Helpers.Convert(fallback.Expression, typeof(object))
+                        DynamicMetaObjectBinder.Convert(fallback.Expression, typeof(object))
                     )
                 );
 
@@ -714,16 +714,13 @@ namespace Microsoft.Scripting {
                     klass,
                     originalClass,
                     new DynamicMetaObject(
-                        Helpers.Convert(
+                        DynamicMetaObjectBinder.Convert(
                             Expression.Call(
                                 typeof(RuntimeOps).GetMethod(methodName),
                                 GetLimitedSelf(),
                                 Expression.Constant(klass),
                                 Expression.Constant(index),
-                                Helpers.Convert(
-                                    value.Expression,
-                                    typeof(object)
-                                ),
+                                Expression.Convert(value.Expression, typeof(object)),
                                 Expression.Constant(binder.Name)
                             ),
                             typeof(object)
@@ -751,8 +748,8 @@ namespace Microsoft.Scripting {
                 DynamicMetaObject target = new DynamicMetaObject(
                     Expression.Condition(
                         Expression.IsFalse(tryDelete),
-                        Helpers.Convert(fallback.Expression, typeof(object)), //if fail to delete, fall back
-                        Helpers.Convert(Expression.Constant(true), typeof(object))
+                        DynamicMetaObjectBinder.Convert(fallback.Expression, typeof(object)), //if fail to delete, fall back
+                        Expression.Convert(Expression.Constant(true), typeof(object))
                     ),
                     fallback.Restrictions
                 );
@@ -796,18 +793,15 @@ namespace Microsoft.Scripting {
                     // class to discover the name.
                     Debug.Assert(originalClass != klass);
 
-                    ifTestSucceeds = Helpers.Convert(
-                        Expression.Block(
-                            Expression.Call(
-                                null,
-                                typeof(RuntimeOps).GetMethod("ExpandoPromoteClass"),
-                                GetLimitedSelf(),
-                                Expression.Constant(originalClass),
-                                Expression.Constant(klass)
-                            ),
-                            succeeds.Expression
+                    ifTestSucceeds = Expression.Block(
+                        Expression.Call(
+                            null,
+                            typeof(RuntimeOps).GetMethod("ExpandoPromoteClass"),
+                            GetLimitedSelf(),
+                            Expression.Constant(originalClass),
+                            Expression.Constant(klass)
                         ),
-                        typeof(object)
+                        succeeds.Expression
                     );
                 }
 
@@ -819,8 +813,8 @@ namespace Microsoft.Scripting {
                             GetLimitedSelf(),
                             Expression.Constant(originalClass ?? klass)
                         ),
-                        Helpers.Convert(ifTestSucceeds, typeof(object)),
-                        Helpers.Convert(binder.Defer(args).Expression, typeof(object))
+                        DynamicMetaObjectBinder.Convert(ifTestSucceeds, typeof(object)),
+                        DynamicMetaObjectBinder.Convert(binder.Defer(args).Expression, typeof(object))
                     ),
                     GetRestrictions().Merge(succeeds.Restrictions)
                 );
@@ -858,10 +852,10 @@ namespace Microsoft.Scripting {
             /// Returns our Expression converted to our known LimitType
             /// </summary>
             private Expression GetLimitedSelf() {
-                return Helpers.Convert(
-                    Expression,
-                    LimitType
-                );
+                if (Expression.Type == LimitType) {
+                    return Expression;
+                }
+                return Expression.Convert(Expression, LimitType);
             }
 
             /// <summary>
