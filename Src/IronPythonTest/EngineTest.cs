@@ -484,45 +484,45 @@ al_getattributeinst = MyArrayList_getattribute()
             var getattributeObjects = new object[] { scope.GetVariable("ns_getattributeinst"), scope.GetVariable("al_getattributeinst") };
 
             // if it lives on a system type we should do a fallback invoke member
-            var site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("Count", Expression.CallInfo(0)));
+            var site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("Count", new CallInfo(0)));
             AreEqual(site.Target(site, scope.GetVariable("alinst")), "FallbackInvokeMember");
 
             // invoke a function that's a member on an object
             foreach (object inst in allObjects) {
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("TestFunc", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("TestFunc", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "TestFunc");
             }
 
             // invoke a field / property that's on an object
             foreach (object inst in allObjects) {
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("InstVal", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("InstVal", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeInstVal");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ClassVal", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ClassVal", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeClassVal");
             }
 
             // invoke a field / property that's not defined on objects w/ __getattr__
             foreach (object inst in getattrObjects) {
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("DoesNotExist", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("DoesNotExist", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeDoesNotExist");
             }
 
             // invoke a field / property that's not defined on objects w/ __getattribute__
             foreach (object inst in getattributeObjects) {
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("DoesNotExist", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("DoesNotExist", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeDoesNotExist");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("Count", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("Count", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeCount");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("TestFunc", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("TestFunc", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeTestFunc");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("InstVal", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("InstVal", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeInstVal");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ClassVal", Expression.CallInfo(0)));
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ClassVal", new CallInfo(0)));
                 AreEqual(site.Target(site, inst), "FallbackInvokeClassVal");
             }
 #endif

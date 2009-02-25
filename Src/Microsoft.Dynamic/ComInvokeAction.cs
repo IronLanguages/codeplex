@@ -112,7 +112,7 @@ namespace Microsoft.Scripting {
                 )
             );
 
-            ComInvokeAction invokeBinder = new ComInvokeAction(Expression.CallInfo(argLen));
+            ComInvokeAction invokeBinder = new ComInvokeAction(new CallInfo(argLen));
             DynamicMetaObject innerAction = target.BindInvoke(invokeBinder, splattedArgs);
 
             Expression exprRestrictions = Expression.Lambda(innerAction.Restrictions.ToExpression(), temps);
