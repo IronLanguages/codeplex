@@ -325,6 +325,18 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
+        internal bool IsReferenceComparison {
+            get {
+                Type left = _left.Type;
+                Type right = _right.Type;
+                MethodInfo method = GetMethod();
+                ExpressionType kind = NodeTypeImpl();
+
+                return (kind == ExpressionType.Equal || kind == ExpressionType.NotEqual) &&
+                    method == null && !left.IsValueType && !right.IsValueType;
+            }
+        }
+
         //
         // For a userdefined type T which has op_False defined and L, R are
         // nullable, (L AndAlso R) is computed as:
@@ -897,6 +909,22 @@ namespace Microsoft.Linq.Expressions {
             return GetMethodBasedBinaryOperator(ExpressionType.Equal, left, right, method, liftToNull);
         }
 
+        /// <summary>
+        /// Creates a <see cref="BinaryExpression"/> that represents a reference equality comparison.
+        /// </summary>
+        /// <param name="left">An <see cref="Expression"/> to set the <see cref="P:BinaryExpression.Left"/> property equal to.</param>
+        /// <param name="right">An <see cref="Expression"/> to set the <see cref="P:BinaryExpression.Right"/> property equal to.</param>
+        /// <returns>A <see cref="BinaryExpression"/> that has the <see cref="P:Expression.NodeType"/> property equal to <see cref="F:ExpressionType.Equal"/> 
+        /// and the <see cref="P:BinaryExpression.Left"/> and <see cref="P:BinaryExpression.Right"/> properties set to the specified values.
+        /// </returns>
+        public static BinaryExpression ReferenceEqual(Expression left, Expression right) {
+            RequiresCanRead(left, "left");
+            RequiresCanRead(right, "right");
+            if (TypeUtils.HasReferenceEquality(left.Type, right.Type)) {
+                return new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+            }
+            throw Error.ReferenceEqualityNotDefined(left.Type, right.Type);
+        }
 
         /// <summary>
         /// Creates a <see cref="BinaryExpression"/> that represents an inequality comparison.
@@ -928,6 +956,22 @@ namespace Microsoft.Linq.Expressions {
             return GetMethodBasedBinaryOperator(ExpressionType.NotEqual, left, right, method, liftToNull);
         }
 
+        /// <summary>
+        /// Creates a <see cref="BinaryExpression"/> that represents a reference inequality comparison.
+        /// </summary>
+        /// <param name="left">An <see cref="Expression"/> to set the <see cref="P:BinaryExpression.Left"/> property equal to.</param>
+        /// <param name="right">An <see cref="Expression"/> to set the <see cref="P:BinaryExpression.Right"/> property equal to.</param>
+        /// <returns>A <see cref="BinaryExpression"/> that has the <see cref="P:Expression.NodeType"/> property equal to <see cref="F:ExpressionType.NotEqual"/> 
+        /// and the <see cref="P:BinaryExpression.Left"/> and <see cref="P:BinaryExpression.Right"/> properties set to the specified values.
+        /// </returns>
+        public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) {
+            RequiresCanRead(left, "left");
+            RequiresCanRead(right, "right");
+            if (TypeUtils.HasReferenceEquality(left.Type, right.Type)) {
+                return new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+            }
+            throw Error.ReferenceEqualityNotDefined(left.Type, right.Type);
+        }
 
         private static BinaryExpression GetEqualityComparisonOperator(ExpressionType binaryType, string opName, Expression left, Expression right, bool liftToNull) {
             // known comparison - numeric types, bools, object, enums

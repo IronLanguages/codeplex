@@ -78,7 +78,7 @@ expressions = [
     Expression("RightShift",            "BinaryExpression",                interop = True,                      doc="a bitwise right-shift operation"),
     Expression("Subtract",              "BinaryExpression",                interop = True,                      doc="arithmetic subtraction without overflow checking"),
     Expression("SubtractChecked",       "BinaryExpression",                                                     doc="arithmetic subtraction with overflow checking"),
-    Expression("TypeAs",                "UnaryExpression",                                                      doc="an explicit reference or boxing conversion where nullNothingnullptra null reference (Nothing in Visual Basic) is supplied if the conversion fails"),
+    Expression("TypeAs",                "UnaryExpression",                                                      doc="an explicit reference or boxing conversion where null reference (Nothing in Visual Basic) is supplied if the conversion fails"),
     Expression("TypeIs",                "TypeBinaryExpression",                                                 doc="a type test"),
 
     # New types in LINQ V2                                                                      
