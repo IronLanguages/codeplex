@@ -38,58 +38,82 @@ import gc
 import nt
 from clr_helpers import Process
 
-CPY_DIR = argv[1]  #E.g., C:\Python25
+CPY_DIR = argv[1]  #E.g., C:\Python26
 
 #--GLOBALS---------------------------------------------------------------------
 
 #CPython builtin modules
 BUILTIN_MODULES =  [
                     "__builtin__",
-                    "_ast",
+                    "_ast", #CodePlex 21088
+                    "_bisect", #CodePlex 21392
+                    "_bytesio", #CodePlex 21393
                     "_codecs",
+                    "_codecs_cn", #CodePlex 15507
+                    "_codecs_hk", #CodePlex 15507
+                    "_codecs_iso2022", #CodePlex 21394
+                    "_codecs_jp", #CodePlex 15507
+                    "_codecs_kr", #CodePlex 15507
+                    "_codecs_tw", #CodePlex 15507
+                    "_collections", 
+                    "_csv", #CodePlex 21395
+                    "_fileio", #CodePlex 19545
+                    "_functools",
+                    "_heapq", #CodePlex 21396
+                    "_hotshot", #CodePlex 21397
+                    "_json", #CodePlex 19581
+                    "_locale",
+                    "_lsprof", #CodePlex 21398
+                    "_md5",
+                    "_multibytecodec", #CodePlex 21399
+                    "_random",
+                    "_sha",
+                    "_sha256",
+                    "_sha512",
                     "_sre",
-                    "_symtable",
-                    "_types",
+                    "_struct",
+                    "_symtable", #IronPython incompat
+                    "_subprocess", #CodePlex 15512
+                    #"_types",  Can't import this in CPython 2.6 either...
+                    "_warnings", 
+                    "_weakref", 
+                    "_winreg", 
+                    "array", 
+                    "aidoop", #CodePlex 21400
+                    "binascii", 
+                    "cPickle", 
+                    "cStringIO", 
+                    "cmath", 
+                    "datetime", 
                     "errno",
                     "exceptions",
+                    "future_builtins", #CodePlex 19580
                     "gc",
+                    "imageop", #Deprecated in CPy 2.6.  Removed in Cpy 3.0
                     "imp",
+                    "itertools", 
                     "marshal",
-                    #"posix", #Non-Windows
-                    #"pwd", #Non-Windows
-                    "signal",
+                    "math", 
+                    "mmap", #CodePlex 21401
+                    "msvcrt", #CodePlex 21402
+                    "nt", 
+                    "operator", 
+                    "parser", #CodePlex 1347 - Won't fix
+                    "signal", #CodePlex 16414
+                    "strop", #CodePlex 21403
                     "sys",
                     "thread",
+                    "time", 
                     "xxsubtype",
-                    "zipimport",
+                    "zipimport", #CodePlex 391
+                    "zlib", #CodePlex 2590
                     ]
  
 #Most of these are standard *.py modules which IronPython overrides for one 
 #reason or another
 OVERRIDDEN_MODULES =  [ 
-            "_functools",
-            "_random",
-            "_weakref",
-            "array",
-            "binascii",
-            "collections",
             "copy_reg",
-            "cPickle",
-            "cStringIO",
-            "datetime",
-            "itertools",
-            "_locale",
-            "math",
-            "_md5",
-            "nt",
-            "operator",
-            "_sha",
-            "_sha256",
-            "_sha512",
             "socket",
-            "time", 
-            "re",
-            "struct",
         ]
 
 MODULES = BUILTIN_MODULES + OVERRIDDEN_MODULES
@@ -102,6 +126,26 @@ for x in nt.listdir(CPY_DIR + "\\DLLs"):
 for x in nt.listdir(CPY_DIR + "\\Lib"):
     if x.endswith(".pyd"):
         MODULES.append(x.split(".pyd", 1)[0])
+
+#Modules we don't implement found in DLLs or Lib and
+#the reason why:
+# bz2 - TODO?
+# pyexpat - CodePlex 20023
+# unicodedata - CodePlex 21404
+# winsound - CodePlex 21405
+# _bsddb - CodePlex 362
+# _ctypes - CodePlex 374
+# _ctypes_test - dependent upon CodePlex 374
+# _elementtree - CodePlex 21407
+# _hashlib - CodePlex 21408
+# _msi - CodePlex 21409
+# _multiprocessing - CodePlex 19542
+# _socket - N/A.  We already implement socket.py directly in C#
+# _sqlite3 - CodePlex 21410
+# _ssl - CodePlex 21411
+# _testcapi N/A. This tests the C API for CPython
+# _tkinter - TODO?
+
 
 #Let the user override modules from the command-line
 if len(argv)==3:
@@ -127,6 +171,10 @@ str_functions = [   'capitalize', 'center', 'count', 'decode',
 #CPython module.
 MAX_DEPTH = 10
 
+
+IGNORE_LIST = [ "__builtin__.print",
+                ]
+
 #--FUNCTIONS-------------------------------------------------------------------
 def ip_missing(mod_attr):
     '''
@@ -150,7 +198,6 @@ def get_cpython_results(name, level=0, temp_mod=None):
     Recursively gets all attributes of a CPython module up to a depth of
     MAX_DEPTH.
     '''
-
     #from the name determine the module
     if "." in name:
         mod_name, rest_of_name = name.split(".", 1)
@@ -186,6 +233,7 @@ def get_cpython_results(name, level=0, temp_mod=None):
         ipymod_dir_str = "dir(temp_mod)"
     else:
         ipymod_dir_str = "dir(temp_mod." + name.split(".", 1)[1] + ")"
+
     
     try:
         ipymod_dir = eval(ipymod_dir_str)
@@ -201,6 +249,9 @@ def get_cpython_results(name, level=0, temp_mod=None):
     #Look through all attributes the CPython version of the 
     #module implements
     for x in cpymod_dir:
+        if name + "." + x in IGNORE_LIST:
+            print "Will not reflect on", name + "." + x
+            return
     
         #Check if IronPython is missing the CPython attribute
         try:    

@@ -24,16 +24,17 @@ using System.Reflection.Emit;
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         private void EmitAddress(Expression node, Type type) {
-            EmitAddress(node, type, true);
+            EmitAddress(node, type, CompilationFlags.EmitExpressionStart);
         }
 
         // We don't want "ref" parameters to modify values of expressions
         // except where it would in IL: locals, args, fields, and array elements
         // (Unbox is an exception, it's intended to emit a ref to the orignal
         // boxed value)
-        private void EmitAddress(Expression node, Type type, bool emitStart) {
+        private void EmitAddress(Expression node, Type type, CompilationFlags flags) {
             Debug.Assert(node != null);
-            ExpressionStart startEmitted = emitStart ? EmitExpressionStart(node) : ExpressionStart.None;
+            bool emitStart = (flags & CompilationFlags.EmitExpressionStartMask) == CompilationFlags.EmitExpressionStart;
+            CompilationFlags startEmitted = emitStart ? EmitExpressionStart(node) : CompilationFlags.EmitNoExpressionStart;
 
             switch (node.NodeType) {
                 default:
@@ -203,7 +204,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private void EmitExpressionAddress(Expression node, Type type) {
             Debug.Assert(TypeUtils.AreReferenceAssignable(type, node.Type));
 
-            EmitExpression(node, false);
+            EmitExpression(node, CompilationFlags.EmitAsNoTail | CompilationFlags.EmitNoExpressionStart);
             LocalBuilder tmp = GetLocal(type);
             _ilg.Emit(OpCodes.Stloc, tmp);
             _ilg.Emit(OpCodes.Ldloca, tmp);
@@ -216,7 +217,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         // For properties, we want to write back into the property if it's
         // passed byref.
         private WriteBack EmitAddressWriteBack(Expression node, Type type) {
-            ExpressionStart startEmitted = EmitExpressionStart(node);
+            CompilationFlags startEmitted = EmitExpressionStart(node);
 
             WriteBack result = null;
             if (type == node.Type) {
@@ -230,7 +231,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
             }
             if (result == null) {
-                EmitAddress(node, type, false);
+                EmitAddress(node, type, CompilationFlags.EmitAsNoTail | CompilationFlags.EmitNoExpressionStart);
             }
 
             EmitExpressionEnd(startEmitted);

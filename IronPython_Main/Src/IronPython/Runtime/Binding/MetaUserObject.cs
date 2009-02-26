@@ -50,38 +50,7 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
-            ValidationInfo valInfo = BindingHelpers.GetValidationInfo(this);
-
-            DynamicMetaObject errorSuggestion = null;
-            if (_baseMetaObject != null) {
-                errorSuggestion = _baseMetaObject.BindInvokeMember(action, args);
-            }
-            
-            CodeContext context = BinderState.GetBinderState(action).Context;
-            IPythonObject sdo = Value;
-            PythonTypeSlot foundSlot;
-
-            if (TryGetGetAttribute(context, sdo.PythonType, out foundSlot)) {
-                // we'll always fetch the value, go ahead and invoke afterwards.
-                return BindingHelpers.GenericInvokeMember(action, valInfo, this, args);
-            }
-
-            bool isOldStyle;
-            bool systemTypeResolution;
-            foundSlot = FindSlot(context, action.Name, sdo, out isOldStyle, out systemTypeResolution);
-            if (foundSlot != null && systemTypeResolution) {
-                // it's a normal .NET member, let the calling language handle it how it usually does
-                return BindingHelpers.AddDynamicTestAndDefer(
-                    action,
-                    action.FallbackInvokeMember(this, args, errorSuggestion),
-                    args,
-                    valInfo
-                );                
-            }
-
-            // we found the member in the type dictionary, not a .NET type, or the
-            // member could exist in the instance.  Get it and invoke it.
-            return BindingHelpers.GenericInvokeMember(action, valInfo, this, args);
+            return new InvokeBinderHelper(this, action, args, BinderState.GetCodeContext(action)).Bind();
         }
 
         public override DynamicMetaObject/*!*/ BindConvert(ConvertBinder/*!*/ conversion) {
@@ -97,13 +66,25 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public override DynamicMetaObject BindBinaryOperation(BinaryOperationBinder binder, DynamicMetaObject arg) {
+        public override DynamicMetaObject/*!*/ BindBinaryOperation(BinaryOperationBinder/*!*/ binder, DynamicMetaObject/*!*/ arg) {
             return PythonProtocol.Operation(binder, this, arg);
         }
 
-        public override DynamicMetaObject BindUnaryOperation(UnaryOperationBinder binder) {
+        public override DynamicMetaObject/*!*/ BindUnaryOperation(UnaryOperationBinder/*!*/ binder) {
             return PythonProtocol.Operation(binder, this);
         }
+
+        public override DynamicMetaObject/*!*/ BindGetIndex(GetIndexBinder/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ indexes) {
+            return PythonProtocol.Index(binder, PythonIndexType.GetItem, ArrayUtils.Insert(this, indexes));
+        }
+
+        public override DynamicMetaObject/*!*/ BindSetIndex(SetIndexBinder/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ indexes, DynamicMetaObject/*!*/ value) {
+            return PythonProtocol.Index(binder, PythonIndexType.SetItem, ArrayUtils.Insert(this, ArrayUtils.Append(indexes, value)));
+        }
+
+        public override DynamicMetaObject/*!*/ BindDeleteIndex(DeleteIndexBinder/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ indexes) {
+            return PythonProtocol.Index(binder, PythonIndexType.DeleteItem, ArrayUtils.Insert(this, indexes));
+        }        
 
         public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
             Expression context = Ast.Call(
@@ -174,6 +155,11 @@ namespace IronPython.Runtime.Binding {
                             conversion,
                             this
                         );
+                    case TypeCode.String:
+                        if (!typeof(Extensible<string>).IsAssignableFrom(this.LimitType)) {
+                            return MakeConvertRuleForCall(conversion, this, Symbols.String, "ConvertToString");
+                        }
+                        break;
                 }
             }
 
@@ -354,7 +340,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            return GetMemberFallback(action, codeContext);
+            return GetMemberFallback(this, action, codeContext);
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ using System; using Microsoft;
 
 
 using System.Diagnostics;
+using System.Reflection.Emit;
 
 namespace Microsoft.Linq.Expressions.Compiler {
 
@@ -56,7 +57,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _labelBlock = _labelBlock.Parent;
         }
 
-        private void EmitLabelExpression(Expression expr) {
+        private void EmitLabelExpression(Expression expr, CompilationFlags flags) {
             var node = (LabelExpression)expr;
             Debug.Assert(node.Target != null);
 
@@ -83,26 +84,40 @@ namespace Microsoft.Linq.Expressions.Compiler {
 
             if (node.DefaultValue != null) {
                 if (node.Target.Type == typeof(void)) {
-                    EmitExpressionAsVoid(node.DefaultValue);
+                    EmitExpressionAsVoid(node.DefaultValue, flags);
                 } else {
-                    EmitExpression(node.DefaultValue);
+                    flags = UpdateEmitExpressionStartFlag(flags, CompilationFlags.EmitExpressionStart);
+                    EmitExpression(node.DefaultValue, flags);
                 }
             }
 
             label.Mark();
         }
 
-        private void EmitGotoExpression(Expression expr) {
+        private void EmitGotoExpression(Expression expr, CompilationFlags flags) {
             var node = (GotoExpression)expr;
+            var labelInfo = ReferenceLabel(node.Target);
+
+            var tailCall = flags & CompilationFlags.EmitAsTailCallMask;
+            if (tailCall != CompilationFlags.EmitAsNoTail) {
+                // Since tail call flags are not passed into EmitTryExpression, CanReturn 
+                // means the goto will be emitted as Ret. Therefore we can emit the goto's
+                // default value with tail call. This can be improved by detecting if the
+                // target label is equivalent to the return label.
+                tailCall = labelInfo.CanReturn ? CompilationFlags.EmitAsTail : CompilationFlags.EmitAsNoTail;
+                flags = UpdateEmitAsTailCallFlag(flags, tailCall);
+            }
+
             if (node.Value != null) {
                 if (node.Target.Type == typeof(void)) {
-                    EmitExpressionAsVoid(node.Value);
+                    EmitExpressionAsVoid(node.Value, flags);
                 } else {
-                    EmitExpression(node.Value);
+                    flags = UpdateEmitExpressionStartFlag(flags, CompilationFlags.EmitExpressionStart);
+                    EmitExpression(node.Value, flags);
                 }
             }
 
-            ReferenceLabel(node.Target).EmitJump();           
+            labelInfo.EmitJump();
         }
 
         private bool TryPushLabelBlock(Expression node) {
@@ -207,9 +222,16 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         _labelInfo.Add(label, new LabelInfo(_ilg, label, true));
                         return;
                     case ExpressionType.Block:
-                        // Look in the last expression of a block
-                        var body = (BlockExpression)lambdaBody;                        
-                        lambdaBody = body.GetExpression(body.ExpressionCount - 1);
+                        // Look in the last significant expression of a block
+                        var body = (BlockExpression)lambdaBody;
+                        // omit empty and debuginfo at the end of the block since they
+                        // are not going to emit any IL
+                        for (int i = body.ExpressionCount - 1; i >= 0; i--) {
+                            lambdaBody = body.GetExpression(i);
+                            if (Significant(lambdaBody)) {
+                                break;
+                            }
+                        }
                         continue;
                 }
             }
