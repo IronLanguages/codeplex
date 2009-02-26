@@ -186,7 +186,13 @@ def gen_compiler(cw):
             method += "Convert"
 
         cw.write("case ExpressionType." + node.kind + ":")
-        cw.write("    " + method + node.type + "(node);")
+        if node.kind in ["Coalesce", "Constant", "Lambda", "ListInit", "Loop", "MemberAccess", "MemberInit",
+                          "New", "NewArrayInit", "NewArrayBounds", "Parameter", "Quote", "TypeIs", 
+                          "Assign", "DebugInfo", "Dynamic", "Default", "Extension", "Index", "RuntimeVariables",
+                          "Throw", "Try", "Unbox", "TypeEqual"]:
+            cw.write("    " + method + node.type + "(node);")
+        else:
+            cw.write("    " + method + node.type + "(node, flags);")
         cw.write("    break;")
     
 def gen_interpreter(cw):

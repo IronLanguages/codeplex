@@ -594,6 +594,7 @@ namespace Microsoft.Runtime.CompilerServices {
                     )
                 ),
                 "CallSite.Target",
+                true, // always compile the rules with tail call optimization
                 new ReadOnlyCollection<ParameterExpression>(@params)
             );
 

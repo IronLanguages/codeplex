@@ -116,7 +116,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 }
 
                 // Clone the lambda, replacing the body & variables
-                return new Expression<T>(lambda.Name, newBody, lambda.Parameters);
+                return new Expression<T>(lambda.Name, newBody, lambda.TailCall, lambda.Parameters);
             }
 
             return lambda;

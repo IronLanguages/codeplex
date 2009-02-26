@@ -3072,6 +3072,10 @@ namespace IronPython.Runtime.Operations {
             return ((CustomOldClassDictionaryStorage)dict).GetValueHelper(index, oldInstance);
         }
 
+        public static bool TryOldInstanceDictionaryGetValueHelper(object dict, int index, object oldInstance, out object res) {
+            return ((CustomOldClassDictionaryStorage)dict).TryGetValueHelper(index, oldInstance, out res);
+        }
+        
         public static object OldInstanceGetBoundMember(CodeContext context, OldInstance instance, SymbolId name) {
             return instance.GetBoundMember(context, name);
         }
