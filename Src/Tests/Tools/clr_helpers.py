@@ -15,3 +15,4 @@
 
 """Helper to avoid tainting cmodule.py with clr methods"""
 from System.Diagnostics import Process
+from System.IO import File, Directory

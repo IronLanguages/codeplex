@@ -204,7 +204,7 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         SubtractChecked,
         /// <summary>
-        /// A node that represents an explicit reference or boxing conversion where nullNothingnullptra null reference (Nothing in Visual Basic) is supplied if the conversion fails.
+        /// A node that represents an explicit reference or boxing conversion where null reference (Nothing in Visual Basic) is supplied if the conversion fails.
         /// </summary>
         TypeAs,
         /// <summary>

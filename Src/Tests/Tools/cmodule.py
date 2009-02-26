@@ -25,7 +25,7 @@ Also, it creates another log file showing extra methods IP implements which
 it should not.
 
 USAGE:
-    ipy cmodule.py C:\Python25
+    ipy cmodule.py C:\Python26
 
 NOTES:
 - the BUILTIN_MODULES list needs to be updated using the info found at 
@@ -33,12 +33,13 @@ NOTES:
   release corresponding to a new major CPython release
 '''
 
-from sys import argv
+import sys
 import gc
 import nt
-from clr_helpers import Process
+import re
+from clr_helpers import Process, File, Directory
 
-CPY_DIR = argv[1]  #E.g., C:\Python26
+CPY_DIR = sys.argv[1]  #E.g., C:\Python26
 
 #--GLOBALS---------------------------------------------------------------------
 
@@ -148,13 +149,10 @@ for x in nt.listdir(CPY_DIR + "\\Lib"):
 
 
 #Let the user override modules from the command-line
-if len(argv)==3:
-    MODULES = [argv[2]]
+if len(sys.argv)==3:
+    MODULES = [sys.argv[2]]
 
-#Log containing all modules and their attributes which IP should implement, but does not
-IPY_SHOULD_IMPL = open("IPY_NEEDS_TO_IMPLEMENT.log", "w")
-#Log containing all module attributes that IP should not be implementing
-IPY_SHOULD_NOT_IMPL = open("IPY_SHOULD_NOT_IMPLEMENT.log", "w")
+
 
 #TODO: each of these members attached to string objects include MANY more
 #      members IP does not implement
@@ -174,6 +172,18 @@ MAX_DEPTH = 10
 
 IGNORE_LIST = [ "__builtin__.print",
                 ]
+
+BUG_REPORT_PRE = """Implement rest of %s module
+
+
+IP VERSION AFFECTED: %s
+FLAGS PASSED TO IPY.EXE: None
+OPERATING SYSTEMS AFFECTED: All
+
+DESCRIPTION
+"""
+
+REGEX_FILTER = "\.__(del)|(new)|(eq)|(ne)|(gt)|(lt)|(ge)|(le)|(subclasshook)|(sizeof)|(trunc)|(cmp)|(radd)|(contains)|(mod)|(mul)|(rmod)|(rmul)|(sub)|(div)(float)|(index)|(int)|(iter)|(long)|(setslice)|(unicode)|(weakref)__$"
 
 #--FUNCTIONS-------------------------------------------------------------------
 def ip_missing(mod_attr):
@@ -278,10 +288,93 @@ def get_cpython_results(name, level=0, temp_mod=None):
         get_cpython_results(name + "." + x, level+1, temp_mod)
     
     return
+
+def gen_bug_report(mod_name, needs_to_be_implemented, needs_to_be_removed):
+    bug_report_name = "bug_reports\\%s.log" % mod_name
+    bug_report = open(bug_report_name, "w")
+    bug_report.write(BUG_REPORT_PRE % (mod_name, str(sys.winver)))
     
+    bug_report.write("-------------------------------------------------------\n")
+    bug_report.write("""After filtering out Python special method names, 
+IronPython is still MISSING implementations for the 
+following module attributes:
+""")
+    for x in needs_to_be_implemented:
+        if re.search(REGEX_FILTER, x)==None:
+            bug_report.write("    " + x)
+    bug_report.write("\n\n")
+    
+    bug_report.write("-------------------------------------------------------\n")
+    bug_report.write("""After filtering out Python special method names, 
+IronPython is still PROVIDING implementations for the 
+following module attributes which should NOT exist:
+""")
+    for x in needs_to_be_removed:
+        if re.search(REGEX_FILTER, x)==None:
+            bug_report.write("    " + x)
+    bug_report.write("\n\n")
+    
+    #--unfiltered list of attributes to be added
+    if len(needs_to_be_implemented)>0:
+        bug_report.write("-------------------------------------------------------\n")
+        bug_report.write("""Complete list of module attributes IronPython is still 
+missing implementations for:
+""")
+        for x in needs_to_be_implemented:
+            bug_report.write("    " + x)
+        bug_report.write("\n\n\n")
+    
+    #--unfiltered list of attributes to be removed
+    if len(needs_to_be_removed)>0:
+        bug_report.write("-------------------------------------------------------\n")
+        bug_report.write("""Complete list of module attributes that should be removed 
+from IronPython:
+""")
+        for x in needs_to_be_removed:
+            bug_report.write("    " + x)
+    
+    bug_report.close()
+    return bug_report_name
+    
+
+
 #--MAIN------------------------------------------------------------------------
+
+try:
+    nt.mkdir(nt.getcwd() + "\\bug_reports")
+except:
+    pass
+
 for mod_name in MODULES:
+    #--First figure out what's missing and what's extra in a module
+    #  and write this to disk.
+    ipy_should_impl_filename = "bug_reports\\mod_to_impl_%s.log" % mod_name
+    ipy_should_not_impl_filename = "bug_reports\\mod_rm_impl_%s.log" % mod_name
+    IPY_SHOULD_IMPL = open(ipy_should_impl_filename, "w")
+    IPY_SHOULD_NOT_IMPL = open(ipy_should_not_impl_filename, "w")
+
     get_cpython_results(mod_name)
     
-IPY_SHOULD_IMPL.close()
-IPY_SHOULD_NOT_IMPL.close()
+    IPY_SHOULD_IMPL.close()
+    IPY_SHOULD_NOT_IMPL.close()
+    
+    #--Next generate a human-readable bug report suitable for
+    #  CodePlex.
+    
+    #filtered attributes which need to be added
+    with open(ipy_should_impl_filename, "r") as to_impl_file:
+        needs_to_be_implemented = to_impl_file.readlines()
+    
+    #filtered attributes to remove
+    with open(ipy_should_not_impl_filename, "r") as to_rm_file:
+        needs_to_be_removed = to_rm_file.readlines()
+    
+    gen_bug_report(mod_name, needs_to_be_implemented, needs_to_be_removed)
+    
+    #--Cleanup
+    for x in [ipy_should_impl_filename, ipy_should_not_impl_filename]:
+        File.Delete(x)
+    
+    #--TODO: we could automatically update bug descriptions on CodePlex at this
+    #  point...
+    
