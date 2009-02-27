@@ -138,7 +138,7 @@ namespace IronPython.Compiler.Ast {
                         ),
                         body,
                         ag.UpdateLineNumber(list.Start.Line),
-                        Ast.Empty()
+                        AstUtils.Empty()
                     ), 
                     ag.Transform(else_),
                     breakLabel, 
@@ -148,7 +148,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Block(
                 init,
                 ls,
-                Ast.Empty()
+                AstUtils.Empty()
             );
         }
 

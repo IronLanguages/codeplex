@@ -23,6 +23,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -86,9 +87,9 @@ namespace Microsoft.Scripting.Ast {
             int count = _yields.Count;
             var cases = new SwitchCase[count + 1];
             for (int i = 0; i < count; i++) {
-                cases[i] = Expression.SwitchCase(Expression.Goto(_yields[i].Label), Expression.Constant(_yields[i].State));
+                cases[i] = Expression.SwitchCase(Expression.Goto(_yields[i].Label), AstUtils.Constant(_yields[i].State));
             }
-            cases[count] = Expression.SwitchCase(Expression.Goto(_returnLabels.Peek()), Expression.Constant(Finished));
+            cases[count] = Expression.SwitchCase(Expression.Goto(_returnLabels.Peek()), AstUtils.Constant(Finished));
 
             Type generatorNextOfT = typeof(GeneratorNext<>).MakeGenericType(_generator.Target.Type);
 
@@ -105,7 +106,7 @@ namespace Microsoft.Scripting.Ast {
                         new ParameterExpression[] { _gotoRouter },
                         Expression.Switch(Expression.Assign(_gotoRouter, _state), cases),
                         body,
-                        Expression.Assign(_state, Expression.Constant(Finished)),
+                        Expression.Assign(_state, AstUtils.Constant(Finished)),
                         Expression.Label(_returnLabels.Peek())
                     ),
                     _generator.Name,
@@ -125,7 +126,7 @@ namespace Microsoft.Scripting.Ast {
             if (_debugCookies != null) {
                 Expression[] debugCookies = new Expression[_debugCookies.Count];
                 for(int i=0; i < _debugCookies.Count; i++)
-                    debugCookies[i] = Expression.Constant(_debugCookies[i]);
+                    debugCookies[i] = AstUtils.Constant(_debugCookies[i]);
 
                 debugCookiesArray = Expression.NewArrayInit(
                     typeof(int),
@@ -317,7 +318,7 @@ namespace Microsoft.Scripting.Ast {
                     // }
                     block.Add(
                         Expression.IfThen(
-                            Expression.NotEqual(deferredVar, Expression.Constant(null, deferredVar.Type)),
+                            Expression.NotEqual(deferredVar, AstUtils.Constant(null, deferredVar.Type)),
                             catchBody
                         )
                     );
@@ -364,7 +365,7 @@ namespace Microsoft.Scripting.Ast {
                         Expression.Block(
                             inTryRouter,
                             @try,
-                            Expression.Assign(saved, Expression.Constant(null, saved.Type)),
+                            Expression.Assign(saved, AstUtils.Constant(null, saved.Type)),
                             Expression.Label(tryEnd)
                         ),
                         Expression.Block(
@@ -372,18 +373,18 @@ namespace Microsoft.Scripting.Ast {
                             inFinallyRouter,
                             @finally,
                             Expression.Condition(
-                                Expression.NotEqual(saved, Expression.Constant(null, saved.Type)),
+                                Expression.NotEqual(saved, AstUtils.Constant(null, saved.Type)),
                                 Expression.Throw(saved),
-                                Expression.Empty()
+                                Utils.Empty()
                             ),
                             Expression.Label(finallyReturn)
                         ),
                         Expression.Catch(all, Utils.Void(Expression.Assign(saved, all)))
                     ),
                     Expression.Condition(
-                        Expression.Equal(_gotoRouter, Expression.Constant(GotoRouterYielding)),
+                        Expression.Equal(_gotoRouter, AstUtils.Constant(GotoRouterYielding)),
                         Expression.Goto(_returnLabels.Peek()),
-                        Expression.Empty()
+                        Utils.Empty()
                     )
                 );
 
@@ -429,11 +430,11 @@ namespace Microsoft.Scripting.Ast {
         private Expression MakeSkipFinallyBlock(LabelTarget target) {
             return Expression.Condition(
                 Expression.AndAlso(
-                    Expression.Equal(_gotoRouter, Expression.Constant(GotoRouterYielding)),
-                    Expression.NotEqual(_state, Expression.Constant(Finished))
+                    Expression.Equal(_gotoRouter, AstUtils.Constant(GotoRouterYielding)),
+                    Expression.NotEqual(_state, AstUtils.Constant(Finished))
                 ),
                 Expression.Goto(target),
-                Expression.Empty()
+                Utils.Empty()
             );
         }
 
@@ -461,7 +462,7 @@ namespace Microsoft.Scripting.Ast {
             var cases = new SwitchCase[end - start];
             for (int i = start; i < end; i++) {
                 YieldMarker y = _yields[i];
-                cases[i - start] = Expression.SwitchCase(Expression.Goto(y.Label), Expression.Constant(y.State));
+                cases[i - start] = Expression.SwitchCase(Expression.Goto(y.Label), AstUtils.Constant(y.State));
                 // Any jumps from outer switch statements should go to the this
                 // router, not the original label (which they cannot legally jump to)
                 y.Label = newTarget;
@@ -492,9 +493,9 @@ namespace Microsoft.Scripting.Ast {
             var block = new List<Expression>();
             if (value == null) {
                 // Yield break
-                block.Add(Expression.Assign(_state, Expression.Constant(Finished)));
+                block.Add(Expression.Assign(_state, AstUtils.Constant(Finished)));
                 if (_inTryWithFinally) {
-                    block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterYielding)));
+                    block.Add(Expression.Assign(_gotoRouter, AstUtils.Constant(GotoRouterYielding)));
                 }
                 block.Add(Expression.Goto(_returnLabels.Peek()));
                 return Expression.Block(block);
@@ -503,14 +504,14 @@ namespace Microsoft.Scripting.Ast {
             // Yield return
             block.Add(MakeAssign(_current, value));
             YieldMarker marker = GetYieldMarker(node);
-            block.Add(Expression.Assign(_state, Expression.Constant(marker.State)));
+            block.Add(Expression.Assign(_state, AstUtils.Constant(marker.State)));
             if (_inTryWithFinally) {
-                block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterYielding)));
+                block.Add(Expression.Assign(_gotoRouter, AstUtils.Constant(GotoRouterYielding)));
             }
             block.Add(Expression.Goto(_returnLabels.Peek()));
             block.Add(Expression.Label(marker.Label));
-            block.Add(Expression.Assign(_gotoRouter, Expression.Constant(GotoRouterNone)));
-            block.Add(Expression.Empty());
+            block.Add(Expression.Assign(_gotoRouter, AstUtils.Constant(GotoRouterNone)));
+            block.Add(Utils.Empty());
             return Expression.Block(block);
         }
 

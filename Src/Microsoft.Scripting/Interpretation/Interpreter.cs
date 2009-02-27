@@ -28,6 +28,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Interpretation")]
 
@@ -809,7 +810,7 @@ namespace Microsoft.Scripting.Interpretation {
                 for (int i = 0; i < args.Length; i++) {
                     args[i] = DynamicUtils.ObjectToMetaObject(
                         argValues[i + 1],
-                        Expression.Constant(argValues[i + 1])
+                        AstUtils.Constant(argValues[i + 1])
                     );
                 }
             }
@@ -817,7 +818,7 @@ namespace Microsoft.Scripting.Interpretation {
             DynamicMetaObject binding = action.Bind(
                 DynamicUtils.ObjectToMetaObject(
                     argValues[0],
-                    Expression.Constant(argValues[0])
+                    AstUtils.Constant(argValues[0])
                 ),
                 args
             );

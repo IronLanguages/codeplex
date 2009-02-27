@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -41,7 +42,7 @@ namespace IronPython.Runtime.Binding {
     sealed class SlotOrFunction {
         private readonly BindingTarget _function;
         private readonly DynamicMetaObject/*!*/ _target;
-        public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new DynamicMetaObject(Ast.Empty(), BindingRestrictions.Empty));
+        public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new DynamicMetaObject(AstUtils.Empty(), BindingRestrictions.Empty));
 
         private SlotOrFunction() {
         }
@@ -163,7 +164,7 @@ namespace IronPython.Runtime.Binding {
                                 ),
                                 typeof(object),
                                 ArrayUtils.Insert<Expression>(
-                                    Ast.Constant(state.Context),
+                                    AstUtils.Constant(state.Context),
                                     tmp,
                                     args
                                 )
@@ -224,7 +225,7 @@ namespace IronPython.Runtime.Binding {
                 xBf = null;
             }
 
-            var mc = new ParameterBinderWithCodeContext(state.Binder, Ast.Constant(state.Context));
+            var mc = new ParameterBinderWithCodeContext(state.Binder, AstUtils.Constant(state.Context));
 
             if (xBf == null) {
                 if (yBf == null) {

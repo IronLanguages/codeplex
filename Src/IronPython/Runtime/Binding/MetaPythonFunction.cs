@@ -150,7 +150,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod(Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "FunctionBadArgumentError"),
                                 AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                                Ast.Constant(Signature.GetProvidedPositionalArgumentCount())
+                                AstUtils.Constant(Signature.GetProvidedPositionalArgumentCount())
                             )
                         ),
                         restrict
@@ -199,7 +199,7 @@ namespace IronPython.Runtime.Binding {
                         typeof(PythonOps).GetMethod("FunctionGetCompatibility"),
                         Ast.Convert(_func.Expression, typeof(PythonFunction))
                     ),
-                    Ast.Constant(_func.Value.FunctionCompatibility)
+                    AstUtils.Constant(_func.Value.FunctionCompatibility)
                 );
 
                 return BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
@@ -421,7 +421,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AddDictionaryArgument"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                        Ast.Constant(kvp.Key),
+                        AstUtils.Constant(kvp.Key),
                         AstUtils.Convert(kvp.Value, typeof(object)),
                         AstUtils.Convert(_dict, typeof(IAttributesCollection))
                     )
@@ -500,8 +500,8 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("VerifyUnduplicatedByPosition"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),    // function
-                        Ast.Constant(name, typeof(string)),                               // name
-                        Ast.Constant(position),                                           // position
+                        AstUtils.Constant(name, typeof(string)),                               // name
+                        AstUtils.Constant(position),                                           // position
                         _paramsLen                                                        // params list length
                         ),
                     value
@@ -539,8 +539,8 @@ namespace IronPython.Runtime.Binding {
                 return Ast.Call(
                         typeof(PythonOps).GetMethod("ExtractDictionaryArgument"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),        // function
-                        Ast.Constant(name, typeof(string)),                                   // name
-                        Ast.Constant(Signature.ArgumentCount),                               // arg count
+                        AstUtils.Constant(name, typeof(string)),                                   // name
+                        AstUtils.Constant(Signature.ArgumentCount),                               // arg count
                         AstUtils.Convert(_dict, typeof(IAttributesCollection))               // dictionary
                     );
             }
@@ -555,7 +555,7 @@ namespace IronPython.Runtime.Binding {
                     return Ast.Call(
                       typeof(PythonOps).GetMethod("FunctionGetDefaultValue"),
                       AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                      Ast.Constant(dfltIndex)
+                      AstUtils.Constant(dfltIndex)
                   );
                 } else {
                     // we might have a conflict, check the default last.
@@ -566,8 +566,8 @@ namespace IronPython.Runtime.Binding {
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("GetFunctionParameterValue"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                        Ast.Constant(dfltIndex),
-                        Ast.Constant(_func.Value.ArgNames[index], typeof(string)),
+                        AstUtils.Constant(dfltIndex),
+                        AstUtils.Constant(_func.Value.ArgNames[index], typeof(string)),
                         VariableOrNull(_params, typeof(List)),
                         VariableOrNull(_dict, typeof(PythonDictionary))
                     );
@@ -586,7 +586,7 @@ namespace IronPython.Runtime.Binding {
                 return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractAnyArgument"),
                     AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),  // function
-                    Ast.Constant(name, typeof(string)),                             // name
+                    AstUtils.Constant(name, typeof(string)),                             // name
                     _paramsLen,                                    // arg count
                     _params,                                       // params list
                     AstUtils.Convert(_dict, typeof(IDictionary))  // dictionary
@@ -614,7 +614,7 @@ namespace IronPython.Runtime.Binding {
                 return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractParamsArgument"),
                     AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),  // function
-                    Ast.Constant(Signature.ArgumentCount),                   // arg count
+                    AstUtils.Constant(Signature.ArgumentCount),                   // arg count
                     _params                                        // list
                 );
             }
@@ -626,7 +626,7 @@ namespace IronPython.Runtime.Binding {
                         type
                     );
                 }
-                return Ast.Constant(null, type);
+                return AstUtils.Constant(null, type);
             }
 
             /// <summary>
@@ -710,7 +710,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Assign(_paramsLen,
                         Ast.Add(
                             Ast.Call(_params, typeof(List).GetMethod("__len__")),
-                            Ast.Constant(Signature.GetProvidedPositionalArgumentCount())
+                            AstUtils.Constant(Signature.GetProvidedPositionalArgumentCount())
                         )
                     )
                 );
@@ -734,7 +734,7 @@ namespace IronPython.Runtime.Binding {
                     int itemIndex = 0;
                     foreach (KeyValuePair<string, Expression> kvp in namedArgs) {
                         items[itemIndex++] = AstUtils.Convert(kvp.Value, typeof(object));
-                        items[itemIndex++] = Ast.Constant(kvp.Key, typeof(object));
+                        items[itemIndex++] = AstUtils.Constant(kvp.Key, typeof(object));
                     }
 
                     dictCreator = Ast.Assign(
@@ -750,7 +750,7 @@ namespace IronPython.Runtime.Binding {
                         _dict,
                         Ast.Call(
                             typeof(PythonOps).GetMethod("MakeDict"),
-                            Ast.Constant(0)
+                            AstUtils.Constant(0)
                         )
                     );
                 }
@@ -878,7 +878,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Call(
                         typeof(PythonOps).GetMethod("UnexpectedKeywordArgumentError"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
-                        Ast.Constant(name, typeof(string))
+                        AstUtils.Constant(name, typeof(string))
                     )
                 );
             }            
@@ -907,7 +907,7 @@ namespace IronPython.Runtime.Binding {
 
         private DynamicMetaObject MakeIsCallableRule(DynamicMetaObject/*!*/ self) {
             return new DynamicMetaObject(
-                Ast.Constant(true),
+                AstUtils.Constant(true),
                 BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(PythonFunction))
             );
         }

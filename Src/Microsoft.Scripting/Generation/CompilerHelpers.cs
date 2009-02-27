@@ -27,6 +27,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Interpreter;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Generation {
     // TODO: keep this?
@@ -572,9 +573,9 @@ namespace Microsoft.Scripting.Generation {
         public static Expression GetTryConvertReturnValue(Type type) {
             Expression res;
             if (type.IsInterface || type.IsClass || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))) {
-                res = Expression.Constant(null, type);
+                res = AstUtils.Constant(null, type);
             } else {
-                res = Expression.Constant(Activator.CreateInstance(type));
+                res = AstUtils.Constant(Activator.CreateInstance(type));
             }
 
             return res;
@@ -778,7 +779,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public static Expression Reduce(DynamicExpression node) {
             // Store the callsite as a constant
-            var siteConstant = Expression.Constant(CallSite.Create(node.DelegateType, node.Binder));
+            var siteConstant = AstUtils.Constant(CallSite.Create(node.DelegateType, node.Binder));
 
             // ($site = siteExpr).Target.Invoke($site, *args)
             var site = Expression.Variable(siteConstant.Type, "$site");

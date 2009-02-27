@@ -22,6 +22,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.Ast {
             return Expression.New(
                 typeof(LocalsDictionary).GetConstructor(new[] { typeof(IList<IStrongBox>), typeof(SymbolId[]) }),
                 Expression.RuntimeVariables(vars),
-                Expression.Constant(vars.Map(v => SymbolTable.StringToIdOrEmpty(v.Name)))
+                AstUtils.Constant(vars.Map(v => SymbolTable.StringToIdOrEmpty(v.Name)))
             );
         }
     }

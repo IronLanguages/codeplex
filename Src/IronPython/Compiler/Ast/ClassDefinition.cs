@@ -137,10 +137,10 @@ namespace IronPython.Compiler.Ast {
                 docStmt =
                     AstUtils.Assign(
                         _docVariable.Variable,
-                        Ast.Constant(doc)
+                        AstUtils.Constant(doc)
                     );
             } else {
-                docStmt = Ast.Empty();
+                docStmt = AstUtils.Empty();
             }
 
             MSAst.Expression returnStmt = Ast.Return(body.ReturnLabel, AstUtils.CodeContext());
@@ -156,7 +156,7 @@ namespace IronPython.Compiler.Ast {
                     docStmt,
                     bodyStmt,
                     returnStmt,
-                    Ast.Empty()
+                    AstUtils.Empty()
                 )
             );
             body.Block.Body = body.AddReturnTarget(body.Block.Body);
@@ -165,9 +165,9 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 AstUtils.CodeContext(),
-                Ast.Constant(SymbolTable.IdToString(_name)),
+                AstUtils.Constant(SymbolTable.IdToString(_name)),
                 bases,
-                Ast.Constant(FindSelfNames()),
+                AstUtils.Constant(FindSelfNames()),
                 lambda
             );
 
