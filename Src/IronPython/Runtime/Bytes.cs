@@ -43,6 +43,14 @@ namespace IronPython.Runtime {
             _bytes = ArrayUtils.ToArray(bytes);
         }
 
+        public Bytes(List bytes) {
+            _bytes = ByteOps.GetBytes(bytes).ToArray();
+        }
+
+        public Bytes(int size) {
+            _bytes = new byte[size];
+        }
+
         private Bytes(byte[] bytes) {
             _bytes = bytes;
         }
@@ -139,11 +147,11 @@ namespace IronPython.Runtime {
             return _bytes.Find(sub);
         }
 
-        public int find(IList<byte>/*!*/ sub, int start) {
+        public int find(IList<byte>/*!*/ sub, int? start) {
             return _bytes.Find(sub, start);
         }
 
-        public int find(IList<byte>/*!*/ sub, int start, int end) {
+        public int find(IList<byte>/*!*/ sub, int? start, int? end) {
             return _bytes.Find(sub, start, end);
         }
 
@@ -155,12 +163,17 @@ namespace IronPython.Runtime {
             return index(item, 0, Count);
         }
 
-        public int index(IList<byte>/*!*/ item, int start) {
+        public int index(IList<byte>/*!*/ item, int? start) {
             return index(item, start, Count);
         }
 
-        public int index(IList<byte>/*!*/ item, int start, int stop) {
-            return _bytes.IndexOfByte(item.ToByte("index", 1), start, stop);
+        public int index(IList<byte>/*!*/ item, int? start, int? stop) {
+            int res = find(item, start, stop);
+            if (res == -1) {
+                throw PythonOps.ValueError("bytes.index(item): item not in bytes");
+            }
+
+            return res;
         }
 
         public bool isalnum() {
@@ -314,7 +327,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.TypeError("expected bytes or bytearray, got NoneType");
             }
 
-            return replace(old, new_, old.Count + 1);
+            return replace(old, new_, _bytes.Length);
         }
 
         public Bytes replace(IList<byte>/*!*/ old, IList<byte>/*!*/ new_, int maxsplit) {
@@ -332,11 +345,11 @@ namespace IronPython.Runtime {
             return rfind(sub, 0, Count);
         }
 
-        public int rfind(IList<byte>/*!*/ sub, int start) {
+        public int rfind(IList<byte>/*!*/ sub, int? start) {
             return rfind(sub, start, Count);
         }
 
-        public int rfind(IList<byte>/*!*/ sub, int start, int end) {
+        public int rfind(IList<byte>/*!*/ sub, int? start, int? end) {
             return _bytes.ReverseFind(sub, start, end);
         }
 
@@ -344,11 +357,11 @@ namespace IronPython.Runtime {
             return rindex(sub, 0, Count);
         }
 
-        public int rindex(IList<byte>/*!*/ sub, int start) {
+        public int rindex(IList<byte>/*!*/ sub, int? start) {
             return rindex(sub, start, Count);
         }
 
-        public int rindex(IList<byte>/*!*/ sub, int start, int end) {
+        public int rindex(IList<byte>/*!*/ sub, int? start, int? end) {
             int ret = rfind(sub, start, end);
 
             if (ret == -1) {
@@ -425,6 +438,17 @@ namespace IronPython.Runtime {
             return new Bytes(res);
         }
 
+        public Bytes/*!*/ rstrip(IList<byte> bytes) {
+            lock (this) {
+                List<byte> res = _bytes.RightStrip(bytes);
+                if (res == null) {
+                    return this;
+                }
+
+                return new Bytes(res);
+            }
+        }
+        
         public List/*!*/ split() {
             return _bytes.SplitInternal((byte[])null, -1, x => new Bytes(x));
         }
@@ -483,6 +507,17 @@ namespace IronPython.Runtime {
             return new Bytes(res);
         }
 
+        public Bytes/*!*/ strip(IList<byte> chars) {
+            lock (this) {
+                List<byte> res = _bytes.Strip(chars);
+                if (res == null) {
+                    return this;
+                }
+
+                return new Bytes(res);
+            }
+        }
+
         public Bytes/*!*/ swapcase() {
             return new Bytes(_bytes.SwapCase());
         }
@@ -532,6 +567,25 @@ namespace IronPython.Runtime {
             }
 
             return new Bytes(_bytes.ZeroFill(width, spaces));
+        }
+
+        public bool __contains__(IList<byte> bytes) {
+            return this.IndexOf(bytes, 0) != -1;
+        }
+
+        public bool __contains__(int value) {
+            return IndexOf(value.ToByteChecked()) != -1;
+        }
+
+        public PythonTuple __reduce__(CodeContext/*!*/ context) {
+            return PythonTuple.MakeTuple(
+                DynamicHelpers.GetPythonType(this),
+                PythonTuple.MakeTuple(
+                    PythonOps.MakeString(this),
+                    "latin-1"
+                ),
+                GetType() == typeof(Bytes) ? null : ObjectOps.ReduceProtocol0(context, this)[2]
+            );
         }
 
         public virtual string/*!*/ __repr__(Microsoft.Scripting.Runtime.CodeContext context) {
@@ -605,7 +659,7 @@ namespace IronPython.Runtime {
 
         public int this[int index] {
             get {
-                return (int)_bytes[index];
+                return (int)_bytes[PythonOps.FixIndex(index, _bytes.Length)];
             }
             [PythonHidden]
             set {

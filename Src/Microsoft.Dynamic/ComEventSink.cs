@@ -127,7 +127,6 @@ namespace Microsoft.Scripting {
 
         public void AddHandler(int dispid, object func) {
             string name = String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", dispid);
-            Func<object[], object> handler = new SplatCallSite(func).Invoke;
 
             lock (_lockObject) {
                 ComEventSinkMethod sinkMethod;
@@ -143,7 +142,7 @@ namespace Microsoft.Scripting {
                     _comEventSinkMethods.Add(sinkMethod);
                 }
 
-                sinkMethod._handlers += handler;
+                sinkMethod._handlers += new SplatCallSite(func).Invoke;
             }
         }
 

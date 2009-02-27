@@ -228,10 +228,7 @@ namespace IronPython.Runtime.Binding {
             if (typeTest != null) {
                 if (typeTest.Test != null) {
                     // add the test and a validator if persent
-                    Expression defer = operation.Defer(args).Expression;
-                    if (deferType != null) {
-                        defer = AstUtils.Convert(defer, deferType);
-                    }
+                    Expression defer = operation.GetUpdateExpression(deferType ?? typeof(object));
 
                     Type bestType = BindingHelpers.GetCompatibleType(defer.Type, res.Expression.Type);
 

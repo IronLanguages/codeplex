@@ -16,9 +16,9 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
 using System.Collections.ObjectModel;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Runtime.CompilerServices {
@@ -26,6 +26,9 @@ namespace Microsoft.Runtime.CompilerServices {
     /// Class responsible for runtime binding of the dynamic operations on the dynamic call site.
     /// </summary>
     public abstract class CallSiteBinder {
+
+        private static readonly LabelTarget _updateLabel = Expression.Label("CallSiteBinder.UpdateLabel");
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CallSiteBinder"/> class.
         /// </summary>
@@ -33,13 +36,13 @@ namespace Microsoft.Runtime.CompilerServices {
         }
 
         /// <summary>
-        /// The key used by the binding rule cache. The expressions returned by the <see cref="Bind"/> method
-        /// are cached and shared across dynamic call sites. All call sites with their CacheIdentity equal
-        /// are considered to be performing identical dynamic operation and therefore the binding expressions
-        /// for such dynamic operations will be shared by the dynamic runtime.
+        /// Gets a label that can be used to cause the binding to be updated. It
+        /// indicates that the expression's binding is no longer valid.
+        /// This is typically used when the "version" of a dynamic object has
+        /// changed.
         /// </summary>
-        public virtual object CacheIdentity {
-            get { return this; }
+        public static LabelTarget UpdateLabel {
+            get { return _updateLabel; }
         }
 
         /// <summary>

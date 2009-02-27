@@ -277,11 +277,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Argument must be exception"
+        /// A string like  "Argument must not have a value type."
         /// </summary>
-        internal static string ArgumentMustBeException {
+        internal static string ArgumentMustNotHaveValueType {
             get {
-                return "Argument must be exception";
+                return "Argument must not have a value type.";
             }
         }
 
