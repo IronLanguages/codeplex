@@ -20,6 +20,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Generation;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Interpreter {
     internal partial class LightLambda {
@@ -112,7 +113,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             var data = Expression.NewArrayInit(typeof(object), parameters);
-            var self = Expression.Constant(this);
+            var self = AstUtils.Constant(this);
             var runMethod = typeof(LightLambda).GetMethod("Run");
             var body = Expression.Convert(Expression.Call(self, runMethod, data), method.ReturnType);
             var lambda = Expression.Lambda(delegateType, body, parameters);

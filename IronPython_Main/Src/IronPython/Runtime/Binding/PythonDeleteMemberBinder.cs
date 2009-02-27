@@ -17,6 +17,7 @@ using System; using Microsoft;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
@@ -43,7 +44,7 @@ namespace IronPython.Runtime.Binding {
                 return Defer(self);
             }
 
-            return Binder.Binder.DeleteMember(Name, self, Ast.Constant(Binder.Context));
+            return Binder.Binder.DeleteMember(Name, self, AstUtils.Constant(Binder.Context));
         }
 
         public BinderState/*!*/ Binder {
@@ -75,7 +76,7 @@ namespace IronPython.Runtime.Binding {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeDeleteAction"),
                 BindingHelpers.CreateBinderStateExpression(),
-                Ast.Constant(Name)
+                AstUtils.Constant(Name)
             );
         }
 

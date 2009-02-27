@@ -34,7 +34,7 @@ namespace Microsoft.Linq.Expressions {
         internal static ConditionalExpression Make(Expression test, Expression ifTrue, Expression ifFalse, Type type) {
             if (ifTrue.Type != type || ifFalse.Type != type) {
                 return new FullConditionalExpressionWithType(test, ifTrue, ifFalse, type);
-            } if (ifFalse == DefaultExpression.VoidInstance) {
+            } if (ifFalse is DefaultExpression && ifFalse.Type == typeof(void)) {
                 return new ConditionalExpression(test, ifTrue);
             } else {
                 return new FullConditionalExpression(test, ifTrue, ifFalse);
@@ -78,7 +78,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal virtual Expression GetFalse() {
-            return DefaultExpression.VoidInstance;
+            return Expression.Empty();
         }
 
         internal override Expression Accept(ExpressionVisitor visitor) {
@@ -182,7 +182,7 @@ namespace Microsoft.Linq.Expressions {
         /// properties set to the specified values. The <see cref="P:ConditionalExpression.IfFalse"/> property is set to default expression and
         /// the type of the resulting <see cref="ConditionalExpression"/> returned by this method is <see cref="System.Void"/>.</returns>
         public static ConditionalExpression IfThen(Expression test, Expression ifTrue) {
-            return Condition(test, ifTrue, DefaultExpression.VoidInstance, typeof(void));
+            return Condition(test, ifTrue, Expression.Empty(), typeof(void));
         }
 
         /// <summary>

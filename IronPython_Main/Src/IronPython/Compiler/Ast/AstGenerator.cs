@@ -56,7 +56,7 @@ namespace IronPython.Compiler.Ast {
         private static readonly MethodInfo _UpdateStackTrace = typeof(ExceptionHelpers).GetMethod("UpdateStackTrace");
         private static readonly MethodInfo _GetCurrentMethod = typeof(MethodBase).GetMethod("GetCurrentMethod");
         internal static readonly MSAst.Expression[] EmptyExpression = new MSAst.Expression[0];
-        internal static readonly MSAst.BlockExpression EmptyBlock = Ast.Block(Ast.Empty());
+        internal static readonly MSAst.BlockExpression EmptyBlock = Ast.Block(AstUtils.Empty());
 
         private AstGenerator(string name, bool generator, bool print) {
             _print = print;
@@ -377,8 +377,8 @@ namespace IronPython.Compiler.Ast {
                     _UpdateStackTrace,
                     AstUtils.CodeContext(),
                     Ast.Call(_GetCurrentMethod),
-                    Ast.Constant(_block.Name),
-                    Ast.Constant(Context.SourceUnit.Path ?? "<string>"),
+                    AstUtils.Constant(_block.Name),
+                    AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
                     LineNumberExpression
                 );
             }
@@ -399,16 +399,16 @@ namespace IronPython.Compiler.Ast {
                         typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
                         AstUtils.CodeContext(),
                         Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")),
-                        Ast.Constant(_block.Name),
-                        Ast.Constant(Context.SourceUnit.Path ?? "<string>"),
+                        AstUtils.Constant(_block.Name),
+                        AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
                         LineNumberExpression
                     )
                 ),
                 AstUtils.Assign(
                     LineNumberUpdated,
-                    Ast.Constant(preventAdditionalAdds)
+                    AstUtils.Constant(preventAdditionalAdds)
                 ),
-                Ast.Empty()
+                AstUtils.Empty()
             );
         }
 
@@ -442,7 +442,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression TransformOrConstantNull(Expression expression, Type/*!*/ type) {
             if (expression == null) {
-                return Ast.Constant(null, type);
+                return AstUtils.Constant(null, type);
             } else {
                 return ConvertIfNeeded(expression.Transform(this, type), type);
             }
@@ -521,7 +521,7 @@ namespace IronPython.Compiler.Ast {
                 toExpr = Ast.Block(
                     UpdateLineNumber(fromStmt.Start.Line),
                     toExpr,
-                    Ast.Empty()
+                    AstUtils.Empty()
                 );
             }
 
@@ -532,10 +532,10 @@ namespace IronPython.Compiler.Ast {
             if (TrackLines) {
                 return MSAst.Expression.Block(
                         Ast.Assign(saveCurrent, LineNumberUpdated),
-                        Ast.Assign(LineNumberUpdated, Ast.Constant(updated))
+                        Ast.Assign(LineNumberUpdated, AstUtils.Constant(updated))
                     );
             } else {
-                return MSAst.Expression.Empty();
+                return AstUtils.Empty();
             }
         }
 
@@ -543,23 +543,23 @@ namespace IronPython.Compiler.Ast {
             if (TrackLines) {
                 return Ast.Assign(LineNumberUpdated, saveCurrent);
             } else {
-                return MSAst.Expression.Empty();
+                return AstUtils.Empty();
             }
         }
 
         internal MSAst.Expression UpdateLineUpdated(bool updated) {
             if (TrackLines) {
-                return Ast.Assign(LineNumberUpdated, Ast.Constant(updated));
+                return Ast.Assign(LineNumberUpdated, AstUtils.Constant(updated));
             } else {
-                return MSAst.Expression.Empty();
+                return AstUtils.Empty();
             }
         }
 
         internal MSAst.Expression UpdateLineNumber(int line) {
             if (TrackLines) {
-                return Ast.Assign(LineNumberExpression, Ast.Constant(line));
+                return Ast.Assign(LineNumberExpression, AstUtils.Constant(line));
             } else {
-                return MSAst.Expression.Empty();
+                return AstUtils.Empty();
             }
         }
 

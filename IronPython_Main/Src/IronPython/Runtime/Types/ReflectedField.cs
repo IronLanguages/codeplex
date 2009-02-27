@@ -24,6 +24,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
@@ -166,7 +167,7 @@ namespace IronPython.Runtime.Types {
                 if (_info.IsStatic) {
                     return Ast.Field(null, _info);
                 } else {
-                    return Ast.Constant(this);
+                    return AstUtils.Constant(this);
                 }
             } else {
                 return Ast.Field(

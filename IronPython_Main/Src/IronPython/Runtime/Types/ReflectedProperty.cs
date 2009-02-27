@@ -25,6 +25,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
     [PythonType("getset_descriptor")]
@@ -114,7 +115,7 @@ namespace IronPython.Runtime.Types {
                 // fallback to runtime call
                 return base.MakeGetExpression(binder, codeContext, instance, owner, error);
             } else if (NeedToReturnProperty(instance, Getter)) {
-                return Expression.Constant(this);
+                return AstUtils.Constant(this);
             } else if (Getter[0].ContainsGenericParameters) {
                 return DefaultBinder.MakeError(
                     binder.MakeContainsGenericParametersError(

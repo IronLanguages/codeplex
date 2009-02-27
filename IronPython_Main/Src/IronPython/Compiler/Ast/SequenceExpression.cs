@@ -89,7 +89,7 @@ namespace IronPython.Compiler.Ast {
                 // arguments
                 AstUtils.CodeContext(),
                 right_temp,
-                Ast.Constant(_items.Length)
+                AstUtils.Constant(_items.Length)
             );
 
             // 4. Create temporary variable for the array
@@ -115,7 +115,7 @@ namespace IronPython.Compiler.Ast {
                 // 6. array_temp[i]
                 MSAst.Expression element = Ast.ArrayAccess(
                     array_temp,                             // array expression
-                    Ast.Constant(i)                         // index
+                    AstUtils.Constant(i)                         // index
                 );
 
                 // 7. target = array_temp[i], and add the transformed assignment into the list of sets
@@ -134,7 +134,7 @@ namespace IronPython.Compiler.Ast {
                 sets[i] = set;
             }
             // 9. add the sets as their own block so they can be marked as a single span, if necessary.
-            sets[_items.Length] = Ast.Empty();
+            sets[_items.Length] = AstUtils.Empty();
             statements[2] = ag.AddDebugInfo(Ast.Block(sets), leftSpan);
 
             // 10. Free the temps
@@ -142,7 +142,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(right_temp);
 
             // 11. Return the suite statement (block)
-            statements[3] = Ast.Empty();
+            statements[3] = AstUtils.Empty();
             return ag.AddDebugInfo(Ast.Block(statements), totalSpan);
         }
 
@@ -155,7 +155,7 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < _items.Length; i++) {
                 statements[i] = _items[i].TransformDelete(ag);
             }
-            statements[_items.Length] = Ast.Empty();
+            statements[_items.Length] = AstUtils.Empty();
             return ag.AddDebugInfo(Ast.Block(statements), Span);
         }
 
