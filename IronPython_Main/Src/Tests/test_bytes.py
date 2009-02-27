@@ -21,10 +21,26 @@ from iptest.misc_util import ip_supported_encodings
 import sys
 
 types = [bytearray, bytes]
+class IndexableOC:
+    def __init__(self, value):
+        self.value = value
+    def __index__(self):
+        return self.value
+
+class Indexable(object):
+    def __init__(self, value):
+        self.value = value
+    def __index__(self):
+        return self.value
+
 
 def test_capitalize():
     tests = [(b'foo', b'Foo'), 
-             (b' foo', b' foo')]
+             (b' foo', b' foo'),
+             (b'fOO', b'Foo'),
+             (b' fOO BAR', b' foo bar'),
+             (b'fOO BAR', b'Foo bar'),
+             ]
     
     for testType in types:
         for data, result in tests:
@@ -106,6 +122,7 @@ def test_expandtabs():
         
         AreEqual(len(testType(b"aaa\taaa\taaa").expandtabs()), 19)
         AreEqual(testType(b"aaa\taaa\taaa").expandtabs(), b"aaa     aaa     aaa")
+        AssertError(OverflowError, bytearray(b'\t\t').expandtabs, sys.maxint)
 
 def test_extend():
     b = bytearray(b'abc')
@@ -122,6 +139,11 @@ def test_find():
         AreEqual(testType(b'abc').find(b'abc', -1, 1), -1)
         AreEqual(testType(b'abc').find(b'abc', 25), -1)
         AreEqual(testType(b'abc').find(b'add', 0, 3), -1)
+        if testType == bytes:
+            AreEqual(testType(b'abc').find(b'add', 0, None), -1)
+            AreEqual(testType(b'abc').find(b'add', None, None), -1)
+            AreEqual(testType(b'abc').find(b'', None, 0), 0)
+            AreEqual(testType(b'x').find(b'x', None, 0), -1)
         
         AreEqual(testType(b'abc').find(b'', 0, 0), 0)
         AreEqual(testType(b'abc').find(b'', 0, 1), 0)
@@ -131,7 +153,7 @@ def test_find():
         AreEqual(testType(b'').find(b'', 0, 4), 0)
         
         AreEqual(testType(b'x').find(b'x', 0, 0), -1)
-        
+                
         AreEqual(testType(b'x').find(b'x', 3, 0), -1)
         AreEqual(testType(b'x').find(b'', 3, 0), -1)
         
@@ -160,6 +182,11 @@ def test_index():
         
         AssertError(ValueError, testType(b'abc').index, b'c', 0, -1)
         AssertError(ValueError, testType(b'abc').index, b'a', -1)
+        
+        AreEqual(testType(b'abc').index(b'ab'), 0)
+        AreEqual(testType(b'abc').index(b'bc'), 1)
+        AssertError(ValueError, testType(b'abc').index, b'abcd')
+        AssertError(ValueError, testType(b'abc').index, b'e')
 
 def test_insert():
     b = bytearray(b'abc')
@@ -194,9 +221,17 @@ def test_isdigit():
 
 def test_islower():
     check_is_method('islower', lambda i : i >= ord('a') and i <= ord('z'))
+    for testType in types:
+        for i in xrange(256):
+            if not chr(i).isupper():
+                AreEqual((testType(b'a') + testType([i])).islower(), True)
     
 def test_isspace():
     check_is_method('isspace', lambda i : i in [ord(' '), ord('\t'), ord('\f'), ord('\n'), ord('\r'), 11])
+    for testType in types:
+        for i in xrange(256):
+            if not chr(i).islower():
+                AreEqual((testType(b'A') + testType([i])).isupper(), True)
 
 def test_istitle():
     for testType in types:
@@ -338,6 +373,8 @@ def test_replace():
         AreEqual(testType(b'abcb').replace(b'', b'foo', 100), b'fooafoobfoocfoobfoo')
         AreEqual(testType(b'abcb').replace(b'', b'foo', 0), b'abcb')
         AreEqual(testType(b'abcb').replace(b'', b'foo', 1), b'fooabcb')
+        
+        AreEqual(testType(b'ooooooo').replace(b'o', b'u'), b'uuuuuuu')
     
     x = b'abc'
     AreEqual(id(x.replace(b'foo', b'bar', 0)), id(x))
@@ -348,10 +385,15 @@ def test_replace():
         Assert(id(x.replace(b'foo', b'bar', 0)) != id(x))
 
 def test_remove():
-    b = bytearray(b'abc')
-    b.remove(ord('a'))
-    AreEqual(b, b'bc')
+    for toremove in (ord('a'), b'a', Indexable(ord('a')), IndexableOC(ord('a'))):    
+        b = bytearray(b'abc')
+        b.remove(ord('a'))
+        AreEqual(b, b'bc')
+    
     AssertError(ValueError, b.remove, ord('x'))
+
+    b = bytearray(b'abc')
+    AssertError(TypeError, b.remove, bytearray(b'a'))
 
 def test_reverse():
     b = bytearray(b'abc')
@@ -367,7 +409,12 @@ def test_rfind():
         AreEqual(testType(b"abcdbcda").rfind(b"cd", -1, -2), -1)
         AreEqual(testType(b"abc").rfind(b"add", 3, 0), -1)
         AreEqual(testType(b'abc').rfind(b'bd'), -1)
-        
+
+        if testType == bytes:
+            AreEqual(testType(b"abc").rfind(b"add", None, 0), -1)
+            AreEqual(testType(b"abc").rfind(b"add", 3, None), -1)
+            AreEqual(testType(b"abc").rfind(b"add", None, None), -1)
+
         AreEqual(testType(b'abc').rfind(b'', 0, 0), 0)
         AreEqual(testType(b'abc').rfind(b'', 0, 1), 1)
         AreEqual(testType(b'abc').rfind(b'', 0, 2), 2)
@@ -416,6 +463,15 @@ def test_rpartition():
         x = testType(b'abc')
         one, two, three = x.rpartition(b'd')        
         AreEqual(id(three), id(x))
+        
+        b = testType(b'mississippi')
+        AreEqual(b.rpartition(b'i'), (b'mississipp', b'i', b''))
+        AreEqual(type(b.rpartition(b'i')[0]), testType)
+        AreEqual(type(b.rpartition(b'i')[1]), testType)
+        AreEqual(type(b.rpartition(b'i')[2]), testType)
+        
+        b = testType(b'abcdefgh')
+        AreEqual(b.rpartition(b'a'), (b'', b'a', b'bcdefgh'))
     
     one, two, three = b''.rpartition(b'abc')
     AreEqual(id(one), id(two))
@@ -448,6 +504,10 @@ def test_rstrip():
         AreEqual(testType(b'abc ').rstrip(), b'abc')
         AreEqual(testType(b' abc ').rstrip(), b' abc')
         AreEqual(testType(b' ').rstrip(), b'')
+
+        AreEqual(testType(b'abcx').rstrip(b'x'), b'abc')
+        AreEqual(testType(b'xabc').rstrip(b'x'), b'xabc')
+        AreEqual(testType(b'x').rstrip(b'x'), b'')
 
     x = b'abc'
     AreEqual(id(x.rstrip()), id(x))
@@ -482,6 +542,8 @@ def test_split():
         AreEqual(testType(b"").split(None), [])
         AreEqual(testType(b"ab").split(None), [b"ab"])
         AreEqual(testType(b"a b").split(None), [b"a", b"b"])
+        
+        AreEqual(testType(b'    ').split(), [])
 
 def test_splitlines():
     for testType in types:
@@ -542,6 +604,11 @@ def test_strip():
         AreEqual(testType(b' abc').strip(), b'abc')
         AreEqual(testType(b' abc ').strip(), b'abc')
         AreEqual(testType(b' ').strip(), b'')
+
+        AreEqual(testType(b'abcx').strip(b'x'), b'abc')
+        AreEqual(testType(b'xabc').strip(b'x'), b'abc')
+        AreEqual(testType(b'xabcx').strip(b'x'), b'abc')
+        AreEqual(testType(b'x').strip(b'x'), b'')
 
     x = b'abc'
     AreEqual(id(x.strip()), id(x))
@@ -767,6 +834,18 @@ def test_bytes_subclass():
         AreEqual(o + b'abc', 23)
         AreEqual(len(o), 2300)
         AreEqual(b'a' in o, False)
+    
+    class custombytearray(bytearray):
+        def __init__(self, value):
+            bytearray.__init__(self)
+            
+    AreEqual(custombytearray(42), bytearray())
+
+    class custombytearray(bytearray):
+        def __init__(self, value, **args):
+            bytearray.__init__(self)
+            
+    AreEqual(custombytearray(42, x=42), bytearray())
 
 def test_bytes_equals():
     for testType in types:
@@ -956,6 +1035,11 @@ def test_bytearray():
     x += b'foo'
     AreEqual(x, b'abcfoo')
     
+    b = bytearray(b"abc")
+    b1 = b
+    b += b"def"    
+    AreEqual(b1, b)
+    
     x = bytearray(b'abc')
     x += bytearray(b'foo')
     AreEqual(x, b'abcfoo')
@@ -963,6 +1047,14 @@ def test_bytearray():
     x = bytearray(b'abc')
     x *= 2
     AreEqual(x, b'abcabc')
+    
+    x = bytearray(b'abcdefghijklmnopqrstuvwxyz')
+    x[25:1] = b'x' * 24
+    AreEqual(x, b'abcdefghijklmnopqrstuvwxyxxxxxxxxxxxxxxxxxxxxxxxxz')
+    
+    x = bytearray(b'abcdefghijklmnopqrstuvwxyz')
+    x[25:0] = b'x' * 25
+    AreEqual(x, b'abcdefghijklmnopqrstuvwxyxxxxxxxxxxxxxxxxxxxxxxxxxz')
     
     tests = ( ((0, 3, None), b'abc', b''), 
               ((0, 2, None), b'abc', b'c'), 
@@ -989,7 +1081,56 @@ def test_bytearray():
             del x[indexes[0] : indexes[1] : indexes[2]]
             AreEqual(x, result)     
     
-    for setval in [b'bar', bytearray(b'bar'), [b'b', b'a', b'r'], (b'b', b'a', b'r')]:
+    class myint(int): pass
+    class intobj(object):
+        def __int__(self):
+            return 42
+    
+    x = bytearray(b'abe')
+    x[-1] = ord('a')
+    AreEqual(x, b'aba')
+    
+    x[-1] = IndexableOC(ord('r'))
+    AreEqual(x, b'abr')
+    
+    x[-1] = Indexable(ord('s'))
+    AreEqual(x, b'abs')
+
+    def f(): x[-1] = IndexableOC(256)
+    AssertError(ValueError, f)
+    
+    def f(): x[-1] = Indexable(256)
+    AssertError(ValueError, f)
+
+    x[-1] = b'b'
+    AreEqual(x, b'abb')
+    x[-1] = myint(ord('c'))
+    AreEqual(x, b'abc')
+
+    x[0:1] = 2
+    AreEqual(x, b'\x00\x00bc')
+    x = bytearray(b'abc')
+    x[0:1] = 2L
+    AreEqual(x, b'\x00\x00bc')
+    x[0:2] = b'a'
+    AreEqual(x, b'abc')
+    x[0:1] = b'd'
+    AreEqual(x, b'dbc')
+    x[0:1] = myint(3)
+    AreEqual(x, b'\x00\x00\x00bc')
+    x[0:3] = [ord('a'), ord('b'), ord('c')]
+    AreEqual(x, b'abcbc')
+
+    def f(): x[0:1] = intobj()
+    AssertError(TypeError, f)
+
+    def f(): x[0:1] = sys.maxint
+    AssertError(MemoryError, f)
+    
+    def f(): x[0:1] = sys.maxint+1
+    AssertError(TypeError, f)    
+        
+    for setval in [b'bar', bytearray(b'bar'), [b'b', b'a', b'r'], (b'b', b'a', b'r'), (98, b'a', b'r'), (Indexable(98), b'a', b'r'), (IndexableOC(98), b'a', b'r')]:
         x = bytearray(b'abc')
         x[0:3] = setval
         AreEqual(x, b'bar')
@@ -1054,6 +1195,12 @@ def test_bytearray():
         def f():x[0:6:2] = b'a'
         AssertError(ValueError, f)
 
+    AreEqual(bytearray(source=b'abc'), bytearray(b'abc'))
+    AreEqual(bytearray(source=2), bytearray(b'\x00\x00'))
+    
+    AreEqual(bytearray(b'abc').__alloc__(), 4)
+    AreEqual(bytearray().__alloc__(), 0)
+    
 def test_bytes():
     AreEqual(hash(b'abc'), hash(b'abc'))
     AreEqual(b'abc', B'abc')
@@ -1070,6 +1217,8 @@ def test_operators():
             # we match the 3.0 behavior for bytes.__getitem__
             AreEqual(testType(b'abc')[0], ord('a'))
         
+            AreEqual(testType(b'abc')[-1], ord('c'))
+        
         for otherType in types:
             
             AreEqual(testType(b'abc') + otherType(b'def'), b'abcdef')
@@ -1078,6 +1227,14 @@ def test_operators():
                 AreEqual(resType, bytearray)
             else:
                 AreEqual(resType, bytes)
+                
+        AreEqual(b'ab' in testType(b'abcd'), True)
+        
+        # CPython 2.6 doesn't allow this...
+        if testType != str:
+            AreEqual(ord(b'a') in testType(b'abcd'), True)
+        
+            AssertError(ValueError, lambda : 256 in testType(b'abcd'))
     
     x = b'abc'
     AreEqual(x * 1, x)
@@ -1096,7 +1253,14 @@ def test_init():
         if testType != str:  # skip on Cpy 2.6 for str type
             AssertError(TypeError, testType, None, 'ascii')
             AssertError(TypeError, testType, u'abc', None)
+            AssertError(TypeError, testType, [None])
             AreEqual(testType(u'abc', 'ascii'), b'abc')
+            AreEqual(testType(0), b'')
+            AreEqual(testType(5), b'\x00\x00\x00\x00\x00')
+            AssertError(ValueError, testType, [256])
+            AssertError(ValueError, testType, [257])
+            
+        testType(range(256))
 
 def test_slicing():
     for testType in types:
@@ -1116,6 +1280,17 @@ def test_slicing():
         AreEqual(testType(b'abc')[2:0:-1], b'cb')
         
         AssertError(TypeError, testType(b'abc').__getitem__, None)
+
+def test_ord():
+    for testType in types:
+        AreEqual(ord(testType(b'a')), 97)
+        AssertErrorWithPartialMessage(TypeError, "expected a character, but string of length 2 found", ord, testType(b'aa'))
+
+def test_pickle():
+    import cPickle
+    
+    for testType in types:
+        AreEqual(cPickle.loads(cPickle.dumps(testType(range(256)))), testType(range(256)))
 
 @skip("win32")
 def test_zzz_cli_features():
@@ -1174,5 +1349,11 @@ def test_zzz_cli_features():
     AssertError(System.InvalidOperationException, b'abc'.Insert, 0, ord('b'))    
     AssertError(System.InvalidOperationException, b'abc'.RemoveAt, 0)    
     AssertError(System.InvalidOperationException, System.Collections.Generic.IList[System.Byte].__setitem__, b'abc', 0, ord('b'))
+    
+    lst = System.Collections.Generic.List[System.Byte]()
+    lst.Add(42)
+    AreEqual(ord(lst), 42)
+    lst.Add(42)
+    AssertErrorWithMessage(TypeError, "expected a character, but string of length 2 found", ord, lst)
 
 run_test(__name__)

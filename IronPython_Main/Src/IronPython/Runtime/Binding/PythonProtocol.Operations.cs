@@ -239,9 +239,12 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Block(                                            // body
                         // getItemRes = param0.__getitem__(curIndex)
                                     Utils.Try(
-                                        Ast.Assign(
-                                            getItemRes,
-                                            sf.Target.Expression
+                                        Ast.Convert(
+                                            Ast.Assign(
+                                                getItemRes,
+                                                sf.Target.Expression
+                                            ),
+                                            typeof(void)
                                         )
                                     ).Catch(
                         // end of indexes, return false

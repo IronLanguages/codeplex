@@ -78,7 +78,7 @@ namespace Microsoft.Linq.Expressions {
     public partial class Expression {
         /// <summary>
         /// Creates a <see cref="CatchBlock"/> representing a catch statement. 
-        /// The <see cref="Type"/> of <see cref="Exception"/> to be caught can be specified but no reference to the <see cref="Exception"/> object 
+        /// The <see cref="Type"/> of object to be caught can be specified but no reference to the object 
         /// will be available for use in the <see cref="CatchBlock"/>.
         /// </summary>
         /// <param name="type">The <see cref="Type"/> of <see cref="Exception"/> this <see cref="CatchBlock"/> will handle.</param>
@@ -89,7 +89,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// Creates a <see cref="CatchBlock"/> representing a catch statement with a reference to the caught <see cref="Exception"/> object for use in the handler body.
+        /// Creates a <see cref="CatchBlock"/> representing a catch statement with a reference to the caught object for use in the handler body.
         /// </summary>
         /// <param name="variable">A <see cref="ParameterExpression"/> representing a reference to the <see cref="Exception"/> object caught by this handler.</param>
         /// <param name="body">The body of the catch statement.</param>

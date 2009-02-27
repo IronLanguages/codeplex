@@ -18,6 +18,9 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 using System.Text;
 using Microsoft.Scripting.Utils;
 
@@ -54,6 +57,11 @@ namespace Microsoft.Scripting.Actions {
 
                 DynamicMetaObject[] tmpargs = GetArguments(args, results, i);
                 DynamicMetaObject next = curBinder.Binder.Bind(tmpargs[0], ArrayUtils.RemoveFirst(tmpargs));
+                if (i != 0) {
+                    // If the rule contains an embedded "update", replace it with a defer
+                    var visitor = new ReplaceUpdateVisitor { Binder = curBinder.Binder, Arguments = tmpargs };
+                    next = new DynamicMetaObject(visitor.Visit(next.Expression), next.Restrictions);
+                }
 
                 if (next.Expression.NodeType == ExpressionType.Throw) {
                     // end of the line... the expression is throwing, none of the other 
@@ -78,6 +86,19 @@ namespace Microsoft.Scripting.Actions {
                 restrictions
             );
         }
+
+        private sealed class ReplaceUpdateVisitor : ExpressionVisitor {
+            internal DynamicMetaObjectBinder Binder;
+            internal DynamicMetaObject[] Arguments;
+
+            protected override Expression VisitGoto(GotoExpression node) {
+                if (node.Target == CallSiteBinder.UpdateLabel) {
+                    return Binder.Defer(Arguments).Expression;
+                }
+                return base.Visit(node);
+            }
+        }
+
 
         private DynamicMetaObject[] GetArguments(DynamicMetaObject[] args, IList<DynamicMetaObject> results, int metaBinderIndex) {
             BinderMappingInfo indices = _metaBinders[metaBinderIndex];

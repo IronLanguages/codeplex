@@ -272,8 +272,8 @@ namespace Microsoft.Scripting {
 
         private bool ExpandoContainsValue(object value) {
             ExpandoData data = _data;
-            for (int i = 0; i < data.Length; i++) {
-                if (data[i].Equals(value)) {
+            for (int i = 0; i < data.Class.Keys.Length; i++) {
+                if (object.Equals(data[i], value)) {
                     return true;
                 }
             }
@@ -574,7 +574,7 @@ namespace Microsoft.Scripting {
             if (!TryGetValueForKey(item.Key, out value))
                 return false;
 
-            return value.Equals(item.Value);
+            return object.Equals(value, item.Value);
         }
 
         void ICollection<KeyValuePair<string, object>>.CopyTo(KeyValuePair<string, object>[] array, int arrayIndex) {
@@ -672,13 +672,7 @@ namespace Microsoft.Scripting {
                     binder.FallbackGetMember(this)
                 );
 
-                return AddDynamicTestAndDefer(
-                    binder,
-                    new DynamicMetaObject[] { this },
-                    Value.Class,
-                    null,
-                    memberValue
-                );
+                return AddDynamicTestAndDefer(binder, Value.Class, null, memberValue);
             }
 
             public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args) {
@@ -691,7 +685,6 @@ namespace Microsoft.Scripting {
                 //invoke the member value using the language's binder
                 return AddDynamicTestAndDefer(
                     binder,
-                    new DynamicMetaObject[] { this },
                     Value.Class,
                     null,
                     binder.FallbackInvoke(memberValue, args, null)
@@ -710,7 +703,6 @@ namespace Microsoft.Scripting {
 
                 return AddDynamicTestAndDefer(
                     binder,
-                    new DynamicMetaObject[] { this, value },
                     klass,
                     originalClass,
                     new DynamicMetaObject(
@@ -754,13 +746,7 @@ namespace Microsoft.Scripting {
                     fallback.Restrictions
                 );
 
-                return AddDynamicTestAndDefer(
-                    binder,
-                    new DynamicMetaObject[] { this },
-                    Value.Class,
-                    null,
-                    target
-                );
+                return AddDynamicTestAndDefer(binder, Value.Class, null, target);
             }
 
             public override IEnumerable<string> GetDynamicMemberNames() {
@@ -778,12 +764,7 @@ namespace Microsoft.Scripting {
             /// Adds a dynamic test which checks if the version has changed.  The test is only necessary for
             /// performance as the methods will do the correct thing if called with an incorrect version.
             /// </summary>
-            private DynamicMetaObject AddDynamicTestAndDefer(
-                DynamicMetaObjectBinder binder, 
-                DynamicMetaObject[] args, 
-                ExpandoClass klass, 
-                ExpandoClass originalClass, 
-                DynamicMetaObject succeeds) {
+            private DynamicMetaObject AddDynamicTestAndDefer(DynamicMetaObjectBinder binder, ExpandoClass klass, ExpandoClass originalClass, DynamicMetaObject succeeds) {
 
                 Expression ifTestSucceeds = succeeds.Expression;
                 if (originalClass != null) {
@@ -806,15 +787,18 @@ namespace Microsoft.Scripting {
                 }
 
                 return new DynamicMetaObject(
-                    Expression.Condition(
-                        Expression.Call(
-                            null,
-                            typeof(RuntimeOps).GetMethod("ExpandoCheckVersion"),
-                            GetLimitedSelf(),
-                            Expression.Constant(originalClass ?? klass)
+                    DynamicMetaObjectBinder.Convert(
+                        Expression.Condition(
+                            Expression.Call(
+                                null,
+                                typeof(RuntimeOps).GetMethod("ExpandoCheckVersion"),
+                                GetLimitedSelf(),
+                                Expression.Constant(originalClass ?? klass)
+                            ),
+                            ifTestSucceeds,
+                            binder.GetUpdateExpression(ifTestSucceeds.Type)
                         ),
-                        DynamicMetaObjectBinder.Convert(ifTestSucceeds, typeof(object)),
-                        DynamicMetaObjectBinder.Convert(binder.Defer(args).Expression, typeof(object))
+                        typeof(object)
                     ),
                     GetRestrictions().Merge(succeeds.Restrictions)
                 );
