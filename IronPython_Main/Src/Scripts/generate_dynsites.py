@@ -264,9 +264,11 @@ internal static %(methodDeclaration)s {
                 // if we produce another monomorphic
                 // rule we should try and share code between the two.
                 originalRule = rule;
-            }else{
+            }else{                              
                 %(setResult)s ruleTarget(site%(args)s);
+
                 if (CallSiteOps.GetMatch(site)) {
+                    CallSiteOps.UpdateRules(@this, i);
                     %(returnResult)s;
                 }        
                         
@@ -285,41 +287,39 @@ internal static %(methodDeclaration)s {
     //
     var cache = CallSiteOps.GetRuleCache(@this);
 
-    if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-        for (int i = 0; i < applicable.Length; i++) {
-            rule = applicable[i];
+    applicable = CallSiteOps.FindApplicableRules(cache);
+    for (int i = 0; i < applicable.Length; i++) {
+        rule = applicable[i];
 
-            //
-            // Execute the rule
-            //
-            ruleTarget = CallSiteOps.SetTarget(@this, rule);
+        //
+        // Execute the rule
+        //
+        ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-            try {
-                %(setResult)s ruleTarget(site%(args)s);
-                if (CallSiteOps.GetMatch(site)) {
-                    %(returnResult)s;
-                }
-            } finally {
-                if (CallSiteOps.GetMatch(site)) {
-                    //
-                    // Rule worked. Add it to level 1 cache
-                    //
-                    CallSiteOps.AddRule(@this, rule);
-                    // and then move it to the front of the L2 cache
-                    CallSiteOps.MoveRule(cache, rule);
-                }
+        try {
+            %(setResult)s ruleTarget(site%(args)s);
+            if (CallSiteOps.GetMatch(site)) {
+                %(returnResult)s;
             }
-
-            if ((object)startingTarget == (object)ruleTarget) {
-                // If we've gone megamorphic we can still template off the L2 cache
-                originalRule = rule;
+        } finally {
+            if (CallSiteOps.GetMatch(site)) {
+                //
+                // Rule worked. Add it to level 1 cache
+                //
+                CallSiteOps.AddRule(@this, rule);
+                // and then move it to the front of the L2 cache
+                CallSiteOps.MoveRule(cache, rule, i);
             }
-            
-            // Rule didn't match, try the next one
-            CallSiteOps.ClearMatch(site);
         }
-    }
 
+        if ((object)startingTarget == (object)ruleTarget) {
+            // If we've gone megamorphic we can still template off the L2 cache
+            originalRule = rule;
+        }
+        
+        // Rule didn't match, try the next one
+        CallSiteOps.ClearMatch(site);
+    }
 
     //
     // Miss on Level 0, 1 and 2 caches. Create new rule

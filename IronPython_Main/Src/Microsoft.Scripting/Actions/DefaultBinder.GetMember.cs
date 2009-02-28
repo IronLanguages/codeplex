@@ -262,11 +262,16 @@ namespace Microsoft.Scripting.Actions {
 
             Expression val = tracker.GetValue(getMemInfo.CodeContext, this, type);
 
-            getMemInfo.Body.FinishCondition(
-                val != null ?
-                    val :
-                    MakeError(tracker.GetError(this))
-            );
+            if (val != null) {
+                getMemInfo.Body.FinishCondition(val);
+            } else {
+                ErrorInfo ei = tracker.GetError(this);
+                if (ei.Kind != ErrorInfoKind.Success && getMemInfo.IsNoThrow) {
+                    getMemInfo.Body.FinishCondition(MakeOperationFailed());
+                } else {
+                    getMemInfo.Body.FinishCondition(MakeError(tracker.GetError(this)));
+                }
+            }
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
@@ -296,14 +301,16 @@ namespace Microsoft.Scripting.Actions {
 
         private void MakeMissingMemberRuleForGet(GetMemberInfo getMemInfo, Type type) {
             if (getMemInfo.IsNoThrow) {
-                getMemInfo.Body.FinishCondition(
-                    Ast.Field(null, typeof(OperationFailed).GetField("Value"))
-                );
+                getMemInfo.Body.FinishCondition(MakeOperationFailed());
             } else {
                 getMemInfo.Body.FinishCondition(
                     MakeError(MakeMissingMemberError(type, getMemInfo.Name))
                 );
             }
+        }
+
+        private static MemberExpression MakeOperationFailed() {
+            return Ast.Field(null, typeof(OperationFailed).GetField("Value"));
         }
 
 

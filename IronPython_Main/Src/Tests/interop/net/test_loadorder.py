@@ -18,7 +18,7 @@ from iptest.process_util import *
 
 skiptest("silverlight")
 
-directory = testpath.public_testdir + r"\interop\loadorder"
+directory = testpath.public_testdir + r"\interop\net\loadorder"
 
 count = 0
 for x in nt.listdir(directory):

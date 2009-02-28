@@ -27,7 +27,7 @@ def test_accessibility():
     AreEqual(o.PublicField, 100)
     Assert(not hasattr(o, 'ProtectedField'))
     AssertErrorWithMatch(AttributeError, "'Misc' object has no attribute 'PrivateField'", lambda: o.PrivateField)
-    AreEqual(o.InterfaceField.Flag, 500)
+    AreEqual(o.InterfaceField.PublicStaticField, 500)
     
     o = DerivedMisc()
     o.Set()

@@ -37,9 +37,6 @@ namespace Microsoft.Scripting {
         private const int MaxRules = 10;
         private readonly CallSiteRule<T>[] _rules;
 
-        // want to start replacing with the last
-        private int replaceNext = MaxRules - 1;
-
         internal SmallRuleSet(CallSiteRule<T>[] rules) {
             _rules = rules;
         }
@@ -50,26 +47,22 @@ namespace Microsoft.Scripting {
         }
 
         internal SmallRuleSet<T> AddRule(CallSiteRule<T> newRule) {
-            int count = _rules.Length;
-
-            if (count < MaxRules) {
-                count++;
-                CallSiteRule<T>[] newSet = new CallSiteRule<T>[count];
-                newSet[0] = newRule;
-
-                for (int i = 1; i < count; i++) {
-                    newSet[i] = _rules[i - 1];
-                }
-
-                return new SmallRuleSet<T>(newSet);
+            var temp = _rules.AddFirst(newRule);
+            if (_rules.Length < MaxRules) {
+                return new SmallRuleSet<T>(temp);
             } else {
-                // find replace position using FIFO
-                int i = replaceNext;
-                replaceNext = (i + 1) % MaxRules;
-
-                _rules[i] = newRule;
+                Array.Copy(temp, _rules, MaxRules);
                 return this;
             }
+        }
+
+        // moves rule +2 up.
+        internal void MoveRule(int i) {
+            var rule = _rules[i];
+
+            _rules[i] = _rules[i - 1];
+            _rules[i - 1] = _rules[i - 2];
+            _rules[i - 2] = rule;
         }
 
         internal CallSiteRule<T>[] GetRules() {

@@ -132,6 +132,7 @@ namespace IronPython.Runtime {
         private string _floatFormat, _doubleFormat;
         private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
         private CodeContext _defaultContext;
+        private readonly IEqualityComparer<object> _equalityComparer;
 
         private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
 
@@ -222,6 +223,28 @@ namespace IronPython.Runtime {
 #endif
 
             _collateCulture = _ctypeCulture = _timeCulture = _monetaryCulture = _numericCulture = CultureInfo.InvariantCulture;
+            _equalityComparer = new PythonEqualityComparer(this);
+        }
+
+        public IEqualityComparer<object>/*!*/ EqualityComparer { 
+            get { return _equalityComparer; } 
+        }
+
+        private sealed class PythonEqualityComparer : IEqualityComparer<object> {
+            private readonly PythonContext/*!*/ _context;
+
+            public PythonEqualityComparer(PythonContext/*!*/ context) {
+                Assert.NotNull(context);
+                _context = context;
+            }
+
+            bool IEqualityComparer<object>.Equals(object x, object y) {
+                return PythonOps.EqualRetBool(_context._defaultContext, x, y);
+            }
+
+            int IEqualityComparer<object>.GetHashCode(object obj) {
+                return _context.Hash(obj);
+            }
         }
 
         public override LanguageOptions/*!*/ Options {
