@@ -22,13 +22,14 @@ from IronPythonTest import *
 
 # properties w/ differening access
 def test_base():
+    # TODO: revisit this
     # can't access protected methods directly in Silverlight
     # (need to create a derived class)
-    if not is_silverlight:
-        a = BaseClass()
-        AreEqual(a.Area, 0)
-        a.Area = 16
-        AreEqual(a.Area, 16)
+    #if not is_silverlight:
+    #    a = BaseClass()
+    #    AreEqual(a.Area, 0)
+    #    a.Area = 16
+    #    AreEqual(a.Area, 16)
         
     class WrapBaseClass(BaseClass): pass
     a = WrapBaseClass()

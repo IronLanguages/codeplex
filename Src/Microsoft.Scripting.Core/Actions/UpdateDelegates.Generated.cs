@@ -71,9 +71,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -92,41 +94,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -199,9 +199,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -220,41 +222,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -327,9 +327,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -348,41 +350,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -455,9 +455,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -476,41 +478,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -583,9 +583,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -604,41 +606,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -711,9 +711,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -732,41 +734,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -839,9 +839,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -860,41 +862,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -967,9 +967,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -988,41 +990,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1095,9 +1095,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -1116,41 +1118,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1223,9 +1223,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -1244,41 +1246,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1351,9 +1351,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                         result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return result;
                         }        
 
@@ -1372,41 +1374,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                        result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return result;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                    result = ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return result;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1478,9 +1478,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -1499,41 +1501,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1605,9 +1605,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -1626,41 +1628,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1732,9 +1732,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -1753,41 +1755,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1859,9 +1859,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -1880,41 +1882,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -1986,9 +1986,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2007,41 +2009,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -2113,9 +2113,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2134,41 +2136,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -2240,9 +2240,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2261,41 +2263,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -2367,9 +2367,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2388,41 +2390,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -2494,9 +2494,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2515,41 +2517,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule
@@ -2621,9 +2621,11 @@ namespace Microsoft.Scripting {
                         // if we produce another monomorphic
                         // rule we should try and share code between the two.
                         originalRule = rule;
-                    }else{
+                    }else{                              
                          ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+
                         if (CallSiteOps.GetMatch(site)) {
+                            CallSiteOps.UpdateRules(@this, i);
                             return;
                         }        
 
@@ -2642,41 +2644,39 @@ namespace Microsoft.Scripting {
             //
             var cache = CallSiteOps.GetRuleCache(@this);
 
-            if ((applicable = CallSiteOps.FindApplicableRules(cache)) != null) {
-                for (int i = 0; i < applicable.Length; i++) {
-                    rule = applicable[i];
+            applicable = CallSiteOps.FindApplicableRules(cache);
+            for (int i = 0; i < applicable.Length; i++) {
+                rule = applicable[i];
 
-                    //
-                    // Execute the rule
-                    //
-                    ruleTarget = CallSiteOps.SetTarget(@this, rule);
+                //
+                // Execute the rule
+                //
+                ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-                    try {
-                         ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-                        if (CallSiteOps.GetMatch(site)) {
-                            return;
-                        }
-                    } finally {
-                        if (CallSiteOps.GetMatch(site)) {
-                            //
-                            // Rule worked. Add it to level 1 cache
-                            //
-                            CallSiteOps.AddRule(@this, rule);
-                            // and then move it to the front of the L2 cache
-                            CallSiteOps.MoveRule(cache, rule);
-                        }
+                try {
+                     ruleTarget(site, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                    if (CallSiteOps.GetMatch(site)) {
+                        return;
                     }
-
-                    if ((object)startingTarget == (object)ruleTarget) {
-                        // If we've gone megamorphic we can still template off the L2 cache
-                        originalRule = rule;
+                } finally {
+                    if (CallSiteOps.GetMatch(site)) {
+                        //
+                        // Rule worked. Add it to level 1 cache
+                        //
+                        CallSiteOps.AddRule(@this, rule);
+                        // and then move it to the front of the L2 cache
+                        CallSiteOps.MoveRule(cache, rule, i);
                     }
-
-                    // Rule didn't match, try the next one
-                    CallSiteOps.ClearMatch(site);
                 }
-            }
 
+                if ((object)startingTarget == (object)ruleTarget) {
+                    // If we've gone megamorphic we can still template off the L2 cache
+                    originalRule = rule;
+                }
+
+                // Rule didn't match, try the next one
+                CallSiteOps.ClearMatch(site);
+            }
 
             //
             // Miss on Level 0, 1 and 2 caches. Create new rule

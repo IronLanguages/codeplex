@@ -514,6 +514,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool EqualRetBool(CodeContext/*!*/ context, object x, object y) {
+            // TODO: use context
+
             //TODO just can't seem to shake these fast paths
             if (x is int && y is int) { return ((int)x) == ((int)y); }
             if (x is string && y is string) { return ((string)x).Equals((string)y); }

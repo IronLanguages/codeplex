@@ -215,7 +215,14 @@ def test_complex():
         AreEqual(v, complex(v.__repr__()))
 
 def test_deque():
-    from collections import deque
+    if not is_stdlib():
+        try:
+            import collections
+            Fail("collections should not be a builtin in 2.6")
+        except ImportError, e:
+            pass
+
+    from _collections import deque
 
     # make sure __init__ clears existing contents
     x = deque([6,7,8,9])
@@ -395,7 +402,6 @@ def test_tuple_count():
 @skip("multiple_execute")
 def test_warnings():
     import sys
-    from collections import deque
     from _warnings import (filters, default_action, once_registry, warn, warn_explicit)
     
     stderr_filename = "test__warnings_stderr.txt"
@@ -414,7 +420,7 @@ def test_warnings():
     cleanup()
     
     # helper for test output
-    expected = deque() # expected output (ignoring filename, lineno, and line)
+    expected = [] # expected output (ignoring filename, lineno, and line)
     def expect(warn_type, message):
         for filter in filters:
             if filter[0] == "ignore" and issubclass(warn_type, filter[2]):
@@ -455,13 +461,13 @@ def test_warnings():
     for line in stderr_file:
         if not line.startswith("  "):
             nlines += 1
-    AreEqual(nlines, expected.__len__())
+    AreEqual(nlines, len(expected))
     stderr_file.seek(0)
     # match lines
     for line in stderr_file:
         if line.startswith("  "):
             continue
-        Assert(line.endswith(expected.popleft()))
+        Assert(line.endswith(expected.pop(0)))
     # clean up
     stderr_file.close()
     
@@ -499,11 +505,11 @@ def test_warnings_showwarning():
         pass
 
 def test_builtin_next():
-    from collections import deque
-    
+    from _collections import deque
     values = [1,2,3,4]
+    iterable_list = [list, tuple, set, deque]
     
-    for iterable in [list, tuple, set, deque]:
+    for iterable in iterable_list:
         i = iter(iterable(values))
         AreEqual(next(i), 1)
         AreEqual(next(i), 2)
@@ -696,11 +702,11 @@ def test_log():
 # A small extension of CPython's test_struct.py, which does not make sure that empty
 # dictionaries are interpreted as false
 def test_struct_bool():
-    import struct
+    import _struct
     for prefix in tuple("<>!=")+('',):
         format = str(prefix + '?')
-        packed = struct.pack(format, {})
-        unpacked = struct.unpack(format, packed)
+        packed = _struct.pack(format, {})
+        unpacked = _struct.unpack(format, packed)
 
         AreEqual(len(unpacked), 1)
         AssertFalse(unpacked[0])
