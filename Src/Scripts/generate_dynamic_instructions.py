@@ -113,7 +113,7 @@ def gen_run_method(cw, n, is_void):
     if type_params: types = '<' + ','.join(type_params) + '>'
     else: types = ''
     
-    cw.enter_block('public %s Run%s%d%s(%s)' % (ret_type, name_extra, n,
+    cw.enter_block('internal %s Run%s%d%s(%s)' % (ret_type, name_extra, n,
                                                 types, 
                                                 ','.join(param_names)))
         
@@ -137,7 +137,7 @@ def gen_run_method(cw, n, is_void):
     
     
 def gen_run_methods(cw):
-    cw.write('public const int MaxParameters = %d;' % MAX_TYPES)
+    cw.write('internal const int MaxParameters = %d;' % MAX_TYPES)
     for i in xrange(MAX_TYPES):
         gen_run_method(cw, i, False)
         gen_run_method(cw, i, True)

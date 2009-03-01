@@ -48,10 +48,21 @@
       <!--                            -->
       <!--          Compiler          -->
       <!--                            -->
+      <Compile Include="Compiler\ArrayGlobalAllocator.cs" />
+      <Compile Include="Compiler\DictionaryGlobalAllocator.cs" />
+      <Compile Include="Compiler\FieldBuilderExpression.cs" />
+      <Compile Include="Compiler\GlobalAllocator.cs" />
       <Compile Include="Compiler\OnDiskScriptCode.cs" />
       <Compile Include="Compiler\Parser.cs" />
       <Compile Include="Compiler\PythonCallTargets.cs" />
       <Compile Include="Compiler\PythonCompilerOptions.cs" />
+      <Compile Include="Compiler\PythonGlobal.cs" />
+      <Compile Include="Compiler\PythonGlobalVariableExpression.cs" />
+      <Compile Include="Compiler\PythonScriptCode.cs" />
+      <Compile Include="Compiler\RuntimeScriptCode.cs" />
+      <Compile Include="Compiler\SavableGlobalAllocator.cs" />
+      <Compile Include="Compiler\SavableScriptCode.cs" />
+      <Compile Include="Compiler\StaticGlobalAllocator.cs" />
       <Compile Include="Compiler\Token.cs" />
       <Compile Include="Compiler\Tokenizer.cs" />
       <Compile Include="Compiler\Tokenizer.Generated.cs" />
@@ -153,6 +164,7 @@
       <Compile Include="Runtime\BindingWarnings.cs" />
       <Compile Include="Runtime\Builtin.cs" />
       <Compile Include="Runtime\Builtin.Generated.cs" />
+      <Compile Include="Runtime\BuiltinsDictionaryStorage.cs" />
       <Compile Include="Runtime\ByteArray.cs" />
       <Compile Include="Runtime\Bytes.cs" />
       <Compile Include="Runtime\ClassMethodAttribute.cs" />
@@ -164,6 +176,7 @@
       <Compile Include="Runtime\CompileFlags.cs" />
       <Compile Include="Runtime\ConversionWrappers.cs" />
       <Compile Include="Runtime\Converter.cs" />
+      <Compile Include="Runtime\CustomDictionaryStorage.cs" />
       <Compile Include="Runtime\DefaultContext.cs" />
       <Compile Include="Runtime\Descriptors.cs" />
       <Compile Include="Runtime\DictionaryOps.cs" />
@@ -173,6 +186,7 @@
       <Compile Include="Runtime\FunctionAttributes.cs" />
       <Compile Include="Runtime\FunctionCode.cs" />
       <Compile Include="Runtime\Generator.cs" />
+      <Compile Include="Runtime\GlobalDictionaryStorage.cs" />
       <Compile Include="Runtime\GlobalScopeDictionaryStorage.cs" />
       <Compile Include="Runtime\Importer.cs" />
       <Compile Include="Runtime\Index.cs" />
@@ -207,6 +221,7 @@
       <Compile Include="Runtime\PythonTuple.cs" />
       <Compile Include="Runtime\PythonTypeAttribute.cs" />
       <Compile Include="Runtime\Reversed.cs" />
+      <Compile Include="Runtime\RuntimeVariablesDictionaryStorage.cs" />
       <Compile Include="Runtime\ScopeDictionaryStorage.cs" />
       <Compile Include="Runtime\Set.cs" />
       <Compile Include="Runtime\Slice.cs" />
