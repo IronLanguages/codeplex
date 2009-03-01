@@ -54,8 +54,8 @@ namespace IronPython.Compiler.Ast {
             if (_locals == null && _globals == null) {
                 // exec code
                 call = Ast.Call(
-                    AstGenerator.GetHelperMethod("UnqualifiedExec"), 
-                    AstUtils.CodeContext(), 
+                    AstGenerator.GetHelperMethod("UnqualifiedExec"),
+                    ag.LocalContext, 
                     ag.TransformAsObject(_code)
                 );
             } else {
@@ -63,8 +63,8 @@ namespace IronPython.Compiler.Ast {
                 // We must have globals now (locals is last and may be absent)
                 Debug.Assert(_globals != null);
                 call = Ast.Call(
-                    AstGenerator.GetHelperMethod("QualifiedExec"), 
-                    AstUtils.CodeContext(), 
+                    AstGenerator.GetHelperMethod("QualifiedExec"),
+                    ag.LocalContext, 
                     ag.TransformAsObject(_code), 
                     ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)), 
                     ag.TransformOrConstantNull(_locals, typeof(object))

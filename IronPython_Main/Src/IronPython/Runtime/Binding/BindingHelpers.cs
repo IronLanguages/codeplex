@@ -14,18 +14,20 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+using Microsoft.Linq.Expressions;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 using Ast = Microsoft.Linq.Expressions.Expression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using System.Collections.Generic;
 
 namespace IronPython.Runtime.Binding {
     
@@ -396,7 +398,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         internal static Expression CreateBinderStateExpression() {
-            return AstUtils.CodeContext();
+            return Compiler.Ast.ArrayGlobalAllocator._globalContext;
         }
 
         /// <summary>

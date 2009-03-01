@@ -21,6 +21,7 @@ using Microsoft.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Interpreter {
 
@@ -64,6 +65,21 @@ namespace Microsoft.Scripting.Interpreter {
             return +1;
         }
     }
+
+    public class DupInstruction : Instruction {
+        public static DupInstruction Instance = new DupInstruction();
+
+        private DupInstruction() { }
+
+        public override int ConsumedStack { get { return 0; } }
+        public override int ProducedStack { get { return 1; } }
+
+        public override int Run(StackFrame frame) {
+            frame.Data[frame.StackIndex++] = frame.Peek();
+            return +1;
+        }
+    }
+
     #endregion
 
     #region variable gets and sets
@@ -565,6 +581,37 @@ namespace Microsoft.Scripting.Interpreter {
 
             object ret = _constructor.Invoke(args);
             frame.Push(ret);
+            return +1;
+        }
+    }
+
+    public class StaticFieldAccessInstruction : Instruction {
+        private readonly FieldInfo _field;
+
+        public StaticFieldAccessInstruction(FieldInfo field) {
+            Debug.Assert(field.IsStatic);
+            _field = field;
+        }
+
+        public override int ProducedStack { get { return 1; } }
+        public override int Run(StackFrame frame) {
+            frame.Push(_field.GetValue(null));
+            return +1;
+        }
+    }
+
+    public class FieldAccessInstruction : Instruction {
+        private readonly FieldInfo _field;
+
+        public FieldAccessInstruction(FieldInfo field) {
+            Debug.Assert(!field.IsStatic);
+            _field = field;
+        }
+
+        public override int ConsumedStack { get { return 1; } }
+        public override int ProducedStack { get { return 1; } }
+        public override int Run(StackFrame frame) {
+            frame.Push(_field.GetValue(frame.Pop()));
             return +1;
         }
     }

@@ -356,11 +356,9 @@
       <Compile Include="Interpreter\Interpreter.cs" />
       <Compile Include="Interpreter\LightCompiler.cs" />
       <Compile Include="Interpreter\LightDelegateCreator.cs" />
-      <Compile Include="Interpreter\LightGlobalRewriter.cs" />
       <Compile Include="Interpreter\LightLambda.cs" />
       <Compile Include="Interpreter\LightLambda.Generated.cs" />
       <Compile Include="Interpreter\LightLambdaClosureVisitor.cs" />
-      <Compile Include="Interpreter\LightScriptCode.cs" />
       <Compile Include="Interpreter\StackFrame.cs" />
     </ItemGroup>
     <ItemGroup>
@@ -423,6 +421,7 @@
       <Compile Include="Runtime\ISlice.cs" />
       <Compile Include="Runtime\LanguageBoundTextContentProvider.cs" />
       <Compile Include="Runtime\LanguageContext.cs" />
+      <Compile Include="Runtime\LegacyScriptCode.cs" />
       <Compile Include="Runtime\LocalsDictionary.cs" />
       <Compile Include="Runtime\MetaObjectExtensions.cs" />
       <Compile Include="Runtime\ModuleChangeEventArgs.cs" />

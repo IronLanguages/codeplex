@@ -314,10 +314,12 @@ namespace IronPython.Runtime.Binding {
 
             if (res.GetLimitType() != typeof(bool) && res.GetLimitType() != typeof(void)) {
                 res = new DynamicMetaObject(
-                    Binders.Convert(
-                        state,
+                    Ast.Dynamic(
+                        state.Convert(
+                            typeof(bool),
+                            ConversionResultKind.ExplicitCast
+                        ),
                         typeof(bool),
-                        ConversionResultKind.ExplicitCast,
                         res.Expression
                     ),
                     res.Restrictions
@@ -1799,10 +1801,12 @@ namespace IronPython.Runtime.Binding {
                         // this type defines __index__, otherwise we'd have an ItemBuilder constructing a slice
                         args[i] = MakeIntTest(args[0],
                             new DynamicMetaObject(
-                                Binders.Convert(
-                                    binder,
+                                Ast.Dynamic(
+                                    binder.Convert(
+                                        typeof(int),
+                                        ConversionResultKind.ExplicitCast
+                                    ),
                                     typeof(int),
-                                    ConversionResultKind.ExplicitCast,
                                     Ast.Dynamic(
                                         binder.InvokeNone,
                                         typeof(object),
@@ -1815,7 +1819,7 @@ namespace IronPython.Runtime.Binding {
                                             args[i].Expression
                                         )
                                     )
-                                ),
+                                ),                               
                                 args[i].Restrictions
                             )
                         );

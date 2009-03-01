@@ -743,7 +743,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // Matches ILGen.TryEmitConstant
-        internal static bool CanEmitConstant(object value, Type type) {
+        public static bool CanEmitConstant(object value, Type type) {
             if (value == null || CanEmitILConstant(type)) {
                 return true;
             }
