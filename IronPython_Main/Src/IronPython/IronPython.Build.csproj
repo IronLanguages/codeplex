@@ -367,6 +367,7 @@
       <Compile Include="Runtime\Types\BuiltinFunction.cs" />
       <Compile Include="Runtime\Types\BuiltinFunctionOverloadMapper.cs" />
       <Compile Include="Runtime\Types\BuiltinMethodDescriptor.cs" />
+      <Compile Include="Runtime\Types\CachedNewTypeInfo.cs" />
       <Compile Include="Runtime\Types\ConstructorFunction.cs" />
       <Compile Include="Runtime\Types\CustomAttributeTracker.cs" />
       <Compile Include="Runtime\Types\CustomOldClassDictionary.cs" />
@@ -381,7 +382,6 @@
       <Compile Include="Runtime\Types\IPythonObject.cs" />
       <Compile Include="Runtime\Types\Mro.cs" />
       <Compile Include="Runtime\Types\NameConverter.cs" />
-      <Compile Include="Runtime\Types\NewSubtypeMaker.cs" />
       <Compile Include="Runtime\Types\NewTypeInfo.cs" />
       <Compile Include="Runtime\Types\NewTypeMaker.cs" />
       <Compile Include="Runtime\Types\OldClass.cs" />

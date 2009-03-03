@@ -164,10 +164,10 @@ def test_subclass_with_interesting_slots():
         __slots__ = ['b']
     class C4(object): pass
     
-    #class D1(C1, C2): pass   # bug 364459
+    class D1(C1, C2): pass   # bug 364459
     def f():
         class D2(C2, C3): pass
-    #AssertError(TypeError, f)  # bug 364423
+    AssertError(TypeError, f)  # bug 364423
     
     class D3(C1, C4):
         pass
@@ -192,34 +192,38 @@ def test_subclass_with_interesting_slots():
 
     # bug 364459
     
-    #class D1(C1, C2): pass
-    #class D2(C2, C1): pass
-    #class D3(C1, C3): pass
-    #class D4(C3, C1): pass
+    class D1(C1, C2): pass
+    class D2(C2, C1): pass
+    class D3(C1, C3): pass
+    class D4(C3, C1): pass
     class D5(C2, C3): pass
     class D6(C2, C3):
         __slots__ = 'b'
     
     # bug 367500
-    #class D7(C2, C3):
-        #__slots__ = ['__weakref__', 'c']
+    class D7(C2, C3):
+        __slots__ = ['__weakref__', 'c']
 
     def f():
         class D8(C2, C3): __slots__ = ['__dict__', 'd']
         
     # bug 367500
-    #AssertErrorWithPartialMessage(TypeError, "__dict__ slot disallowed: we already got one", f)
+    AssertErrorWithPartialMessage(TypeError, "__dict__ slot disallowed: we already got one", f)
 
     for D in [
-                #D1, D2, D3, D4,
+                D1, D2, D3, D4,
                 D5, D6,
-                #D7
+                D7
              ]:
         d = D()
         d.not_in_slots = 20
         AreEqual(d.not_in_slots, 20)
 
+    class C1(object):
+        __slots__ = 'a'
+
     class C4(object): __slots__ = [ 'a', '__dict__']
+
     class C5(object): __slots__ = [ '__weakref__', 'c']
     
     def f1():
@@ -264,7 +268,6 @@ def test_old_style():  # ensure no impact on old-style
     x.b = 10
     AreEqual(10, x.b)
 
-@disabled('bug 365503')
 def test_slots_choices():
     # guess: all existing attributes should never be overwriten by __slots__ members
     
@@ -316,7 +319,6 @@ def test_name_mangling():
     x._C__a = 4
     AreEqual([x._C__a, x._C__b_, x.__c__], [4, -2, -3])
 
-@disabled("bug 367641, 367663")
 def test_from_sbs_newtype_test():
     class C(float): __slots__ = 'a'
     class D(object): pass
