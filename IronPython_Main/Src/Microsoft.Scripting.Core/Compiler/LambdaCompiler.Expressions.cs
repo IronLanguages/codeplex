@@ -103,6 +103,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 case ExpressionType.Throw:
                     EmitThrow((UnaryExpression)node, CompilationFlags.EmitAsVoidType);
                     break;
+                case ExpressionType.Goto:
+                    EmitGotoExpression(node, UpdateEmitAsTypeFlag(flags, CompilationFlags.EmitAsVoidType));
+                    break;
                 case ExpressionType.Constant:
                 case ExpressionType.Default:
                 case ExpressionType.Parameter:

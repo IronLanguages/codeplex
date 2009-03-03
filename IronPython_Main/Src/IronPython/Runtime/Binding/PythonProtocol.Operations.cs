@@ -115,6 +115,9 @@ namespace IronPython.Runtime.Binding {
                 case ExpressionType.IsFalse:
                     res = MakeUnaryNotOperation(operation, arg);
                     break;
+                case ExpressionType.IsTrue:
+                    res = PythonProtocol.ConvertToBool(operation, arg);
+                    break;
                 default:
                     res = TypeError(operation, "unknown operation: " + operation.ToString(), args);
                     break;
