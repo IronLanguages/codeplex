@@ -414,5 +414,53 @@ def test_compiled_code():
     finally:
         System.IO.File.Move('old_test_class.py', testpath.public_testdir + '\\test_class.py')
         
+
+def test_cached_types():
+    import clr
+    from System import IComparable, IFormattable, ICloneable
+    import IronPythonTest    
     
+    # basic sanity test that we can compile...
+    clr.CompileSubclassTypes('test', (object, ))
+    clr.CompileSubclassTypes('test', object)
+    clr.CompileSubclassTypes('test', object, str, int, long, float, complex)
+    clr.CompileSubclassTypes('test', (object, IComparable[()]))
+    clr.CompileSubclassTypes('test', (object, IComparable[()]), (str, IComparable[()]))
+    
+    # build an unlikely existing type and make sure construction gives us
+    # back the correct type.
+    clr.CompileSubclassTypes('cached_type_dll', (object, IComparable[()], IFormattable, ICloneable))
+    asm = System.Reflection.Assembly.Load('cached_type_dll')
+    clr.AddReference(asm)
+    
+    class x(object, IComparable[()], IFormattable, ICloneable):
+        pass
+        
+    a = x()
+    AreEqual(clr.GetClrType(x).Assembly, asm)
+
+    # collect all types that are available in IronPythonTest and
+    # pre-gen them, then run test_inheritance to make sure it all works.
+    types = []
+    queue = [IronPythonTest]
+    while queue:
+        cur = queue.pop()
+        for name in dir(cur):
+            attr = getattr(cur, name)
+            if type(attr) is type:
+                clrType = clr.GetClrType(attr)
+                if clrType.IsEnum or clrType.IsSealed or clrType.IsValueType or clrType.ContainsGenericParameters:
+                    continue
+                types.append(attr)
+            elif type(attr) == type(IronPythonTest):
+                queue.append(attr)
+                
+    clr.CompileSubclassTypes('InheritanceTypes', *types)
+    clr.AddReference('InheritanceTypes')
+    import test_inheritance
+
+    # verify that GetSubclassedTypes round trips with clr.CompileSubclassTypes
+    clr.CompileSubclassTypes('finaltest', *clr.GetSubclassedTypes())
+    clr.AddReference('finaltest')
+
 run_test(__name__)

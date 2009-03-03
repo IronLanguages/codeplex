@@ -61,7 +61,7 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// Gets the arguments that the delegate is applied to.
+        /// Gets the arguments that the delegate or lambda expression is applied to.
         /// </summary>
         public ReadOnlyCollection<Expression> Arguments {
             get { return ReturnReadOnly(ref _arguments); }
@@ -99,10 +99,22 @@ namespace Microsoft.Linq.Expressions {
 
     public partial class Expression {
 
-        ///<summary>Creates an <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" />.</summary>
-        ///<returns>An <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.Invoke" /> and the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Expression" /> and <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Arguments" /> properties set to the specified values.</returns>
-        ///<param name="expression">An <see cref="T:Microsoft.Linq.Expressions.Expression" /> to set the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Expression" /> equal to.</param>
-        ///<param name="arguments">An array of <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects to use to populate the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Arguments" /> collection.</param>
+        ///<summary>
+        ///Creates an <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that 
+        ///applies a delegate or lambda expression to a list of argument expressions.
+        ///</summary>
+        ///<returns>
+        ///An <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that 
+        ///applies the specified delegate or lambda expression to the provided arguments.
+        ///</returns>
+        ///<param name="expression">
+        ///An <see cref="T:Microsoft.Linq.Expressions.Expression" /> that represents the delegate
+        ///or lambda expression to be applied.
+        ///</param>
+        ///<param name="arguments">
+        ///An array of <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects
+        ///that represent the arguments that the delegate or lambda expression is applied to.
+        ///</param>
         ///<exception cref="T:System.ArgumentNullException">
         ///<paramref name="expression" /> is null.</exception>
         ///<exception cref="T:System.ArgumentException">
@@ -113,10 +125,22 @@ namespace Microsoft.Linq.Expressions {
             return Invoke(expression, (IEnumerable<Expression>)arguments);
         }
 
-        ///<summary>Creates an <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" />.</summary>
-        ///<returns>An <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.Invoke" /> and the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Expression" /> and <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Arguments" /> properties set to the specified values.</returns>
-        ///<param name="expression">An <see cref="T:Microsoft.Linq.Expressions.Expression" /> to set the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Expression" /> equal to.</param>
-        ///<param name="arguments">An <see cref="T:System.Collections.Generic.IEnumerable`1" /> that contains <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects to use to populate the <see cref="P:Microsoft.Linq.Expressions.InvocationExpression.Arguments" /> collection.</param>
+        ///<summary>
+        ///Creates an <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that 
+        ///applies a delegate or lambda expression to a list of argument expressions.
+        ///</summary>
+        ///<returns>
+        ///An <see cref="T:Microsoft.Linq.Expressions.InvocationExpression" /> that 
+        ///applies the specified delegate or lambda expression to the provided arguments.
+        ///</returns>
+        ///<param name="expression">
+        ///An <see cref="T:Microsoft.Linq.Expressions.Expression" /> that represents the delegate
+        ///or lambda expression to be applied.
+        ///</param>
+        ///<param name="arguments">
+        ///An <see cref="T:System.Collections.Generic.IEnumerable`1" /> of <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects
+        ///that represent the arguments that the delegate or lambda expression is applied to.
+        ///</param>
         ///<exception cref="T:System.ArgumentNullException">
         ///<paramref name="expression" /> is null.</exception>
         ///<exception cref="T:System.ArgumentException">
