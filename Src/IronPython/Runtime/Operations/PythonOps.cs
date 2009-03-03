@@ -3318,9 +3318,6 @@ namespace IronPython.Runtime.Operations {
 
             var pythonEngine = Python.CreateEngine();
             
-            pythonEngine.Runtime.LoadAssembly(typeof(string).Assembly);
-            pythonEngine.Runtime.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
-
             var pythonContext = (PythonContext)HostingHelpers.GetLanguageContext(pythonEngine);
 
             foreach (var scriptCode in ScriptCode.LoadFromAssembly(pythonContext.DomainManager, precompiled)) {
