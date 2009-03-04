@@ -98,8 +98,12 @@ namespace Microsoft.Scripting {
 
         public static ComEventSink FromRuntimeCallableWrapper(object rcw, Guid sourceIid, bool createIfNotFound) {
             List<ComEventSink> comEventSinks = ComEventSinksContainer.FromRuntimeCallableWrapper(rcw, createIfNotFound);
-            ComEventSink comEventSink = null;
 
+            if (comEventSinks == null) {
+                return null;
+            }
+
+            ComEventSink comEventSink = null;
             lock (comEventSinks) {
 
                 foreach (ComEventSink sink in comEventSinks) {
@@ -153,8 +157,9 @@ namespace Microsoft.Scripting {
             lock (_lockObject) {
 
                 ComEventSinkMethod sinkEntry = FindSinkMethod(name);
-                if (sinkEntry == null)
-                    throw Error.RemovingUnregisteredHandler();
+                if (sinkEntry == null){
+                    return;
+                }
 
                 // Remove the delegate from multicast delegate chain.
                 // We will need to find the delegate that corresponds
