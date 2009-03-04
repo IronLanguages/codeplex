@@ -714,7 +714,10 @@ namespace Microsoft.Linq.Expressions {
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MethodCallExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.Call" />, the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Object" /> property equal to <paramref name="instance" />, <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Method" /> set to the <see cref="T:System.Reflection.MethodInfo" /> that represents the specified instance method, and <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Arguments" /> set to the specified arguments.</returns>
         ///<param name="instance">An <see cref="T:Microsoft.Linq.Expressions.Expression" /> whose <see cref="P:Microsoft.Linq.Expressions.Expression.Type" /> property value will be searched for a specific method.</param>
         ///<param name="methodName">The name of the method.</param>
-        ///<param name="typeArguments">An array of <see cref="T:System.Type" /> objects that specify the type parameters of the method.</param>
+        ///<param name="typeArguments">
+        ///An array of <see cref="T:System.Type" /> objects that specify the type parameters of the generic method.
+        ///This argument should be null when <paramref name="methodName" /> specifies a non-generic method.
+        ///</param>
         ///<param name="arguments">An array of <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects that represents the arguments to the method.</param>
         ///<exception cref="T:System.ArgumentNullException">
         ///<paramref name="instance" /> or <paramref name="methodName" /> is null.</exception>
@@ -734,7 +737,10 @@ namespace Microsoft.Linq.Expressions {
         ///<returns>A <see cref="T:Microsoft.Linq.Expressions.MethodCallExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.Call" />, the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Method" /> property set to the <see cref="T:System.Reflection.MethodInfo" /> that represents the specified static (Shared in Visual Basic) method, and the <see cref="P:Microsoft.Linq.Expressions.MethodCallExpression.Arguments" /> property set to the specified arguments.</returns>
         ///<param name="type">The <see cref="T:System.Type" /> that specifies the type that contains the specified static (Shared in Visual Basic) method.</param>
         ///<param name="methodName">The name of the method.</param>
-        ///<param name="typeArguments">An array of <see cref="T:System.Type" /> objects that specify the type parameters of the method.</param>
+        ///<param name="typeArguments">
+        ///An array of <see cref="T:System.Type" /> objects that specify the type parameters of the generic method.
+        ///This argument should be null when <paramref name="methodName" /> specifies a non-generic method.
+        ///</param>
         ///<param name="arguments">An array of <see cref="T:Microsoft.Linq.Expressions.Expression" /> objects that represent the arguments to the method.</param>
         ///<exception cref="T:System.ArgumentNullException">
         ///<paramref name="type" /> or <paramref name="methodName" /> is null.</exception>
@@ -888,8 +894,13 @@ namespace Microsoft.Linq.Expressions {
             var methodInfos = members.Map(t => (MethodInfo)t);
             int count = FindBestMethod(methodInfos, typeArgs, args, out method);
 
-            if (count == 0)
-                throw Error.MethodWithArgsDoesNotExistOnType(methodName, type);
+            if (count == 0) {
+                if (typeArgs != null && typeArgs.Length > 0) {
+                    throw Error.GenericMethodWithArgsDoesNotExistOnType(methodName, type);
+                } else {
+                    throw Error.MethodWithArgsDoesNotExistOnType(methodName, type);
+                }
+            }
             if (count > 1)
                 throw Error.MethodWithMoreThanOneMatch(methodName, type);
             return method;
