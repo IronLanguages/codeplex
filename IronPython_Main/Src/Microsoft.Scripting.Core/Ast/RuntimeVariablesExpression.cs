@@ -25,8 +25,8 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// An expression that provides runtime read/write access to variables.
-    /// Needed to implement "eval" in dynamic languages.
-    /// Evaluates to an instance of ILocalVariables at run time.
+    /// Needed to implement "eval" in some dynamic languages.
+    /// Evaluates to an instance of <see cref="IList{IStrongBox}" /> when executed.
     /// </summary>
     public sealed class RuntimeVariablesExpression : Expression {
         private readonly ReadOnlyCollection<ParameterExpression> _variables;
