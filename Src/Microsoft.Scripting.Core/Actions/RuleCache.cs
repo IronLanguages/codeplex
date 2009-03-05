@@ -15,13 +15,12 @@
 using System; using Microsoft;
 
 
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Utils;
-using System.Threading;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -29,6 +28,7 @@ namespace Microsoft.Scripting {
     /// Represents a cache of runtime binding rules.
     /// </summary>
     /// <typeparam name="T">The delegate type.</typeparam>
+    [EditorBrowsable(EditorBrowsableState.Never), DebuggerStepThrough]
     public class RuleCache<T> where T : class {
         private CallSiteRule<T>[] _rules = new CallSiteRule<T>[0];
         private readonly Object cacheLock = new Object();
