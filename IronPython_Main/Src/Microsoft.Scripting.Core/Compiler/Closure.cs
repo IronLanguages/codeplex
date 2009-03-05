@@ -15,12 +15,16 @@
 using System; using Microsoft;
 
 
+using System.ComponentModel;
+using System.Diagnostics;
+
 namespace Microsoft.Runtime.CompilerServices {
 
     /// <summary>
     /// This API supports the .NET Framework infrastructure and is not intended to be used directly from your code.
     /// Represents the runtime state of a dynamically generated method.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never), DebuggerStepThrough]
     public sealed class Closure {
         /// <summary>
         /// Represents the non-trivial constants and locally executable expressions that are referenced by a dynamically generated method. 

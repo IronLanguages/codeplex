@@ -16,6 +16,8 @@ using System; using Microsoft;
 
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using System.Globalization;
@@ -28,6 +30,7 @@ namespace Microsoft.Runtime.CompilerServices {
     /// Represents a runtime binding at a call site.
     /// </summary>
     /// <typeparam name="T">The delegate type.</typeparam>
+    [EditorBrowsable(EditorBrowsableState.Never), DebuggerStepThrough]
     public sealed class CallSiteRule<T> where T : class {
 
         internal static readonly ReadOnlyCollection<ParameterExpression> Parameters;
