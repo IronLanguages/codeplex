@@ -207,6 +207,7 @@
       <Compile Include="Ast\MethodCallExpression.cs" />
       <Compile Include="Ast\NewArrayExpression.cs" />
       <Compile Include="Ast\NewExpression.cs" />
+      <Compile Include="Ast\SkipInterpretExpression.cs" />
       <Compile Include="Ast\SourceFileInformation.cs" />
       <Compile Include="Ast\SymbolConstantExpression.cs" />
       <Compile Include="Ast\ThrowStatement.cs" />
