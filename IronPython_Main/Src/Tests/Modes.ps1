@@ -376,7 +376,7 @@ function saveassemblies-helper
 	
 	#####
 			
-	hello-helper $dlrexe "-X:SaveAssemblies" $args[1..$args.Length]
+	hello-helper $dlrexe "-X:NoAdaptiveCompilation" "-X:SaveAssemblies" $args[1..$args.Length]
 	
 	expect-files(("Snippets.scripting.dll"))
 	not-expect-files(("Snippets.scripting.pdb"))

@@ -261,7 +261,7 @@ def test_catch_MyException():
 
 Line263 = 263
 @skip("silverlight")
-def test_cp11923():
+def test_cp11923_first():
     try:
         _t_test = testpath.public_testdir + "\\cp11923.py"
         write_to_file(_t_test, """def f():
@@ -273,7 +273,7 @@ def test_cp11923():
             try:
                 cp11923.f()
             except:
-                assert_traceback([(Line263 + 11, 69, 'test_traceback.py', 'test_cp11923'), (3, 22, get_full_dir_name(_t_test).lower(), 'f')])
+                assert_traceback([(Line263 + 11, 69, 'test_traceback.py', 'test_cp11923_first'), (3, 22, get_full_dir_name(_t_test).lower(), 'f')])
             reload(cp11923)
         
     finally:
@@ -284,7 +284,7 @@ def test_cp11923():
 ##TESTS BEYOND THIS POINT SHOULD NOT DEPEND ON LINE NUMBERS IN THIS FILE#######
 ###############################################################################
 @skip("silverlight")
-def test_cp11923():
+def test_cp11923_second():
     import nt
     import sys
     old_path = [x for x in sys.path]
