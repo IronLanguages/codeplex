@@ -57,9 +57,13 @@ EXCLUDE_LIST = ["test_fuzz_parser.py"]
 EXCLUDE_LIST.append("test_math.py")
 
 # doesn't run on CPy 2.5
-EXCLUDE_LIST.append("test_python26.py")
 EXCLUDE_LIST.append("test_bytes.py")
 EXCLUDE_LIST.append("test_strformat.py")
+EXCLUDE_LIST.append("test_formatting.py")
+EXCLUDE_LIST.append("test_cPickle.py")
+EXCLUDE_LIST.append("test_array.py")
+EXCLUDE_LIST.append("test_slice.py")
+EXCLUDE_LIST.append("test_complex.py")
 
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
 #These WILL be run.

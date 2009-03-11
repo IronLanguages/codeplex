@@ -1443,7 +1443,11 @@ def test_underlying_type():
         pass
 
 def test_a_override_patching():
-    clr.AddReference('Microsoft.Scripting.Core')
+    if System.Environment.Version.Major >=4:
+        clr.AddReference("System.Core")
+    else:
+        clr.AddReference("Microsoft.Scripting.Core")
+    
     # derive from object
     class x(object):
         pass

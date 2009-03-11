@@ -67,8 +67,8 @@ def test_repr():
     
 
 def test_infinite():
-    AreEqual(repr(1.0e340j),  '1.#INFj')
-    AreEqual(repr(-1.0e340j),'-1.#INFj')
+    AreEqual(repr(1.0e340j),  'inf*j')
+    AreEqual(repr(-1.0e340j),'-inf*j')
 
 # Test must sort alphabetically ahead of other uses of the deprecated functions
 def test_deprecations():

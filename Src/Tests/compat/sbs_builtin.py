@@ -193,7 +193,7 @@ class test_builtin(object):
                         printwith('same', pow(a, x, y))
        
     def test_file_mode(self):
-        disabled_modes = []
+        disabled_modes = ['Ut+', 'rUt+', 'Urt+']
                           
         arw = ['', 'a', 'r', 'w', 'U', 'rU', 'Ur', 'wU', 'Uw', 'Ua', 'aU']
         bt = ['', 'b', 't']

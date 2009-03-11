@@ -438,7 +438,7 @@ public static object __new__(PythonType cls, object value) {
 }"""
 
 def gen_header(cw, ty):
-    if ty.name not in ['Int32', 'Double', 'BigInteger', 'Complex64']:
+    if ty.name not in ['Int32', 'Double', 'Single', 'BigInteger', 'Complex64']:
         cw.write(type_header)
             
 def gen_type(cw, ty):

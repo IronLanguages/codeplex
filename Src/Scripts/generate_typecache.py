@@ -63,6 +63,7 @@ data = [
     TypeData('Method'),
     TypeData('Enumerate'),
     TypeData('Int32', 'intType'),
+    TypeData('Single', 'singleType'),
     TypeData('Double', 'doubleType'),
     TypeData('BigInteger'),
     TypeData('Complex64'),

@@ -697,7 +697,20 @@ def test_log():
     
     for one in ones:
         for n in nonzeros:
-            AssertError(ZeroDivisionError, math.log, n, 1)
+            AssertError(ZeroDivisionError, math.log, n, one)
+
+def test_trunc():
+    import sys, math
+    
+    test_values = [-1, 0, 1, -1L, 0L, 1L, -1.0, 0.0, 1.0, sys.maxint + 0.5,
+                   -sys.maxint - 0.5, 9876543210, -9876543210, -1e100, 1e100]
+    
+    for value in test_values:
+        AreEqual(long(value), math.trunc(value))
+        if type(value) == float:
+            AreEqual(type(math.trunc(value)) == int, -sys.maxint - 1 <= value <= sys.maxint)
+        else:
+            AreEqual(type(value), type(math.trunc(value)))
 
 # A small extension of CPython's test_struct.py, which does not make sure that empty
 # dictionaries are interpreted as false
