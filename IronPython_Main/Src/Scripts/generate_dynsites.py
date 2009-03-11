@@ -204,7 +204,7 @@ def gen_update_targets(cw):
         replace['matchmakerArgs'] = mmArgList(n)
         replace['funcType'] = 'Func<CallSite, %s>' % gsig(n)
         replace['methodDeclaration'] = 'TRet UpdateAndExecute%d<%s>(CallSite site%s)' % (n, gsig(n), gparms(n))
-        replace['matchMakerDeclaration'] = 'TRet Fallback%d<%s>(CallSite site%s)' % (n, gsig(n), gparms(n))
+        replace['matchMakerDeclaration'] = 'TRet NoMatch%d<%s>(CallSite site%s)' % (n, gsig(n), gparms(n))
         replace['fallbackMethod'] = 'Fallback%d' % (n, )
         replace['typeArgs'] = gsig(n)
         cw.write(updateAndExecute, **replace)
@@ -220,7 +220,7 @@ def gen_update_targets(cw):
         replace['matchmakerArgs'] = mmArgList(n)
         replace['funcType'] = 'Action<CallSite, %s>' % gsig_noret(n)
         replace['methodDeclaration'] = 'void UpdateAndExecuteVoid%d<%s>(CallSite site%s)' % (n, gsig_noret(n), gparms(n))
-        replace['matchMakerDeclaration'] = 'void FallbackVoid%d<%s>(CallSite site%s)' % (n, gsig_noret(n), gparms(n))
+        replace['matchMakerDeclaration'] = 'void NoMatchVoid%d<%s>(CallSite site%s)' % (n, gsig_noret(n), gparms(n))
         replace['fallbackMethod'] = 'FallbackVoid%d' % (n, )
         replace['typeArgs'] = gsig_noret(n)
         cw.write(updateAndExecute, **replace)
@@ -237,16 +237,14 @@ internal static %(methodDeclaration)s {
     // Declare the locals here upfront. It actually saves JIT stack space.
     //
     var @this = (CallSite<%(funcType)s>)site;
-    CallSiteRule<%(funcType)s>[] applicable;
-    CallSiteRule<%(funcType)s> rule;
-    %(funcType)s ruleTarget, startingTarget = @this.Target;
+    %(funcType)s[] applicable;
+    %(funcType)s rule, originalRule = @this.Target;
     %(declareResult)s
-    CallSiteRule<%(funcType)s> originalRule = null;
 
     //
     // Create matchmaker and its site. We'll need them regardless.
     //
-    site = CallSiteOps.CreateMatchmaker();
+    site = CallSiteOps.CreateMatchmaker(@this);
 
     //
     // Level 1 cache lookup
@@ -258,14 +256,11 @@ internal static %(methodDeclaration)s {
             //
             // Execute the rule
             //
-            ruleTarget = CallSiteOps.SetTarget(@this, rule);
 
-            if ((object)startingTarget == (object)ruleTarget) {
-                // if we produce another monomorphic
-                // rule we should try and share code between the two.
-                originalRule = rule;
-            }else{                              
-                %(setResult)s ruleTarget(site%(args)s);
+            // if we've already tried it skip it...
+            if ((object)rule != (object)originalRule) {
+                @this.Target = rule;
+                %(setResult)s rule(site%(args)s);
 
                 if (CallSiteOps.GetMatch(site)) {
                     CallSiteOps.UpdateRules(@this, i);
@@ -274,7 +269,7 @@ internal static %(methodDeclaration)s {
                         
                 // Rule didn't match, try the next one
                 CallSiteOps.ClearMatch(site);            
-            }                
+            }
         }
     }
 
@@ -285,19 +280,20 @@ internal static %(methodDeclaration)s {
     //
     // Any applicable rules in level 2 cache?
     //
+    
     var cache = CallSiteOps.GetRuleCache(@this);
 
-    applicable = CallSiteOps.FindApplicableRules(cache);
-    for (int i = 0; i < applicable.Length; i++) {
-        rule = applicable[i];
+    var cachedRules = cache.GetRules();
+    for (int i = 0; i < cachedRules.Length; i++) {
+        rule = cachedRules[i].Target;
 
         //
         // Execute the rule
         //
-        ruleTarget = CallSiteOps.SetTarget(@this, rule);
+        @this.Target = rule;
 
         try {
-            %(setResult)s ruleTarget(site%(args)s);
+            %(setResult)s rule(site%(args)s);
             if (CallSiteOps.GetMatch(site)) {
                 %(returnResult)s;
             }
@@ -310,11 +306,6 @@ internal static %(methodDeclaration)s {
                 // and then move it to the front of the L2 cache
                 CallSiteOps.MoveRule(cache, rule, i);
             }
-        }
-
-        if ((object)startingTarget == (object)ruleTarget) {
-            // If we've gone megamorphic we can still template off the L2 cache
-            originalRule = rule;
         }
         
         // Rule didn't match, try the next one
@@ -329,16 +320,15 @@ internal static %(methodDeclaration)s {
     var args = new object[] { %(argelems)s };
    
     for (; ; ) {
-        rule = CallSiteOps.CreateNewRule(cache, @this, rule, originalRule, args);
+        @this.Target = originalRule;
+        rule = @this.Target = @this.Binder.BindDelegate(@this, args);
 
         //
         // Execute the rule on the matchmaker site
         //
 
-        ruleTarget = CallSiteOps.SetTarget(@this, rule);
-
         try {
-            %(setResult)s ruleTarget(site%(args)s);
+            %(setResult)s rule(site%(args)s);
             if (CallSiteOps.GetMatch(site)) {
                 %(returnResult)s;
             }
@@ -354,6 +344,13 @@ internal static %(methodDeclaration)s {
         // Rule we got back didn't work, try another one
         CallSiteOps.ClearMatch(site);
     }
+}
+
+[Obsolete("pregenerated CallSite<T>.Update delegate", true)]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
+internal static %(matchMakerDeclaration)s {
+    site._match = false;
+    %(returnDefault)s;
 }
 
 '''

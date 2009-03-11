@@ -1442,6 +1442,7 @@ def test_underlying_type():
         #gen.SaveAssembly()
         pass
 
+@disabled("PEVerify failure with generics")
 def test_a_override_patching():
     if System.Environment.Version.Major >=4:
         clr.AddReference("System.Core")

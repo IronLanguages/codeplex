@@ -43,7 +43,7 @@ namespace Microsoft.Scripting {
 
         // move the rule +2 up.
         // this is called on every successful rule.
-        internal void MoveRule(CallSiteRule<T> rule, int i) {
+        internal void MoveRule(T rule, int i) {
             // limit search to MaxSearch elements. 
             // Rule should not get too far unless it has been already moved up.
             const int MaxSearch = 8;
@@ -54,13 +54,21 @@ namespace Microsoft.Scripting {
 
             // need a lock to make sure we are moving the right rule and not loosing any.
             lock (cacheLock) {
-                i = Array.IndexOf(_rules, rule, i, count);
-                if (i < 0) {
+                int oldIndex = -1;
+                int max = Math.Min(_rules.Length, i + count);
+                for (int index = i; index < max; index++) {
+                    if (_rules[index].Target == rule) {
+                        oldIndex = index;
+                        break;
+                    }
+                }
+                if (oldIndex < 0) {
                     return;
                 }
-                _rules[i] = _rules[i - 1];
-                _rules[i - 1] = _rules[i - 2];
-                _rules[i - 2] = rule;
+                CallSiteRule<T> oldRule = _rules[oldIndex];
+                _rules[oldIndex] = _rules[oldIndex - 1];
+                _rules[oldIndex - 1] = _rules[oldIndex - 2];
+                _rules[oldIndex - 2] = oldRule;
             }
         }
 
