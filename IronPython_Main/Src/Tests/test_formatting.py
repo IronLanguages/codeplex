@@ -33,8 +33,8 @@ AreEqual(str(0.000123456789012), "0.000123456789012")
 
 # 12 significant digits near the decimal point, followed by 0s, or preceeded more than 3 0s
 
-AreEqual(str(1234567890120.00), "1.23456789012e+012")
-AreEqual(str(0.0000123456789012), "1.23456789012e-005")
+AreEqual(str(1234567890120.00), "1.23456789012e+12")
+AreEqual(str(0.0000123456789012), "1.23456789012e-05")
 
 # More than 12 significant digits near the decimal point, with rounding down
 
@@ -55,32 +55,29 @@ AreEqual(str(1.234567890126), "1.23456789013")
 # Signficiant digits away from the decimal point
 
 AreEqual(str(100000000000.0), "100000000000.0")
-AreEqual(str(1000000000000.0), "1e+012")
+AreEqual(str(1000000000000.0), "1e+12")
 AreEqual(str(0.0001), "0.0001")
-AreEqual(str(0.00001), "1e-005")
+AreEqual(str(0.00001), "1e-05")
 
 # Near the ends of the number line
 
 # System.Double.MaxValue
-AreEqual(str(1.79769313486232e+308), "1.#INF")
+AreEqual(str(1.79769313486232e+308), "inf")
 AreEqual(str(1.79769313486231e+308), "1.79769313486e+308")
 # System.Double.MinValue
-AreEqual(str(-1.79769313486232e+308), "-1.#INF")
+AreEqual(str(-1.79769313486232e+308), "-inf")
 AreEqual(str(-1.79769313486231e+308), "-1.79769313486e+308")
 # System.Double.Epsilon
-if (is_cli or is_silverlight):
-    AreEqual(str(4.94065645841247e-324), "4.94065645841e-324")
-else:
-    AreEqual(str(4.94065645841247e-324), "0.0")
+AreEqual(str(4.94065645841247e-324), "4.94065645841e-324")
 # NaN
-AreEqual(str((1.79769313486232e+308 * 2.0) * 0.0), "-1.#IND")
+AreEqual(str((1.79769313486232e+308 * 2.0) * 0.0), "nan")
 
 AreEqual(str(2.0), "2.0")
 AreEqual(str(.0), "0.0")
-AreEqual(str(-.0), "0.0")
+AreEqual(str(-.0), "-0.0")
 # verify small strings display all precision by default
 x = 123.456E-19 * 2.0
-AreEqual(str(x), "2.46912e-017")
+AreEqual(str(x), "2.46912e-17")
 
 ######################################################################################
 
@@ -110,9 +107,9 @@ values = [
           # Signficiant digits away from the decimal point
 
           (100000.0, "100000"),
-          (1000000.0, "1e+006"),
+          (1000000.0, "1e+06"),
           (0.0001, "0.0001"),
-          (0.00001, "1e-005")]
+          (0.00001, "1e-05")]
 
 for v in values:
     AreEqual("%g" % v[0], v[1])
@@ -135,8 +132,8 @@ if is_cli or is_silverlight:
     AreEqual(str(f), "1.23457")
     AreEqual("%g" % f, "1.23457")
     f = IronPythonTest.DoubleToFloat.ToFloat(1234567.8)
-    AreEqual(str(f), "1.23457e+006")
-    AreEqual("%g" % f, "1.23457e+006")
+    AreEqual(str(f), "1.23457e+06")
+    AreEqual("%g" % f, "1.23457e+06")
 
 ######################################################################################
 
@@ -198,12 +195,12 @@ AreEqual('%+u' % 5, '+5')
 AreEqual('%05u' % 3, '00003')
 AreEqual('% u' % 19, ' 19')
 AreEqual('%*u' % (5,10), '   10')
-AreEqual('%e' % 1000000, '1.000000e+006')
-AreEqual('%E' % 1000000, '1.000000E+006')
+AreEqual('%e' % 1000000, '1.000000e+06')
+AreEqual('%E' % 1000000, '1.000000E+06')
 
-AreEqual('%.2e' % 1000000, '1.00e+006')
-AreEqual('%.2E' % 1000000, '1.00E+006')
-AreEqual('%.2g' % 1000000, '1e+006')
+AreEqual('%.2e' % 1000000, '1.00e+06')
+AreEqual('%.2E' % 1000000, '1.00E+06')
+AreEqual('%.2g' % 1000000, '1e+06')
 
 AreEqual('%G' % 100, '100')
 

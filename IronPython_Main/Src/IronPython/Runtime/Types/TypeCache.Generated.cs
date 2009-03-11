@@ -47,6 +47,7 @@ namespace IronPython.Runtime.Types {
         private static PythonType method;
         private static PythonType enumerate;
         private static PythonType intType;
+        private static PythonType singleType;
         private static PythonType doubleType;
         private static PythonType biginteger;
         private static PythonType complex64;
@@ -189,6 +190,13 @@ namespace IronPython.Runtime.Types {
             get {
                 if (intType == null) intType = DynamicHelpers.GetPythonTypeFromType(typeof(Int32));
                 return intType;
+            }
+        }
+
+        public static PythonType Single {
+            get {
+                if (singleType == null) singleType = DynamicHelpers.GetPythonTypeFromType(typeof(Single));
+                return singleType;
             }
         }
 

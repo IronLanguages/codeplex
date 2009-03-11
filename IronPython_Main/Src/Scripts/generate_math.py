@@ -28,19 +28,20 @@ class Func:
         args = ["v%d" % i for i in range(self.args)]
         cw.enter_block("public static double %s(%s)" %
                        (self.name, ", ".join(params)))
-        cw.write("return Check(Math.%s(%s));" %
-                 (self.cname, ", ".join(args)))
+        cw.write("return Check(%s, Math.%s(%s));" %
+                 (", ".join(args), self.cname, ", ".join(args)))
         cw.exit_block()
         
 #Func('fmod', 2), Func('modf'),
 #Func('frexp'),Func('hypot', 2), Func('ldexp', 2),
+#Func('atan2', 2), Func('pow', 2)
 
 funcs = [
-    Func('acos'), Func('asin'), Func('atan'), Func('atan2', 2),
-    Func('ceil', 1, 'Ceiling'), Func('cos'), Func('cosh'), Func('exp'),
-    Func('fabs', 1, 'Abs'), Func('floor'),
-    Func('pow', 2), Func('sin'), Func('sinh'),
-    Func('sqrt'), Func('tan'), Func('tanh'),
+    Func('cos'), Func('sin'), Func('tan'),
+    Func('cosh'), Func('sinh'), Func('tanh'),
+    Func('acos'), Func('asin'), Func('atan'),
+    Func('floor'), Func('ceil', 1, 'Ceiling'), Func('fabs', 1, 'Abs'),
+    Func('sqrt'), Func('exp'),
 ]
 
 def gen_funcs(cw):
