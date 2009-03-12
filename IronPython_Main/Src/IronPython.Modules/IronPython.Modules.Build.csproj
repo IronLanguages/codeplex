@@ -18,6 +18,7 @@
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
     <DefineConstants>$(SignedSym)</DefineConstants>
+    <BaseAddress>885063680</BaseAddress>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
