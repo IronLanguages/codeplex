@@ -638,7 +638,7 @@ function test-relatedpy($pyexe)
 	
 	#-X:AutoIndent, -X:ColorfulConsole, -X:TabCompletion, -t, -tt
 	echo ""
-	echo "Testing -X:AutoIndent, -X:ColorfulConsole, -X:TabCompletion, -t, -tt ..."
+	echo "Testing -X:AutoIndent, -X:ColorfulConsole, -X:TabCompletion, -X:EnabeProfiler, -t, -tt ..."
 	#Just run a few sanity checks to make sure nothing breaks
 	hello-helper $pyexe "-X:AutoIndent" "-X:ColorfulConsole" "-X:TabCompletion" -t -tt
 	hello-helper $pyexe "-X:AutoIndent" "-X:ColorfulConsole"
@@ -646,6 +646,7 @@ function test-relatedpy($pyexe)
 	hello-helper $pyexe "-X:ColorfulConsole" "-X:TabCompletion"
 	hello-helper $pyexe "-X:TabCompletion" -t -tt
 	hello-helper $pyexe -t -tt
+	hello-helper $pyexe "-X:EnableProfiler"
 	
 	#-X:AssembliesDir, -X:SaveAssemblies
 	echo ""
