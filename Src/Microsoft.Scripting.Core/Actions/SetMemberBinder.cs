@@ -69,6 +69,13 @@ namespace Microsoft.Scripting {
             return target.BindSetMember(this, args[0]);
         }
 
+        // this is a standard DynamicMetaObjectBinder
+        internal override sealed bool IsStandardBinder {
+            get {
+                return true;
+            }
+        }
+
         /// <summary>
         /// Performs the binding of the dynamic set member operation if the target dynamic object cannot bind.
         /// </summary>

@@ -16,12 +16,16 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>
     /// Represents an expression that has a conditional operator.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.ConditionalExpressionProxy))]
+#endif
     public class ConditionalExpression : Expression {
         private readonly Expression _test;
         private readonly Expression _true;

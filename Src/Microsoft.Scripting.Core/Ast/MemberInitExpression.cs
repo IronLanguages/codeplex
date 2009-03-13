@@ -17,8 +17,8 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using System.Text;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
@@ -27,6 +27,9 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents calling a constructor and initializing one or more members of the new object.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.MemberInitExpressionProxy))]
+#endif
     public sealed class MemberInitExpression : Expression {
         private readonly NewExpression _newExpression;
         private readonly ReadOnlyCollection<MemberBinding> _bindings;

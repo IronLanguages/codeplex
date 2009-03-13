@@ -17,6 +17,7 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
@@ -30,6 +31,9 @@ namespace Microsoft.Linq.Expressions {
     /// Only one of fault or finally can be supplied.
     /// The return type of the try block must match the return type of any associated catch statements.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.TryExpressionProxy))]
+#endif
     public sealed class TryExpression : Expression {
         private readonly Type _type;
         private readonly Expression _body;
