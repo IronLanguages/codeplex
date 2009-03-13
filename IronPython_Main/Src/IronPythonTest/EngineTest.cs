@@ -357,7 +357,7 @@ namespace IronPythonTest {
                         Expression.Constant("FallbackInvoke"),
                         target.Expression
                     ),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
             }
         }
@@ -374,7 +374,7 @@ namespace IronPythonTest {
                         Expression.Constant("FallbackGetIndex"),
                         indexes[0].Expression
                     ),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
             }
         }
@@ -392,7 +392,7 @@ namespace IronPythonTest {
                         indexes[0].Expression,
                         value.Expression
                     ),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
             }
         }
@@ -405,7 +405,7 @@ namespace IronPythonTest {
             public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion) {
                 return new DynamicMetaObject(
                     Expression.Constant("FallbackGetMember"),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
             }
         }
@@ -431,7 +431,7 @@ namespace IronPythonTest {
                             exprs
                         )
                     ),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
             }
         }
@@ -448,7 +448,7 @@ namespace IronPythonTest {
             public override DynamicMetaObject FallbackConvert(DynamicMetaObject target, DynamicMetaObject errorSuggestion) {
                 return new DynamicMetaObject(
                     Expression.Constant(_result),
-                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
 
             }

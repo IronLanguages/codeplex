@@ -235,8 +235,84 @@ def gen_checked_ops(cw):
         if node.kind.endswith("Checked"):
             cw.write("case ExpressionType.%s:" % node.kind)
 
+def get_type_name(t):
+    if not t.IsGenericType:
+        return t.Name
+
+    name = t.Name[:t.Name.IndexOf("`")]
+    name += "<" + ", ".join(map(lambda g: g.Name, t.GetGenericArguments())) + ">"
+    return name
+
+def gen_debug_proxy(cw, e):
+    name = e.Name + "Proxy"
+    cw.enter_block("internal class %(name)s", name=name)
+    cw.write("""private readonly %(expression)s _node;
+
+public %(name)s(%(expression)s node) {
+    _node = node;
+}
+""", name = name, expression = e.Name)
+    import System.Reflection
+    bf = System.Reflection.BindingFlags
+
+    # properties
+    def get_properties(e):
+        properties = []
+        atom = set()
+        def add(l):
+            for p in l:
+                if not p.Name in atom:
+                    atom.add(p.Name)
+                    properties.append(p)
+        while e:
+            add(e.GetProperties(bf.Instance | bf.Public))
+            add(e.GetProperties(bf.Instance | bf.NonPublic))
+            e = e.BaseType
+
+        properties.sort(None, lambda p: p.Name)
+        return properties
+        
+    properties = get_properties(e)
+
+    for p in properties:
+        if p.Name == "Dump": continue
+        get = p.GetGetMethod(True)
+        if not get: continue
+        if not get.IsPublic and p.Name != "DebugView": continue
+
+        cw.write("public %(type)s %(name)s { get { return _node.%(name)s; } }", type = get_type_name(p.PropertyType), name = p.Name)
+
+    cw.exit_block()
+
+
+def gen_debug_proxies(cw):
+    import clr
+    msc = clr.LoadAssemblyByPartialName("Microsoft.Scripting.Core")
+    expr = msc.GetType("System.Linq.Expressions.Expression")
+    custom = [ 'SwitchCase', 'CatchBlock' ]
+    ignore = [ 'Expression' ]
+    def expression_filter(e):
+        if not e.IsPublic: return False
+        if not e.Namespace.EndsWith(".Expressions"): return False
+        if e.IsGenericType: return False
+        if e.Name in ignore: return False
+        if expr.IsAssignableFrom(e): return True
+        if e.Name in custom: return True
+
+        return False
+
+    expressions = filter(expression_filter, msc.GetTypes())
+    expressions.sort(None, lambda e: e.Name)
+    
+    first = True
+    for e in expressions:
+       if not first: cw.write("")
+       else: first = False
+       gen_debug_proxy(cw, e)
+
 def main():
     return generate(
+        ("Expression Debugger Proxies", gen_debug_proxies),
         ("Expression Tree Node Types", gen_tree_nodes),
         ("Checked Operations", gen_checked_ops),
         ("Binary Operation Binder Validator", gen_binop_validator),

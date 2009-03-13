@@ -117,7 +117,7 @@ namespace IronPython.Compiler.Ast {
 
             PythonOptions po = (pc.Options as PythonOptions);
             Assert.NotNull(po);
-            if (po.EnableProfiler && mode != CompilationMode.Collectable) {
+            if (po.EnableProfiler && mode != CompilationMode.ToDisk) {
                 _profiler = Profiler.GetProfiler(PythonContext);
                 if (mode == CompilationMode.Lookup) {
                     _profilerName = NameForExec;

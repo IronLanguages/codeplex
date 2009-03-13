@@ -26,6 +26,9 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents an expression that has a binary operator.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.BinaryExpressionProxy))]
+#endif
     public class BinaryExpression : Expression {
         private readonly Expression _left;
         private readonly Expression _right;

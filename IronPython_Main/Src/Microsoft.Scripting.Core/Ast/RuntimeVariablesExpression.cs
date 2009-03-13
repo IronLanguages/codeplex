@@ -17,10 +17,11 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -28,6 +29,9 @@ namespace Microsoft.Linq.Expressions {
     /// Needed to implement "eval" in some dynamic languages.
     /// Evaluates to an instance of <see cref="IList{IStrongBox}" /> when executed.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.RuntimeVariablesExpressionProxy))]
+#endif
     public sealed class RuntimeVariablesExpression : Expression {
         private readonly ReadOnlyCollection<ParameterExpression> _variables;
 

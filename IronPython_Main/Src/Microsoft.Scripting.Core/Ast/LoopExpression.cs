@@ -15,12 +15,16 @@
 using System; using Microsoft;
 
 
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents an infinite loop. It can be exited with "break".
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.LoopExpressionProxy))]
+#endif
     public sealed class LoopExpression : Expression {
         private readonly Expression _body;
         private readonly LabelTarget _break;

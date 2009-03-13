@@ -167,10 +167,6 @@ namespace Microsoft.Scripting {
             ContractUtils.RequiresNotNull(expression, "expression");
             ContractUtils.RequiresNotNull(type, "type");
 
-            if (expression.Type == type && type.IsSealed) {
-                return BindingRestrictions.Empty;
-            }
-
             return new BindingRestrictions(new Restriction(expression, type));
         }
 

@@ -15,8 +15,8 @@
 using System; using Microsoft;
 
 
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using System.Text;
 
 namespace Microsoft.Linq.Expressions {
     /// <summary>
@@ -44,6 +44,9 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents an unconditional jump. This includes return statements, break and continue statements, and other jumps.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.GotoExpressionProxy))]
+#endif
     public sealed class GotoExpression : Expression {
         private readonly GotoExpressionKind _kind;
         private readonly Expression _value;

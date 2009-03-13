@@ -15,16 +15,18 @@
 using System; using Microsoft;
 
 
-using System.Reflection;
-using Microsoft.Scripting;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using System.Text;
+using System.Reflection;
 
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>
     /// Represents accessing a field or property.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.MemberExpressionProxy))]
+#endif
     public class MemberExpression : Expression {
         private readonly Expression _expression;
 

@@ -17,6 +17,7 @@ using System; using Microsoft;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
@@ -27,6 +28,9 @@ namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents creating a new array and possibly initializing the elements of the new array.
     /// </summary>
+#if !SILVERLIGHT
+    [DebuggerTypeProxy(typeof(Expression.NewArrayExpressionProxy))]
+#endif
     public class NewArrayExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
         private readonly Type _type;

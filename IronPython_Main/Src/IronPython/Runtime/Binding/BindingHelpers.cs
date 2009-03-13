@@ -150,7 +150,7 @@ namespace IronPython.Runtime.Binding {
                             action.Name,
                             target.Expression
                         ),
-                        BindingRestrictions.Empty
+                        BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                     ),
                     args,
                     null
@@ -259,9 +259,12 @@ namespace IronPython.Runtime.Binding {
         
         internal static ValidationInfo/*!*/ GetValidationInfo(DynamicMetaObject/*!*/ tested, PythonType type) {
             return new ValidationInfo(
-                CheckTypeVersion(
-                    AstUtils.Convert(tested.Expression, type.UnderlyingSystemType), 
-                    type.Version
+                Ast.AndAlso(
+                    Ast.TypeEqual(tested.Expression, type.UnderlyingSystemType),
+                    CheckTypeVersion(
+                        AstUtils.Convert(tested.Expression, type.UnderlyingSystemType), 
+                        type.Version
+                    )
                 )
             );
         }
@@ -275,6 +278,11 @@ namespace IronPython.Runtime.Binding {
                         Expression test = BindingHelpers.CheckTypeVersion(
                             AstUtils.Convert(args[i].Expression, val.GetType()),
                             val.PythonType.Version
+                        );
+
+                        test = Ast.AndAlso(
+                            Ast.TypeEqual(args[i].Expression, val.GetType()),
+                            test
                         );
 
                         if (typeTest != null) {
