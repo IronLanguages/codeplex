@@ -247,9 +247,9 @@ namespace Microsoft.Linq.Expressions {
         /// Helper used for ensuring we only return 1 instance of a ReadOnlyCollection of T.
         /// 
         /// This is called from various methods where we internally hold onto an IList of T
-        /// or a ROC of T.  We check to see if we've already returned a ROC of T and if so
-        /// simply return the other one.  Otherwise we do a thread-safe replacement of hte
-        /// list w/ a ROC which wraps it.
+        /// or a readonly collection of T.  We check to see if we've already returned a 
+        /// readonly collection of T and if so simply return the other one.  Otherwise we do 
+        /// a thread-safe replacement of the list w/ a readonly collection which wraps it.
         /// 
         /// Ultimately this saves us from having to allocate a ReadOnlyCollection for our
         /// data types because the compiler is capable of going directly to the IList of T.
@@ -263,7 +263,7 @@ namespace Microsoft.Linq.Expressions {
                 return res;
             }
 
-            // otherwise make sure only ROC every gets exposed
+            // otherwise make sure only readonly collection every gets exposed
             Interlocked.CompareExchange<IList<T>>(
                 ref collection,
                 value.ToReadOnly(),
@@ -286,12 +286,12 @@ namespace Microsoft.Linq.Expressions {
         /// 
         /// This enables users to get the ReadOnlyCollection w/o it consuming more memory than if 
         /// it was just an array.  Meanwhile The DLR internally avoids accessing  which would force 
-        /// the ROC to be created resulting in a typical memory savings.
+        /// the readonly collection to be created resulting in a typical memory savings.
         /// </summary>
         internal static ReadOnlyCollection<Expression> ReturnReadOnly(IArgumentProvider provider, ref object collection) {
             Expression tObj = collection as Expression;
             if (tObj != null) {
-                // otherwise make sure only one ROC ever gets exposed
+                // otherwise make sure only one readonly collection ever gets exposed
                 Interlocked.CompareExchange(
                     ref collection,
                     new ReadOnlyCollection<Expression>(new ListArgumentProvider(provider, tObj)),
@@ -299,7 +299,7 @@ namespace Microsoft.Linq.Expressions {
                 );
             }
 
-            // and return what is not guaranteed to be a ROC
+            // and return what is not guaranteed to be a readonly collection
             return (ReadOnlyCollection<Expression>)collection;
         }
 

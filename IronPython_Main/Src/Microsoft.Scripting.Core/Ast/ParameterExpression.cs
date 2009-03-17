@@ -15,7 +15,6 @@
 using System; using Microsoft;
 
 
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
@@ -74,7 +73,7 @@ namespace Microsoft.Linq.Expressions {
                 }
             }
 
-            return new TypedParameterExpression(type, name);            
+            return new TypedParameterExpression(type, name);
         }
 
         /// <summary>
@@ -144,7 +143,7 @@ namespace Microsoft.Linq.Expressions {
             : base(name) {
             _paramType = type;
         }
-        
+
         protected override Type TypeImpl() {
             return _paramType;
         }
@@ -161,7 +160,7 @@ namespace Microsoft.Linq.Expressions {
 
         protected override Type TypeImpl() {
             return typeof(T);
-        }        
+        }
     }
 
     public partial class Expression {
@@ -170,7 +169,25 @@ namespace Microsoft.Linq.Expressions {
         /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
-        /// <param name="name">The name of the parameter or variable.</param>
+        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        public static ParameterExpression Parameter(Type type) {
+            return Parameter(type, null);
+        }
+
+        /// <summary>
+        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// </summary>
+        /// <param name="type">The type of the parameter or variable.</param>
+        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        public static ParameterExpression Variable(Type type) {
+            return Variable(type, null);
+        }
+
+        /// <summary>
+        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// </summary>
+        /// <param name="type">The type of the parameter or variable.</param>
+        /// <param name="name">The name of the parameter or variable, used for debugging or pretty printing purpose only.</param>
         /// <returns>A ParameterExpression node with the specified name and type.</returns>
         public static ParameterExpression Parameter(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
@@ -191,7 +208,7 @@ namespace Microsoft.Linq.Expressions {
         /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
-        /// <param name="name">The name of the parameter or variable.</param>
+        /// <param name="name">The name of the parameter or variable, used for debugging or pretty printing purpose only.</param>
         /// <returns>A ParameterExpression node with the specified name and type.</returns>
         public static ParameterExpression Variable(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
