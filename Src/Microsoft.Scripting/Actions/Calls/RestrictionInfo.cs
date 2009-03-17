@@ -21,8 +21,8 @@ using System.Reflection;
 
 namespace Microsoft.Scripting.Actions.Calls {
     public class RestrictionInfo {
-        public DynamicMetaObject[] Objects;
-        public Type[] Types;
+        public readonly DynamicMetaObject[] Objects;
+        public readonly Type[] Types;
 
         public RestrictionInfo(DynamicMetaObject[] objects, Type[] types) {
             Objects = objects;

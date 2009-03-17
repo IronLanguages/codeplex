@@ -607,6 +607,12 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
+            var pc = PythonContext.GetContext(BinderState.GetBinderState(call).Context);
+            var po = pc.Options as PythonOptions;
+            if (po != null && po.EnableProfiler) {
+                Profiler profiler = Profiler.GetProfiler(pc);
+                res = profiler.AddProfiling(res, target.Method);
+            }
             return new KeyValuePair<OptimizingCallDelegate, Type[]>(res, typeRestrictions);
         }
         

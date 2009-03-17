@@ -225,7 +225,7 @@ namespace Microsoft.Scripting {
             //   cArgs:             5
             //   cNamedArgs:        2
             //   rgArgs:            123, 125, 102, 101, 100
-            //   rgdispidNamedArgs: dx, dz (the dispids of x and z respectively)
+            //   rgdispidNamedArgs: dispid x, dispid z (the dispids of x and z respectively)
 
             Expression[] parameters = MakeArgumentExpressions();
 
