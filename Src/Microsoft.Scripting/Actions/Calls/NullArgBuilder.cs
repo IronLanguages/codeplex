@@ -12,10 +12,10 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-
-
 using System.Collections.Generic;
+using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
@@ -37,6 +37,16 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             return AstUtils.Constant(null);
+        }
+
+        protected internal override Func<object[], object> ToDelegate(ParameterBinder parameterBinder, IList<DynamicMetaObject> knownTypes, bool[] hasBeenUsed) {
+            return (args) => null;
+        }
+
+        internal override bool CanGenerateDelegate {
+            get {
+                return true;
+            }
         }
     }
 }

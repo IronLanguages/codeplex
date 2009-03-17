@@ -1442,7 +1442,6 @@ def test_underlying_type():
         #gen.SaveAssembly()
         pass
 
-@disabled("PEVerify failure with generics")
 def test_a_override_patching():
     if System.Environment.Version.Major >=4:
         clr.AddReference("System.Core")
@@ -1466,6 +1465,15 @@ def test_a_override_patching():
     
     # now the super call should work & should include the InvokeBinder new type
     TestHelpers.HashObject(y(CallInfo(0)))
-    
+
+def test_inherited_interface_impl():
+    BinderTest.InterfaceTestHelper.Flag = False
+    BinderTest.InterfaceTestHelper.GetObject().M()
+    AreEqual(BinderTest.InterfaceTestHelper.Flag, True)
+
+    BinderTest.InterfaceTestHelper.Flag = False
+    BinderTest.InterfaceTestHelper.GetObject2().M()
+    AreEqual(BinderTest.InterfaceTestHelper.Flag, True)
+
 run_test(__name__)
 

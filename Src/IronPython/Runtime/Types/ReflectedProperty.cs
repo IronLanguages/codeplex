@@ -17,14 +17,19 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Types {
@@ -95,8 +100,55 @@ namespace IronPython.Runtime.Types {
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 
-            value = CallGetter(context, PythonContext.GetContext(context).GetGenericCallSiteStorage(), instance, ArrayUtils.EmptyObjects);
+            value = CallGetter(context, owner, PythonContext.GetContext(context).GetGenericCallSiteStorage0(), instance);
             return true;
+        }
+
+        private object CallGetter(CodeContext context, PythonType owner, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object>>> storage, object instance) {
+            if (NeedToReturnProperty(instance, Getter)) {
+                return this;
+            }
+
+            if (Getter.Length == 0) {
+                throw new MissingMemberException("unreadable property");
+            }
+
+            if (owner == null) {
+                owner = DynamicHelpers.GetPythonType(instance);
+            }
+
+            // this matches the logic in the default binder when it does a property get.  We 
+            // need to duplicate it here to be consistent for all gets.
+            MethodInfo[] members = Getter;
+
+            Type type = owner.UnderlyingSystemType;
+            if (Getter.Length > 1) {
+                // if we were given multiple members pick the member closest to the type...                
+                Type bestMemberDeclaringType = Getter[0].DeclaringType;
+                MethodInfo bestMember = Getter[0];
+
+                for (int i = 1; i < Getter.Length; i++) {
+                    MethodInfo mt = Getter[i];
+                    if (!IsApplicableForType(type, mt)) {
+                        continue;
+                    }
+
+                    if (Getter[i].DeclaringType.IsSubclassOf(bestMemberDeclaringType) ||
+                        !IsApplicableForType(type, bestMember)) {
+                        bestMember = Getter[i];
+                        bestMemberDeclaringType = Getter[i].DeclaringType;
+                    }
+                }
+                members = new MethodInfo[] { bestMember };
+            }
+
+            BuiltinFunction target = PythonTypeOps.GetBuiltinFunction(type, __name__, members);
+
+            return target.Call0(context, storage, instance);
+        }
+
+        private static bool IsApplicableForType(Type type, MethodInfo mt) {
+            return mt.DeclaringType == type || type.IsSubclassOf(mt.DeclaringType);
         }
 
         internal override bool GetAlwaysSucceeds {

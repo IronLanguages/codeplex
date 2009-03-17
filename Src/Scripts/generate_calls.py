@@ -73,6 +73,213 @@ def gen_args_paramscall(nparams):
         comma = ","
     return args
 
+builtin_function_switch_template = """case %(argCount)d:
+    if (IsUnbound) {
+        return typeof(BuiltinFunctionCaller<%(typeParams)s>);
+    }
+    return typeof(BuiltinMethodCaller<%(typeParams)s>);"""
+
+def builtin_function_callers_switch(cw):
+    for nparams in range(MAX_ARGS-2):        
+        cw.write(builtin_function_switch_template % {
+                  'argCount' : nparams,
+                  'typeParams' : ',' * nparams,
+                  'dlgParams' : ',' * (nparams + 3),
+                 })
+
+builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(typeParams)s> where TFuncType : class {
+    private readonly CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> _site;
+    private readonly OptimizingInfo _info;
+    public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
+    private readonly BuiltinFunction _func;
+%(typeVars)s
+
+    public BuiltinFunctionCaller(CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> site, OptimizingInfo info, BuiltinFunction func, %(typeCheckParams)s) {
+        _func = func;
+        _info = info;
+        _site = site;
+        MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
+%(argsAssign)s
+    }
+
+    public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
+        if (_info.OptimizedDelegate == null &&
+            func == _func && 
+%(typeCheck)s
+           ) {
+            bool shouldOptimize;
+            object res = _info.Caller(new object[] { context, %(callArgs)s }, out shouldOptimize);
+
+            if (shouldOptimize) {
+                _info.OptimizedDelegate = _info.Binder.Optimize(_site, new object[] { context, func, %(callArgs)s });
+            }
+
+            return res;
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
+    }
+}
+
+class BuiltinMethodCaller<TFuncType, %(typeParams)s> where TFuncType : class {
+    private readonly CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> _site;
+    private readonly OptimizingInfo _info;
+    public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
+    private readonly Type _selfType;
+    private readonly BuiltinFunctionData _data;
+%(typeVars)s
+
+    public BuiltinMethodCaller(CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> site, OptimizingInfo info, BuiltinFunction func, Type selfType, %(typeCheckParams)s) {
+        _selfType = selfType;
+        _data = func._data;
+        _info = info;
+        _site = site;
+        MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
+%(argsAssign)s
+    }
+
+    public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
+        BuiltinFunction bf = func as BuiltinFunction;
+        if (_info.OptimizedDelegate == null &&
+            bf != null && !bf.IsUnbound && bf._data == _data &&
+            (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
+%(typeCheck)s
+            ) {
+            bool shouldOptimize;
+            object res = _info.Caller(new object[] { context, bf.__self__, %(callArgs)s }, out shouldOptimize);
+
+            if (shouldOptimize) {
+                _info.OptimizedDelegate = _info.Binder.Optimize(_site, new object[] { context, func, %(callArgs)s });
+            }
+
+            return res;
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
+    }
+}
+"""
+
+def builtin_function_callers(cw):
+    for nparams in range(1, MAX_ARGS-2):       
+        assignTemplate = "        _type%d = type%d;"
+        typeCheckTemplate = "            (_type%d == null || CompilerHelpers.GetType(arg%d) == _type%d)"
+        typeVarTemplate = "    private readonly Type " + ', '.join(('_type%d' % i for i in xrange(nparams))) + ';'
+        cw.write(builtin_function_caller_template % {
+                  'argCount' : nparams,
+                  'ctorArgs' : ',' * nparams,
+                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                  'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
+                  'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
+                  'typeCheckParams': ', '.join(('Type type%d' % (d,) for d in xrange(nparams))),
+                  'argsAssign' : '\n'.join((assignTemplate % (d,d) for d in xrange(nparams))),
+                  'typeCheck' : ' &&\n'.join((typeCheckTemplate % (d,d,d) for d in xrange(nparams))),
+                  'dlgParams' : ',' * (nparams + 3),
+                  'typeVars' : typeVarTemplate,
+                 })
+
+function_caller_template = """
+class FunctionCaller<%(typeParams)s> : FunctionCaller {
+    public FunctionCaller(int compat) : base(compat) { }
+    
+    public object Call%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
+        PythonFunction pyfunc = func as PythonFunction;
+        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+            var callTarget = pyfunc.Target as CallTarget%(argCount)d;
+            if (callTarget != null) {
+                return callTarget(%(callArgs)s);
+            }
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
+    }
+
+    public object GeneratorCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
+        PythonFunction pyfunc = func as PythonFunction;
+        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+            var callTarget = pyfunc.Target as GeneratorTarget%(argCount)d;
+            if (callTarget != null) {
+                PythonGenerator res = new PythonGenerator(pyfunc);
+                PythonOps.InitializePythonGenerator(res, callTarget(res, %(callArgs)s));
+                return res;
+            }
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
+    }"""
+    
+defaults_template = """
+    public object Default%(defaultCount)dCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
+        PythonFunction pyfunc = func as PythonFunction;
+        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+            var callTarget = pyfunc.Target as CallTarget%(totalParamCount)d;
+            if (callTarget != null) {            
+                int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
+                return callTarget(%(callArgs)s, %(defaultArgs)s);
+            }
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
+    }"""
+
+defaults_template_0 = """
+public object Default%(argCount)dCall0(CallSite site, CodeContext context, object func) {
+    PythonFunction pyfunc = func as PythonFunction;
+    if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+        var callTarget = pyfunc.Target as CallTarget%(argCount)d;
+        if (callTarget != null) {
+            int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
+            return ((CallTarget%(argCount)d)pyfunc.Target)(%(defaultArgs)s);
+        }
+    }
+
+    return ((CallSite<Func<CallSite, CodeContext, object, object>>)site).Update(site, context, func);
+}"""
+
+def function_callers(cw):
+    for nparams in range(1, MAX_ARGS-2):        
+        cw.write(function_caller_template % {
+                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                  'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
+                  'argCount' : nparams,
+                  'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
+                 })                    
+                 
+        for i in xrange(nparams + 1, MAX_ARGS - 2):
+            cw.write(defaults_template % {
+                      'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                      'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
+                      'argCount' : nparams,
+                      'totalParamCount' : i,
+                      'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
+                      'defaultCount' : i - nparams,
+                      'defaultArgs' : ', '.join(('pyfunc.Defaults[defaultIndex + %d]' % curDefault for curDefault in xrange(i - nparams))),
+                     })                 
+        cw.write('}')
+
+def function_callers_0(cw):
+    for i in xrange(1, MAX_ARGS - 2):
+        cw.write(defaults_template_0 % {
+                  'argCount' : i,
+                  'defaultArgs' : ', '.join(('pyfunc.Defaults[defaultIndex + %d]' % curDefault for curDefault in xrange(i))),
+                 })                 
+
+function_caller_switch_template = """case %(argCount)d:                        
+    callerType = typeof(FunctionCaller<%(arity)s>).MakeGenericType(typeParams);
+    mi = callerType.GetMethod(baseName + "Call%(argCount)d");
+    Debug.Assert(mi != null);
+    fc = GetFunctionCaller(callerType, funcCompat);
+    funcType = typeof(Func<,,,,%(arity)s>).MakeGenericType(allParams);
+
+    return new Binding.FastBindResult<T>((T)(object)Delegate.CreateDelegate(funcType, fc, mi), true);"""
+    
+
+def function_caller_switch(cw):
+    for nparams in range(1, MAX_ARGS-2):
+        cw.write(function_caller_switch_template % {
+                  'arity' : ',' * (nparams - 1),
+                  'argCount' : nparams,
+                 })   
 
 def call_targets(cw):
     for nparams in range(MAX_ARGS+1):
@@ -205,6 +412,11 @@ def gen_python_generator_switch(cw):
 
 def main():
     return generate(
+        ("Python Builtin Function Optimizable Callers", builtin_function_callers),
+        ("Python Builtin Function Optimizable Switch", builtin_function_callers_switch),
+        ("Python Zero Arg Function Callers", function_callers_0),
+        ("Python Function Callers", function_callers),
+        ("Python Function Caller Switch", function_caller_switch),
         ("Python Call Targets", call_targets),
         ("Python Generator Targets", generator_targets),
         ("Python Call Target Switch", gen_python_switch),

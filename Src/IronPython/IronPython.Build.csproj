@@ -60,6 +60,7 @@
       <Compile Include="Compiler\PythonGlobal.cs" />
       <Compile Include="Compiler\PythonGlobalVariableExpression.cs" />
       <Compile Include="Compiler\PythonScriptCode.cs" />
+      <Compile Include="Compiler\ReducableDynamicExpression.cs" />
       <Compile Include="Compiler\RuntimeScriptCode.cs" />
       <Compile Include="Compiler\SavableGlobalAllocator.cs" />
       <Compile Include="Compiler\SavableScriptCode.cs" />
@@ -215,6 +216,7 @@
       <Compile Include="Runtime\PythonDictionary.cs" />
       <Compile Include="Runtime\PythonFile.cs" />
       <Compile Include="Runtime\PythonFunction.cs" />
+      <Compile Include="Runtime\PythonFunction.Generated.cs" />
       <Compile Include="Runtime\PythonHiddenAttribute.cs" />
       <Compile Include="Runtime\PythonModule.cs" />
       <Compile Include="Runtime\PythonModuleAttribute.cs" />
@@ -252,6 +254,11 @@
       <Compile Include="Runtime\Binding\ConditionalBuilder.cs" />
       <Compile Include="Runtime\Binding\ConversionBinder.cs" />
       <Compile Include="Runtime\Binding\CreateFallbackBinder.cs" />
+      <Compile Include="Runtime\Binding\FastBindResult.cs" />
+      <Compile Include="Runtime\Binding\FastGetBase.cs" />
+      <Compile Include="Runtime\Binding\FastSetBase.cs" />
+      <Compile Include="Runtime\Binding\IFastGettable.cs" />
+      <Compile Include="Runtime\Binding\IFastInvokable.cs" />
       <Compile Include="Runtime\Binding\IPythonGetable.cs" />
       <Compile Include="Runtime\Binding\IPythonInvokable.cs" />
       <Compile Include="Runtime\Binding\IPythonOperable.cs" />
@@ -268,6 +275,8 @@
       <Compile Include="Runtime\Binding\MetaPythonType.Members.cs" />
       <Compile Include="Runtime\Binding\MetaUserObject.cs" />
       <Compile Include="Runtime\Binding\MetaUserObject.Members.cs" />
+      <Compile Include="Runtime\Binding\OperationRetBoolBinder.cs" />
+      <Compile Include="Runtime\Binding\OperationRetBoolBinder.Generated.cs" />
       <Compile Include="Runtime\Binding\PythonBinaryOperationBinder.cs" />
       <Compile Include="Runtime\Binding\PythonBinder.cs" />
       <Compile Include="Runtime\Binding\PythonDeleteIndexBinder.cs" />
@@ -367,6 +376,7 @@
       <!--          Runtime.Types          -->
       <!--                                 -->
       <Compile Include="Runtime\Types\BuiltinFunction.cs" />
+      <Compile Include="Runtime\Types\BuiltinFunction.Generated.cs" />
       <Compile Include="Runtime\Types\BuiltinFunctionOverloadMapper.cs" />
       <Compile Include="Runtime\Types\BuiltinMethodDescriptor.cs" />
       <Compile Include="Runtime\Types\CachedNewTypeInfo.cs" />

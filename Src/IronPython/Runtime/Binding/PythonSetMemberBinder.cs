@@ -25,6 +25,9 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
+    using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 
     class PythonSetMemberBinder : SetMemberBinder, IPythonSite, IExpressionSerializable {
         private readonly BinderState/*!*/ _state;
@@ -50,6 +53,30 @@ namespace IronPython.Runtime.Binding {
             }
 #endif
             return Binder.Binder.SetMember(Name, self, value, AstUtils.Constant(Binder.Context));
+        }
+
+        public override T BindDelegate<T>(CallSite<T> site, object[] args) {
+            IPythonObject ipo = args[0] as IPythonObject;
+            if (ipo != null && !(ipo is IProxyObject)) {
+                FastBindResult<T> res = UserTypeOps.MakeSetBinding<T>(Binder.Context, site, ipo, args[1], this);
+
+                if (res.Target != null) {
+                    PerfTrack.NoteEvent(PerfTrack.Categories.BindingFast, "IPythonObject");
+
+                    if (res.ShouldCache) {
+                        CacheTarget(res.Target);
+                    }
+                    return res.Target;
+                }
+
+                PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "IPythonObject");
+            }
+
+            return base.BindDelegate(site, args);
+        }
+
+        internal Func<CallSite, object, TValue, object> OptimizeDelegate<TValue>(CallSite<Func<CallSite, object, TValue, object>> site, object self, TValue value) {
+            return base.BindDelegate<Func<CallSite, object, TValue, object>>(site, new object[] { self, value });
         }
 
         public BinderState/*!*/ Binder {
@@ -86,6 +113,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         #endregion
+
     }
 }
 
