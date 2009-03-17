@@ -201,8 +201,8 @@ def test_function_environments():
 ## coverage for CustomFieldIdDict
 def contains(d, *attrs):
     for attr in attrs:
-        Assert(attr in d)
-        Assert(d.__contains__(attr))
+        Assert(attr in d, "didn't find " + str(attr) + " in " + repr(d))
+        Assert(d.__contains__(attr), "didn't find " + str(attr) + " in " + repr(d))
 
 
 def repeat_on_class(C):

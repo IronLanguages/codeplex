@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 using System.Diagnostics;
 using System.Reflection;
+using System; using Microsoft;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Actions.Calls {
 
@@ -28,6 +28,7 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// ArgBuilder which provides the CodeContext parameter to a method.
     /// </summary>
     public sealed class ContextArgBuilder : ArgBuilder {
+        private static Func<object[], object> _readFunc = (Func<object[], object>)Delegate.CreateDelegate(typeof(Func<object[], object>), 0, typeof(ArgBuilder).GetMethod("ArgumentRead"));
         public ContextArgBuilder(ParameterInfo info) 
             : base(info){
         }
@@ -38,6 +39,16 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         internal protected override Expression ToExpression(ParameterBinder parameterBinder, IList<Expression> parameters, bool[] hasBeenUsed) {
             return ((ParameterBinderWithCodeContext)parameterBinder).ContextExpression;
+        }
+
+        protected internal override Func<object[], object> ToDelegate(ParameterBinder parameterBinder, IList<DynamicMetaObject> knownTypes, bool[] hasBeenUsed) {
+            return _readFunc;
+        }
+
+        internal override bool CanGenerateDelegate {
+            get {
+                return true;
+            }
         }
     }
 }

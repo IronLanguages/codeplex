@@ -53,6 +53,8 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override DynamicMetaObject/*!*/ BindSetMember(SetMemberBinder/*!*/ member, DynamicMetaObject/*!*/ value) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Binding, "Type SetMember " + Value.UnderlyingSystemType.FullName);
+            PerfTrack.NoteEvent(PerfTrack.Categories.BindingTarget, "Type SetMember");
             BinderState state = BinderState.GetBinderState(member);
 
             if (Value.IsSystemType) {
@@ -90,6 +92,8 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override DynamicMetaObject/*!*/ BindDeleteMember(DeleteMemberBinder/*!*/ member) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Binding, "Type DeleteMember " + Value.UnderlyingSystemType.FullName);
+            PerfTrack.NoteEvent(PerfTrack.Categories.BindingTarget, "Type DeleteMember");
             if (Value.IsSystemType) {
                 BinderState state = BinderState.GetBinderState(member);
 
@@ -126,6 +130,9 @@ namespace IronPython.Runtime.Binding {
         #region Gets
 
         private DynamicMetaObject/*!*/ GetMemberWorker(DynamicMetaObjectBinder/*!*/ member, Expression codeContext) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Binding, "Type GetMember " + Value.UnderlyingSystemType.FullName);
+            PerfTrack.NoteEvent(PerfTrack.Categories.BindingTarget, "Type GetMember");
+
             switch (GetGetMemberName(member)) {
                 case "__dict__":
                 case "__class__":

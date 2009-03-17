@@ -522,8 +522,71 @@ def operator_reversal(cw):
         op.genOperatorReversal_Forward(cw)
         op.genOperatorReversal_Reverse(cw)
         
+
+def fast_op_ret_bool_chooser(cw):
+    for curType in ('int', ):
+        cw.enter_block('if (CompilerHelpers.GetType(args[0]) == typeof(%s) && CompilerHelpers.GetType(args[1]) == typeof(%s))' % (curType, curType))
+        _else = ''
+        for x in (curType, 'object'):
+            for y in (curType, 'object'):                
+                cw.enter_block('%sif (typeof(T) == typeof(Func<CallSite, %s, %s, bool>))' % (_else, x, y))
+                cw.write('res = (T)(object)Get%s%s%sDelegate(opBinder);' % (curType.title(), x.title(), y.title()))
+                cw.exit_block()
+                _else = 'else '
+        cw.exit_block()
+
+def fast_op_ret_bool(cw):
+    """public bool IntEqualRetBool(CallSite site, object self, object other) {
+    if (self != null && self.GetType() == typeof(int) &&
+        other != null && other.GetType() == typeof(int)) {
+        return (int)self == (int)other;
+    }
+
+    return ((CallSite<Func<CallSite, object, object, bool>>)site).Update(site, self, other);
+}"""
+    for curPyType, curPascalType in (('int', 'Int'), ):
+        for x in ('object', curPyType):
+            for y in ('object', curPyType):
+                cw.enter_block('private Func<CallSite, %s, %s, bool> Get%s%s%sDelegate(BinaryOperationBinder opBinder)' % (x, y, curPascalType, x.title(), y.title()))
+                cw.enter_block('switch (opBinder.Operation)')
+                cw.write('case ExpressionType.Equal: return %sEqualRetBool;' % (curPascalType, ))
+                cw.write('case ExpressionType.NotEqual: return %sNotEqualRetBool; ' % (curPascalType, ))
+                cw.write('case ExpressionType.GreaterThan: return %sGreaterThanRetBool;' % (curPascalType, ))
+                cw.write('case ExpressionType.LessThan: return %sLessThanRetBool;' % (curPascalType, ))
+                cw.write('case ExpressionType.GreaterThanOrEqual: return %sGreaterThanOrEqualRetBool;' % (curPascalType, ))
+                cw.write('case ExpressionType.LessThanOrEqual:return %sLessThanOrEqualRetBool;' % (curPascalType, ))
+                cw.exit_block()
+                cw.write('return null;')
+                cw.exit_block()
+                
+                cw.write('')
+                
+                for op in (('==', 'Equal'), ('!=', 'NotEqual'), ('>', 'GreaterThan'), ('<', 'LessThan'), ('>=', 'GreaterThanOrEqual'), ('<=', 'LessThanOrEqual')):                   
+                    cw.enter_block('public bool %s%sRetBool(CallSite site, %s self, %s other)' % (curPascalType, op[1], x, y))
+                    if x == 'object':
+                        cw.enter_block('if (self != null && self.GetType() == typeof(%s))' % curPyType)
+                        
+                    if y == 'object':
+                        cw.enter_block('if (other != null && other.GetType() == typeof(%s))' % curPyType)
+                        
+                    cw.write('return (%s)self %s (%s)other;' % (curPyType, op[0], curPyType))
+                    
+                    if x == 'object':
+                        cw.exit_block()
+                        
+                    if y == 'object':
+                        cw.exit_block()
+                    
+                    if x == 'object' or y == 'object':
+                        cw.write('return ((CallSite<Func<CallSite, %s, %s, bool>>)site).Update(site, self, other);' % (x, y))
+
+                    cw.exit_block()
+                    cw.write('')
+            
 def main():
     return generate(
+        ("Python Fast Ops RetBool Chooser", fast_op_ret_bool_chooser),
+        ("Python Fast Ops Ret Bool", fast_op_ret_bool),
         ("Tokenize Ops", tokenize_generator),
         ("Token Kinds", tokenkinds_generator),
         ("Tokens", tokens_generator),

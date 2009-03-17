@@ -14,12 +14,10 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
+using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
 
@@ -44,6 +42,10 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         public override Expression GetDynamicConversion(Expression value, Type type) {
             return Expression.Dynamic(OldConvertToAction.Make(Binder, type), type, _context, value);
+        }
+
+        public override Func<object[], object> ConvertObject(int index, DynamicMetaObject knownType, ParameterInfo info, Type toType) {
+            return Binder.ConvertObject(index, knownType, toType, ConversionResultKind.ExplicitCast);
         }
     }
 }
