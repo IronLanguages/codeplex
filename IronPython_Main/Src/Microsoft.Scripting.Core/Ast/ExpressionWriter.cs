@@ -395,18 +395,18 @@ namespace Microsoft.Linq.Expressions {
                 if (isChecked) {
                     Out(Flow.Break, "checked(", Flow.None);
                 }
-                
-                
+
+
                 if (parenthesizeLeft) {
                     Out("(", Flow.None);
                 }
                 Visit(node.Left);
                 if (parenthesizeLeft) {
                     Out(Flow.None, ")", Flow.Break);
-                }                
+                }
 
                 Out(beforeOp, op, Flow.Space | Flow.Break);
-                
+
                 if (parenthesizeRight) {
                     Out("(", Flow.None);
                 }
@@ -527,12 +527,12 @@ namespace Microsoft.Linq.Expressions {
 
         private static bool NeedsParentheses(Expression parent, Expression child) {
             Debug.Assert(parent != null);
-            if (child == null) { 
+            if (child == null) {
                 return false;
             }
             return GetOperatorPrecedence(child) < GetOperatorPrecedence(parent);
         }
-        
+
         // the greater the higher
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static int GetOperatorPrecedence(Expression node) {
@@ -571,10 +571,10 @@ namespace Microsoft.Linq.Expressions {
 
                 case ExpressionType.Equal:
                 case ExpressionType.NotEqual:
-                    return 7;    
+                    return 7;
 
                 case ExpressionType.GreaterThan:
-                case ExpressionType.LessThan:                
+                case ExpressionType.LessThan:
                 case ExpressionType.GreaterThanOrEqual:
                 case ExpressionType.LessThanOrEqual:
                     return 8;
@@ -635,7 +635,7 @@ namespace Microsoft.Linq.Expressions {
                 Visit(nodeToVisit);
             }
         }
-        
+
         protected internal override Expression VisitMethodCall(MethodCallExpression node) {
             if (node.Object != null) {
                 ParenthesizedVisit(node, node.Object);
@@ -723,6 +723,12 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.IsTrue:
                     Out(".IsTrue ");
                     break;
+                case ExpressionType.PreDecrementAssign:
+                    Out("++");
+                    break;
+                case ExpressionType.PreIncrementAssign:
+                    Out("--");
+                    break;
             }
 
             bool parenthesize = NeedsParentheses(node, node.Operand);
@@ -745,7 +751,7 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.NegateChecked:
                     Out(")");
                     break;
-                
+
                 case ExpressionType.TypeAs:
                     Out(Flow.Space, "as", Flow.Space | Flow.Break);
                     Out(node.Type.Name);
@@ -753,6 +759,16 @@ namespace Microsoft.Linq.Expressions {
 
                 case ExpressionType.ArrayLength:
                     Out(".Length");
+                    break;
+
+                case ExpressionType.PostDecrementAssign:
+                case ExpressionType.Decrement:
+                    Out("--");
+                    break;
+
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.Increment:
+                    Out("++");
                     break;
             }
             return node;
