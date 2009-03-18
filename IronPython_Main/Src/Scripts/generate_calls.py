@@ -184,7 +184,7 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
     
     public object Call%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
             var callTarget = pyfunc.Target as CallTarget%(argCount)d;
             if (callTarget != null) {
                 return callTarget(%(callArgs)s);
@@ -196,7 +196,7 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
 
     public object GeneratorCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
             var callTarget = pyfunc.Target as GeneratorTarget%(argCount)d;
             if (callTarget != null) {
                 PythonGenerator res = new PythonGenerator(pyfunc);
@@ -211,7 +211,7 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
 defaults_template = """
     public object Default%(defaultCount)dCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
             var callTarget = pyfunc.Target as CallTarget%(totalParamCount)d;
             if (callTarget != null) {            
                 int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
@@ -225,7 +225,7 @@ defaults_template = """
 defaults_template_0 = """
 public object Default%(argCount)dCall0(CallSite site, CodeContext context, object func) {
     PythonFunction pyfunc = func as PythonFunction;
-    if (pyfunc != null && pyfunc.FunctionCompatibility == _compat) {
+    if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
         var callTarget = pyfunc.Target as CallTarget%(argCount)d;
         if (callTarget != null) {
             int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
