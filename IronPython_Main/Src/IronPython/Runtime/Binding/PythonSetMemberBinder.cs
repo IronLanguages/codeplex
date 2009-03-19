@@ -42,7 +42,7 @@ using Microsoft.Runtime.CompilerServices;
             _state = binder;
         }
 
-        public override DynamicMetaObject FallbackSetMember(DynamicMetaObject self, DynamicMetaObject value, DynamicMetaObject onBindingError) {
+        public override DynamicMetaObject FallbackSetMember(DynamicMetaObject self, DynamicMetaObject value, DynamicMetaObject errorSuggestion) {
             if (self.NeedsDeferral()) {
                 return Defer(self, value);
             }
