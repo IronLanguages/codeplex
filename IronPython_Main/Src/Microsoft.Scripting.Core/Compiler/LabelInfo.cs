@@ -15,6 +15,8 @@
 using System; using Microsoft;
 
 
+using ILGenerator = Microsoft.Linq.Expressions.Compiler.OffsetTrackingILGenerator;
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;

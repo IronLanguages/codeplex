@@ -1080,7 +1080,23 @@ def test_get_frozen_object():
 
 def test_cp17459():
     AreEqual(imp.IMP_HOOK, 9)
+
+
+def test_module_getattribute():
+    mymod = type(sys)('foo', 'bar')
+    attrs = ['__delattr__', '__doc__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__str__']
+    for attr in attrs:
+        d = mymod.__dict__
+        d[attr] = 42
+        AreEqual(getattr(mymod, attr), 42)
+        AreEqual(mymod.__getattribute__(attr), 42)
+        AreEqual(mymod.__getattribute__(attr), getattr(mymod, attr))
+        del d[attr]
         
+    for x in dir(type(sys)):
+        AreEqual(mymod.__getattribute__(x), getattr(mymod, x))
+    
+    
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:
