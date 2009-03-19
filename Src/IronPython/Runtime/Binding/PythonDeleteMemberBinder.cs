@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Binding {
             _state = binder;
         }
 
-        public override DynamicMetaObject FallbackDeleteMember(DynamicMetaObject self, DynamicMetaObject onBindingError) {
+        public override DynamicMetaObject FallbackDeleteMember(DynamicMetaObject self, DynamicMetaObject errorSuggestion) {
             if (self.NeedsDeferral()) {
                 return Defer(self);
             }
