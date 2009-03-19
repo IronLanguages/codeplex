@@ -336,5 +336,20 @@ def test_str_to_numeric():
     AreEqual(complex(v), 123+0j)
     AreEqual(float(v), 123.0)
 
+def test_subclass_ctor():
+    # verify all of the ctors work for various types...
+    class myunicode(unicode): pass
+    class myunicode2(unicode): 
+        def __init__(self, *args): pass
+    
+    class myfloat(float): pass
+    class mylong(long): pass
+    class myint(int): pass
+    
+    for x in [1, 1.0, 1L, 1j, myfloat(1.0), mylong(1L), myint(1), True, False, None, object()]:
+        AreEqual(myunicode(x), unicode(x))
+        AreEqual(myunicode2(x), unicode(x))
+    AreEqual(myunicode('foo', 'ascii'), unicode('foo', 'ascii'))
+    AreEqual(myunicode2('foo', 'ascii'), unicode('foo', 'ascii'))
 
 run_test(__name__)
