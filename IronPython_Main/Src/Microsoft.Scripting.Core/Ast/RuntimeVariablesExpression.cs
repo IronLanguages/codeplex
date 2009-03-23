@@ -44,7 +44,7 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         /// <returns>The <see cref="Type"/> that represents the static type of the expression.</returns>
         protected override Type TypeImpl() {
-            return typeof(IList<IStrongBox>);
+            return typeof(IRuntimeVariables);
         }
 
         /// <summary>

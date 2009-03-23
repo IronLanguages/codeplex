@@ -204,9 +204,10 @@ def test_virtual_property():
             self.field = value + 30
     x = C()
     Callback.On(x)
-    AreEqual(x.field, 3)
-    AreEqual(x.Property, 220)
-
+    AreEqual(x.field, 233)  # we read field, we added 200 from C#, and added 30 ourself
+    AreEqual(x.Property, 233)   
+    
+    x.field = 3
     C.Property = property(C.get_Property, C.set_Property)
     Callback.On(x)
     AreEqual(x.field, 233)

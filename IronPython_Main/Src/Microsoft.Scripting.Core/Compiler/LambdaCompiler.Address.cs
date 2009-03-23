@@ -154,7 +154,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LocalBuilder temp = GetLocal(GetMemberType(member));
             _ilg.Emit(OpCodes.Stloc, temp);
             _ilg.Emit(OpCodes.Ldloca, temp);
-            FreeLocal(temp);
         }
 
 
@@ -208,7 +207,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
             LocalBuilder tmp = GetLocal(type);
             _ilg.Emit(OpCodes.Stloc, tmp);
             _ilg.Emit(OpCodes.Ldloca, tmp);
-            FreeLocal(tmp);
         }
 
 

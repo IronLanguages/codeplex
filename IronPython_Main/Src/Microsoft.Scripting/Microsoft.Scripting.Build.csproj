@@ -362,6 +362,7 @@
       <Compile Include="Interpreter\LightLambda.cs" />
       <Compile Include="Interpreter\LightLambda.Generated.cs" />
       <Compile Include="Interpreter\LightLambdaClosureVisitor.cs" />
+      <Compile Include="Interpreter\RuntimeVariables.cs" />
       <Compile Include="Interpreter\StackFrame.cs" />
     </ItemGroup>
     <ItemGroup>
