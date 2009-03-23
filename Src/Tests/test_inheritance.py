@@ -1387,4 +1387,24 @@ def test_super_tostring():
 
     c = C()    
 	
+@skip("win32")
+def test_inherit_mixed_properties():
+    for base in (MixedPropertiesInherited, MixedProperties):
+        class MyClass(base):
+            def __init__(self):
+                AreEqual(self.Foo, None)
+                self.Foo = 42
+                AreEqual(self.Foo, 42)
+
+                AreEqual(self.Bar, None)
+                self.Bar = 23
+                AreEqual(self.Bar, 23)
+                
+                AreEqual(self.GetFoo(), 42)
+                AreEqual(self.GetBar(), 23)
+        
+        a = MyClass()
+        AreEqual(a.GetFoo(), 42)
+        AreEqual(a.GetBar(), 23)
+
 run_test(__name__)

@@ -56,8 +56,8 @@ using System.Security;
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
 [assembly: AssemblyVersion("0.9.5.1")]
-[assembly: AssemblyFileVersion("1.0.0.00")]
-[assembly: AssemblyInformationalVersion("1.0")]
+[assembly: AssemblyFileVersion("2.6.0903.0")]
+[assembly: AssemblyInformationalVersion("2.6")]
 [assembly: AllowPartiallyTrustedCallers]
 
 #endif
