@@ -908,7 +908,7 @@ def test_paramless_function_call_error():
         AssertUnreachable()
     except TypeError: pass
 
-@skip("interpreted")  # we don't have FuncEnv's in interpret modes so this always returns None
+
 def test_function_closure():
     def f(): pass
     
@@ -971,6 +971,12 @@ def test_function_closure():
         return g()
 
     AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5])
+    
+    # closure cells are not recreated
+    callRes = f()
+    a = sorted([id(x) for x in callRes.func_closure])
+    b = sorted([id(x) for x in callRes.func_closure])
+    AreEqual(a, b)
 
     def f():
         x = 4

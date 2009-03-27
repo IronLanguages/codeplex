@@ -50,6 +50,9 @@
       <!--          Compiler          -->
       <!--                            -->
       <Compile Include="Compiler\ArrayGlobalAllocator.cs" />
+      <Compile Include="Compiler\ClosureExpression.cs" />
+      <Compile Include="Compiler\ClosureInfo.cs" />
+      <Compile Include="Compiler\CompilationMode.cs" />
       <Compile Include="Compiler\DictionaryGlobalAllocator.cs" />
       <Compile Include="Compiler\FieldBuilderExpression.cs" />
       <Compile Include="Compiler\GlobalAllocator.cs" />

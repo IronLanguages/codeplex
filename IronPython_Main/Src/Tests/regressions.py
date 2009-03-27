@@ -210,6 +210,10 @@ def test_struct_uint_bad_value_cp20039():
     AreEqual(_struct.Struct('L').pack(4294967296), '\x00\x00\x00\x00')
     AreEqual(_struct.Struct('L').pack(-1), '\x00\x00\x00\x00')
     AreEqual(_struct.Struct('L').pack('abc'), '\x00\x00\x00\x00')
+    if not is_cli: #CodePlex 20039
+        AreEqual(_struct.Struct('I').pack(4294967296), '\x00\x00\x00\x00')
+        AreEqual(_struct.Struct('I').pack(-1), '\x00\x00\x00\x00')
+        AreEqual(_struct.Struct('I').pack('abc'), '\x00\x00\x00\x00')
 
 def test_reraise_backtrace_cp20051():
     def foo():

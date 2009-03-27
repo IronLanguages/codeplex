@@ -44,12 +44,17 @@ def gen_args_comma(nparams, comma):
 def gen_args(nparams):
     return gen_args_comma(nparams, "")
 
-def gen_args_call(nparams):
+def gen_args_call(nparams, *prefix):
     args = ""
     comma = ""
     for i in xrange(nparams):
         args = args + comma +("arg%d" % i)
         comma = ", "
+    if prefix:
+        if args:
+            args = prefix[0] + ', ' + args
+        else:
+            args = prefix[0]
     return args
 
 def gen_args_array(nparams):
@@ -187,7 +192,7 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
         if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
             var callTarget = pyfunc.Target as CallTarget%(argCount)d;
             if (callTarget != null) {
-                return callTarget(%(callArgs)s);
+                return callTarget(pyfunc, %(callArgs)s);
             }
         }
 
@@ -215,7 +220,7 @@ defaults_template = """
             var callTarget = pyfunc.Target as CallTarget%(totalParamCount)d;
             if (callTarget != null) {            
                 int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
-                return callTarget(%(callArgs)s, %(defaultArgs)s);
+                return callTarget(pyfunc, %(callArgs)s, %(defaultArgs)s);
             }
         }
 
@@ -229,7 +234,7 @@ public object Default%(argCount)dCall0(CallSite site, CodeContext context, objec
         var callTarget = pyfunc.Target as CallTarget%(argCount)d;
         if (callTarget != null) {
             int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-            return ((CallTarget%(argCount)d)pyfunc.Target)(%(defaultArgs)s);
+            return callTarget(pyfunc, %(defaultArgs)s);
         }
     }
 
@@ -281,10 +286,24 @@ def function_caller_switch(cw):
                   'argCount' : nparams,
                  })   
 
+def gen_lazy_call_targets(cw):
+    for nparams in range(MAX_ARGS+1):
+        cw.enter_block("public static object OriginalCallTarget%d(%s)" % (nparams, make_params(nparams, "PythonFunction function")))
+        cw.write("function.Target = function.func_code.Code.Compile();")
+        cw.write("return ((CallTarget%d)function.Target)(%s);" % (nparams, gen_args_call(nparams, 'function')))
+        cw.exit_block()
+        cw.write('')
+
+        cw.enter_block("public static IEnumerator OriginalGeneratorTarget%d(%s)" % (nparams, make_params(nparams, "PythonGenerator generator")))
+        cw.write("generator.Function.Target = generator.Function.func_code.Code.Compile();")
+        cw.write("return ((GeneratorTarget%d)generator.Function.Target)(%s);" % (nparams, gen_args_call(nparams, 'generator')))
+        cw.exit_block()
+        cw.write('')
+
 def call_targets(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("public delegate object CallTarget%d(%s);" %
-                 (nparams, make_params(nparams)))
+                 (nparams, make_params(nparams, "PythonFunction function")))
 
 def generator_targets(cw):
     for nparams in range(MAX_ARGS+1):
@@ -404,14 +423,19 @@ public static object Call(%(params)s) {
 
 def gen_python_switch(cw):
     for nparams in range(MAX_ARGS+1):
-        cw.write("case %d: return typeof(CallTarget%d);" % (nparams, nparams))
+        cw.write("""case %d: 
+    originalTarget = (CallTarget%d)OriginalCallTarget%d;
+    return typeof(CallTarget%d);""" % (nparams, nparams, nparams, nparams))
 
 def gen_python_generator_switch(cw):
    for nparams in range(MAX_ARGS+1):
-        cw.write("case %d: return typeof(GeneratorTarget%d);" % (nparams, nparams))
+        cw.write("""case %d: 
+    originalTarget = (GeneratorTarget%d)OriginalGeneratorTarget%d;
+    return typeof(GeneratorTarget%d);""" % (nparams, nparams, nparams, nparams))
 
 def main():
     return generate(
+        ("Python Lazy Call Targets", gen_lazy_call_targets),
         ("Python Builtin Function Optimizable Callers", builtin_function_callers),
         ("Python Builtin Function Optimizable Switch", builtin_function_callers_switch),
         ("Python Zero Arg Function Callers", function_callers_0),

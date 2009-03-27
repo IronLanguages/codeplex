@@ -309,12 +309,12 @@ namespace Microsoft.Scripting {
             if (ido != null) {
 #endif
                 var idoMetaObject = ido.GetMetaObject(expression);
-                if (idoMetaObject.Value != ido) {
-                    throw new InvalidOperationException();
-                }
 
-                if (idoMetaObject.Expression != expression) {
-                    throw new InvalidOperationException();
+                if (idoMetaObject == null ||
+                    !idoMetaObject.HasValue ||
+                    idoMetaObject.Value == null ||
+                    (object)idoMetaObject.Expression != (object)expression) {
+                    throw Error.InvalidMetaObjectCreated(ido.GetType());
                 }
 
                 return idoMetaObject;

@@ -249,7 +249,7 @@ div_body = """\
 if (y == -1 && x == %(type)s.MinValue) {
     return -(%(bigger_type)s)%(type)s.MinValue;
 } else {
-    return (%(type)s)%(op_type)sOps.%(method_name)sImpl((%(op_type)s)x, (%(op_type)s)y);
+    return (%(type)s)MathUtils.FloorDivideUnchecked(x, y);
 }"""
 
 #rshift, mod

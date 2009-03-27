@@ -74,6 +74,7 @@
       <Compile Include="xxsubtype.cs" />
       <Compile Include="_collections.cs" />
       <Compile Include="_functools.cs" />
+      <Compile Include="_heapq.cs" />
       <Compile Include="_random.cs" />
       <Compile Include="_sre.cs" />
       <Compile Include="_ssl.cs" />
