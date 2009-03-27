@@ -209,7 +209,7 @@ namespace IronPython.Runtime {
                 !binder.Signature.HasDictionaryArgument() &&
                 !binder.Signature.HasKeywordArgument() &&
                 !binder.Signature.HasListArgument() &&
-                (_flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0;
+                (Flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0;
         }
 
         private FunctionCaller/*!*/ GetFunctionCaller(Type/*!*/ callerType, int funcCompat) {
@@ -265,7 +265,7 @@ namespace IronPython.Runtime {
                 PythonFunction pyfunc = func as PythonFunction;
                 CallTarget0 target;
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat && (target = pyfunc.Target as CallTarget0) != null) {
-                    return target();
+                    return target(pyfunc);
                 }
 
                 return ((CallSite<Func<CallSite, CodeContext, object, object>>)site).Update(site, context, func);
@@ -283,7 +283,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget1;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget1)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -296,7 +296,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget2;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget2)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -309,7 +309,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget3;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget3)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -322,7 +322,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget4;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget4)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -335,7 +335,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget5)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -348,7 +348,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget6)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -361,7 +361,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget7)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -374,7 +374,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget8)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -387,7 +387,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget9)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
                     }
                 }
 
@@ -400,7 +400,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget10)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
                     }
                 }
 
@@ -413,7 +413,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget11)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
                     }
                 }
 
@@ -426,7 +426,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget12)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11]);
                     }
                 }
 
@@ -439,7 +439,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-                        return ((CallTarget13)pyfunc.Target)(pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11], pyfunc.Defaults[defaultIndex + 12]);
+                        return callTarget(pyfunc, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11], pyfunc.Defaults[defaultIndex + 12]);
                     }
                 }
 
@@ -476,7 +476,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget1;
                     if (callTarget != null) {
-                        return callTarget(arg0);
+                        return callTarget(pyfunc, arg0);
                     }
                 }
 
@@ -503,7 +503,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget2;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -516,7 +516,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget3;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -529,7 +529,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget4;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -542,7 +542,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -555,7 +555,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -568,7 +568,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -581,7 +581,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -594,7 +594,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -607,7 +607,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
                     }
                 }
 
@@ -620,7 +620,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
                     }
                 }
 
@@ -633,7 +633,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
                     }
                 }
 
@@ -646,7 +646,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 1;
-                        return callTarget(arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11]);
+                        return callTarget(pyfunc, arg0, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10], pyfunc.Defaults[defaultIndex + 11]);
                     }
                 }
 
@@ -662,7 +662,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget2;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1);
+                        return callTarget(pyfunc, arg0, arg1);
                     }
                 }
 
@@ -689,7 +689,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget3;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -702,7 +702,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget4;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -715,7 +715,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -728,7 +728,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -741,7 +741,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -754,7 +754,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -767,7 +767,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -780,7 +780,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -793,7 +793,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
                     }
                 }
 
@@ -806,7 +806,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
                     }
                 }
 
@@ -819,7 +819,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 2;
-                        return callTarget(arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
+                        return callTarget(pyfunc, arg0, arg1, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9], pyfunc.Defaults[defaultIndex + 10]);
                     }
                 }
 
@@ -835,7 +835,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget3;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2);
+                        return callTarget(pyfunc, arg0, arg1, arg2);
                     }
                 }
 
@@ -862,7 +862,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget4;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -875,7 +875,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -888,7 +888,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -901,7 +901,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -914,7 +914,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -927,7 +927,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -940,7 +940,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -953,7 +953,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -966,7 +966,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
                     }
                 }
 
@@ -979,7 +979,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 3;
-                        return callTarget(arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8], pyfunc.Defaults[defaultIndex + 9]);
                     }
                 }
 
@@ -995,7 +995,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget4;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3);
                     }
                 }
 
@@ -1022,7 +1022,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1035,7 +1035,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1048,7 +1048,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1061,7 +1061,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1074,7 +1074,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -1087,7 +1087,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -1100,7 +1100,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -1113,7 +1113,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -1126,7 +1126,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 4;
-                        return callTarget(arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7], pyfunc.Defaults[defaultIndex + 8]);
                     }
                 }
 
@@ -1142,7 +1142,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget5;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4);
                     }
                 }
 
@@ -1169,7 +1169,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1182,7 +1182,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1195,7 +1195,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1208,7 +1208,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1221,7 +1221,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -1234,7 +1234,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -1247,7 +1247,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -1260,7 +1260,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 5;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6], pyfunc.Defaults[defaultIndex + 7]);
                     }
                 }
 
@@ -1276,7 +1276,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget6;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5);
                     }
                 }
 
@@ -1303,7 +1303,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1316,7 +1316,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1329,7 +1329,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1342,7 +1342,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1355,7 +1355,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -1368,7 +1368,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -1381,7 +1381,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 6;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5], pyfunc.Defaults[defaultIndex + 6]);
                     }
                 }
 
@@ -1397,7 +1397,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget7;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
                     }
                 }
 
@@ -1424,7 +1424,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1437,7 +1437,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1450,7 +1450,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1463,7 +1463,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1476,7 +1476,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -1489,7 +1489,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 7;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4], pyfunc.Defaults[defaultIndex + 5]);
                     }
                 }
 
@@ -1505,7 +1505,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget8;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                     }
                 }
 
@@ -1532,7 +1532,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 8;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1545,7 +1545,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 8;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1558,7 +1558,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 8;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1571,7 +1571,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 8;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1584,7 +1584,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 8;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3], pyfunc.Defaults[defaultIndex + 4]);
                     }
                 }
 
@@ -1600,7 +1600,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget9;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
                     }
                 }
 
@@ -1627,7 +1627,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 9;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1640,7 +1640,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 9;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1653,7 +1653,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 9;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1666,7 +1666,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 9;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2], pyfunc.Defaults[defaultIndex + 3]);
                     }
                 }
 
@@ -1682,7 +1682,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget10;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
                     }
                 }
 
@@ -1709,7 +1709,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 10;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1722,7 +1722,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 10;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1735,7 +1735,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 10;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1], pyfunc.Defaults[defaultIndex + 2]);
                     }
                 }
 
@@ -1751,7 +1751,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget11;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
                     }
                 }
 
@@ -1778,7 +1778,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 11;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1791,7 +1791,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 11;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pyfunc.Defaults[defaultIndex + 0], pyfunc.Defaults[defaultIndex + 1]);
                     }
                 }
 
@@ -1807,7 +1807,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget12;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
                     }
                 }
 
@@ -1834,7 +1834,7 @@ namespace IronPython.Runtime {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {            
                         int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + 12;
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, pyfunc.Defaults[defaultIndex + 0]);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, pyfunc.Defaults[defaultIndex + 0]);
                     }
                 }
 
@@ -1850,7 +1850,7 @@ namespace IronPython.Runtime {
                 if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
                     var callTarget = pyfunc.Target as CallTarget13;
                     if (callTarget != null) {
-                        return callTarget(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
+                        return callTarget(pyfunc, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
                     }
                 }
 

@@ -59,7 +59,7 @@ namespace IronPython.Runtime {
                         FindImportFunction(context), 
                         fullName, 
                         Builtin.globals(context), 
-                        Builtin.LocalsAsAttributesCollection(context), 
+                        context.Scope.Dict, 
                         from
                     );
                 }
@@ -76,7 +76,7 @@ namespace IronPython.Runtime {
                     FindImportFunction(context), 
                     fullName, 
                     Builtin.globals(context), 
-                    Builtin.LocalsAsAttributesCollection(context), 
+                    context.Scope.Dict, 
                     from, 
                     level
                 );

@@ -183,7 +183,15 @@ OPERATING SYSTEMS AFFECTED: All
 DESCRIPTION
 """
 
-REGEX_FILTER = "\.__(del)|(new)|(eq)|(ne)|(gt)|(lt)|(ge)|(le)|(subclasshook)|(sizeof)|(trunc)|(cmp)|(radd)|(contains)|(mod)|(mul)|(rmod)|(rmul)|(sub)|(div)(float)|(index)|(int)|(iter)|(long)|(setslice)|(unicode)|(weakref)__$"
+REGEX_FILTER = "\."
+REGEX_FILTER += "(__del__)|(__new__)|(__eq__)|(__ne__)|(__gt__)|(__lt__)"
+REGEX_FILTER += "|(__ge__)|(__le__)|(__subclasshook__)|(__sizeof__)|(__trunc__)"
+REGEX_FILTER += "|(__cmp__)|(__radd__)|(__contains__)|(__mod__)|(__mul__)"
+REGEX_FILTER += "|(__rmod__)|(__rmul__)|(__sub__)|(__div__)|(__float__)|(__index__)"
+REGEX_FILTER += "|(__int__)|(__iter__)|(__long__)|(__setslice__)|(__unicode__)"
+REGEX_FILTER += "|(__weakref__)|(__get__)|(__delete__)|(__package__)"
+REGEX_FILTER += "|(conjugate)|(fromhex)|(hex)|(imag)|(real)|(as_integer_ratio)|(is_integer)" #New float methods in 2.6
+REGEX_FILTER += "$"
 
 #--FUNCTIONS-------------------------------------------------------------------
 def ip_missing(mod_attr):

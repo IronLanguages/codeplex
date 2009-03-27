@@ -59,7 +59,7 @@ namespace IronPython.Compiler.Ast {
                     ag.Globals.GetSymbol(_name)
                 );
             } else {
-                read = ag.Globals.GetVariable(_reference.PythonVariable);
+                read = ag.Globals.GetVariable(ag, _reference.PythonVariable);
             }
 
             if (!_assigned && !(read is IPythonGlobalExpression)) {
@@ -87,7 +87,7 @@ namespace IronPython.Compiler.Ast {
 
             if (_reference.PythonVariable != null) {
                 assignment = ag.Globals.Assign(
-                    ag.Globals.GetVariable(_reference.PythonVariable), 
+                    ag.Globals.GetVariable(ag, _reference.PythonVariable), 
                     AstGenerator.ConvertIfNeeded(right, typeof(object))
                 );
             } else {
@@ -108,7 +108,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             if (_reference.PythonVariable != null && !ag.IsGlobal) {
-                MSAst.Expression variable = ag.Globals.GetVariable(_reference.PythonVariable);
+                MSAst.Expression variable = ag.Globals.GetVariable(ag, _reference.PythonVariable);
                 // keep the variable alive until we hit the del statement to
                 // better match CPython's lifetimes
                 MSAst.Expression del = Ast.Block(

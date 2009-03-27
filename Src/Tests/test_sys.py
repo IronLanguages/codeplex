@@ -66,7 +66,7 @@ def test_getrefcount():
 def test_version():
     import re
     #E.g., 2.5.0 (IronPython 2.0 Alpha (2.0.0.800) on .NET 2.0.50727.1433)
-    regex = "^\d\.\d\.\d \(IronPython \d\.\d(\.\d)? ((Alpha )|(Beta )|())((DEBUG )|())\(\d\.\d\.\d\.\d{1,8}\) on \.NET \d(\.\d{1,5}){3}\)$"
+    regex = "^\d\.\d\.\d \(IronPython \d\.\d(\.\d)? ((Alpha )|(Beta )|())((DEBUG )|()|(\d?))\(\d\.\d\.\d\.\d{1,8}\) on \.NET \d(\.\d{1,5}){3}\)$"
     Assert(re.match(regex, sys.version) != None)
 
 def test_winver():

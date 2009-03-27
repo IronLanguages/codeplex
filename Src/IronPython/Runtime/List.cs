@@ -1043,10 +1043,37 @@ namespace IronPython.Runtime {
             lock (this) return Array.BinarySearch(_data, index, count, value, comparer);
         }
 
+        internal bool EqualsWorker(List l) {
+            using (new OrderedLocker(this, l)) {
+                return PythonOps.ArraysEqual(_data, _size, l._data, l._size);
+            }
+        }
+
         internal int CompareToWorker(List l) {
             using (new OrderedLocker(this, l)) {
                 return PythonOps.CompareArrays(_data, _size, l._data, l._size);
             }
+        }
+
+        internal bool FastSwap(int i, int j) {
+            // ensure i <= j
+            if (i > j) {
+                int tmp = i;
+                i = j;
+                j = tmp;
+            }
+
+            // bounds checking
+            if (i < 0 || j >= _size) {
+                return false;
+            } else if (i == j) {
+                return true;
+            }
+
+            object temp = _data[i];
+            _data[i] = _data[j];
+            _data[j] = temp;
+            return true;
         }
 
         #region IList Members
@@ -1216,10 +1243,11 @@ namespace IronPython.Runtime {
         }
 
         bool IValueEquality.ValueEquals(object other) {
-            List l = other as List;
+            if (Object.ReferenceEquals(this, other)) return true;
 
+            List l = other as List;
             if (l == null || l.__len__() != this.__len__()) return false;
-            return CompareTo(l) == 0;
+            return Equals(l);
         }
 
         #endregion
@@ -1258,6 +1286,15 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        private bool Equals(List other) {
+            CompareUtil.Push(this, other);
+            try {
+                return EqualsWorker(other);
+            } finally {
+                CompareUtil.Pop(this, other);
+            }
+        }
 
         internal int CompareTo(List other) {
             CompareUtil.Push(this, other);

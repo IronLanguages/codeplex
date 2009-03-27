@@ -206,6 +206,54 @@ finally:
     __builtin__.locals = save_locals
 
 localsAfterExpr()
+del locals
+# name binding in a function
+def f():
+    a = 2
+    class c:
+        exec "a = 42"
+        abc = a
+    return c
+
+AreEqual(f().abc, 42)
+
+
+#def f():
+#    a = 2
+#    class c:
+#        locals()['a'] = 42
+#        abc = a
+#    return c
+#
+#AreEqual(f().abc, 2)
+#
+#def f():
+#    a = 2
+#    class c:
+#        exec "a = 43"
+#        locals()['a'] = 42 
+#        abc = a
+#    return c
+#
+#AreEqual(f().abc, 43)
+
+#def f():
+#    def x(): 42
+#    class C:
+#            print locals()
+#            print x
+#    return C
+#
+#AreEqual(f()().x, 42)
+
+#def f():
+#    def x(): 42
+#    class C:
+#            print locals()
+#            print x
+#    return C
+#
+#Assert(not hasattr(f()(), 'x'))
 
 ######################################################################################
 
