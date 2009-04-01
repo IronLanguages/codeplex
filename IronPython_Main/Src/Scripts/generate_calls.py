@@ -289,13 +289,13 @@ def function_caller_switch(cw):
 def gen_lazy_call_targets(cw):
     for nparams in range(MAX_ARGS+1):
         cw.enter_block("public static object OriginalCallTarget%d(%s)" % (nparams, make_params(nparams, "PythonFunction function")))
-        cw.write("function.Target = function.func_code.Code.Compile();")
+        cw.write("function.Target = function.func_code.GetCompiledCode();")
         cw.write("return ((CallTarget%d)function.Target)(%s);" % (nparams, gen_args_call(nparams, 'function')))
         cw.exit_block()
         cw.write('')
 
         cw.enter_block("public static IEnumerator OriginalGeneratorTarget%d(%s)" % (nparams, make_params(nparams, "PythonGenerator generator")))
-        cw.write("generator.Function.Target = generator.Function.func_code.Code.Compile();")
+        cw.write("generator.Function.Target = generator.Function.func_code.GetCompiledCode();")
         cw.write("return ((GeneratorTarget%d)generator.Function.Target)(%s);" % (nparams, gen_args_call(nparams, 'generator')))
         cw.exit_block()
         cw.write('')
