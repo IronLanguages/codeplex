@@ -282,34 +282,31 @@ def test_MTA():
 
 # Test -Q
 def test_Q():
-    if is_stdlib():
-        TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), """sys:1: DeprecationWarning: classic float division\n1.5\n""")
-        return
-
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), """<string>:1: DeprecationWarning: classic float division\n1.5\n""")
     TestCommandLine(("-Q", "warn", "-c", "print 3/2.0"), "1.5\n")
     TestCommandLine(("-Q", "warn", "-c", "print 3j/2.0"), "1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), "warning: DeprecationWarning: classic float division\n1.5\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2.0"), "warning: DeprecationWarning: classic float division\n1.5\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2L"), "warning: DeprecationWarning: classic float division\n1.5\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2.0"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2L"), "warning: DeprecationWarning: classic complex division\n1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2j"), "warning: DeprecationWarning: classic complex division\n-1.5j\n")
-    TestCommandLine(("-Qwarn", "-c", "print 3/2L"), "warning: DeprecationWarning: classic long division\n1\n")
-    TestCommandLine(("-Qwarnall", "-c", "print 3/2L"), "warning: DeprecationWarning: classic long division\n1\n")
-    TestCommandLine(("-Qwarn", "-c", "print 3L/2"), "warning: DeprecationWarning: classic long division\n1\n")
-    TestCommandLine(("-Qwarnall", "-c", "print 3L/2"), "warning: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2.0"), "<string>:1: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2.0"), "<string>:1: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2L"), "<string>:1: DeprecationWarning: classic float division\n1.5\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2.0"), "<string>:1: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2"), "<string>:1: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3j/2L"), "<string>:1: DeprecationWarning: classic complex division\n1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3.0/2j"), "<string>:1: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2j"), "<string>:1: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3L/2j"), "<string>:1: DeprecationWarning: classic complex division\n-1.5j\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3/2L"), "<string>:1: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3/2L"), "<string>:1: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3L/2"), "<string>:1: DeprecationWarning: classic long division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3L/2"), "<string>:1: DeprecationWarning: classic long division\n1\n")
 
     TestCommandLine(("-Qnew", "-c", "print 3/2"), "1.5\n")
     TestCommandLine(("-Qold", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Qwarn", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
-    TestCommandLine(("-Qwarnall", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3/2"), "<string>:1: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3/2"), "<string>:1: DeprecationWarning: classic int division\n1\n")
     TestCommandLine(("-Q", "new", "-c", "print 3/2"), "1.5\n")
     TestCommandLine(("-Q", "old", "-c", "print 3/2"), "1\n")
-    TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
-    TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "warning: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "<string>:1: DeprecationWarning: classic int division\n1\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "<string>:1: DeprecationWarning: classic int division\n1\n")
 
 def test_doc():
     TestCommandLine(("", "-c", "print __doc__"), "None\n", 0)

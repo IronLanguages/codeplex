@@ -459,8 +459,9 @@ def test_cached_types():
     clr.AddReference('InheritanceTypes')
     import test_inheritance
 
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21892
     # verify that GetSubclassedTypes round trips with clr.CompileSubclassTypes
-    clr.CompileSubclassTypes('finaltest', *clr.GetSubclassedTypes())
-    clr.AddReference('finaltest')
+    #clr.CompileSubclassTypes('finaltest', *clr.GetSubclassedTypes())
+    #clr.AddReference('finaltest')
 
 run_test(__name__)

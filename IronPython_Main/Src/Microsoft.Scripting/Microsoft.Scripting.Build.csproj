@@ -182,15 +182,11 @@
       <!--                       -->
       <!--          Ast          -->
       <!--                       -->
-      <Compile Include="Ast\ActionExpression.cs" />
       <Compile Include="Ast\AssignmentExpression.cs" />
       <Compile Include="Ast\BinaryExpression.cs" />
       <Compile Include="Ast\Block.cs" />
-      <Compile Include="Ast\BreakStatement.cs" />
       <Compile Include="Ast\CodeContextExpression.cs" />
-      <Compile Include="Ast\ConditionalExpression.cs" />
       <Compile Include="Ast\ConstantExpression.cs" />
-      <Compile Include="Ast\ContinueStatement.cs" />
       <Compile Include="Ast\DebugStatement.cs" />
       <Compile Include="Ast\DeleteStatement.cs" />
       <Compile Include="Ast\DeleteUnboundExpression.cs" />
@@ -202,7 +198,6 @@
       <Compile Include="Ast\GlobalVariableExpression.cs" />
       <Compile Include="Ast\IfStatementBuilder.cs" />
       <Compile Include="Ast\IfStatementTest.cs" />
-      <Compile Include="Ast\LabeledStatement.cs" />
       <Compile Include="Ast\LambdaBuilder.cs" />
       <Compile Include="Ast\LambdaParameterRewriter.cs" />
       <Compile Include="Ast\LoopStatement.cs" />
@@ -212,7 +207,6 @@
       <Compile Include="Ast\SkipInterpretExpression.cs" />
       <Compile Include="Ast\SourceFileInformation.cs" />
       <Compile Include="Ast\SymbolConstantExpression.cs" />
-      <Compile Include="Ast\ThrowStatement.cs" />
       <Compile Include="Ast\TryStatementBuilder.cs" />
       <Compile Include="Ast\UnaryExpression.cs" />
       <Compile Include="Ast\UnboundAssignment.cs" />
@@ -437,7 +431,6 @@
       <Compile Include="Runtime\OperationFailed.cs" />
       <Compile Include="Runtime\Operators.cs" />
       <Compile Include="Runtime\OperatorSlotAttribute.cs" />
-      <Compile Include="Runtime\OptimizedScriptCode.cs" />
       <Compile Include="Runtime\ParamDictionaryAttribute.cs" />
       <Compile Include="Runtime\ParserSink.cs" />
       <Compile Include="Runtime\PositionTrackingWriter.cs" />
