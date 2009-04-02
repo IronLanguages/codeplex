@@ -17,17 +17,13 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT // ComObject
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
-using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Collections;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting {
@@ -277,47 +273,48 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal override IEnumerable<string> MemberNames {
-            get {
-                EnsureScanDefinedMethods();
-                EnsureScanDefinedEvents();
+        internal override IList<string> GetMemberNames(bool dataOnly) {
+            EnsureScanDefinedMethods();
+            EnsureScanDefinedEvents();
 
-                return ComTypeDesc.GetMemberNames();
-            }
+            return ComTypeDesc.GetMemberNames(dataOnly);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        internal override IEnumerable<KeyValuePair<string, object>> DataMembers {
-            get {
-                IEnumerable<string> names = MemberNames;
-                Type comType = RuntimeCallableWrapper.GetType();
+        internal override IList<KeyValuePair<string, object>> GetMembers(IEnumerable<string> names) {
+            if (names == null) {
+                names = GetMemberNames(true);
+            }
 
-                var members = new List<KeyValuePair<string, object>>();
-                foreach (string name in names) {
-                    ComMethodDesc method;
-                    if (ComTypeDesc.TryGetFunc(name, out method)){
-                        if (method.IsDataMember) {
-                            try {
-                                object value = comType.InvokeMember(
-                                    method.Name,
-                                    BindingFlags.GetProperty,
-                                    null,
-                                    RuntimeCallableWrapper,
-                                    new object[0],
-                                    CultureInfo.InvariantCulture
-                                );
-                                members.Add(new KeyValuePair<string, object>(method.Name, value));
+            Type comType = RuntimeCallableWrapper.GetType();
 
-                            //evaluation failed for some reason. pass exception out 
-                            } catch (System.Exception ex) {
-                                members.Add(new KeyValuePair<string, object>(method.Name, ex));
-                            }
-                        }
-                    }
+            var members = new List<KeyValuePair<string, object>>();
+            foreach (string name in names) {
+                if (name == null) {
+                    continue;
                 }
 
-                return members.ToArray();
+                ComMethodDesc method;
+                if (ComTypeDesc.TryGetFunc(name, out method) && method.IsDataMember) {
+                    try {
+                        object value = comType.InvokeMember(
+                            method.Name,
+                            BindingFlags.GetProperty,
+                            null,
+                            RuntimeCallableWrapper,
+                            new object[0],
+                            CultureInfo.InvariantCulture
+                        );
+                        members.Add(new KeyValuePair<string, object>(method.Name, value));
+
+                        //evaluation failed for some reason. pass exception out 
+                    } catch (Exception ex) {
+                        members.Add(new KeyValuePair<string, object>(method.Name, ex));
+                    }
+                }
             }
+
+            return members.ToArray();
         }
 
         DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter) {
@@ -493,7 +490,7 @@ namespace Microsoft.Scripting {
             if (_comTypeDesc != null && _comTypeDesc.Funcs != null) {
                 return;
             }
-            
+
             ComTypes.ITypeInfo typeInfo = ComRuntimeHelpers.GetITypeInfoFromIDispatch(_dispatchObject, true);
             if (typeInfo == null) {
                 _comTypeDesc = ComTypeDesc.CreateEmptyTypeDesc();

@@ -725,8 +725,11 @@ def test_relative_imports():
         write_to_file(_f_subpkg_b, 'import abc\nreload(abc)')
                 
         import the_dir.subdir.a
-        AreEqual(sys.foo, 'error')
-                
+        if sys.winver=="2.5":
+            AreEqual(sys.foo, 'error')
+        else:
+            Assert(not hasattr(sys, "foo"))
+        
         import the_dir.x
         AreEqual(sys.foo, 'pkgy')
         
