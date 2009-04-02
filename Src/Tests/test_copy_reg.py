@@ -18,11 +18,18 @@ import copy_reg
 import _random
 import imp
     
-class testclass:
+class testclass(object):
     pass
 
 class myCustom2:
     pass
+
+
+@skip("cli", "silverlight") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21907
+def test_constructor_neg():
+    class KOld: pass
+    
+    AssertError(TypeError, copy_reg.constructor, KOld)
 
  
 def test_constructor():
@@ -267,9 +274,11 @@ def test_dispatch_table():
 
 #pickle_complex
 def test_pickle_complex():
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21908
+    if not (is_cli or is_silverlight):
+        AreEqual(copy_reg.pickle_complex(1), (complex, (1, 0)))
     
     #negative tests
-    AssertError(AttributeError,copy_reg.pickle_complex,1)
     AssertError(AttributeError,copy_reg.pickle_complex,"myargu")
     obj2 = myCustom2()
     AssertError(AttributeError,copy_reg.pickle_complex,obj2)

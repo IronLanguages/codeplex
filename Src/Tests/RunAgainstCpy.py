@@ -56,15 +56,6 @@ EXCLUDE_LIST = ["test_fuzz_parser.py"]
 #under CPython 2.5.  For now, this is just disabled.
 EXCLUDE_LIST.append("test_math.py")
 
-# doesn't run on CPy 2.5
-EXCLUDE_LIST.append("test_bytes.py")
-EXCLUDE_LIST.append("test_strformat.py")
-EXCLUDE_LIST.append("test_formatting.py")
-EXCLUDE_LIST.append("test_cPickle.py")
-EXCLUDE_LIST.append("test_array.py")
-EXCLUDE_LIST.append("test_slice.py")
-EXCLUDE_LIST.append("test_complex.py")
-
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
 #These WILL be run.
 EXTRA_INCLUDE_LIST = ["regressions.py"]
@@ -119,7 +110,7 @@ for test_name in PKG_LIST:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = subprocess.call(sys.executable + " -m " + test_name,
+    ec = subprocess.call(sys.executable + " harness.py " + test_name,
                          env=os.environ)
     
     #if it fails, add it to the list

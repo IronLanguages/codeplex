@@ -115,12 +115,13 @@ def validcollate():
     # an argument is Random type
     str2 = _random.Random()
     AssertError(TypeError,_locale.strcoll,str1,str2)
-         
+
+@skip("cli", "silverlight") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21913  
 def test_strcoll():
-    _locale.setlocale(_locale.LC_COLLATE,"en-us")
+    _locale.setlocale(_locale.LC_COLLATE,"English")
     validcollate()
     
-    _locale.setlocale(_locale.LC_COLLATE,"fr-fr")
+    _locale.setlocale(_locale.LC_COLLATE,"French")
     validcollate()
 
 #CodePlex Work Item #9218
@@ -136,14 +137,14 @@ def test_setlocale():
     
     for c in c_list:
         resultLocale = None
-        _locale.setlocale(c,"en-us")
+        _locale.setlocale(c,"English")
         resultLocale = _locale.setlocale(c)
         AreEqual(resultLocale,"English_United States.1252")
             
                     
     for c in c_list:
         resultLocale = None
-        _locale.setlocale(c,"fr-fr")
+        _locale.setlocale(c,"French")
         resultLocale = _locale.setlocale(c)
         AreEqual(resultLocale,"French_France.1252")
     

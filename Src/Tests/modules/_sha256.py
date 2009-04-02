@@ -36,7 +36,11 @@ def test_sanity():
     Assert("__name__" in dir(_sha256))
     Assert("sha224" in dir (_sha256))
     Assert("sha256" in dir(_sha256))
-    AreEqual(len(dir(_sha256)), 4)#, "There should only be four attributes in the _sha256 module!")
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21920
+    if is_cli:
+        AreEqual(len(dir(_sha256)), 4)#, "There should only be four attributes in the _sha256 module!")
+    else:
+        AreEqual(len(dir(_sha256)), 5)#, "There should only be five attributes in the _sha256 module!")
 
 def test_sha256_sanity():
     x = _sha256.sha256()

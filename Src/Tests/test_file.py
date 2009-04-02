@@ -671,17 +671,27 @@ def test_modes():
     AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw+')
     AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua+')
 
-    x = file('test_file', 'pU')
-    AreEqual(x.mode, 'pU')
-    x.close()
-    
-    x = file('test_file', 'pU+')
-    AreEqual(x.mode, 'pU+')
-    x.close()
+    if is_cli:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
+        x = file('test_file', 'pU')
+        AreEqual(x.mode, 'pU')
+        x.close()
+        
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
+        x = file('test_file', 'pU+')
+        AreEqual(x.mode, 'pU+')
+        x.close()
+        
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21911
+        # extra info can be passed and is retained
+        x = file('test_file', 'rFOOBAR')
+        AreEqual(x.mode, 'rFOOBAR')
+        
+    else:
+        AssertError(IOError, file, 'test_file', 'pU')
+        AssertError(IOError, file, 'test_file', 'pU+')
+        AssertError(IOError, file, 'test_file', 'rFOOBAR')
 
-    # extra info can be passed and is retained
-    x = file('test_file', 'rFOOBAR')
-    AreEqual(x.mode, 'rFOOBAR')
 
 import thread
 CP16623_LOCK = thread.allocate_lock()

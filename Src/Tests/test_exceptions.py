@@ -901,9 +901,14 @@ def test_deprecated_string_exception():
     except:
         pass
     m = w.finish()
-    AreEqual(len(m), 1)
-    AreEqual(m[0].category, DeprecationWarning)
-    AreEqual(m[0].message, 'raising a string exception is deprecated')
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21909
+    if is_cli or is_silverlight:
+        AreEqual(len(m), 1)
+        AreEqual(m[0].category, DeprecationWarning)
+        AreEqual(m[0].message, 'raising a string exception is deprecated')
+    else:
+        AreEqual(len(m), 0)
+    
 
 def test_nested_try():
     global l
