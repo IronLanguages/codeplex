@@ -55,7 +55,9 @@
       <Compile Include="Compiler\CompilationMode.cs" />
       <Compile Include="Compiler\DictionaryGlobalAllocator.cs" />
       <Compile Include="Compiler\FieldBuilderExpression.cs" />
+      <Compile Include="Compiler\GeneratorRewriter.cs" />
       <Compile Include="Compiler\GlobalAllocator.cs" />
+      <Compile Include="Compiler\LazyCode.cs" />
       <Compile Include="Compiler\OnDiskScriptCode.cs" />
       <Compile Include="Compiler\Parser.cs" />
       <Compile Include="Compiler\PythonCallTargets.cs" />

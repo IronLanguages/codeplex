@@ -581,8 +581,12 @@ def test_relative_control():
         get_builtins_dict()['__import__'] = old_import
 
 def test_import_relative_error():
-        def f():  exec 'from . import *'
+    def f():  exec 'from . import *'
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21912
+    if is_cli or is_silverlight:
         AssertError(SyntaxError, f)
+    else:
+        AssertError(ValueError, f)
 
 def test_import_hooks_import_precence():
     """__import__ takes precedence over import hooks"""

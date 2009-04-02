@@ -658,7 +658,11 @@ def test_stat_result():
     AreEqual(object.st_mtime,8)
     AreEqual(object.st_ctime,9)
     
-    AreEqual(str(nt.stat_result(range(12))), "(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)") #CodePlex 8755
+    if is_cli: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21917
+        AreEqual(str(nt.stat_result(range(12))), "(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)") #CodePlex 8755
+    else:
+        AreEqual(str(nt.stat_result(range(12))), 
+                 "nt.stat_result(st_mode=0, st_ino=1, st_dev=2, st_nlink=3, st_uid=4, st_gid=5, st_size=6, st_atime=7, st_mtime=8, st_ctime=9)") #CodePlex 8755
     
     #negative tests
     statResult = [0,1,2,3,4,5,6,7,8,]

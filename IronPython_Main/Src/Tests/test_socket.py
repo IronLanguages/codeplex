@@ -204,29 +204,28 @@ def test_getprotobyname():
     '''
     #IP and CPython
     proto_map = {
-                "ggp": socket.IPPROTO_GGP,
                 "icmp": socket.IPPROTO_ICMP,
                 "ip": socket.IPPROTO_IP,
-                "pup": socket.IPPROTO_PUP,
                 "tcp": socket.IPPROTO_TCP,
                 "udp": socket.IPPROTO_UDP,
     }
     
     #supported only by IP
-    iponly_map = {"dstopts": socket.IPPROTO_DSTOPTS,
-                  "none": socket.IPPROTO_NONE,
-                  "raw": socket.IPPROTO_RAW,
-                  "ipv4": socket.IPPROTO_IPV4,
-                  "ipv6": socket.IPPROTO_IPV6,
-                  "esp": socket.IPPROTO_ESP,
-                  "fragment": socket.IPPROTO_FRAGMENT,
-                  "nd": socket.IPPROTO_ND,
-                  "icmpv6": socket.IPPROTO_ICMPV6,
-                  "routing": socket.IPPROTO_ROUTING,
-    }
-    
     if is_cli:
-        proto_map.update(iponly_map)
+        proto_map.update(
+            {"dstopts": socket.IPPROTO_DSTOPTS,
+             "none": socket.IPPROTO_NONE,
+             "raw": socket.IPPROTO_RAW,
+             "ipv4": socket.IPPROTO_IPV4,
+             "ipv6": socket.IPPROTO_IPV6,
+             "esp": socket.IPPROTO_ESP,
+             "fragment": socket.IPPROTO_FRAGMENT,
+             "nd": socket.IPPROTO_ND,
+             "icmpv6": socket.IPPROTO_ICMPV6,
+             "routing": socket.IPPROTO_ROUTING,
+             "pup": socket.IPPROTO_PUP, #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21918
+             "ggp": socket.IPPROTO_GGP, #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21918
+            })
     
     for proto_name, good_val in proto_map.iteritems():
         temp_val = socket.getprotobyname(proto_name)

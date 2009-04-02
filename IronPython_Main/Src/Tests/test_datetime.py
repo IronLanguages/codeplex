@@ -1088,14 +1088,25 @@ def test_cp13704():
     '''
     min_args = 3
 
-    AssertErrorWithMessage(TypeError, "function takes at least %d arguments (0 given)" % min_args, 
-                           datetime.datetime)
-    AssertErrorWithMessage(TypeError, "function takes at least %d arguments (2 given)" % min_args, 
-                           datetime.datetime, None, None)
-    AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (9 given)", 
-                           datetime.datetime, None, None, None, None, None, None, None, None, None)
-    AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (10 given)", 
-                           datetime.datetime, None, None, None, None, None, None, None, None, None, None)
+    if not (is_cli or is_silverlight):
+        AssertErrorWithMessage(TypeError, "Required argument 'year' (pos 1) not found", 
+                               datetime.datetime)
+        AssertErrorWithMessage(TypeError, "an integer is required",  
+                               datetime.datetime, None, None)
+        AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (9 given)", 
+                               datetime.datetime, None, None, None, None, None, None, None, None, None)
+        AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (10 given)", 
+                               datetime.datetime, None, None, None, None, None, None, None, None, None, None)
+        
+    else: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=13704
+        AssertErrorWithMessage(TypeError, "function takes at least %d arguments (0 given)" % min_args, 
+                               datetime.datetime)
+        AssertErrorWithMessage(TypeError, "function takes at least %d arguments (2 given)" % min_args, 
+                               datetime.datetime, None, None)
+        AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (9 given)", 
+                               datetime.datetime, None, None, None, None, None, None, None, None, None)
+        AssertErrorWithMessage(TypeError, "function takes at most 8 arguments (10 given)", 
+                               datetime.datetime, None, None, None, None, None, None, None, None, None, None)
                            
 
 def test_pickle():

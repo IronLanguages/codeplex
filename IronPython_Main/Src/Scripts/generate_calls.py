@@ -116,7 +116,7 @@ builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(t
             object res = _info.Caller(new object[] { context, %(callArgs)s }, out shouldOptimize);
 
             if (shouldOptimize) {
-                _info.OptimizedDelegate = _info.Binder.Optimize(_site, new object[] { context, func, %(callArgs)s });
+                _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, %(callArgs)s });
             }
 
             return res;
@@ -154,7 +154,7 @@ class BuiltinMethodCaller<TFuncType, %(typeParams)s> where TFuncType : class {
             object res = _info.Caller(new object[] { context, bf.__self__, %(callArgs)s }, out shouldOptimize);
 
             if (shouldOptimize) {
-                _info.OptimizedDelegate = _info.Binder.Optimize(_site, new object[] { context, func, %(callArgs)s });
+                _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, %(callArgs)s });
             }
 
             return res;
@@ -193,20 +193,6 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
             var callTarget = pyfunc.Target as CallTarget%(argCount)d;
             if (callTarget != null) {
                 return callTarget(pyfunc, %(callArgs)s);
-            }
-        }
-
-        return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
-    }
-
-    public object GeneratorCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
-        PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-            var callTarget = pyfunc.Target as GeneratorTarget%(argCount)d;
-            if (callTarget != null) {
-                PythonGenerator res = new PythonGenerator(pyfunc);
-                PythonOps.InitializePythonGenerator(res, callTarget(res, %(callArgs)s));
-                return res;
             }
         }
 
@@ -294,21 +280,10 @@ def gen_lazy_call_targets(cw):
         cw.exit_block()
         cw.write('')
 
-        cw.enter_block("public static IEnumerator OriginalGeneratorTarget%d(%s)" % (nparams, make_params(nparams, "PythonGenerator generator")))
-        cw.write("generator.Function.Target = generator.Function.func_code.GetCompiledCode();")
-        cw.write("return ((GeneratorTarget%d)generator.Function.Target)(%s);" % (nparams, gen_args_call(nparams, 'generator')))
-        cw.exit_block()
-        cw.write('')
-
 def call_targets(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("public delegate object CallTarget%d(%s);" %
                  (nparams, make_params(nparams, "PythonFunction function")))
-
-def generator_targets(cw):
-    for nparams in range(MAX_ARGS+1):
-        cw.write("public delegate IEnumerator GeneratorTarget%d(%s);" %
-                 (nparams, make_params(nparams, "PythonGenerator generator")))
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
@@ -427,12 +402,6 @@ def gen_python_switch(cw):
     originalTarget = (CallTarget%d)OriginalCallTarget%d;
     return typeof(CallTarget%d);""" % (nparams, nparams, nparams, nparams))
 
-def gen_python_generator_switch(cw):
-   for nparams in range(MAX_ARGS+1):
-        cw.write("""case %d: 
-    originalTarget = (GeneratorTarget%d)OriginalGeneratorTarget%d;
-    return typeof(GeneratorTarget%d);""" % (nparams, nparams, nparams, nparams))
-
 def main():
     return generate(
         ("Python Lazy Call Targets", gen_lazy_call_targets),
@@ -442,9 +411,7 @@ def main():
         ("Python Function Callers", function_callers),
         ("Python Function Caller Switch", function_caller_switch),
         ("Python Call Targets", call_targets),
-        ("Python Generator Targets", generator_targets),
         ("Python Call Target Switch", gen_python_switch),
-        ("Python Generator Target Switch", gen_python_generator_switch),
     )
 
 if __name__ == "__main__":
