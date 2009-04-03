@@ -160,7 +160,7 @@ class raise_generator(object):
         self.code = codeHolder
         self.state = state
     def generate(self, indent=1):
-        self.code.Add('    '*indent);self.code.Add('raise "%s"\n' % self.state)
+        self.code.Add('    '*indent);self.code.Add('raise Exception("%s")\n' % self.state)
 
 class define_generator(object):
     def __init__(self, codeHolder, body):
@@ -263,7 +263,7 @@ class test_exceptions(object):
     
     def test_exceptions(self):    
         if len(allGenerators)==0:
-            raise "Need at least one generator from test_exceptions"
+            raise Exception("Need at least one generator from test_exceptions")
     
         stateful = [raise_generator, return_generator]
         

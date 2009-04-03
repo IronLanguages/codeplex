@@ -19,7 +19,7 @@
 """
 
 import sys, nt
-sys.path.append([nt.environ[x] for x in nt.environ.keys() if x.lower() == "merlin_root"][0] + "\\..\\External.LCA_RESTRICTED\\Languages\\ironpython\\25\\Lib\\Test")
+sys.path.append([nt.environ[x] for x in nt.environ.keys() if x.lower() == "merlin_root"][0] + "\\..\\External.LCA_RESTRICTED\\Languages\\IronPython\\26\\Lib\\Test")
 
 def test_main(type="short"):
     import pystone

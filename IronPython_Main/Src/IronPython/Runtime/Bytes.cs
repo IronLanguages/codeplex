@@ -16,9 +16,11 @@
 using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.Scripting;
@@ -27,11 +29,10 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime {
     [PythonType("bytes")]
-    public class Bytes : IList<byte>, ICodeFormattable {
+    public class Bytes : IList<byte>, ICodeFormattable, IExpressionSerializable {
         private byte[]/*!*/ _bytes;
         internal static Bytes/*!*/ Empty = new Bytes();
 
@@ -799,6 +800,20 @@ namespace IronPython.Runtime {
             }
 
             return res;
+        }
+
+        #endregion
+
+        #region IExpressionSerializable Members
+
+        Expression IExpressionSerializable.CreateExpression() {
+            return Expression.Call(
+                typeof(PythonOps).GetMethod("MakeBytes"),
+                Expression.NewArrayInit(
+                    typeof(byte),
+                    ArrayUtils.ConvertAll(_bytes, (b) => Expression.Constant(b))
+                )
+            );
         }
 
         #endregion
