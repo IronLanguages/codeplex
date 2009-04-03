@@ -722,7 +722,7 @@ foreach ($exe_test in $tests)
 
 #CPython 2.5 is a special case
 echo "---------------------------------------------------------------------"
-test-pymodes $env:MERLIN_ROOT\..\External.LCA_RESTRICTED\Languages\IronPython\25\python.exe
+test-pymodes $env:MERLIN_ROOT\..\External.LCA_RESTRICTED\Languages\IronPython\26\python.exe
 
 $ErrorActionPreference = $old_ErrorActionPreference
 if ($global:ERRORS -gt 0)
