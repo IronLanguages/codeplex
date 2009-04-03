@@ -49,7 +49,7 @@ namespace IronPython {
         private readonly bool _verbose;
         private readonly Version _version;
         private readonly bool _adaptiveCompilation;
-        private readonly bool _enableProfiler;
+        private bool _enableProfiler;
         private readonly bool _lightweightScopes;
 
         public ReadOnlyCollection<string>/*!*/ Arguments {
@@ -146,6 +146,7 @@ namespace IronPython {
         /// </summary>
         public bool EnableProfiler {
             get { return _enableProfiler; }
+            set { _enableProfiler = value; }
         }
 
         public PythonOptions() 
