@@ -247,6 +247,7 @@
       <Compile Include="Generation\DelegateHelpers.cs" />
       <Compile Include="Generation\DelegateHelpers.Generated.cs" />
       <Compile Include="Generation\DynamicILGen.cs" />
+      <Compile Include="Generation\FieldBuilderExpression.cs" />
       <Compile Include="Generation\GlobalArrayRewriter.cs" />
       <Compile Include="Generation\GlobalLookupRewriter.cs" />
       <Compile Include="Generation\GlobalOptimizedRewriter.cs" />
