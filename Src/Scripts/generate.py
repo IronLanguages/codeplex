@@ -239,13 +239,20 @@ class BlockReplacer:
         code.insert(0, self.start)
         code.append(self.end)
         
+        def should_indent(line):
+            if not line: return False
+            if line.startswith("#region"): return True
+            if line.startswith("#endregion"): return True
+            if line.startswith("#"): return False
+            return True
+        
        #code_text = '\n' + indent
         code_text = indent[0]
         delim = False
         for line in code:
             if delim:
                 code_text += "\n"
-                if line:
+                if should_indent(line):
                     code_text += indent[0]
             code_text += line
             delim = True
