@@ -195,7 +195,7 @@ namespace Microsoft.Linq.Expressions {
         /// New tree requires more general template.
         /// </summary>
         private bool _tooSpecific;
-        
+
         /// <summary>
         /// New tree is sufficiently similar to the old one.
         /// </summary>
@@ -212,10 +212,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         internal static TreeCompareResult CompareTrees(
-                Expression left, 
-                Expression right, 
+                Expression left,
+                Expression right,
                 Set<int> templated,
-                out List<KeyValuePair<ConstantExpression, int>> ReplacementList){
+                out List<KeyValuePair<ConstantExpression, int>> ReplacementList) {
 
 
             TreeComparer comparer = new TreeComparer(templated);
@@ -255,7 +255,7 @@ namespace Microsoft.Linq.Expressions {
 
             _varInfo = new VariableInfo();
             _curConstNum = -1;
-            _replacementList = new List<KeyValuePair<ConstantExpression, int>>();           
+            _replacementList = new List<KeyValuePair<ConstantExpression, int>>();
 
             // then see if they differ by just constants which we could replace
             for (int i = 0; i < walkLeft.Expressions.Count; i++) {
@@ -337,7 +337,7 @@ namespace Microsoft.Linq.Expressions {
                                 AddToReplacementList(ceLeft);
                             }
                         } else {
-                            if (!leftValue.Equals(rightValue)){
+                            if (!leftValue.Equals(rightValue)) {
                                 //new templated const
                                 _tooSpecific = true;
                                 AddToReplacementList(ceLeft);
@@ -353,9 +353,11 @@ namespace Microsoft.Linq.Expressions {
                     }
                     break;
                 case ExpressionType.Add:
+                case ExpressionType.AddChecked:
                 case ExpressionType.And:
                 case ExpressionType.AndAlso:
                 case ExpressionType.ArrayIndex:
+                case ExpressionType.Coalesce:
                 case ExpressionType.Divide:
                 case ExpressionType.ExclusiveOr:
                 case ExpressionType.GreaterThan:
@@ -365,10 +367,13 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.LessThanOrEqual:
                 case ExpressionType.Modulo:
                 case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
                 case ExpressionType.Or:
                 case ExpressionType.OrElse:
+                case ExpressionType.Power:
                 case ExpressionType.RightShift:
                 case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
                 case ExpressionType.AddAssign:
                 case ExpressionType.SubtractAssign:
                 case ExpressionType.MultiplyAssign:
@@ -384,6 +389,26 @@ namespace Microsoft.Linq.Expressions {
                 case ExpressionType.LeftShiftAssign:
                 case ExpressionType.ExclusiveOrAssign:
                     if (!Compare((BinaryExpression)currentLeft, (BinaryExpression)currentRight)) {
+                        return false;
+                    }
+                    break;
+
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.Decrement:
+                case ExpressionType.Increment:
+                case ExpressionType.PreDecrementAssign:
+                case ExpressionType.PreIncrementAssign:
+                case ExpressionType.PostDecrementAssign:
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.UnaryPlus:
+                case ExpressionType.Negate:
+                case ExpressionType.NegateChecked:
+                case ExpressionType.Not:
+                case ExpressionType.OnesComplement:
+                case ExpressionType.IsFalse:
+                case ExpressionType.IsTrue:
+                    if (!Compare((UnaryExpression)currentLeft, (UnaryExpression)currentRight)) {
                         return false;
                     }
                     break;
@@ -428,37 +453,45 @@ namespace Microsoft.Linq.Expressions {
                         return false;
                     }
                     break;
+
+                case ExpressionType.ArrayLength:
                 case ExpressionType.Lambda:
                 case ExpressionType.Assign:
                 case ExpressionType.Goto:
                 case ExpressionType.Throw:
                 case ExpressionType.Loop:
                 case ExpressionType.Default:
-                case ExpressionType.Convert:
                 case ExpressionType.TypeAs:
                 case ExpressionType.Unbox:
-                case ExpressionType.Negate:
-                case ExpressionType.Not:
-                case ExpressionType.IsFalse:
-                case ExpressionType.IsTrue:
-                case ExpressionType.OnesComplement:
                 case ExpressionType.Conditional:
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
                 case ExpressionType.Invoke:
-                    // these nodes children and types completely
+                case ExpressionType.RuntimeVariables:
+                    // these nodes' children and types completely
                     // define the node
                     break;
-                case ExpressionType.Label:
-                case ExpressionType.Switch:
-                    // we could improve the compare to compare labels & switch,
-                    // but these are rarely used in rules.
-                    return false;
+
                 case ExpressionType.Extension:
                     // we should have been reduced, but error on the side of being different.
                     return false;
+
+                case ExpressionType.Index:
+                    if (!Compare((IndexExpression)currentLeft, (IndexExpression)currentRight)) {
+                        return false;
+                    }
+                    break;
+
+                // we could improve the compare to compare these nodes,
+                // but these are rarely used in rules.
+                case ExpressionType.Quote:
+                case ExpressionType.Label:
+                case ExpressionType.Switch:
+                case ExpressionType.DebugInfo:
+                case ExpressionType.ListInit:
+                case ExpressionType.MemberInit:
                 default:
-                    throw ContractUtils.Unreachable;
+                    return false;
             }
             return true;
         }
@@ -495,6 +528,14 @@ namespace Microsoft.Linq.Expressions {
             }
 
             return true;
+        }
+
+        private static bool Compare(IndexExpression left, IndexExpression right) {
+            return left.Indexer == right.Indexer;
+        }
+
+        private static bool Compare(UnaryExpression left, UnaryExpression right) {
+            return left.Method == right.Method;
         }
 
         private static bool Compare(MethodCallExpression left, MethodCallExpression right) {

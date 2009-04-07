@@ -3435,6 +3435,28 @@ namespace IronPython.Runtime.Operations {
             return b.ToString();
         }
 
+        /// <summary>
+        /// Called from generated code, helper to remove a name
+        /// </summary>
+        public static object RemoveName(CodeContext context, SymbolId name) {
+            return context.LanguageContext.RemoveName(context.Scope, name);
+        }
+
+        /// <summary>
+        /// Called from generated code, helper to do name lookup
+        /// </summary>
+        public static object LookupName(CodeContext context, SymbolId name) {
+            return context.LanguageContext.LookupName(context.Scope, name);
+        }
+
+        /// <summary>
+        /// Called from generated code, helper to do name assignment
+        /// </summary>
+        public static object SetName(CodeContext context, SymbolId name, object value) {
+            context.LanguageContext.SetName(context.Scope, name, value);
+            return value;
+        }
+
         #region Global Access
 
         public static CodeContext/*!*/ CreateLocalContext(CodeContext/*!*/ outerContext, Microsoft.Scripting.Tuple boxes, SymbolId[] args, bool isVisible) {
