@@ -17,7 +17,7 @@ import sys
 from iptest.runner import run_test_pkg
 
 #List of all test packages to be run under IronPython
-TEST_PKG_LIST = ["interop.net", "modules", "hosting"]
+TEST_PKG_LIST = ["interop.net", "modules", "hosting", "versions"]
 
 #List of specific modules contained within test packages
 #that have been disabled

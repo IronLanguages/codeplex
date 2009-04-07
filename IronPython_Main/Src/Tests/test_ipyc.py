@@ -414,7 +414,7 @@ def test_compiled_code():
     finally:
         System.IO.File.Move('old_test_class.py', testpath.public_testdir + '\\test_class.py')
         
-
+@skip("multiple_execute")
 def test_cached_types():
     import clr
     from System import IComparable, IFormattable, ICloneable

@@ -2090,7 +2090,7 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static Exception MakeRethrownException(CodeContext/*!*/ context) {
             PythonTuple t = GetExceptionInfo(context);
-            
+
             Exception e = MakeException(context, t[0], t[1], t[2]);
             ExceptionHelpers.UpdateForRethrow(e);
             return e;
@@ -2865,7 +2865,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Function helpers
 
-        public static PythonGenerator MakeGenerator(PythonFunction function, Tuple data, object generatorCode) {
+        public static PythonGenerator MakeGenerator(PythonFunction function, Microsoft.Scripting.Tuple data, object generatorCode) {
             PythonGeneratorNext next = generatorCode as PythonGeneratorNext;
             if (next == null) {
                 next = ((LazyCode<PythonGeneratorNext>)generatorCode).EnsureDelegate();
