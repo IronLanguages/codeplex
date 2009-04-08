@@ -21,11 +21,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Linq.Expressions;
-using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using System.Security;
 
 namespace Microsoft.Scripting {
 

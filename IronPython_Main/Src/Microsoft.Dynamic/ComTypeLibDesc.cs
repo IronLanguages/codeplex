@@ -18,10 +18,8 @@ using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
-using System.Runtime.InteropServices;
-using Microsoft.Scripting;
 using System.Globalization;
+using System.Security;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting {
@@ -46,6 +44,7 @@ namespace Microsoft.Scripting {
             return String.Format(CultureInfo.CurrentCulture, "<type library {0}>", _typeLibName);
         }
 
+        [SecurityCritical]
         internal static ComTypeLibDesc GetFromTypeLib(ComTypes.ITypeLib typeLib) {
             // check whether we have already loaded this type library
             ComTypes.TYPELIBATTR typeLibAttr = ComRuntimeHelpers.GetTypeAttrForTypeLib(typeLib);

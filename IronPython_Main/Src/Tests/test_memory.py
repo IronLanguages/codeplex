@@ -19,6 +19,7 @@ skiptest("silverlight")  #no time.clock or GetTotalMemory
 
 from Microsoft.Scripting.Generation import Snippets
 import clr
+import gc
 skipMemoryCheck = Snippets.Shared.SaveSnippets or clr.GetCurrentRuntime().Configuration.DebugMode
 
 from time import clock
@@ -84,7 +85,7 @@ t_list = [
     
 for code in t_list:
     baseMem = evalTest(10)
-    usedMax = max(10000, 4*baseMem)
+    usedMax = max(12000, 4*baseMem)
     if not skipMemoryCheck:
         for repetitions in [100, 500]:
             usedMem = evalTest(repetitions)

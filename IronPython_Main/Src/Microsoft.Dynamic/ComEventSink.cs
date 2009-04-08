@@ -20,11 +20,9 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Security;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting {
@@ -69,12 +67,14 @@ namespace Microsoft.Scripting {
 
         #region ctor
 
+        [SecurityCritical]
         private ComEventSink(object rcw, Guid sourceIid) {
             Initialize(rcw, sourceIid);
         }
 
         #endregion
 
+        [SecurityCritical]
         private void Initialize(object rcw, Guid sourceIid) {
             _sourceIid = sourceIid;
             _adviseCookie = -1;
@@ -96,6 +96,7 @@ namespace Microsoft.Scripting {
 
         #region static methods
 
+        [SecurityCritical]
         public static ComEventSink FromRuntimeCallableWrapper(object rcw, Guid sourceIid, bool createIfNotFound) {
             List<ComEventSink> comEventSinks = ComEventSinksContainer.FromRuntimeCallableWrapper(rcw, createIfNotFound);
 
@@ -150,6 +151,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [SecurityCritical]
         public void RemoveHandler(int dispid, object func) {
 
             string name = String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", dispid);
@@ -272,6 +274,11 @@ namespace Microsoft.Scripting {
 
         #region IDisposable
 
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         public void Dispose() {
             DisposeAll();
             GC.SuppressFinalize(this);
@@ -279,10 +286,16 @@ namespace Microsoft.Scripting {
 
         #endregion
 
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         ~ComEventSink() {
             DisposeAll();
         }
 
+        [SecurityCritical]
         private void DisposeAll() {
             if (_connectionPoint == null) {
                 return;

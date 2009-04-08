@@ -18,9 +18,7 @@ using System; using Microsoft;
 #if !SILVERLIGHT
 
 using System.Diagnostics;
-using System.Globalization;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>

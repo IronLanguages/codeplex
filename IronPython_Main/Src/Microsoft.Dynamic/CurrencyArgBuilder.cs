@@ -21,7 +21,6 @@ using System; using Microsoft;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     internal sealed class CurrencyArgBuilder : SimpleArgBuilder {

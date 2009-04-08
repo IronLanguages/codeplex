@@ -24,7 +24,8 @@ class VariantType:
         unmanagedRepresentationType=None,
         includeInUnionTypes=True,
         getStatements=None,
-        setStatements=None):
+        setStatements=None,
+        critical=False):
         
         self.emitAccessors = emitAccessors
         self.variantType = variantType
@@ -42,13 +43,14 @@ class VariantType:
         firstChar = self.variantType[0]
         self.name = self.variantType.lower().replace(firstChar.lower(), firstChar, 1)
         self.accessorName = "As" + self.name
+        self.critical = critical
     
     def write_UnionTypes(self, cw):
         if not self.includeInUnionTypes: return
         if self.unmanagedRepresentationType == "IntPtr":
-            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]')
+            cw.write('[SuppressMessage("Microsoft.Reliability", "CA2006:UseSafeHandleToEncapsulateNativeResources")]')
         if self.managedFieldName == '_bstr':
-            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]')
+            cw.write('[SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]')
         cw.write("[FieldOffset(0)] internal %s %s;" % (self.unmanagedRepresentationType, self.managedFieldName))
 
     def write_ToObject(self, cw):
@@ -59,11 +61,11 @@ class VariantType:
             return
             
         cw.write("// VT_%s" % self.variantType)
-        cw.writeline()
         
         cw.enter_block('public %s %s' % (self.managedType, self.accessorName))
 
         # Getter
+        if self.critical: gen_exposed_code_security(cw)
         cw.enter_block("get")
         cw.write("Debug.Assert(VariantType == VarEnum.VT_%s);" % self.variantType)
         if self.getStatements == None:
@@ -73,6 +75,7 @@ class VariantType:
         cw.exit_block()
 
         # Setter
+        if self.critical: gen_exposed_code_security(cw)
         cw.enter_block("set")
         cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
         cw.write("VariantType = VarEnum.VT_%s;" % self.variantType)
@@ -86,6 +89,8 @@ class VariantType:
 
         # Byref Setter
         cw.writeline()
+        gen_exposed_code_security(cw)
+
         cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
         cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
         cw.write("VariantType = (VarEnum.VT_%s | VarEnum.VT_BYREF);" % self.variantType)
@@ -113,7 +118,8 @@ class VariantType:
 
     def write_ConvertByrefToPtr(self, cw):
         if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType and self.variantType != "ERROR":
-            cw.write('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
+            gen_exposed_code_security(cw)
+            cw.write('[SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
             if self.unmanagedRepresentationType == 'Int32':
                 cw.enter_block("public static unsafe IntPtr Convert%sByrefToPtr(ref %s value)" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType))
             else:
@@ -124,7 +130,13 @@ class VariantType:
             cw.exit_block()        
             cw.exit_block()
             cw.write('')
-    
+
+def gen_exposed_code_security(cw):
+    cw.write("#if MICROSOFT_DYNAMIC")
+    cw.write("[PermissionSet(SecurityAction.LinkDemand, Unrestricted = true)]")
+    cw.write("#endif")
+    cw.write("[SecurityCritical]")
+
 variantTypes = [
   # VariantType('varEnum', 'managed_type')
     VariantType('I1', "SByte"),
@@ -180,7 +192,8 @@ variantTypes = [
                 "if (value != null) {",
                 "    Marshal.GetNativeVariantForObject(value, UnsafeMethods.ConvertVariantByrefToPtr(ref this));",
                 "}"
-        ]),
+        ],
+        critical=True),
     VariantType("UNKNOWN", "Object", 
         isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
@@ -195,7 +208,8 @@ variantTypes = [
                 "if (value != null) {",
                 "    _typeUnion._unionTypes._unknown = Marshal.GetIUnknownForObject(value);",
                 "}"
-        ]),
+        ],
+        critical=True),
     VariantType("DISPATCH", "Object", 
         isPrimitiveType=False,
         unmanagedRepresentationType="IntPtr",
@@ -210,14 +224,16 @@ variantTypes = [
                 "if (value != null) {",
                 "    _typeUnion._unionTypes._unknown = Marshal.GetIDispatchForObject(value);",
                 "}"
-        ]),
+        ],
+        critical=True),
     VariantType("VARIANT", "Object", 
         emitAccessors=False,
         isPrimitiveType=False,
         unmanagedRepresentationType="Variant",
         includeInUnionTypes=False,              # will use "this" 
         getStatements=["return Marshal.GetObjectForNativeVariant(UnsafeMethods.ConvertVariantByrefToPtr(ref this));"],
-        setStatements=["UnsafeMethods.InitVariantForObject(value, ref this);"])
+        setStatements=["UnsafeMethods.InitVariantForObject(value, ref this);"],
+        critical=True)
 
 ]
 

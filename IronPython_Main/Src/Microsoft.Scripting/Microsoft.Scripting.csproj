@@ -182,6 +182,7 @@
     <Compile Include="Interpreter\LightCompiler.cs" />
     <Compile Include="Interpreter\RuntimeVariables.cs" />
     <Compile Include="Interpreter\StackFrame.cs" />
+    <Compile Include="Interpreter\LastFaultingLineExpression.cs" />
     <Compile Include="Runtime\BindingRestrictionsHelpers.cs" />
     <Compile Include="Runtime\DynamicNull.cs" />
     <Compile Include="Runtime\Generator.cs" />

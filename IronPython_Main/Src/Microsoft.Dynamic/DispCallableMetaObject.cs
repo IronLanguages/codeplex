@@ -17,13 +17,9 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT
 
-using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
+using System.Security;
+using System.Security.Permissions;
 
 namespace Microsoft.Scripting {
     internal class DispCallableMetaObject : DynamicMetaObject {
@@ -44,11 +40,22 @@ namespace Microsoft.Scripting {
                 base.BindInvoke(binder, args);
         }
 
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         private DynamicMetaObject BindGetOrInvoke(DynamicMetaObject[] args, CallInfo callInfo) {
+            //
+            // Demand Full Trust to proceed with the binding.
+            //
+
+            new PermissionSet(PermissionState.Unrestricted).Demand();
+
             ComMethodDesc method;
             var target = _callable.DispatchComObject;
             var name = _callable.MemberName;
-            
+
             if (target.TryGetMemberMethod(name, out method) ||
                 target.TryGetMemberMethodExplicit(name, out method)) {
 
@@ -58,8 +65,18 @@ namespace Microsoft.Scripting {
             return null;
         }
 
-
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
+            //
+            // Demand Full Trust to proceed with the binding.
+            //
+
+            new PermissionSet(PermissionState.Unrestricted).Demand();
+
             ComMethodDesc method;
             var target = _callable.DispatchComObject;
             var name = _callable.MemberName;
@@ -76,6 +93,7 @@ namespace Microsoft.Scripting {
             return base.BindSetIndex(binder, indexes, value);
         }
 
+        [SecurityCritical]
         private DynamicMetaObject BindComInvoke(ComMethodDesc method, DynamicMetaObject[] indexes, CallInfo callInfo, bool[] isByRef) {
             var callable = Expression;
             var dispCall = Helpers.Convert(callable, typeof(DispCallable));
@@ -94,6 +112,7 @@ namespace Microsoft.Scripting {
             ).Invoke();
         }
 
+        [SecurityCritical]
         private BindingRestrictions DispCallableRestrictions() {
             var callable = Expression;
 
