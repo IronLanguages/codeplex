@@ -18,8 +18,7 @@ using System; using Microsoft;
 #if !SILVERLIGHT // ComObject
 
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
+using System.Security;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting {
@@ -28,6 +27,7 @@ namespace Microsoft.Scripting {
         private LinkedList<string> _itfs; // implemented interfaces
         private LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
 
+        [SecurityCritical]
         internal ComTypeClassDesc(ComTypes.ITypeInfo typeInfo) :
             base(typeInfo) {
             ComTypes.TYPEATTR typeAttr = ComRuntimeHelpers.GetTypeAttrForTypeInfo(typeInfo);

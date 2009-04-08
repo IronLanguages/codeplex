@@ -16,11 +16,6 @@
 using System; using Microsoft;
 
 
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Reflection.Emit;
-using System.Text;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting {

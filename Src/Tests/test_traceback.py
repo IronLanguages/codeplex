@@ -326,4 +326,37 @@ cp11116_a.a()
         nt.unlink(_t_test)
         nt.unlink(_t_test_a)
 
+Line331 = 332
+def test_reraise():
+    def g():
+        f()
+    
+    def f():
+        try:
+            raise Exception
+        except:
+            raise
+
+    try:
+        g()
+    except:
+        assert_traceback([(Line331+9, 0, 'test_traceback.py', 'test_reraise'), (Line331, 0, 'test_traceback.py', 'g'), (Line331+4, 0, 'test_traceback.py', 'f')])
+
+
+def test_reraise_finally():
+    def g():
+        f()
+    
+    def f():
+        try:
+            raise Exception
+        finally:
+            raise
+
+    try:
+        g()
+    except:
+        assert_traceback([(Line331+25, 30, 'test_traceback.py', 'test_reraise_finally'), (Line331+16, 3, 'test_traceback.py', 'g'), (Line331+22,13, 'test_traceback.py', 'f')])
+
+
 run_test(__name__)

@@ -23,7 +23,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\FxCop\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;$(SignedSym);MICROSOFT_DYNAMIC</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -38,7 +38,7 @@
     <Optimize>false</Optimize>
     <OutputPath>..\..\Bin\Debug\</OutputPath>
     <DocumentationFile>..\..\Bin\Debug\Microsoft.Dynamic.xml</DocumentationFile>
-    <DefineConstants>DEBUG;TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;$(SignedSym);MICROSOFT_DYNAMIC</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -51,7 +51,7 @@
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\Release\</OutputPath>
     <DocumentationFile>..\..\Bin\Release\Microsoft.Dynamic.XML</DocumentationFile>
-    <DefineConstants>TRACE;$(SignedSym);MICROSOFT_SCRIPTING_CORE</DefineConstants>
+    <DefineConstants>TRACE;$(SignedSym);MICROSOFT_DYNAMIC</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

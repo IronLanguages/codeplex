@@ -17,9 +17,6 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT // ComObject
 
-using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting {
@@ -143,7 +140,6 @@ namespace Microsoft.Scripting {
 
         public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {
             ContractUtils.RequiresNotNull(binder, "binder");
-
 
             ComMethodDesc getItem;
             if (_self.TryGetGetItem(out getItem)) {

@@ -2090,8 +2090,9 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static Exception MakeRethrownException(CodeContext/*!*/ context) {
             PythonTuple t = GetExceptionInfo(context);
-
-            Exception e = MakeException(context, t[0], t[1], t[2]);
+            
+            Exception e = MakeExceptionWorker(context, t[0], t[1], t[2], true);
+            e.Data.Remove(typeof(TraceBack));
             ExceptionHelpers.UpdateForRethrow(e);
             return e;
         }
@@ -2106,6 +2107,10 @@ namespace IronPython.Runtime.Operations {
         /// a Tuple, or a single value.  This case is handled by EC.CreateThrowable.
         /// </summary>
         public static Exception MakeException(CodeContext/*!*/ context, object type, object value, object traceback) {
+            return MakeExceptionWorker(context, type, value, traceback, false);
+        }
+
+        private static Exception MakeExceptionWorker(CodeContext context, object type, object value, object traceback, bool forRethrow) {
             Exception throwable;
             PythonType pt;
 
@@ -2133,10 +2138,12 @@ namespace IronPython.Runtime.Operations {
             IDictionary dict = throwable.Data;
 
             if (traceback != null) {
-                TraceBack tb = traceback as TraceBack;
-                if (tb == null) throw PythonOps.TypeError("traceback argument must be a traceback object");
+                if (!forRethrow) {
+                    TraceBack tb = traceback as TraceBack;
+                    if (tb == null) throw PythonOps.TypeError("traceback argument must be a traceback object");
 
-                dict[typeof(TraceBack)] = tb;
+                    dict[typeof(TraceBack)] = tb;
+                }
             } else if (dict.Contains(typeof(TraceBack))) {
                 dict.Remove(typeof(TraceBack));
             }

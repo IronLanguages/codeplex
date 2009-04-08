@@ -24,6 +24,7 @@ using System.Text;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -60,6 +61,7 @@ namespace IronPython.Compiler.Ast {
         private readonly AstGenerator/*!*/ _parent;                     // the parent generator
         private readonly string/*!*/ _profilerName;                     // a human-friendly name to be used as the output form the profiler
         private Dictionary<PythonVariable, MSAst.Expression> _localLifted; // expressions for how we refer to lifted variables locally
+        internal bool _isEmittingFinally;                                // true if we're emitting a finally (used for proper handling of exception tracking during rethrow)
 
         private static readonly Dictionary<string, MethodInfo> _HelperMethods = new Dictionary<string, MethodInfo>(); // cache of helper methods
         private static readonly MethodInfo _UpdateStackTrace = typeof(ExceptionHelpers).GetMethod("UpdateStackTrace");
@@ -93,7 +95,7 @@ namespace IronPython.Compiler.Ast {
             _context = parent.Context;
             _binderState = parent.BinderState;
             _parent = parent;
-            _document = _context.SourceUnit.Document;
+            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PythonContext.LanguageGuid, PythonContext.VendorGuid);
             _profiler = parent._profiler;
 
             _globals = parent._globals;
@@ -104,7 +106,7 @@ namespace IronPython.Compiler.Ast {
             Assert.NotNull(context);
             _context = context;
             _binderState = new BinderState(Binder);
-            _document = _context.SourceUnit.Document;
+            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PythonContext.LanguageGuid, PythonContext.VendorGuid);
 
             LanguageContext pc = context.SourceUnit.LanguageContext;
             switch (mode) {
@@ -563,15 +565,13 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         internal MSAst.Expression GetUpdateTrackbackExpression() {
             if (_lineNoUpdated == null) {
-                return AstUtils.SkipInterpret(
-                    Ast.Call(
-                        _UpdateStackTrace,
-                        LocalContext,
-                        Ast.Call(_GetCurrentMethod),
-                        AstUtils.Constant(Name),
-                        AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
-                        LineNumberExpression
-                    )
+                return Ast.Call(
+                    _UpdateStackTrace,
+                    LocalContext,
+                    Ast.Call(_GetCurrentMethod),
+                    AstUtils.Constant(Name),
+                    AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
+                    new LastFaultingLineExpression(LineNumberExpression)
                 );
             }
 
@@ -582,28 +582,26 @@ namespace IronPython.Compiler.Ast {
         /// Gets the expression for the actual updating of the line number for stack traces to be available
         /// </summary>
         internal MSAst.Expression GetLineNumberUpdateExpression(bool preventAdditionalAdds) {
-            return AstUtils.SkipInterpret(
-                Ast.Block(
-                    AstUtils.If(
-                        Ast.Not(
-                            LineNumberUpdated
-                        ),
-                        Ast.Call(
-                            typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
-                            LocalContext,
-                            Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")),
-                            AstUtils.Constant(Name),
-                            AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
-                            LineNumberExpression
-                        )
-                    ),
-                    Ast.Assign(
-                        LineNumberUpdated,
-                        AstUtils.Constant(preventAdditionalAdds)
-                    ),
-                    AstUtils.Empty()
-                )
-            );
+            return Ast.Block(
+                AstUtils.If(
+                    Ast.Not(
+                        LineNumberUpdated
+                    ),                
+                    Ast.Call(
+                        typeof(ExceptionHelpers).GetMethod("UpdateStackTrace"),
+                        LocalContext,
+                        Ast.Call(typeof(MethodBase).GetMethod("GetCurrentMethod")),
+                        AstUtils.Constant(Name),
+                        AstUtils.Constant(Context.SourceUnit.Path ?? "<string>"),
+                        new LastFaultingLineExpression(LineNumberExpression)
+                    )
+                ),
+                Ast.Assign(
+                    LineNumberUpdated,
+                    AstUtils.Constant(preventAdditionalAdds)
+                ),
+                AstUtils.Empty()
+            );            
         }
 
         #endregion
@@ -722,24 +720,18 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression PushLineUpdated(bool updated, ParameterExpression saveCurrent) {
-            return AstUtils.SkipInterpret(
-                MSAst.Expression.Block(
+            return MSAst.Expression.Block(
                     Ast.Assign(saveCurrent, LineNumberUpdated),
                     Ast.Assign(LineNumberUpdated, AstUtils.Constant(updated))
-                )
-            );
+                );
         }
 
         internal MSAst.Expression PopLineUpdated(ParameterExpression saveCurrent) {
-            return AstUtils.SkipInterpret(
-                Ast.Assign(LineNumberUpdated, saveCurrent)
-            );
+            return Ast.Assign(LineNumberUpdated, saveCurrent);
         }
 
         internal MSAst.Expression UpdateLineUpdated(bool updated) {
-            return AstUtils.SkipInterpret(
-                Ast.Assign(LineNumberUpdated, AstUtils.Constant(updated))
-            );
+            return Ast.Assign(LineNumberUpdated, AstUtils.Constant(updated));
         }
 
         internal MSAst.Expression UpdateLineNumber(int line) {

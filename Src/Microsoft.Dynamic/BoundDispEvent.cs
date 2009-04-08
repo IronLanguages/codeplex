@@ -21,6 +21,8 @@ using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Security;
+using System.Security.Permissions;
 
 namespace Microsoft.Scripting {
     internal sealed class BoundDispEvent : DynamicObject {
@@ -73,9 +75,20 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="handler">The handler to be added.</param>
         /// <returns>The original event with handler added.</returns>
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         private object InPlaceAdd(object handler) {
             ContractUtils.RequiresNotNull(handler, "handler");
             VerifyHandler(handler);
+
+            //
+            // Demand Full Trust to proceed with the operation.
+            //
+
+            new PermissionSet(PermissionState.Unrestricted).Demand();
 
             ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, true);
             comEventSink.AddHandler(_dispid, handler);
@@ -87,9 +100,20 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="handler">The handler to be removed.</param>
         /// <returns>The original event with handler removed.</returns>
+#if MICROSOFT_DYNAMIC
+        [SecurityCritical, SecurityTreatAsSafe]
+#else
+        [SecuritySafeCritical]
+#endif
         private object InPlaceSubtract(object handler) {
             ContractUtils.RequiresNotNull(handler, "handler");
             VerifyHandler(handler);
+
+            //
+            // Demand Full Trust to proceed with the operation.
+            //
+
+            new PermissionSet(PermissionState.Unrestricted).Demand();
 
             ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, false);
             if (comEventSink != null) {

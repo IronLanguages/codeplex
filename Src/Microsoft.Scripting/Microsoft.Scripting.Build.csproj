@@ -341,6 +341,7 @@
       <Compile Include="Interpreter\DynamicInstructions.Generated.cs" />
       <Compile Include="Interpreter\Instruction.cs" />
       <Compile Include="Interpreter\Interpreter.cs" />
+      <Compile Include="Interpreter\LastFaultingLineExpression.cs" />
       <Compile Include="Interpreter\LightCompiler.cs" />
       <Compile Include="Interpreter\LightDelegateCreator.cs" />
       <Compile Include="Interpreter\LightLambda.cs" />
