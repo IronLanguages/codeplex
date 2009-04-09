@@ -1,5 +1,5 @@
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  
 
 
   <PropertyGroup>
@@ -20,6 +20,7 @@
     <DelaySign>true</DelaySign>
     <DefineConstants>$(SignedSym)</DefineConstants>
     <BaseAddress>879755264</BaseAddress>
+<TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -232,6 +233,7 @@
       <Compile Include="Runtime\RuntimeVariablesDictionaryStorage.cs" />
       <Compile Include="Runtime\ScopeDictionaryStorage.cs" />
       <Compile Include="Runtime\Set.cs" />
+      <Compile Include="Runtime\SiteLocalStorage.cs" />
       <Compile Include="Runtime\Slice.cs" />
       <Compile Include="Runtime\StringFormatSpec.cs" />
       <Compile Include="Runtime\StringFormatter.cs" />
@@ -256,6 +258,7 @@
       <Compile Include="Runtime\Binding\BindingHelpers.cs" />
       <Compile Include="Runtime\Binding\CompatibilityInvokeBinder.cs" />
       <Compile Include="Runtime\Binding\ConditionalBuilder.cs" />
+      <Compile Include="Runtime\Binding\ContextArgBuilder.cs" />
       <Compile Include="Runtime\Binding\ConversionBinder.cs" />
       <Compile Include="Runtime\Binding\CreateFallbackBinder.cs" />
       <Compile Include="Runtime\Binding\FastBindResult.cs" />
@@ -282,6 +285,7 @@
       <Compile Include="Runtime\Binding\OperationRetBoolBinder.cs" />
       <Compile Include="Runtime\Binding\OperationRetBoolBinder.Generated.cs" />
       <Compile Include="Runtime\Binding\PythonBinaryOperationBinder.cs" />
+      <Compile Include="Runtime\Binding\PythonBinder.Create.cs" />
       <Compile Include="Runtime\Binding\PythonBinder.cs" />
       <Compile Include="Runtime\Binding\PythonDeleteIndexBinder.cs" />
       <Compile Include="Runtime\Binding\PythonDeleteMemberBinder.cs" />
@@ -291,6 +295,7 @@
       <Compile Include="Runtime\Binding\PythonGetSliceBinder.cs" />
       <Compile Include="Runtime\Binding\PythonIndexType.cs" />
       <Compile Include="Runtime\Binding\PythonInvokeBinder.cs" />
+      <Compile Include="Runtime\Binding\PythonMethodBinder.cs" />
       <Compile Include="Runtime\Binding\PythonOperationBinder.cs" />
       <Compile Include="Runtime\Binding\PythonOperationKind.cs" />
       <Compile Include="Runtime\Binding\PythonProtocol.cs" />
@@ -299,6 +304,7 @@
       <Compile Include="Runtime\Binding\PythonSetMemberBinder.cs" />
       <Compile Include="Runtime\Binding\PythonSetSliceBinder.cs" />
       <Compile Include="Runtime\Binding\PythonUnaryOperationBinder.cs" />
+      <Compile Include="Runtime\Binding\SiteLocalStorageBuilder.cs" />
       <Compile Include="Runtime\Binding\SlotOrFunction.cs" />
     </ItemGroup>
     <ItemGroup>
@@ -405,6 +411,7 @@
       <Compile Include="Runtime\Types\OldInstance.Generated.cs" />
       <Compile Include="Runtime\Types\OperatorMapping.cs" />
       <Compile Include="Runtime\Types\PythonAssemblyOps.cs" />
+      <Compile Include="Runtime\Types\PythonSiteCache.cs" />
       <Compile Include="Runtime\Types\PythonType.cs" />
       <Compile Include="Runtime\Types\PythonTypeDictSlot.cs" />
       <Compile Include="Runtime\Types\PythonTypeSlot.cs" />
@@ -432,7 +439,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
   </ItemGroup>
@@ -443,7 +450,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

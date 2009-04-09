@@ -22,6 +22,12 @@ using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Generation;
+using System.Collections;
+using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
+using System.Reflection;
 
 namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>
@@ -35,111 +41,163 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// 
     /// Contrast this with MethodTarget which represents the real physical invocation of a method
     /// </summary>
-    class MethodCandidate {
-        private MethodTarget _target;
-        private List<ParameterWrapper> _parameters;
-        private NarrowingLevel _narrowingLevel;
+    public sealed class MethodCandidate {
+        // TODO: merge with MethodTarget
 
-        internal MethodCandidate(MethodCandidate previous, NarrowingLevel narrowingLevel) {
-            this._target = previous.Target;
-            this._parameters = previous._parameters;
-            _narrowingLevel = narrowingLevel;
-        }
+        private readonly MethodTarget _target;
+        private readonly List<ParameterWrapper> _parameters;
+        private readonly ParameterWrapper _paramsDict;
+        private readonly int _paramsArrayIndex;
 
-        internal MethodCandidate(MethodTarget target, List<ParameterWrapper> parameters) {
-            Debug.Assert(target != null);
+        internal MethodCandidate(MethodTarget target, List<ParameterWrapper> parameters, ParameterWrapper paramsDict) {
+            Assert.NotNull(target);
+            Assert.NotNullItems(parameters);
 
             _target = target;
             _parameters = parameters;
-            _narrowingLevel = NarrowingLevel.None;
+            _paramsDict = paramsDict;
+
+            _paramsArrayIndex = ParameterWrapper.IndexOfParamsArray(parameters);
+
             parameters.TrimExcess();
+        }
+
+        public int ParamsArrayIndex {
+            get { return _paramsArrayIndex; }
+        }
+
+        public bool HasParamsArray {
+            get { return _paramsArrayIndex != -1; }
+        }
+
+        public bool HasParamsDictionary {
+            get { return _paramsDict != null; }
         }
 
         public MethodTarget Target {
             get { return _target; }
         }
 
-        public NarrowingLevel NarrowingLevel {
-            get {
-                return _narrowingLevel;
+        public OverloadResolver MethodBinder {
+            get { return _target.MethodBinder; }
+        }
+
+        public ActionBinder Binder {
+            get { return _target.MethodBinder.Binder; }
+        }
+
+        internal ParameterWrapper GetParameter(int argumentIndex, ArgumentBinding namesBinding) {
+            return _parameters[namesBinding.ArgumentToParameter(argumentIndex)];
+        }
+
+        internal ParameterWrapper GetParameter(int parameterIndex) {
+            return _parameters[parameterIndex];
+        }
+
+        internal int ParameterCount {
+            get { return _parameters.Count; }
+        }
+
+        internal int IndexOfParameter(string name) {
+            for (int i = 0; i < _parameters.Count; i++) {
+                if (_parameters[i].Name == name) {
+                    return i;
+                }
             }
+            return -1;
         }
 
-        [Confined]
-        public override string ToString() {
-            return string.Format("MethodCandidate({0})", Target);
+        public int GetVisibleParameterCount() {
+            int result = 0;
+            foreach (var parameter in _parameters) {
+                if (!parameter.IsHidden) {
+                    result++;
+                }
+            }
+            return result;
         }
 
-        internal bool IsApplicable(Type[] types, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {
-            // attempt to convert each parameter
-            bool res = true;
-            for (int i = 0; i < types.Length; i++) {
-                bool success = _parameters[i].HasConversionFrom(types[i], narrowingLevel);
+        internal bool TryConvertArguments(ArgumentBinding namesBinding, NarrowingLevel narrowingLevel, out CallFailure failure) {
+            var args = MethodBinder.GetActualArguments();
+            Debug.Assert(args.Count == ParameterCount);
 
-                conversionResults.Add(new ConversionResult(types[i], _parameters[i].Type, i, !success));
+            BitArray hasConversion = new BitArray(args.Count);
 
-                res &= success;
+            bool success = true;
+            for (int i = 0; i < args.Count; i++) {
+                success &= (hasConversion[i] = MethodBinder.CanConvertFrom(args[i].GetLimitType(), GetParameter(i, namesBinding), narrowingLevel));
             }
 
-            return res;
+            if (!success) {
+                var conversionResults = new ConversionResult[args.Count];
+                for (int i = 0; i < args.Count; i++) {
+                    conversionResults[i] = new ConversionResult(args[i].GetLimitType(), GetParameter(i, namesBinding).Type, !hasConversion[i]);
+                }
+                failure = new CallFailure(_target, conversionResults);
+            } else {
+                failure = null;
+            }
+
+            return success;
         }
 
-        internal bool IsApplicable(DynamicMetaObject[] objects, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {
-            // attempt to convert each parameter
-            bool res = true;
-            for (int i = 0; i < objects.Length; i++) {
-                /*if (objects[i].NeedsDeferral) {
-                    conversionResults.Add(new ConversionResult(typeof(Dynamic), _parameters[i].Type, i, false));
-                } else*/ {
-                    bool success = _parameters[i].HasConversionFrom(objects[i].GetLimitType(), narrowingLevel);
+        internal bool TryConvertCollapsedArguments(NarrowingLevel narrowingLevel, out CallFailure failure) {
+            var args = MethodBinder.GetActualArguments();
+            Debug.Assert(args.CollapsedCount > 0);
 
-                    conversionResults.Add(new ConversionResult(objects[i].GetLimitType(), _parameters[i].Type, i, !success));
+            // There must be at least one expanded parameter preceding splat index (see MethodBinder.GetSplatLimits):
+            ParameterWrapper parameter = GetParameter(args.SplatIndex - 1);
+            Debug.Assert(parameter.ParameterInfo != null && CompilerHelpers.IsParamArray(parameter.ParameterInfo));
 
-                    res &= success;
+            for (int i = 0; i < args.CollapsedCount; i++) {
+                Type argType = CompilerHelpers.GetType(MethodBinder.GetCollapsedArgumentValue(i));
+
+                if (!MethodBinder.CanConvertFrom(argType, parameter, narrowingLevel)) {
+                    failure = new CallFailure(_target, new[] { new ConversionResult(argType, parameter.Type, false) });
+                    return false;
                 }
             }
 
-            return res;
+            failure = null;
+            return true;
         }
 
-        internal static Candidate GetPreferredCandidate(MethodCandidate one, MethodCandidate two, CallTypes callType, Type[] actualTypes) {
-            Candidate cmpParams = ParameterWrapper.GetPreferredParameters(one.Parameters, two.Parameters, actualTypes);
-            if (cmpParams.Chosen()) {
-                return cmpParams;
+        internal static Candidate GetPreferredParameters(ApplicableCandidate one, ApplicableCandidate two) {
+            Debug.Assert(one.Method.ParameterCount == two.Method.ParameterCount);
+            var binder = one.Method.MethodBinder;
+            var args = binder.GetActualArguments();
+
+            Candidate result = Candidate.Equivalent;
+            for (int i = 0; i < args.Count; i++) {
+                Candidate preferred = ParameterWrapper.GetPreferredParameter(binder, one.GetParameter(i), two.GetParameter(i), args[i].GetLimitType());
+
+                switch (result) {
+                    case Candidate.Equivalent:
+                        result = preferred;
+                        break;
+
+                    case Candidate.One:
+                        if (preferred == Candidate.Two) return Candidate.Ambiguous;
+                        break;
+
+                    case Candidate.Two:
+                        if (preferred == Candidate.One) return Candidate.Ambiguous;
+                        break;
+
+                    case Candidate.Ambiguous:
+                        if (preferred != Candidate.Equivalent) {
+                            result = preferred;
+                        }
+                        break;
+
+                    default:
+                        throw new InvalidOperationException();
+                }
             }
 
-            Candidate ret = MethodTarget.CompareEquivalentParameters(one.Target, two.Target);
-            if (ret.Chosen()) {
-                return ret;
-            }
+            // TODO: process collapsed arguments:
 
-            if (CompilerHelpers.IsStatic(one.Target.Method) && !CompilerHelpers.IsStatic(two.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? Candidate.Two : Candidate.One;
-            } else if (!CompilerHelpers.IsStatic(one.Target.Method) && CompilerHelpers.IsStatic(two.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? Candidate.One : Candidate.Two;
-            }
-
-            return Candidate.Equivalent;
-        }
-
-        internal static Candidate GetPreferredCandidate(MethodCandidate one, MethodCandidate two, CallTypes callType, DynamicMetaObject[] actualTypes) {
-            Candidate cmpParams = ParameterWrapper.GetPreferredParameters(one.Parameters, two.Parameters, actualTypes);
-            if (cmpParams.Chosen()) {
-                return cmpParams;
-            }
-
-            Candidate ret = MethodTarget.CompareEquivalentParameters(one.Target, two.Target);
-            if (ret.Chosen()) {
-                return ret;
-            }
-
-            if (CompilerHelpers.IsStatic(one.Target.Method) && !CompilerHelpers.IsStatic(two.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? Candidate.Two : Candidate.One;
-            } else if (!CompilerHelpers.IsStatic(one.Target.Method) && CompilerHelpers.IsStatic(two.Target.Method)) {
-                return callType == CallTypes.ImplicitInstance ? Candidate.One : Candidate.Two;
-            }
-
-            return Candidate.Equivalent;
+            return result;
         }
 
 
@@ -149,12 +207,12 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// The basic idea here is to figure out which parameters map to params or a dictionary params and
         /// fill in those spots w/ extra ParameterWrapper's.  
         /// </summary>
-        internal MethodCandidate MakeParamsExtended(ActionBinder binder, int count, string[] names) {
+        internal MethodCandidate MakeParamsExtended(int count, IList<string> names) {
             Debug.Assert(BinderHelpers.IsParamsMethod(_target.Method));
 
             List<ParameterWrapper> newParameters = new List<ParameterWrapper>(count);
             
-            // keep track of which kw args map to a real argument, and which ones
+            // keep track of which named args map to a real argument, and which ones
             // map to the params dictionary.
             List<string> unusedNames = new List<string>(names);
             List<int> unusedNameIndexes = new List<int>();
@@ -163,16 +221,13 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             // if we don't have a param array we'll have a param dict which is type object
-            ParameterWrapper paramsArrayParameter = null, paramsDictParameter = null;
-            int paramsArrayIndex = -1, paramsDictIndex = -1;
+            ParameterWrapper paramsArrayParameter = null;
+            int paramsArrayIndex = -1;
 
             for (int i = 0; i < _parameters.Count; i++) {
                 ParameterWrapper parameter = _parameters[i];
 
-                if (parameter.IsParamsDict) {
-                    paramsDictParameter = parameter;
-                    paramsDictIndex = i;
-                } else if (parameter.IsParamsArray) {
+                if (parameter.IsParamsArray) {
                     paramsArrayParameter = parameter;
                     paramsArrayIndex = i;
                 } else {
@@ -186,21 +241,17 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             if (paramsArrayIndex != -1) {
-                Type elementType = paramsArrayParameter.Type.GetElementType();
-                bool nonNullItems = CompilerHelpers.ProhibitsNullItems(paramsArrayParameter.ParameterInfo);
-
+                ParameterWrapper expanded = paramsArrayParameter.Expand();
                 while (newParameters.Count < (count - unusedNames.Count)) {
-                    ParameterWrapper param = new ParameterWrapper(binder, paramsArrayParameter.ParameterInfo, elementType, null, nonNullItems, false, false);
-                    newParameters.Insert(System.Math.Min(paramsArrayIndex, newParameters.Count), param);
+                    newParameters.Insert(System.Math.Min(paramsArrayIndex, newParameters.Count), expanded);
                 }
             }
 
-            if (paramsDictIndex != -1) {
-                Type elementType = paramsDictParameter.Type.GetElementType();
-                bool nonNullItems = CompilerHelpers.ProhibitsNullItems(paramsDictParameter.ParameterInfo);
-                
-                foreach (string si in unusedNames) {
-                    newParameters.Add(new ParameterWrapper(binder, paramsDictParameter.ParameterInfo, typeof(object), si, nonNullItems, false, false));
+            if (_paramsDict != null) {
+                bool nonNullItems = CompilerHelpers.ProhibitsNullItems(_paramsDict.ParameterInfo);
+
+                foreach (string name in unusedNames) {
+                    newParameters.Add(new ParameterWrapper(_paramsDict.ParameterInfo, typeof(object), name, nonNullItems, false, false, _paramsDict.IsHidden));
                 }
             } else if (unusedNames.Count != 0) {
                 // unbound kw args and no where to put them, can't call...
@@ -213,87 +264,12 @@ namespace Microsoft.Scripting.Actions.Calls {
                 return null;
             }
 
-            return new MethodCandidate(_target.MakeParamsExtended(count, unusedNames.ToArray(), unusedNameIndexes.ToArray()), newParameters);
+            return new MethodCandidate(_target.MakeParamsExtended(count, unusedNames.ToArray(), unusedNameIndexes.ToArray()), newParameters, null);
         }
 
-        internal string ToSignatureString(string name, CallTypes callType) {
-            StringBuilder buf = new StringBuilder(name);
-            buf.Append("(");
-            bool isFirstArg = true;
-            int i = 0;
-            if (callType == CallTypes.ImplicitInstance) i = 1;
-            for (; i < _parameters.Count; i++) {
-                if (isFirstArg) isFirstArg = false;
-                else buf.Append(", ");
-                buf.Append(_parameters[i].ToSignatureString());
-            }
-            buf.Append(")");
-            return buf.ToString(); //@todo add helper info for more interesting signatures
-        }
-
-        internal IList<ParameterWrapper> Parameters {
-            get {
-                return _parameters;
-            }
-        }
-
-        internal bool HasParamsDictionary() {
-            foreach (ParameterWrapper pw in _parameters) {
-                // can't bind to methods that are params dictionaries, only to their extended forms.
-                if (pw.IsParamsDict) return true;
-            }
-            return false;
-        }
-
-        internal bool TryGetNormalizedArguments<T>(T[] argTypes, string[] names, out T[] args, out CallFailure failure) {
-            if (names.Length == 0) {
-                // no named arguments, success!
-                args = argTypes;
-                failure = null;
-                return true;
-            }
-
-            T[] res = new T[argTypes.Length];
-            Array.Copy(argTypes, res, argTypes.Length - names.Length);
-            List<string> unboundNames = null;
-            List<string> duppedNames = null;
-
-            for (int i = 0; i < names.Length; i++) {
-                bool found = false;
-                for (int j = 0; j < _parameters.Count; j++) {
-                    if (_parameters[j].Name == names[i]) {
-                        found = true;
-
-                        if (res[j] != null) {
-                            if (duppedNames == null) duppedNames = new List<string>();
-                            duppedNames.Add(names[i]);
-                        } else {
-                            res[j] = argTypes[i + argTypes.Length - names.Length];
-                        }
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    if (unboundNames == null) unboundNames = new List<string>();
-                    unboundNames.Add(names[i]);
-                }
-            }
-
-            if (unboundNames != null) {
-                failure = new CallFailure(Target, unboundNames.ToArray(), true);
-                args = null;
-                return false;
-            } else if (duppedNames != null) {
-                failure = new CallFailure(Target, duppedNames.ToArray(), false);
-                args = null;
-                return false;
-            }
-
-            failure = null;
-            args = res;
-            return true;
+        [Confined]
+        public override string ToString() {
+            return string.Format("MethodCandidate({0})", Target);
         }
     }
-
 }

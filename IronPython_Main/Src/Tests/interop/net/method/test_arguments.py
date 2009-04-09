@@ -102,15 +102,15 @@ def test_0_1_args():
     
     f = o.M203
     f()
-    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (1 given)", lambda: f(1)) #CP 18379
-    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (1 given)", lambda: f({'a':1})) #CP 18379
+    AssertErrorWithMessage(TypeError, "M203() takes no arguments (1 given)", lambda: f(1))
+    AssertErrorWithMessage(TypeError, "M203() takes no arguments (1 given)", lambda: f({'a':1}))
     f(a=1)
     f(a=1, b=2)
     f(**{})
     f(**{'a':2, 'b':3})
     f(a=1, **{'b':2, 'c':5})
     AssertErrorWithMessage(TypeError, "M203() got multiple values for keyword argument 'a'", lambda: f(a=1, **{'a':2, 'c':5}))
-    AssertErrorWithMessage(TypeError, "M203() takes at least 0 arguments (3 given)", lambda: f(*(1,2,3)))
+    AssertErrorWithMessage(TypeError, "M203() takes no arguments (3 given)", lambda: f(*(1,2,3)))
     
 
 def test_optional():
@@ -231,7 +231,7 @@ def test_two_args():
     
     #public void M351(int x, [ParamDictionary] IAttributesCollection arg) { Flag<object>.Set(arg); }
     f = o.M351
-    AssertErrorWithMessage(TypeError, "M351() takes at least 1 argument (0 given)", lambda: f())
+    AssertErrorWithMessage(TypeError, "M351() takes exactly 1 argument (0 given)", lambda: f())
     f(1); AreEqual(Flag[object].Value1, {})
     f(1, a=3); AreEqual(Flag[object].Value1, {'a':3})
     f(1, a=3,b=4); AreEqual(Flag[object].Value1, {'a':3, 'b':4})
@@ -523,6 +523,14 @@ def test_2_out_args():
         AreEqual(x.Value, 30)
         AreEqual(y.Value, 40)
         Flag.Check(2)
-        
+
+def test_splatting_errors():
+    # public void M200(int arg) { Flag.Reset(); Flag.Set(arg); }
+    f = o.M200
+    
+    AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not NoneType", lambda: f(*None))
+    AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not str", lambda: f(*'x'))
+    AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not int", lambda: f(*1))
+
 run_test(__name__)
 

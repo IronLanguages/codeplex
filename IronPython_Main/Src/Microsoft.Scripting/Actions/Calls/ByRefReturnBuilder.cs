@@ -32,12 +32,12 @@ namespace Microsoft.Scripting.Actions.Calls {
             _returnArgs = returnArgs;
         }
 
-        internal override Expression ToExpression(ParameterBinder parameterBinder, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
+        internal override Expression ToExpression(OverloadResolver resolver, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             if (_returnArgs.Count == 1) {
                 if (_returnArgs[0] == -1) {
                     return ret;
                 }
-                return Ast.Block(ret, args[_returnArgs[0]].ToReturnExpression(parameterBinder));
+                return Ast.Block(ret, args[_returnArgs[0]].ToReturnExpression(resolver));
             }
 
             Expression[] retValues = new Expression[_returnArgs.Count];
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                     usesRet = true;
                     retValues[rIndex++] = ret;
                 } else {
-                    retValues[rIndex++] = args[index].ToReturnExpression(parameterBinder);
+                    retValues[rIndex++] = args[index].ToReturnExpression(resolver);
                 }
             }
 
@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 retArray = Ast.Block(ret, retArray);
             }
 
-            return parameterBinder.Binder.GetByRefArrayExpression(retArray);
+            return resolver.GetByRefArrayExpression(retArray);
         }
 
         public override int CountOutParams {

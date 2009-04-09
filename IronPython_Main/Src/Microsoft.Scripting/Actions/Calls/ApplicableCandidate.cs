@@ -15,22 +15,22 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
-using System.Reflection;
+using System.Text;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
-    public class RestrictionInfo {
-        public readonly DynamicMetaObject[] Objects;
-        public readonly Type[] Types;
+    public sealed class ApplicableCandidate {
+        public readonly MethodCandidate Method;
+        public readonly ArgumentBinding ArgumentBinding;
 
-        public RestrictionInfo(DynamicMetaObject[] objects, Type[] types) {
-            Assert.NotNullItems(objects);
-            Assert.NotNull(types);
+        internal ApplicableCandidate(MethodCandidate method, ArgumentBinding argBinding) {
+            Assert.NotNull(method, argBinding);
+            Method = method;
+            ArgumentBinding = argBinding;
+        }
 
-            Objects = objects;
-            Types = types;
+        public ParameterWrapper GetParameter(int argumentIndex) {
+            return Method.GetParameter(argumentIndex, ArgumentBinding);
         }
     }
 }

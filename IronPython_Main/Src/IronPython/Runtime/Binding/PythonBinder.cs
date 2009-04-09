@@ -20,6 +20,9 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 using System.Threading;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -34,11 +37,8 @@ using Microsoft.Scripting.Utils;
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
-    using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
-    public class PythonBinder : DefaultBinder {
+    public sealed partial class PythonBinder : DefaultBinder {
         private PythonContext/*!*/ _context;
         private SlotCache/*!*/ _typeMembers = new SlotCache();
         private SlotCache/*!*/ _resolvedMembers = new SlotCache();
@@ -108,9 +108,7 @@ using Microsoft.Runtime.CompilerServices;
                 return (args) => (Type)(PythonType)args[index];
             }
 
-            CallSite<Func<CallSite, object, object>> convSite = CallSite<Func<CallSite, object, object>>.Create(_context.DefaultBinderState.Convert(visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : kind));
-
-            return (args) => convSite.Target(convSite, args[index]);
+            return (args) => Converter.Convert(args[index], toType);
         }
 
         internal static MethodInfo GetGenericConvertMethod(Type toType) {
@@ -178,10 +176,6 @@ using Microsoft.Runtime.CompilerServices;
             return Converter.PreferConvert(t1, t2);
         }
 
-        public override Expression GetByRefArrayExpression(Expression argumentArrayExpression) {
-            return Ast.Call(typeof(PythonOps).GetMethod("MakeTuple"), argumentArrayExpression);
-        }
-
         public override ErrorInfo MakeConversionError(Type toType, Expression value) {
             return ErrorInfo.FromException(
                 Ast.Call(
@@ -231,7 +225,7 @@ using Microsoft.Runtime.CompilerServices;
 
         #region .NET member binding
 
-        protected override string GetTypeName(Type t) {
+        public override string GetTypeName(Type t) {
             return DynamicHelpers.GetPythonTypeFromType(t).Name;
         }
 
@@ -644,10 +638,6 @@ using Microsoft.Runtime.CompilerServices;
         private static Expression ReturnTypeTracker(TypeTracker memberTracker) {
             // all non-group types get exposed as PythonType's
             return AstUtils.Constant(DynamicHelpers.GetPythonTypeFromType(memberTracker.Type));
-        }
-
-        protected override bool AllowKeywordArgumentSetting(MethodBase method) {
-            return CompilerHelpers.IsConstructor(method) && !method.DeclaringType.IsDefined(typeof(PythonTypeAttribute), true);
         }
 
         internal ScriptDomainManager/*!*/ DomainManager {
