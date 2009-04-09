@@ -12,25 +12,22 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
-using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
-using System.Reflection;
-using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions.Calls {
-    public class RestrictionInfo {
-        public readonly DynamicMetaObject[] Objects;
-        public readonly Type[] Types;
 
-        public RestrictionInfo(DynamicMetaObject[] objects, Type[] types) {
-            Assert.NotNullItems(objects);
-            Assert.NotNull(types);
+namespace IronPython.Runtime {
+    public abstract class SiteLocalStorage {
+    }
 
-            Objects = objects;
-            Types = types;
-        }
+    /// <summary>
+    /// Provides storage which is flowed into a callers site.  The same storage object is 
+    /// flowed for multiple calls enabling the callee to cache data that can be re-used
+    /// across multiple calls.
+    /// 
+    /// Data is a public field so that this works properly with DynamicSite's as the reference
+    /// type (and EnsureInitialize)
+    /// </summary>
+    public class SiteLocalStorage<T> : SiteLocalStorage {
+        public T Data;
     }
 }

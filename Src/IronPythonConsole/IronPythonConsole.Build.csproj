@@ -1,5 +1,5 @@
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  
 
 
   <PropertyGroup>
@@ -17,6 +17,7 @@
     <SignedDir Condition="'$(SignAssembly)' == 'true'">Signed</SignedDir>
     <SignedDir Condition="$(SignAssembly) != true">Unsigned</SignedDir>
     <DelaySign>true</DelaySign>
+<TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->     <ItemGroup>
       <!--                    -->
@@ -40,17 +41,17 @@
     <None Include="..\..\Config\$(SignedDir)\App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
-    <ProjectReference Include="..\IronPython\IronPython.Build.csproj">
+    <ProjectReference Include="..\IronPython\IronPython.csproj">
       <Name>IronPython %28IronPython\IronPython%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
-  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

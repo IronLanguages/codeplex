@@ -34,26 +34,26 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// Contrast this with MethodCandidate which represents the logical view of the invocation of a method
     /// </summary>
     public sealed class MethodTarget {
-        private MethodBinder _binder;
+        private OverloadResolver _methodBinder;
         private readonly MethodBase _method;
         private int _parameterCount;
         private IList<ArgBuilder> _argBuilders;
         private ArgBuilder _instanceBuilder;
         private ReturnBuilder _returnBuilder;
 
-        internal MethodTarget(MethodBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
-            this._binder = binder;
-            this._method = method;
-            this._parameterCount = parameterCount;
-            this._instanceBuilder = instanceBuilder;
-            this._argBuilders = argBuilders;
-            this._returnBuilder = returnBuilder;
+        internal MethodTarget(OverloadResolver binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
+            _methodBinder = binder;
+            _method = method;
+            _parameterCount = parameterCount;
+            _instanceBuilder = instanceBuilder;
+            _argBuilders = argBuilders;
+            _returnBuilder = returnBuilder;
 
             //argBuilders.TrimExcess();
         }
 
-        public MethodBinder Binder {
-            get { return _binder; }
+        public OverloadResolver MethodBinder {
+            get { return _methodBinder; }
         }
 
         public MethodBase Method {
@@ -82,30 +82,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             return res.ToArray();
         }
 
-        public string GetSignatureString(CallTypes callType) {
-            StringBuilder buf = new StringBuilder();
-            Type[] types = GetParameterTypes();
-            if (callType == CallTypes.ImplicitInstance) {
-                types = ArrayUtils.RemoveFirst(types);
-            }
-
-            string comma = "";
-            buf.Append("(");
-            foreach (Type t in types) {
-                buf.Append(comma);
-                buf.Append(t.Name);
-                comma = ", ";
-            }
-            buf.Append(")");
-            return buf.ToString();
-        }
-
-        [Confined]
-        public override string ToString() {
-            return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
-        }
-
-        internal OptimizingCallDelegate MakeDelegate(ParameterBinder parameterBinder, RestrictionInfo restrictionInfo) {
+        internal OptimizingCallDelegate MakeDelegate(RestrictionInfo restrictionInfo) {
             MethodInfo mi = Method as MethodInfo;
             if (mi == null) {
                 return null;
@@ -132,15 +109,16 @@ namespace Microsoft.Scripting.Actions.Calls {
             bool[] hasBeenUsed = new bool[restrictionInfo.Objects.Length];
 
             for (int i = 0; i < _argBuilders.Count; i++) {
-                if (!_argBuilders[i].CanGenerateDelegate) {
+                var builder = _argBuilders[i].ToDelegate(_methodBinder, restrictionInfo.Objects, hasBeenUsed);
+                if (builder == null) {
                     return null;
                 }
 
-                builders[i] = _argBuilders[i].ToDelegate(parameterBinder, restrictionInfo.Objects, hasBeenUsed);
+                builders[i] = builder;
             }
             
             if (_instanceBuilder != null && !(_instanceBuilder is NullArgBuilder)) {
-                return new Caller(mi, builders, _instanceBuilder.ToDelegate(parameterBinder, restrictionInfo.Objects, hasBeenUsed)).CallWithInstance;
+                return new Caller(mi, builders, _instanceBuilder.ToDelegate(_methodBinder, restrictionInfo.Objects, hasBeenUsed)).CallWithInstance;
             } else {
                 return new Caller(mi, builders, null).Call;
             }
@@ -220,10 +198,10 @@ namespace Microsoft.Scripting.Actions.Calls {
             }            
         }
 
-        internal Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters) {
+        internal Expression MakeExpression(IList<Expression> args) {
             bool[] usageMarkers;
             Expression[] spilledArgs;
-            Expression[] args = GetArgumentExpressions(parameterBinder, parameters, out usageMarkers, out spilledArgs);
+            Expression[] callArgs = GetArgumentExpressions(args, out usageMarkers, out spilledArgs);
             
             MethodBase mb = Method;
             MethodInfo mi = mb as MethodInfo;
@@ -240,28 +218,28 @@ namespace Microsoft.Scripting.Actions.Calls {
             if (CompilerHelpers.IsVisible(mb)) {
                 // public method
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
-                    call = AstUtils.SimpleCallHelper(instance, mi, args);
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(_methodBinder, args, usageMarkers);
+                    call = AstUtils.SimpleCallHelper(instance, mi, callArgs);
                 } else {
-                    call = AstUtils.SimpleNewHelper(ci, args);
+                    call = AstUtils.SimpleNewHelper(ci, callArgs);
                 }
             } else {
                 // Private binding, invoke via reflection
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? AstUtils.Constant(null) : _instanceBuilder.ToExpression(parameterBinder, parameters, usageMarkers);
+                    Expression instance = mi.IsStatic ? AstUtils.Constant(null) : _instanceBuilder.ToExpression(_methodBinder, args, usageMarkers);
                     Debug.Assert(instance != null, "Can't skip instance expression");
 
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeMethod"),
                         AstUtils.Constant(mi),
                         AstUtils.Convert(instance, typeof(object)),
-                        AstUtils.NewArrayHelper(typeof(object), args)
+                        AstUtils.NewArrayHelper(typeof(object), callArgs)
                     );
                 } else {
                     call = Ast.Call(
                         typeof(BinderOps).GetMethod("InvokeConstructor"),
                         AstUtils.Constant(ci),
-                        AstUtils.NewArrayHelper(typeof(object), args)
+                        AstUtils.NewArrayHelper(typeof(object), callArgs)
                     );
                 }
             }
@@ -270,11 +248,11 @@ namespace Microsoft.Scripting.Actions.Calls {
                 call = Expression.Block(spilledArgs.AddLast(call));
             }
 
-            ret = _returnBuilder.ToExpression(parameterBinder, _argBuilders, parameters, call);
+            ret = _returnBuilder.ToExpression(_methodBinder, _argBuilders, args, call);
 
             List<Expression> updates = null;
             for (int i = 0; i < _argBuilders.Count; i++) {
-                Expression next = _argBuilders[i].UpdateFromReturn(parameterBinder, parameters);
+                Expression next = _argBuilders[i].UpdateFromReturn(_methodBinder, args);
                 if (next != null) {
                     if (updates == null) {
                         updates = new List<Expression>();
@@ -295,14 +273,14 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
 
-            if (parameterBinder.Temps != null) {
-                ret = Ast.Block(parameterBinder.Temps, ret);
+            if (_methodBinder.Temps != null) {
+                ret = Ast.Block(_methodBinder.Temps, ret);
             }
 
             return ret;
         }
 
-        private Expression[] GetArgumentExpressions(ParameterBinder parameterBinder, IList<Expression> parameters, out bool[] usageMarkers, out Expression[] spilledArgs) {
+        private Expression[] GetArgumentExpressions(IList<Expression> parameters, out bool[] usageMarkers, out Expression[] spilledArgs) {
             int minPriority = Int32.MaxValue;
             int maxPriority = Int32.MinValue;
             foreach (ArgBuilder ab in _argBuilders) {
@@ -316,7 +294,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             for (int priority = minPriority; priority <= maxPriority; priority++) {
                 for (int i = 0; i < _argBuilders.Count; i++) {
                     if (_argBuilders[i].Priority == priority) {
-                        args[i] = _argBuilders[i].ToExpression(parameterBinder, parameters, usageMarkers);
+                        args[i] = _argBuilders[i].ToExpression(_methodBinder, parameters, usageMarkers);
 
                         // see if this has a temp that needs to be passed as the actual argument
                         Expression byref = _argBuilders[i].ByRefArgument;
@@ -333,7 +311,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             if (actualArgs != null) {                
                 for (int i = 0; i < args.Length;  i++) {
                     if (args[i] != null && actualArgs[i] == null) {
-                        actualArgs[i] = parameterBinder.GetTemporary(args[i].Type, null);
+                        actualArgs[i] = _methodBinder.GetTemporary(args[i].Type, null);
                         args[i] = Expression.Assign(actualArgs[i], args[i]);
                     }
                 }
@@ -361,33 +339,6 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
             return result;
-        }
-
-        /// <summary>
-        /// Creates a call to this MethodTarget with the specified parameters.  Casts are inserted to force
-        /// the types to the provided known types.
-        /// 
-        /// TODO: Remove RuleBuilder and knownTypes once we're fully meta
-        /// </summary>
-        /// <param name="parameterBinder">ParameterBinder used to map arguments to parameters.</param>
-        /// <param name="parameters">The explicit arguments</param>
-        /// <param name="knownTypes">If non-null, the type for each element in parameters</param>
-        /// <returns></returns>
-        internal Expression MakeExpression(ParameterBinder parameterBinder, IList<Expression> parameters, IList<Type> knownTypes) {
-            Debug.Assert(knownTypes == null || parameters.Count == knownTypes.Count);
-
-            IList<Expression> args = parameters;
-            if (knownTypes != null) {
-                args = new Expression[parameters.Count];
-                for (int i = 0; i < args.Count; i++) {
-                    args[i] = parameters[i];
-                    if (knownTypes[i] != null && !knownTypes[i].IsAssignableFrom(parameters[i].Type)) {
-                        args[i] = AstUtils.Convert(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));
-                    }
-                }
-            }
-
-            return MakeExpression(parameterBinder, args);
         }
 
         private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {
@@ -454,6 +405,8 @@ namespace Microsoft.Scripting.Actions.Calls {
             ArgBuilder paramsDictBuilder = null;
 
             foreach (ArgBuilder ab in _argBuilders) {
+                // TODO: define a virtual method on ArgBuilder implementing this functionality:
+
                 SimpleArgBuilder sab = ab as SimpleArgBuilder;
                 if (sab != null) {
                     // we consume one or more incoming argument(s)
@@ -480,6 +433,9 @@ namespace Microsoft.Scripting.Actions.Calls {
                         // consume the argument, adjust its position:
                         newArgBuilders.Add(sab.MakeCopy(curArg++));
                     }
+                } else if (ab is KeywordArgBuilder) {
+                    newArgBuilders.Add(ab);
+                    curArg++;
                 } else {
                     // CodeContext, null, default, etc...  we don't consume an 
                     // actual incoming argument.
@@ -491,16 +447,23 @@ namespace Microsoft.Scripting.Actions.Calls {
                 newArgBuilders.Insert(kwIndex, new ParamsDictArgBuilder(paramsDictBuilder.ParameterInfo, curArg, names, nameIndexes));
             }
 
-            return new MethodTarget(_binder, Method, argCount, _instanceBuilder, newArgBuilders, _returnBuilder);
+            return new MethodTarget(_methodBinder, Method, argCount, _instanceBuilder, newArgBuilders, _returnBuilder);
         }
 
         private int GetConsumedArguments() {
             int consuming = 0;
             foreach (ArgBuilder argb in _argBuilders) {
                 SimpleArgBuilder sab = argb as SimpleArgBuilder;
-                if (sab != null && !sab.IsParamsDict) consuming++;
+                if (sab != null && !sab.IsParamsDict || argb is KeywordArgBuilder) {
+                    consuming++;
+                }
             }
             return consuming;
+        }
+
+        [Confined]
+        public override string ToString() {
+            return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
     }
 

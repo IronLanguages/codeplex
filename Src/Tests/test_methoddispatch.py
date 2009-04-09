@@ -27,7 +27,8 @@ from IronPythonTest import *
 def test_sanity():
     md = MixedDispatch("hi")
     AssertErrorWithMessage(TypeError, "Combine() takes exactly 2 arguments (1 given)", MixedDispatch.Combine, md)
-    AssertErrorWithMessage(TypeError, "Combine() takes exactly 1 argument (0 given)", md.Combine)
+    AssertErrorWithMessage(TypeError, "Combine() takes at least 1 argument (0 given)", md.Combine)
+    md.Combine(md)
 
 
     x = BindingTestClass.Bind("Hello")

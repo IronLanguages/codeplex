@@ -132,7 +132,6 @@ namespace IronPython.Runtime.Types {
             public readonly OptimizingCallDelegate Caller;
             public readonly Type[] TypeTest;
             public readonly CallSignature Signature;
-            public Delegate OptimizedDelegate;
 
             public OptimizingInfo(OptimizingCallDelegate caller, Type[] types, CallSignature signature) {
                 Caller = caller;
@@ -142,6 +141,13 @@ namespace IronPython.Runtime.Types {
 
             public PythonInvokeBinder GetInvokeBinder(CodeContext context) {
                 return PythonContext.GetContext(context).DefaultBinderState.Invoke(Signature);
+            }
+
+            public Delegate GetOptimizedDelegate(CodeContext context) {
+                return PythonContext.GetContext(context).GetOptimizedDelegateForBuiltin(this);
+            }
+            internal void SetOptimizedDelegate(CodeContext context, Delegate dlg) {
+                PythonContext.GetContext(context).SetOptimizedDelegateForBuiltin(this, dlg);
             }
         }
 
@@ -159,13 +165,12 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call0(CallSite site, CodeContext context, TFuncType func) {
-                if (func == _func && _info.OptimizedDelegate == null) {
+                if (func == _func && _info.GetOptimizedDelegate(context) == null) {
                     bool shouldOptimize;
                     object res = _info.Caller.Invoke(new object[] { context }, out shouldOptimize);
 
                     if (shouldOptimize) {
-
-                        _info.OptimizedDelegate = ((PythonInvokeBinder)_site.Binder).Optimize(_site, new object[] { context, func });
+                        _info.SetOptimizedDelegate(context, ((PythonInvokeBinder)_site.Binder).Optimize(_site, new object[] { context, func }));
                     }
 
                     return res;
@@ -193,14 +198,14 @@ namespace IronPython.Runtime.Types {
 
             public object Call0(CallSite site, CodeContext context, TFuncType func) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType)) {
                     bool shouldOptimize;
                     object res = _info.Caller(new object[] { context, bf.__self__ }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func }));
                     }
 
                     return res;
@@ -231,15 +236,15 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call1(CallSite site, CodeContext context, TFuncType func, T0 arg0) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0)
                    ) {
                     bool shouldOptimize;
                     object res = _info.Caller(new object[] { context, arg0 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0 }));
                     }
 
                     return res;
@@ -268,8 +273,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call1(CallSite site, CodeContext context, TFuncType func, T0 arg0) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0)
                     ) {
@@ -277,7 +282,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0 }));
                     }
 
                     return res;
@@ -304,8 +309,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call2(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1)
                    ) {
@@ -313,7 +318,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1 }));
                     }
 
                     return res;
@@ -343,8 +348,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call2(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1)
@@ -353,7 +358,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1 }));
                     }
 
                     return res;
@@ -381,8 +386,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call3(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2)
@@ -391,7 +396,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2 }));
                     }
 
                     return res;
@@ -422,8 +427,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call3(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -433,7 +438,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2 }));
                     }
 
                     return res;
@@ -462,8 +467,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call4(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -473,7 +478,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3 }));
                     }
 
                     return res;
@@ -505,8 +510,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call4(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -517,7 +522,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3 }));
                     }
 
                     return res;
@@ -547,8 +552,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call5(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -559,7 +564,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4 }));
                     }
 
                     return res;
@@ -592,8 +597,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call5(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -605,7 +610,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4 }));
                     }
 
                     return res;
@@ -636,8 +641,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call6(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -649,7 +654,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5 }));
                     }
 
                     return res;
@@ -683,8 +688,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call6(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -697,7 +702,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5 }));
                     }
 
                     return res;
@@ -729,8 +734,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call7(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -743,7 +748,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6 }));
                     }
 
                     return res;
@@ -778,8 +783,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call7(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -793,7 +798,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6 }));
                     }
 
                     return res;
@@ -826,8 +831,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call8(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -841,7 +846,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }));
                     }
 
                     return res;
@@ -877,8 +882,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call8(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -893,7 +898,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }));
                     }
 
                     return res;
@@ -927,8 +932,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call9(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -943,7 +948,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }));
                     }
 
                     return res;
@@ -980,8 +985,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call9(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -997,7 +1002,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }));
                     }
 
                     return res;
@@ -1032,8 +1037,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call10(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -1049,7 +1054,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 }));
                     }
 
                     return res;
@@ -1087,8 +1092,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call10(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -1105,7 +1110,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 }));
                     }
 
                     return res;
@@ -1141,8 +1146,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call11(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -1159,7 +1164,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 }));
                     }
 
                     return res;
@@ -1198,8 +1203,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call11(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -1217,7 +1222,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 }));
                     }
 
                     return res;
@@ -1254,8 +1259,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call12(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -1273,7 +1278,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 }));
                     }
 
                     return res;
@@ -1313,8 +1318,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call12(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -1333,7 +1338,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11 }));
                     }
 
                     return res;
@@ -1371,8 +1376,8 @@ namespace IronPython.Runtime.Types {
             }
 
             public object Call13(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12) {
-                if (_info.OptimizedDelegate == null &&
-                    func == _func && 
+                if (func == _func &&
+                    _info.GetOptimizedDelegate(context) == null && 
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
                     (_type2 == null || CompilerHelpers.GetType(arg2) == _type2) &&
@@ -1391,7 +1396,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 }));
                     }
 
                     return res;
@@ -1432,8 +1437,8 @@ namespace IronPython.Runtime.Types {
 
             public object Call13(CallSite site, CodeContext context, TFuncType func, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12) {
                 BuiltinFunction bf = func as BuiltinFunction;
-                if (_info.OptimizedDelegate == null &&
-                    bf != null && !bf.IsUnbound && bf._data == _data &&
+                if (bf != null && !bf.IsUnbound && bf._data == _data &&
+                    _info.GetOptimizedDelegate(context) == null &&
                     (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
                     (_type0 == null || CompilerHelpers.GetType(arg0) == _type0) &&
                     (_type1 == null || CompilerHelpers.GetType(arg1) == _type1) &&
@@ -1453,7 +1458,7 @@ namespace IronPython.Runtime.Types {
                     object res = _info.Caller(new object[] { context, bf.__self__, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 }, out shouldOptimize);
 
                     if (shouldOptimize) {
-                        _info.OptimizedDelegate = _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 });
+                        _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12 }));
                     }
 
                     return res;

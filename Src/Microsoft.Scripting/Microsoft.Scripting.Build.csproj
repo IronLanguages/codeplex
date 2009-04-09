@@ -1,5 +1,5 @@
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  
 
 
   <PropertyGroup>
@@ -7,18 +7,19 @@
     <RootNamespace>Microsoft.Scripting</RootNamespace>
     <AssemblyName>Microsoft.Scripting</AssemblyName>
     <WarningsNotAsErrors>0649,1685,649</WarningsNotAsErrors>
-    <NoWarn>0688,1591</NoWarn>
+    <NoWarn>1591</NoWarn>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
     <OutputPath>$(SuiteBinPath)\Merlin</OutputPath>
-    <AssemblyOriginatorKeyFile>..\..\Support\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
     <DefineConstants>SYSTEM_CORE;$(SignedSym)</DefineConstants>
     <BaseAddress>857735168</BaseAddress>
+<TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -80,17 +81,14 @@
       <Compile Include="Actions\BinderHelper.cs" />
       <Compile Include="Actions\BinderHelpers.cs" />
       <Compile Include="Actions\BoundMemberTracker.cs" />
-      <Compile Include="Actions\CallBinderHelper.cs" />
       <Compile Include="Actions\CallSignature.cs" />
       <Compile Include="Actions\ComboActionRewriter.cs" />
       <Compile Include="Actions\ComboBinder.cs" />
       <Compile Include="Actions\ConditionalBuilder.cs" />
       <Compile Include="Actions\ConstructorTracker.cs" />
       <Compile Include="Actions\ConvertToBinderHelper.cs" />
-      <Compile Include="Actions\CreateInstanceBinderHelper.cs" />
       <Compile Include="Actions\CustomTracker.cs" />
       <Compile Include="Actions\DefaultBinder.Conversions.cs" />
-      <Compile Include="Actions\DefaultBinder.Create.cs" />
       <Compile Include="Actions\DefaultBinder.cs" />
       <Compile Include="Actions\DefaultBinder.DeleteMember.cs" />
       <Compile Include="Actions\DefaultBinder.GetMember.cs" />
@@ -99,7 +97,6 @@
       <Compile Include="Actions\DefaultBinder.Operations.cs" />
       <Compile Include="Actions\DefaultBinder.SetMember.cs" />
       <Compile Include="Actions\DeleteMemberBinderHelper.cs" />
-      <Compile Include="Actions\DoOperationBinderHelper.cs" />
       <Compile Include="Actions\DynamicSiteHelper.cs" />
       <Compile Include="Actions\ErrorInfo.cs" />
       <Compile Include="Actions\EventTracker.cs" />
@@ -134,26 +131,29 @@
       <!--                                 -->
       <!--          Actions.Calls          -->
       <!--                                 -->
+      <Compile Include="Actions\Calls\ActualArguments.cs" />
+      <Compile Include="Actions\Calls\ApplicableCandidate.cs" />
       <Compile Include="Actions\Calls\ArgBuilder.cs" />
+      <Compile Include="Actions\Calls\ArgumentBinding.cs" />
       <Compile Include="Actions\Calls\BindingResult.cs" />
       <Compile Include="Actions\Calls\BindingTarget.cs" />
       <Compile Include="Actions\Calls\ByRefReturnBuilder.cs" />
       <Compile Include="Actions\Calls\CallFailure.cs" />
       <Compile Include="Actions\Calls\CallFailureReason.cs" />
       <Compile Include="Actions\Calls\Candidate.cs" />
-      <Compile Include="Actions\Calls\ContextArgBuilder.cs" />
       <Compile Include="Actions\Calls\ConversionResult.cs" />
       <Compile Include="Actions\Calls\DefaultArgBuilder.cs" />
+      <Compile Include="Actions\Calls\DefaultOverloadResolver.cs" />
       <Compile Include="Actions\Calls\KeywordArgBuilder.cs" />
       <Compile Include="Actions\Calls\KeywordConstructorReturnBuilder.cs" />
       <Compile Include="Actions\Calls\MethodBinder.cs" />
+      <Compile Include="Actions\Calls\MethodBinder.TargetSets.cs" />
       <Compile Include="Actions\Calls\MethodCandidate.cs" />
       <Compile Include="Actions\Calls\MethodTarget.cs" />
       <Compile Include="Actions\Calls\NarrowingLevel.cs" />
       <Compile Include="Actions\Calls\NullArgBuilder.cs" />
       <Compile Include="Actions\Calls\OutArgBuilder.cs" />
-      <Compile Include="Actions\Calls\ParameterBinder.cs" />
-      <Compile Include="Actions\Calls\ParameterBinderWithCodeContext.cs" />
+      <Compile Include="Actions\Calls\OverloadResolverFactory.cs" />
       <Compile Include="Actions\Calls\ParameterWrapper.cs" />
       <Compile Include="Actions\Calls\ParamsArgBuilder.cs" />
       <Compile Include="Actions\Calls\ParamsDictArgBuilder.cs" />
@@ -162,7 +162,6 @@
       <Compile Include="Actions\Calls\ReturnBuilder.cs" />
       <Compile Include="Actions\Calls\ReturnReferenceArgBuilder.cs" />
       <Compile Include="Actions\Calls\SimpleArgBuilder.cs" />
-      <Compile Include="Actions\Calls\SiteLocalStorageBuilder.cs" />
     </ItemGroup>
     <ItemGroup>
       <!--                               -->
@@ -247,7 +246,6 @@
       <Compile Include="Generation\KeyedQueue.cs" />
       <Compile Include="Generation\MethodSignatureInfo.cs" />
       <Compile Include="Generation\ParameterInfoWrapper.cs" />
-      <Compile Include="Generation\SiteLocalStorage.cs" />
       <Compile Include="Generation\Snippets.cs" />
       <Compile Include="Generation\ToDiskRewriter.cs" />
       <Compile Include="Generation\TypeGen.cs" />
@@ -497,10 +495,10 @@
   <ItemGroup>
     <Content Include="Microsoft.Scripting.txt" />
   </ItemGroup>
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);PRODUCTION_BUILD</DefineConstants>
     <PublishMetaAssemblyPath>$(InternalPath)\sdk\ref\WinFX\$(WINFX_REFS_VERSION)</PublishMetaAssemblyPath>
   </PropertyGroup>
-  <Target Name="AfterCompile" DependsOnTargets="Verify" Condition="'$(SpecSharpVerify)' == 'true'" />
+  
 </Project>

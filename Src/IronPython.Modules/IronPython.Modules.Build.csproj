@@ -1,5 +1,5 @@
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="dogfood">
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  
 
 
   <PropertyGroup>
@@ -19,6 +19,7 @@
     <DelaySign>true</DelaySign>
     <DefineConstants>$(SignedSym)</DefineConstants>
     <BaseAddress>885063680</BaseAddress>
+<TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
@@ -97,14 +98,14 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.Build.csproj">
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
-    <ProjectReference Include="..\IronPython\IronPython.Build.csproj">
+    <ProjectReference Include="..\IronPython\IronPython.csproj">
       <Name>IronPython</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
