@@ -547,6 +547,23 @@ def test_cp16520():
     for i in xrange(0, len(lines)):
         AreEqual(lines[i], expected_lines[i])                        
     
+def test_decorator26():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('{@}property{ENTER}')
+    superConsole.SendKeys('def foo{(}{)}: pass{ENTER}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    
+    #verification
+    lines = getTestOutput()[0]
+    expected_lines = [  ">>> @property\n",
+                        "... def foo(): pass\n",
+                        "... \n",
+                        ">>> outputRedirectStop()\n"]
+                   
+    AreEqual(len(lines), len(expected_lines))
+    for i in xrange(0, len(lines)):
+        AreEqual(lines[i], expected_lines[i])                        
+    
 #------------------------------------------------------------------------------
 #--__main__
 

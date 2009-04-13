@@ -132,7 +132,7 @@ namespace IronPython.Runtime {
         internal bool _importWarningThrows;
         private CommandDispatcher _commandDispatcher; // can be null
         private ClrModule.ReferencesList _referencesList;
-        private string _floatFormat, _doubleFormat;
+        private FloatFormat _floatFormat, _doubleFormat;
         private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
         private CodeContext _defaultContext;
         private readonly IEqualityComparer<object> _equalityComparer;
@@ -465,7 +465,7 @@ namespace IronPython.Runtime {
             return new AssemblyName(typeof(PythonContext).Assembly.FullName).Version;
         }
 
-        internal string FloatFormat {
+        internal FloatFormat FloatFormat {
             get {
                 return _floatFormat;
             }
@@ -474,7 +474,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal string DoubleFormat {
+        internal FloatFormat DoubleFormat {
             get {
                 return _doubleFormat;
             }
@@ -1347,7 +1347,7 @@ namespace IronPython.Runtime {
 
         public override TService GetService<TService>(params object[] args) {
             if (typeof(TService) == typeof(TokenizerService)) {
-                return (TService)(object)new Tokenizer();
+                return (TService)(object)new Tokenizer(ErrorSink.Null, GetPythonCompilerOptions(), true);
             }
 
             return base.GetService<TService>(args);

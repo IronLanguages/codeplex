@@ -152,7 +152,7 @@ variantTypes = [
     VariantType('INT', "IntPtr"),
     VariantType('UINT', "UIntPtr"),
 
-    VariantType('BOOL', "bool", 
+    VariantType('BOOL', "Boolean", 
         unmanagedRepresentationType="Int16",
         getStatements=["return _typeUnion._unionTypes._bool != 0;"],
         setStatements=["_typeUnion._unionTypes._bool = value ? (Int16)(-1) : (Int16)0;"]),
@@ -237,6 +237,12 @@ variantTypes = [
 
 ]
 
+managed_types_to_variant_types_add = [
+    ("Char",			"UI2"),
+    ("CurrencyWrapper", "CY"),
+    ("ErrorWrapper",    "ERROR"),
+]
+
 def gen_UnionTypes(cw):
     for variantType in variantTypes:
         variantType.write_UnionTypes(cw)
@@ -261,6 +267,46 @@ def gen_ComToManagedPrimitiveTypes(cw):
     for variantType in variantTypes:
         variantType.write_ComToManagedPrimitiveTypes(cw)
 
+def gen_ManagedToComPrimitiveTypes(cw):
+    import System
+    import clr
+    # build inverse map
+    type_map = {}
+    for variantType in variantTypes:
+        # take them in order, first one wins ... handles ERROR and INT32 conflict
+        if variantType.isPrimitiveType and not type_map.has_key(variantType.managedType):
+            type_map[variantType.managedType] = variantType.variantType
+
+    for managedType, variantType in managed_types_to_variant_types_add:
+        type_map[managedType] = variantType
+
+    def is_system_type(name):
+        t = getattr(System, name, None)
+        return t and System.Type.GetTypeCode(t) not in [System.TypeCode.Empty, System.TypeCode.Object]
+
+    system_types = filter(is_system_type, type_map.keys())
+    system_types = sorted(system_types, cmp, lambda name: int(System.Type.GetTypeCode(getattr(System, name))))
+    other_types = sorted(set(type_map.keys()).difference(set(system_types)))
+
+    # switch from sytem types
+    cw.enter_block("switch (Type.GetTypeCode(argumentType))")
+    for t in system_types:
+        cw.write("""case TypeCode.%(code)s:
+    primitiveVarEnum = VarEnum.VT_%(vt)s;
+    return true;""", code = System.Type.GetTypeCode(getattr(System, t)).ToString(), vt = type_map[t])
+    cw.exit_block()
+
+    # if statements from the rest
+    for t in other_types:
+        clrtype = getattr(System, t, None)
+        if not clrtype: clrtype = getattr(System.Runtime.InteropServices, t, None)
+        clrtype = clr.GetClrType(clrtype)
+        cw.write("""
+if (argumentType == typeof(%(type)s)) {
+    primitiveVarEnum = VarEnum.VT_%(vt)s;
+    return true;
+}""", type = clrtype.Name, vt = type_map[t])
+
 def gen_IsPrimitiveType(cw):
     for variantType in variantTypes:
         variantType.write_IsPrimitiveType(cw)
@@ -271,6 +317,7 @@ def gen_ConvertByrefToPtr(cw):
 
 def main():
     return generate(
+        ("Managed To COM Primitive Type Map", gen_ManagedToComPrimitiveTypes),
         ("Variant union types", gen_UnionTypes),
         ("Variant ToObject", gen_ToObject),
         ("Variant accessors", gen_accessors),

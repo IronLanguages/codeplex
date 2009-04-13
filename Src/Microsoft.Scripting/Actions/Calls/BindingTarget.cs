@@ -23,8 +23,10 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.Calls {
+    public delegate object OptimizingCallDelegate(object[] args, out bool shouldOptimize);
+
     /// <summary>
-    /// Encapsulates the result of an attempt to bind to one or methods using the MethodBinder.
+    /// Encapsulates the result of an attempt to bind to one or methods using the OverloadResolver.
     /// 
     /// Users should first check the Result property to see if the binding was successful or
     /// to determine the specific type of failure that occured.  If the binding was successful
@@ -35,20 +37,20 @@ namespace Microsoft.Scripting.Actions.Calls {
     public sealed class BindingTarget {
         private readonly BindingResult _result;                                           // the result of the binding
         private readonly string _name;                                                    // the name of the method being bound to
-        private readonly MethodTarget _target;                                            // the MethodTarget if the binding was successful 
+        private readonly MethodCandidate _candidate;                                      // the selected method if the binding was successful 
         private readonly RestrictionInfo _restrictedArgs;                                 // the arguments after they've been restricted to their known types
         private readonly NarrowingLevel _level;                                           // the NarrowingLevel at which the target succeeds on conversion
         private readonly CallFailure[] _callFailures;                                     // if failed on conversion the various conversion failures for all overloads
-        private readonly MethodTarget[] _ambiguousMatches;                                // list of methods which are ambiguous to bind to.
+        private readonly MethodCandidate[] _ambiguousMatches;                             // list of methods which are ambiguous to bind to.
         private readonly int[] _expectedArgs;                                             // gets the acceptable number of parameters which can be passed to the method.
         private readonly int _actualArgs;                                                 // gets the actual number of arguments provided
 
         /// <summary>
         /// Creates a new BindingTarget when the method binding has succeeded.
         /// </summary>
-        internal BindingTarget(string name, int actualArgumentCount, MethodTarget target, NarrowingLevel level, RestrictionInfo restrictedArgs) {
+        internal BindingTarget(string name, int actualArgumentCount, MethodCandidate candidate, NarrowingLevel level, RestrictionInfo restrictedArgs) {
             _name = name;
-            _target = target;
+            _candidate = candidate;
             _restrictedArgs = restrictedArgs;
             _level = level;
             _actualArgs = actualArgumentCount;
@@ -78,7 +80,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// <summary>
         /// Creates a new BindingTarget when the match was ambiguous
         /// </summary>
-        internal BindingTarget(string name, int actualArgumentCount, MethodTarget[] ambiguousMatches) {
+        internal BindingTarget(string name, int actualArgumentCount, MethodCandidate[] ambiguousMatches) {
             _name = name;
             _result = BindingResult.AmbiguousMatch;
             _ambiguousMatches = ambiguousMatches;
@@ -108,7 +110,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
         public Expression MakeExpression() {
-            if (_target == null) {
+            if (_candidate == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
             } else if (_restrictedArgs == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was done with Expressions, not MetaObject's");
@@ -119,17 +121,17 @@ namespace Microsoft.Scripting.Actions.Calls {
                 exprs[i] = _restrictedArgs.Objects[i].Expression;
             }
 
-            return _target.MakeExpression(exprs);
+            return _candidate.MakeExpression(exprs);
         }
 
         public OptimizingCallDelegate MakeDelegate() {
-            if (_target == null) {
+            if (_candidate == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was unsuccessful.");
             } else if (_restrictedArgs == null) {
                 throw new InvalidOperationException("An expression cannot be produced because the method binding was done with Expressions, not MetaObject's");
             }
 
-            return _target.MakeDelegate(_restrictedArgs);
+            return _candidate.MakeDelegate(_restrictedArgs);
         }
 
         /// <summary>
@@ -137,8 +139,8 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// </summary>
         public MethodBase Method {
             get {
-                if (_target != null) {
-                    return _target.Method;
+                if (_candidate != null) {
+                    return _candidate.Method;
                 }
 
                 return null;
@@ -146,7 +148,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         /// <summary>
-        /// Gets the name of the method as supplied to the MethodBinder.
+        /// Gets the name of the method as supplied to the OverloadResolver.
         /// </summary>
         public string Name {
             get {
@@ -157,16 +159,16 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// <summary>
         /// Returns the MethodTarget if the binding succeeded, or null if no method was applicable.
         /// </summary>
-        public MethodTarget MethodTarget {
+        public MethodCandidate MethodCandidate {
             get {
-                return _target;
+                return _candidate;
             }
         }
 
         /// <summary>
         /// Returns the methods which don't have any matches or null if Result == BindingResult.AmbiguousMatch
         /// </summary>
-        public IEnumerable<MethodTarget> AmbiguousMatches {
+        public IEnumerable<MethodCandidate> AmbiguousMatches {
             get {
                 return _ambiguousMatches;
             }
@@ -217,8 +219,8 @@ namespace Microsoft.Scripting.Actions.Calls {
         /// </summary>
         public Type ReturnType {
             get {
-                if (_target != null) {
-                    return _target.ReturnType;
+                if (_candidate != null) {
+                    return _candidate.ReturnType;
                 }
 
                 return null;
@@ -244,12 +246,6 @@ namespace Microsoft.Scripting.Actions.Calls {
             get {
                 return _result == BindingResult.Success;
             }
-        }
-
-        internal MethodTarget GetTargetThrowing() {
-            if (_target == null) throw new InvalidOperationException();
-
-            return _target;
         }
     }
 }

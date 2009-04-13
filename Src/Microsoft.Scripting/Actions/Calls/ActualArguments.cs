@@ -163,10 +163,10 @@ namespace Microsoft.Scripting.Actions.Calls {
             binding = new ArgumentBinding(positionalArgCount, permutation);
 
             if (unboundNames != null) {
-                failure = new CallFailure(method.Target, unboundNames.ToArray(), true);
+                failure = new CallFailure(method, unboundNames.ToArray(), true);
                 return false;
             } else if (duppedNames != null) {
-                failure = new CallFailure(method.Target, duppedNames.ToArray(), false);
+                failure = new CallFailure(method, duppedNames.ToArray(), false);
                 return false;
             }
 

@@ -26,7 +26,7 @@ using System.Reflection;
 
 namespace Microsoft.Scripting {
     internal class VariantArgBuilder : SimpleArgBuilder {
-        private bool _isWrapper;
+        private readonly bool _isWrapper;
 
         internal VariantArgBuilder(Type parameterType)
             : base(parameterType) {
