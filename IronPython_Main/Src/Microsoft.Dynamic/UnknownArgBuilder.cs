@@ -25,7 +25,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     internal class UnknownArgBuilder : SimpleArgBuilder {
-        private bool _isWrapper;
+        private readonly bool _isWrapper;
 
         internal UnknownArgBuilder(Type parameterType)
             : base(parameterType) {

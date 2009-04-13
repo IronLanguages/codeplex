@@ -87,59 +87,6 @@ namespace Microsoft.Scripting.Actions.Calls {
             get { return _info; }
         }
 
-        internal static Candidate GetPreferredParameter(OverloadResolver binder, ParameterWrapper candidateOne, ParameterWrapper candidateTwo) {
-            Assert.NotNull(candidateOne, candidateTwo);
-
-            if (binder.ParametersEquivalent(candidateOne, candidateTwo)) {
-                return Candidate.Equivalent;
-            }
-
-            Type t1 = candidateOne.Type;
-            Type t2 = candidateTwo.Type;
-
-            if (binder.CanConvertFrom(t2, candidateOne, NarrowingLevel.None)) {
-                if (binder.CanConvertFrom(t1, candidateTwo, NarrowingLevel.None)) {
-                    return Candidate.Ambiguous;
-                } else {
-                    return Candidate.Two;
-                }
-            }
-
-            if (binder.CanConvertFrom(t1, candidateTwo, NarrowingLevel.None)) {
-                return Candidate.One;
-            }
-
-            // Special additional rules to order numeric value types
-            Candidate preferred = binder.PreferConvert(t1, t2);
-            if (preferred.Chosen()) {
-                return preferred;
-            }
-
-            preferred = binder.PreferConvert(t2, t1).TheOther();
-            if (preferred.Chosen()) {
-                return preferred;
-            }
-
-            return Candidate.Ambiguous;
-        }
-
-        internal static Candidate GetPreferredParameter(OverloadResolver binder, ParameterWrapper candidateOne, ParameterWrapper candidateTwo, Type argType) {
-            Assert.NotNull(candidateOne, candidateTwo, argType);
-
-            if (binder.ParametersEquivalent(candidateOne, candidateTwo)) {
-                return Candidate.Equivalent;
-            }
-
-            for (NarrowingLevel curLevel = NarrowingLevel.None; curLevel <= NarrowingLevel.All; curLevel++) {
-                Candidate candidate = binder.SelectBestConversionFor(argType, candidateOne, candidateTwo, curLevel);
-                if (candidate.Chosen()) {
-                    return candidate;
-                }
-            }
-
-            return GetPreferredParameter(binder, candidateOne, candidateTwo);
-        }
-
         public string Name {
             get { return _name; }
         }

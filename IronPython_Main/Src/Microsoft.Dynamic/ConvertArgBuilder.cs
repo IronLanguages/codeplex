@@ -12,29 +12,31 @@
  *
  *
  * ***************************************************************************/
-
 using System; using Microsoft;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting.Actions.Calls {
-    public sealed class ApplicableCandidate {
-        public readonly MethodCandidate Method;
-        public readonly ArgumentBinding ArgumentBinding;
 
-        internal ApplicableCandidate(MethodCandidate method, ArgumentBinding argBinding) {
-            Assert.NotNull(method, argBinding);
-            Method = method;
-            ArgumentBinding = argBinding;
+#if !SILVERLIGHT
+
+using Microsoft.Linq.Expressions;
+
+namespace Microsoft.Scripting {
+    internal class ConvertArgBuilder : SimpleArgBuilder {
+        private readonly Type _marshalType;
+
+        internal ConvertArgBuilder(Type parameterType, Type marshalType)
+            : base(parameterType) {
+            _marshalType = marshalType;
         }
 
-        public ParameterWrapper GetParameter(int argumentIndex) {
-            return Method.GetParameter(argumentIndex, ArgumentBinding);
+        internal override Expression Marshal(Expression parameter) {
+            parameter = base.Marshal(parameter);
+            return Expression.Convert(parameter, _marshalType);
         }
 
-        public override string ToString() {
-            return Method.ToString();
+        internal override Expression UnmarshalFromRef(Expression newValue) {
+            return base.UnmarshalFromRef(Expression.Convert(newValue, ParameterType));
         }
     }
 }
+
+#endif

@@ -443,4 +443,54 @@ def test_long_log():
     AreEqual(round(math.log10(N()), 5),1.0)
     AreEqual(round(math.log(N()), 5),2.30259)
     
+def test_float_26():
+    from_hex_tests = [('1.fffffffffffff7', 1.9999999999999998),
+                      ('1.fffffffffffff8', 2.0),
+                      ('-1.1fffffffffffffffffffffffffffffffff', -1.125),
+                      ('-1.ffffffffffffffffffffffffffffffffff', -2),
+                      ('10.4', 16.25),
+                      ('1.fffffffffffffp1023', 1.7976931348623157e+308),
+                      ('1p1', 2.0),
+                      ('-1.0p1', -2.0),
+                      ('+1.0p1', 2.0),
+                      ('-0x1.0p1', -2.0),
+                      ('1.0p1023', 8.9884656743115795e+307),
+                      ('1.0p-1023', 1.1125369292536007e-308),
+                      ('1.1234p1', 2.1422119140625),
+                      ('1.' + 'f'*1000+ 'p1', 4.0),
+                      ('1.ap1', 3.25),
+                      ('1.Ap1', 3.25),
+                      ('1.0p-1', 0.5),
+                      ('1.0p-1', 0.5),
+                      ('1.0p-1074', 4.9406564584124654e-324),
+                      ('2.0p-1075', 4.9406564584124654e-324),
+                      ('1.0p-1075', 0),
+                      ('10.0p-1075', 3.9525251667299724e-323),
+                      ('0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.a', 1.634661910256948e+55),
+                      ('0x1.Ap1', 3.25),
+                      ('0x1.Ap2', 6.5),
+                      ('0x1.Ap3', 13),
+                      ('  0x1.Ap1   ', 3.25),
+                      ]
+                      
+    for string, value in from_hex_tests:
+        #print string, value
+        AreEqual(float.fromhex(string), value)
+    
+    from_hex_errors = [(OverflowError, '1.0p1024'), 
+                       (OverflowError, '1.0p1025'), 
+                       (OverflowError, '10.0p1023'),
+                       (OverflowError, '1.ffffffffffffffp1023'),
+                       (ValueError, 'xxxx'), 
+                       (OverflowError, '1.0p99999999999999999999999')]
+    for excep, error in from_hex_errors:
+        AssertError(excep, float.fromhex, error)
+    
+
+def test_integer_ratio():
+    int_ratio_tests = [ (2.5, (5, 2)), (1.3, (5854679515581645L, 4503599627370496L))]
+    
+    for flt, res in int_ratio_tests:
+        AreEqual(flt.as_integer_ratio(), res)
+
 run_test(__name__)

@@ -691,7 +691,7 @@ namespace Microsoft.Scripting {
                 Expression tryGetValue = Expression.Call(
                     typeof(RuntimeOps).GetMethod(methodName),
                     GetLimitedSelf(),
-                    Expression.Constant(klass),
+                    Expression.Constant(klass, typeof(object)),
                     Expression.Constant(index),
                     Expression.Constant(name),
                     value
@@ -758,7 +758,7 @@ namespace Microsoft.Scripting {
                             Expression.Call(
                                 typeof(RuntimeOps).GetMethod(methodName),
                                 GetLimitedSelf(),
-                                Expression.Constant(klass),
+                                Expression.Constant(klass, typeof(object)),
                                 Expression.Constant(index),
                                 Expression.Convert(value.Expression, typeof(object)),
                                 Expression.Constant(binder.Name)
@@ -779,7 +779,7 @@ namespace Microsoft.Scripting {
                 Expression tryDelete = Expression.Call(
                     typeof(RuntimeOps).GetMethod(methodName),
                     GetLimitedSelf(),
-                    Expression.Constant(Value.Class),
+                    Expression.Constant(Value.Class, typeof(object)),
                     Expression.Constant(index),
                     Expression.Constant(binder.Name)
                 );
@@ -827,8 +827,8 @@ namespace Microsoft.Scripting {
                             null,
                             typeof(RuntimeOps).GetMethod("ExpandoPromoteClass"),
                             GetLimitedSelf(),
-                            Expression.Constant(originalClass),
-                            Expression.Constant(klass)
+                            Expression.Constant(originalClass, typeof(object)),
+                            Expression.Constant(klass, typeof(object))
                         ),
                         succeeds.Expression
                     );
@@ -841,7 +841,7 @@ namespace Microsoft.Scripting {
                                 null,
                                 typeof(RuntimeOps).GetMethod("ExpandoCheckVersion"),
                                 GetLimitedSelf(),
-                                Expression.Constant(originalClass ?? klass)
+                                Expression.Constant(originalClass ?? klass, typeof(object))
                             ),
                             ifTestSucceeds,
                             binder.GetUpdateExpression(ifTestSucceeds.Type)

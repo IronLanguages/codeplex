@@ -17,12 +17,9 @@ using System; using Microsoft;
 
 #if !SILVERLIGHT // ComObject
 
-using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 

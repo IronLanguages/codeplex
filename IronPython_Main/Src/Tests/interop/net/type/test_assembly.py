@@ -23,7 +23,7 @@ def test_assembly_instance():
     mscorlib = clr.LoadAssemblyByName("mscorlib")
         
     #GetMemberNames
-    Assert(len(dir(mscorlib)), 63)
+    Assert(len(dir(mscorlib)), 64)
     for x in ["System", "Microsoft"]:
         Assert( x in dir(mscorlib), "dir(mscorlib) does not have %s" % x)
     
@@ -49,8 +49,8 @@ def test_type():
     mscorlib = Assembly.Load("mscorlib")
     Assert("Assembly" in repr(mscorlib))  
 
-    AreEqual(len(dir(Assembly)), 63)
-    AreEqual(len(dir(AssemblyBuilder)), 76)   
+    AreEqual(len(dir(Assembly)), 64)
+    AreEqual(len(dir(AssemblyBuilder)), 77)   
     
 #####################################################################################
 run_test(__name__)

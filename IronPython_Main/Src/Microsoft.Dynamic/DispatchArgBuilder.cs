@@ -26,7 +26,7 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting {
 
     internal class DispatchArgBuilder : SimpleArgBuilder {
-        private bool _isWrapper;
+        private readonly bool _isWrapper;
 
         internal DispatchArgBuilder(Type parameterType)
             : base(parameterType) {

@@ -45,20 +45,20 @@ namespace Microsoft.Scripting.Actions.Calls {
     /// 
     /// Implementation Details:
     /// 
-    /// The MethodBinder works by building up a TargetSet for each number of effective arguments that can be
+    /// The MethodBinder works by building up a CandidateSet for each number of effective arguments that can be
     /// passed to a set of overloads.  For example a set of overloads such as:
     ///     foo(object a, object b, object c)
     ///     foo(int a, int b)
     ///     
     /// would have 2 target sets - one for 3 parameters and one for 2 parameters.  For parameter arrays
-    /// we fallback and create the appropriately sized TargetSet on demand.
+    /// we fallback and create the appropriately sized CandidateSet on demand.
     /// 
-    /// Each TargetSet consists of a set of MethodCandidate's.  Each MethodCandidate knows the flattened
+    /// Each CandidateSet consists of a set of MethodCandidate's.  Each MethodCandidate knows the flattened
     /// parameters that could be received.  For example for a function such as:
     ///     foo(params int[] args)
     ///     
-    /// When this method is in a TargetSet of size 3 the MethodCandidate takes 3 parameters - all of them
-    /// ints; if it's in a TargetSet of size 4 it takes 4 parameters.  Effectively a MethodCandidate is 
+    /// When this method is in a CandidateSet of size 3 the MethodCandidate takes 3 parameters - all of them
+    /// ints; if it's in a CandidateSet of size 4 it takes 4 parameters.  Effectively a MethodCandidate is 
     /// a simplified view that allows all arguments to be treated as required positional arguments.
     /// 
     /// Each MethodCandidate in turn refers to a MethodTarget.  The MethodTarget is composed of a set
@@ -77,9 +77,9 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         // built as target sets are built:
         private string _methodName;
-        private NarrowingLevel _minLevel, _maxLevel;    // specifies the minimum and maximum narrowing levels for conversions during binding
+        private NarrowingLevel _minLevel, _maxLevel;             // specifies the minimum and maximum narrowing levels for conversions during binding
         private IList<string> _argNames;
-        private Dictionary<int, TargetSet> _targetSets;          // the methods as they map from # of arguments -> the possible TargetSet's.
+        private Dictionary<int, CandidateSet> _candidateSets;    // the methods as they map from # of arguments -> the possible CandidateSet's.
         private List<MethodCandidate> _paramsCandidates;         // the methods which are params methods which need special treatment because they don't have fixed # of args
         
         // built as arguments are processed:
@@ -128,7 +128,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             ContractUtils.RequiresNotNullItems(methods, "methods");
             ContractUtils.Requires(minLevel <= maxLevel);
 
-            if (_targetSets != null) {
+            if (_candidateSets != null) {
                 throw new InvalidOperationException("Overload resolver cannot be reused.");
             }
 
@@ -141,7 +141,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             GetNamedArguments(out namedArgs, out _argNames);
             
             // uses arg names:
-            BuildTargetSets(methods);
+            BuildCandidateSets(methods);
 
             // uses target sets:
             int preSplatLimit, postSplatLimit;
@@ -154,9 +154,9 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
 
             // steps 3, 4:
-            TargetSet targetSet = GetTargetSet();
-            if (targetSet != null && !targetSet.IsParamsDictionaryOnly()) {
-                return MakeBindingTarget(targetSet);
+            var candidateSet = GetCandidateSet();
+            if (candidateSet != null && !candidateSet.IsParamsDictionaryOnly()) {
+                return MakeBindingTarget(candidateSet);
             }
 
             // step 5:
@@ -183,30 +183,28 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         /// <summary>
-        /// Handles binding of special parameters.
-        /// </summary>
-        /// <returns>True if the argument is handled by this method.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "3#")]
-        protected virtual bool BindSpecialParameter(ParameterInfo parameterInfo, List<ArgBuilder> arguments,
-            List<ParameterWrapper> parameters, ref int index) {
-            return false;
-        }
-
-        /// <summary>
         /// Called before arguments binding.
         /// </summary>
-        /// <returns>The number of parameter infos to skip.</returns>
+        /// <returns>
+        /// A bitmask that indicates (set bits) the parameters that were mapped by this method.
+        /// A default mapping will be constructed for the remaining parameters (cleared bits).
+        /// </returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "3#")]
-        protected virtual int PrepareParametersBinding(ParameterInfo[] parameterInfos, List<ArgBuilder> arguments,
-            List<ParameterWrapper> parameters, ref int index) {
-            return 0;
+        internal protected virtual BitArray MapSpecialParameters(ParameterMapping mapping) {
+            if (!CompilerHelpers.IsStatic(mapping.Method)) {
+                var type = mapping.Method.DeclaringType;
+                mapping.AddParameter(new ParameterWrapper(null, type, null, true, false, false, false));
+                mapping.AddInstanceBuilder(new SimpleArgBuilder(type, mapping.ArgIndex, false, false));
+            }
+
+            return null;
         }
 
-        private void BuildTargetSets(IList<MethodBase> methods) {
-            Debug.Assert(_targetSets == null);
+        private void BuildCandidateSets(IList<MethodBase> methods) {
+            Debug.Assert(_candidateSets == null);
             Debug.Assert(_argNames != null);
 
-            _targetSets = new Dictionary<int, TargetSet>();
+            _candidateSets = new Dictionary<int, CandidateSet>();
 
             foreach (MethodBase method in methods) {
                 if (IsUnsupported(method)) continue;
@@ -218,7 +216,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 // For all the methods that take a params array, create MethodCandidates that clash with the 
                 // other overloads of the method
                 foreach (MethodCandidate candidate in _paramsCandidates) {
-                    foreach (int count in _targetSets.Keys) {
+                    foreach (int count in _candidateSets.Keys) {
                         MethodCandidate target = candidate.MakeParamsExtended(count, _argNames);
                         if (target != null) {
                             AddTarget(target);
@@ -228,13 +226,13 @@ namespace Microsoft.Scripting.Actions.Calls {
             }
         }
 
-        private TargetSet GetTargetSet() {
-            Debug.Assert(_targetSets != null && _actualArguments != null);
+        private CandidateSet GetCandidateSet() {
+            Debug.Assert(_candidateSets != null && _actualArguments != null);
 
-            TargetSet result;
+            CandidateSet result;
 
             // use precomputed set if arguments are fully expanded and we have one:
-            if (_actualArguments.CollapsedCount == 0 && _targetSets.TryGetValue(_actualArguments.Count, out result)) {
+            if (_actualArguments.CollapsedCount == 0 && _candidateSets.TryGetValue(_actualArguments.Count, out result)) {
                 return result;
             }
 
@@ -249,267 +247,57 @@ namespace Microsoft.Scripting.Actions.Calls {
             return null;
         }
 
-        private TargetSet BuildExpandedTargetSet(int count) {
-            TargetSet ts = new TargetSet(this, count);
+        private CandidateSet BuildExpandedTargetSet(int count) {
+            var set = new CandidateSet(this, count);
             if (_paramsCandidates != null) {
                 foreach (MethodCandidate maker in _paramsCandidates) {
                     MethodCandidate target = maker.MakeParamsExtended(count, _argNames);
                     if (target != null) {
-                        ts.Add(target);
+                        set.Add(target);
                     }
                 }
             }
 
-            return ts;
+            return set;
         }
 
         private void AddTarget(MethodCandidate target) {
-            int count = target.Target.ParameterCount;
-            TargetSet set;
-            if (!_targetSets.TryGetValue(count, out set)) {
-                set = new TargetSet(this, count);
-                _targetSets[count] = set;
+            int count = target.ParameterCount;
+            CandidateSet set;
+            if (!_candidateSets.TryGetValue(count, out set)) {
+                set = new CandidateSet(this, count);
+                _candidateSets[count] = set;
             }
             set.Add(target);
         }
 
         private void AddSimpleTarget(MethodCandidate target) {
             AddTarget(target);
-            if (BinderHelpers.IsParamsMethod(target.Target.Method)) {
-                if (_paramsCandidates == null) _paramsCandidates = new List<MethodCandidate>();
+            if (BinderHelpers.IsParamsMethod(target.Method)) {
+                if (_paramsCandidates == null) {
+                    _paramsCandidates = new List<MethodCandidate>();
+                }
                 _paramsCandidates.Add(target);
-            }
-        }
-
-        // TODO: revisit
-        protected virtual ArgBuilder MakeInstanceBuilder(MethodBase method, List<ParameterWrapper> parameters, ref int argIndex) {
-            if (!CompilerHelpers.IsStatic(method)) {
-                parameters.Add(new ParameterWrapper(null, method.DeclaringType, null, true, false, false, false));
-                return new SimpleArgBuilder(method.DeclaringType, argIndex++, false, false);
-            } else {
-                return new NullArgBuilder();
             }
         }
 
         private void AddBasicMethodTargets(MethodBase method) {
             Assert.NotNull(method);
 
-            var parameterInfos = method.GetParameters();
-            var parameters = new List<ParameterWrapper>();
-            ParameterWrapper paramsDict = null;
-            var arguments = new List<ArgBuilder>(parameterInfos.Length);
-            var defaultArguments = new List<ArgBuilder>();
-            int argIndex = 0;
-            var instanceBuilder = MakeInstanceBuilder(method, parameters, ref argIndex);
+            var mapping = new ParameterMapping(this, method, null, _argNames);
 
-            bool hasByRefOrOut = false;
-            bool hasDefaults = false;
+            mapping.MapParameters(false);
 
-            var infoIndex = PrepareParametersBinding(parameterInfos, arguments, parameters, ref argIndex);
-            for (; infoIndex < parameterInfos.Length; infoIndex++) {
-                var pi = parameterInfos[infoIndex];
-
-                if (BindSpecialParameter(pi, arguments, parameters, ref argIndex)) {
-                    continue;
-                }
-
-                int indexForArgBuilder, kwIndex = GetKeywordIndex(pi);
-                if (kwIndex == ParameterNotPassedByKeyword) {
-                    // positional argument, we simply consume the next argument
-                    indexForArgBuilder = argIndex++;
-                } else {
-                    // keyword argument, we just tell the simple arg builder to consume arg 0.
-                    // KeywordArgBuilder will then pass in the correct single argument based 
-                    // upon the actual argument number provided by the user.
-                    indexForArgBuilder = 0;
-                }
-
-                // if the parameter is default we need to build a default arg builder and then
-                // build a reduced method at the end.  
-                if (!CompilerHelpers.IsMandatoryParameter(pi)) {
-                    // We need to build the default builder even if we have a parameter for it already to
-                    // get good consistency of our error messages.  But consider a method like 
-                    // def foo(a=1, b=2) and the user calls it as foo(b=3). Then adding the default
-                    // value breaks an otherwise valid call.  This is because we only generate MethodCandidates
-                    // filling in the defaults from right to left (so the method - 1 arg requires a,
-                    // and the method minus 2 args requires b).  So we only add the default if it's 
-                    // a positional arg or we don't already have a default value.
-                    if (kwIndex == -1 || !hasDefaults) {
-                        defaultArguments.Add(new DefaultArgBuilder(pi));
-                        hasDefaults = true;
-                    } else {
-                        defaultArguments.Add(null);
-                    }
-                } else if (defaultArguments.Count > 0) {
-                    // non-contigious default parameter
-                    defaultArguments.Add(null);
-                }
-
-                ArgBuilder ab;
-                if (pi.ParameterType.IsByRef) {
-                    hasByRefOrOut = true;
-                    Type refType = typeof(StrongBox<>).MakeGenericType(pi.ParameterType.GetElementType());
-                    parameters.Add(new ParameterWrapper(pi, refType, pi.Name, true, false, false, false));
-                    ab = new ReferenceArgBuilder(pi, refType, indexForArgBuilder);
-                } else if (BinderHelpers.IsParamDictionary(pi)) {
-                    paramsDict = new ParameterWrapper(pi);
-                    ab = new SimpleArgBuilder(pi, indexForArgBuilder);
-                } else if (infoIndex == 0 && CompilerHelpers.IsExtension(pi.Member)) {
-                    parameters.Add(new ParameterWrapper(pi, pi.ParameterType, pi.Name, true, false, false, true));
-                    ab = new SimpleArgBuilder(pi, indexForArgBuilder);
-                } else {
-                    hasByRefOrOut |= CompilerHelpers.IsOutParameter(pi);
-                    parameters.Add(new ParameterWrapper(pi));
-                    ab = new SimpleArgBuilder(pi, indexForArgBuilder);
-                }
-
-                if (kwIndex == ParameterNotPassedByKeyword) {
-                    arguments.Add(ab);
-                } else {
-                    Debug.Assert(KeywordArgBuilder.BuilderExpectsSingleParameter(ab));
-                    arguments.Add(new KeywordArgBuilder(ab, _argNames.Count, kwIndex));
-                }
+            foreach (var defaultCandidate in mapping.CreateDefaultCandidates()) {
+                AddSimpleTarget(defaultCandidate);
             }
 
-            ReturnBuilder returnBuilder = MakeKeywordReturnBuilder(
-                new ReturnBuilder(CompilerHelpers.GetReturnType(method)),
-                parameterInfos,
-                parameters,
-                AllowKeywordArgumentSetting(method)
-            );
-
-            if (hasDefaults) {
-                for (int defaultsUsed = 1; defaultsUsed < defaultArguments.Count + 1; defaultsUsed++) {
-                    // if the left most default we'll use is not present then don't add a default.  This happens in cases such as:
-                    // a(a=1, b=2, c=3) and then call with a(a=5, c=3).  We'll come through once for c (no default, skip),
-                    // once for b (default present, emit) and then a (no default, skip again).  W/o skipping we'd generate the same
-                    // method multiple times.  This also happens w/ non-contigious default values, e.g. foo(a, b=3, c) where we don't want
-                    // to generate a default candidate for just c which matches the normal method.
-                    if (defaultArguments[defaultArguments.Count - defaultsUsed] != null) {
-                        AddSimpleTarget(MakeDefaultCandidate(
-                            method,
-                            parameters,
-                            paramsDict,
-                            instanceBuilder,
-                            arguments,
-                            defaultArguments,
-                            returnBuilder,
-                            defaultsUsed));
-                    }
-                }
+            var byRefReducedCandidate = mapping.CreateByRefReducedCandidate();
+            if (byRefReducedCandidate != null) {
+                AddSimpleTarget(byRefReducedCandidate);
             }
 
-            if (hasByRefOrOut) {
-                AddSimpleTarget(MakeByRefReducedMethodTarget(parameterInfos, method));
-            }
-
-            AddSimpleTarget(new MethodCandidate(
-                new MethodTarget(this, method, parameters.Count, instanceBuilder, arguments, returnBuilder),
-                parameters,
-                paramsDict
-            ));
-        }
-
-        private MethodCandidate MakeDefaultCandidate(MethodBase method, List<ParameterWrapper> parameters, ParameterWrapper paramsDict,
-            ArgBuilder instanceBuilder, List<ArgBuilder> argBuilders, List<ArgBuilder> defaultBuilders, ReturnBuilder returnBuilder, int defaultsUsed) {
-            List<ArgBuilder> defaultArgBuilders = new List<ArgBuilder>(argBuilders);
-            List<ParameterWrapper> necessaryParams = parameters.GetRange(0, parameters.Count - defaultsUsed);
-
-            for (int curDefault = 0; curDefault < defaultsUsed; curDefault++) {
-                int readIndex = defaultBuilders.Count - defaultsUsed + curDefault;
-                int writeIndex = defaultArgBuilders.Count - defaultsUsed + curDefault;
-
-                if (defaultBuilders[readIndex] != null) {
-                    defaultArgBuilders[writeIndex] = defaultBuilders[readIndex];
-                } else {
-                    necessaryParams.Add(parameters[parameters.Count - defaultsUsed + curDefault]);
-                }
-            }
-
-            // shift any arguments forward that need to be...
-            int curArg = CompilerHelpers.IsStatic(method) ? 0 : 1;
-            for (int i = 0; i < defaultArgBuilders.Count; i++) {
-                SimpleArgBuilder sab = defaultArgBuilders[i] as SimpleArgBuilder;
-                if (sab != null) {
-                    defaultArgBuilders[i] = sab.MakeCopy(curArg++);
-                }
-            }
-
-            return new MethodCandidate(
-                new MethodTarget(this, method, necessaryParams.Count, instanceBuilder, defaultArgBuilders, returnBuilder),
-                necessaryParams,
-                paramsDict
-            );
-        }
-
-        private MethodCandidate MakeByRefReducedMethodTarget(ParameterInfo[] parameterInfos, MethodBase method) {
-            Assert.NotNull(parameterInfos, method);
-
-            var parameters = new List<ParameterWrapper>();
-            ParameterWrapper paramsDict = null;
-            var arguments = new List<ArgBuilder>();
-            int argIndex = 0;
-            var instanceBuilder = MakeInstanceBuilder(method, parameters, ref argIndex);            
-            
-            List<int> returnArgs = new List<int>();
-            if (CompilerHelpers.GetReturnType(method) != typeof(void)) {
-                returnArgs.Add(-1);
-            }
-
-            var infoIndex = PrepareParametersBinding(parameterInfos, arguments, parameters, ref argIndex);
-            for (; infoIndex < parameterInfos.Length; infoIndex++) {
-                var pi = parameterInfos[infoIndex];
-
-                if (BindSpecialParameter(pi, arguments, parameters, ref argIndex)) {
-                    continue;
-                }
-                
-                // See KeywordArgBuilder.BuilderExpectsSingleParameter
-                int indexForArgBuilder = 0;
-
-                int kwIndex = ParameterNotPassedByKeyword;
-                if (!CompilerHelpers.IsOutParameter(pi)) {
-                    kwIndex = GetKeywordIndex(pi);
-                    if (kwIndex == ParameterNotPassedByKeyword) {
-                        indexForArgBuilder = argIndex++;
-                    }
-                }
-
-                ArgBuilder ab;
-                if (CompilerHelpers.IsOutParameter(pi)) {
-                    returnArgs.Add(arguments.Count);
-                    ab = new OutArgBuilder(pi);
-                } else if (pi.ParameterType.IsByRef) {
-                    // if the parameter is marked as [In] it is not returned.
-                    if ((pi.Attributes & (ParameterAttributes.In | ParameterAttributes.Out)) != ParameterAttributes.In) {
-                        returnArgs.Add(arguments.Count);
-                    }
-                    parameters.Add(new ParameterWrapper(pi, pi.ParameterType.GetElementType(), pi.Name, false, false, false, false));
-                    ab = new ReturnReferenceArgBuilder(pi, indexForArgBuilder);
-                } else if (BinderHelpers.IsParamDictionary(pi)) {
-                    paramsDict = new ParameterWrapper(pi);
-                    ab = new SimpleArgBuilder(pi, indexForArgBuilder);
-                } else {
-                    parameters.Add(new ParameterWrapper(pi));
-                    ab = new SimpleArgBuilder(pi, indexForArgBuilder);
-                }
-
-                if (kwIndex == ParameterNotPassedByKeyword) {
-                    arguments.Add(ab);
-                } else {
-                    Debug.Assert(KeywordArgBuilder.BuilderExpectsSingleParameter(ab));
-                    arguments.Add(new KeywordArgBuilder(ab, _argNames.Count, kwIndex));
-                }
-            }
-
-            ReturnBuilder returnBuilder = MakeKeywordReturnBuilder(
-                new ByRefReturnBuilder(returnArgs),
-                parameterInfos,
-                parameters,
-                AllowKeywordArgumentSetting(method)
-            );
-
-            return new MethodCandidate(new MethodTarget(this, method, parameters.Count, instanceBuilder, arguments, returnBuilder), parameters, paramsDict);
+            AddSimpleTarget(mapping.CreateCandidate());
         }
 
         private static bool IsUnsupported(MethodBase method) {
@@ -542,7 +330,7 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         #region Step 3: Resolution
 
-        internal BindingTarget MakeBindingTarget(TargetSet targetSet) {
+        internal BindingTarget MakeBindingTarget(CandidateSet targetSet) {
             List<CallFailure> failures = null;
             List<CallFailure> nameBindingFailures = null;
 
@@ -618,7 +406,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             var result = new List<ApplicableCandidate>();
             foreach (ApplicableCandidate candidate in candidates) {
                 CallFailure callFailure;
-                if (candidate.Method.TryConvertArguments(candidate.ArgumentBinding, level, out callFailure)) {
+                if (TryConvertArguments(candidate.Method, candidate.ArgumentBinding, level, out callFailure)) {
                     result.Add(candidate);
                 } else {
                     AddFailure(ref failures, callFailure);
@@ -637,7 +425,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             var result = new List<ApplicableCandidate>();
             foreach (ApplicableCandidate candidate in candidates) {
                 CallFailure callFailure;
-                if (candidate.Method.TryConvertCollapsedArguments(level, out callFailure)) {
+                if (TryConvertCollapsedArguments(candidate.Method, level, out callFailure)) {
                     result.Add(candidate);
                 } else {
                     AddFailure(ref failures, callFailure);
@@ -651,6 +439,49 @@ namespace Microsoft.Scripting.Actions.Calls {
                 failures = new List<CallFailure>(1);
             }
             failures.Add(failure);
+        }
+
+        private bool TryConvertArguments(MethodCandidate candidate, ArgumentBinding namesBinding, NarrowingLevel narrowingLevel, out CallFailure failure) {
+            Debug.Assert(_actualArguments.Count == candidate.ParameterCount);
+
+            BitArray hasConversion = new BitArray(_actualArguments.Count);
+
+            bool success = true;
+            for (int i = 0; i < _actualArguments.Count; i++) {
+                success &= (hasConversion[i] = CanConvertFrom(_actualArguments[i].GetLimitType(), candidate.GetParameter(i, namesBinding), narrowingLevel));
+            }
+
+            if (!success) {
+                var conversionResults = new ConversionResult[_actualArguments.Count];
+                for (int i = 0; i < _actualArguments.Count; i++) {
+                    conversionResults[i] = new ConversionResult(_actualArguments[i].GetLimitType(), candidate.GetParameter(i, namesBinding).Type, !hasConversion[i]);
+                }
+                failure = new CallFailure(candidate, conversionResults);
+            } else {
+                failure = null;
+            }
+
+            return success;
+        }
+
+        private bool TryConvertCollapsedArguments(MethodCandidate candidate, NarrowingLevel narrowingLevel, out CallFailure failure) {
+            Debug.Assert(_actualArguments.CollapsedCount > 0);
+
+            // There must be at least one expanded parameter preceding splat index (see MethodBinder.GetSplatLimits):
+            ParameterWrapper parameter = candidate.GetParameter(_actualArguments.SplatIndex - 1);
+            Debug.Assert(parameter.ParameterInfo != null && CompilerHelpers.IsParamArray(parameter.ParameterInfo));
+
+            for (int i = 0; i < _actualArguments.CollapsedCount; i++) {
+                Type argType = CompilerHelpers.GetType(GetCollapsedArgumentValue(i));
+
+                if (!CanConvertFrom(argType, parameter, narrowingLevel)) {
+                    failure = new CallFailure(candidate, new[] { new ConversionResult(argType, parameter.Type, false) });
+                    return false;
+                }
+            }
+
+            failure = null;
+            return true;
         }
 
         private RestrictionInfo GetRestrictedArgs(ApplicableCandidate selectedCandidate, IList<ApplicableCandidate> candidates, int targetSetSize) {
@@ -748,12 +579,164 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         internal Candidate GetPreferredCandidate(ApplicableCandidate one, ApplicableCandidate two) {
-            Candidate cmpParams = MethodCandidate.GetPreferredParameters(one, two);
+            Candidate cmpParams = GetPreferredParameters(one, two);
             if (cmpParams.Chosen()) {
                 return cmpParams;
             }
 
             return CompareEquivalentCandidates(one, two);
+        }
+
+        internal protected virtual Candidate CompareEquivalentCandidates(ApplicableCandidate one, ApplicableCandidate two) {
+            Candidate ret = CompareEquivalentParameters(one.Method, two.Method);
+            if (ret.Chosen()) {
+                return ret;
+            }
+
+            return Candidate.Equivalent;
+        }
+
+        internal static Candidate CompareEquivalentParameters(MethodCandidate one, MethodCandidate two) {
+            // Prefer normal methods over explicit interface implementations
+            if (two.Method.IsPrivate && !one.Method.IsPrivate) return Candidate.One;
+            if (one.Method.IsPrivate && !two.Method.IsPrivate) return Candidate.Two;
+
+            // Prefer non-generic methods over generic methods
+            if (one.Method.IsGenericMethod) {
+                if (!two.Method.IsGenericMethod) {
+                    return Candidate.Two;
+                } else {
+                    //!!! Need to support selecting least generic method here
+                    return Candidate.Equivalent;
+                }
+            } else if (two.Method.IsGenericMethod) {
+                return Candidate.One;
+            }
+
+            //prefer methods without out params over those with them
+            switch (Compare(one.ReturnBuilder.CountOutParams, two.ReturnBuilder.CountOutParams)) {
+                case 1: return Candidate.Two;
+                case -1: return Candidate.One;
+            }
+
+            //prefer methods using earlier conversions rules to later ones            
+            for (int i = Int32.MaxValue; i >= 0; ) {
+                int maxPriorityThis = FindMaxPriority(one.ArgBuilders, i);
+                int maxPriorityOther = FindMaxPriority(two.ArgBuilders, i);
+
+                if (maxPriorityThis < maxPriorityOther) return Candidate.One;
+                if (maxPriorityOther < maxPriorityThis) return Candidate.Two;
+
+                i = maxPriorityThis - 1;
+            }
+
+            return Candidate.Equivalent;
+        }
+
+        private static int Compare(int x, int y) {
+            if (x < y) return -1;
+            else if (x > y) return +1;
+            else return 0;
+        }
+
+        private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {
+            int max = 0;
+            foreach (ArgBuilder ab in abs) {
+                if (ab.Priority > ceiling) continue;
+
+                max = System.Math.Max(max, ab.Priority);
+            }
+            return max;
+        }
+
+        internal Candidate GetPreferredParameters(ApplicableCandidate one, ApplicableCandidate two) {
+            Debug.Assert(one.Method.ParameterCount == two.Method.ParameterCount);
+            var args = GetActualArguments();
+
+            Candidate result = Candidate.Equivalent;
+            for (int i = 0; i < args.Count; i++) {
+                Candidate preferred = GetPreferredParameter(one.GetParameter(i), two.GetParameter(i), args[i].GetLimitType());
+
+                switch (result) {
+                    case Candidate.Equivalent:
+                        result = preferred;
+                        break;
+
+                    case Candidate.One:
+                        if (preferred == Candidate.Two) return Candidate.Ambiguous;
+                        break;
+
+                    case Candidate.Two:
+                        if (preferred == Candidate.One) return Candidate.Ambiguous;
+                        break;
+
+                    case Candidate.Ambiguous:
+                        if (preferred != Candidate.Equivalent) {
+                            result = preferred;
+                        }
+                        break;
+
+                    default:
+                        throw new InvalidOperationException();
+                }
+            }
+
+            // TODO: process collapsed arguments:
+
+            return result;
+        }
+
+        internal Candidate GetPreferredParameter(ParameterWrapper candidateOne, ParameterWrapper candidateTwo, Type argType) {
+            Assert.NotNull(candidateOne, candidateTwo, argType);
+
+            if (ParametersEquivalent(candidateOne, candidateTwo)) {
+                return Candidate.Equivalent;
+            }
+
+            for (NarrowingLevel curLevel = NarrowingLevel.None; curLevel <= NarrowingLevel.All; curLevel++) {
+                Candidate candidate = SelectBestConversionFor(argType, candidateOne, candidateTwo, curLevel);
+                if (candidate.Chosen()) {
+                    return candidate;
+                }
+            }
+
+            return GetPreferredParameter(candidateOne, candidateTwo);
+        }
+
+        internal Candidate GetPreferredParameter(ParameterWrapper candidateOne, ParameterWrapper candidateTwo) {
+            Assert.NotNull(candidateOne, candidateTwo);
+
+            if (ParametersEquivalent(candidateOne, candidateTwo)) {
+                return Candidate.Equivalent;
+            }
+
+            Type t1 = candidateOne.Type;
+            Type t2 = candidateTwo.Type;
+
+            if (CanConvertFrom(t2, candidateOne, NarrowingLevel.None)) {
+                if (CanConvertFrom(t1, candidateTwo, NarrowingLevel.None)) {
+                    return Candidate.Ambiguous;
+                } else {
+                    return Candidate.Two;
+                }
+            }
+
+            if (CanConvertFrom(t1, candidateTwo, NarrowingLevel.None)) {
+                return Candidate.One;
+            }
+
+            // Special additional rules to order numeric value types
+            Candidate preferred = PreferConvert(t1, t2);
+            if (preferred.Chosen()) {
+                return preferred;
+            }
+
+            preferred = PreferConvert(t2, t1).TheOther();
+            if (preferred.Chosen()) {
+                return preferred;
+            }
+
+            return Candidate.Ambiguous;
         }
 
         private ApplicableCandidate SelectBestCandidate(List<ApplicableCandidate> candidates) {
@@ -765,15 +748,15 @@ namespace Microsoft.Scripting.Actions.Calls {
             return null;
         }
 
-        private BindingTarget MakeSuccessfulBindingTarget(ApplicableCandidate result, List<ApplicableCandidate> potentialCandidates, 
-            NarrowingLevel level, TargetSet targetSet) {
+        private BindingTarget MakeSuccessfulBindingTarget(ApplicableCandidate result, List<ApplicableCandidate> potentialCandidates,
+            NarrowingLevel level, CandidateSet targetSet) {
 
             return new BindingTarget(
                 _methodName,
                 _actualArguments.VisibleCount,
-                result.Method.Target,
+                result.Method,
                 level,
-                GetRestrictedArgs(result, potentialCandidates, targetSet.Count)
+                GetRestrictedArgs(result, potentialCandidates, targetSet.Arity)
             );
         }
 
@@ -782,9 +765,9 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         private BindingTarget MakeAmbiguousBindingTarget(List<ApplicableCandidate> result) {
-            MethodTarget[] methods = new MethodTarget[result.Count];
+            var methods = new MethodCandidate[result.Count];
             for (int i = 0; i < result.Count; i++) {
-                methods[i] = result[i].Method.Target;
+                methods[i] = result[i].Method;
             }
 
             return new BindingTarget(_methodName, _actualArguments.VisibleCount, methods);
@@ -793,15 +776,6 @@ namespace Microsoft.Scripting.Actions.Calls {
         #endregion
 
         #region Step 4: Argument Building, Conversions
-
-        internal protected virtual Candidate CompareEquivalentCandidates(ApplicableCandidate one, ApplicableCandidate two) {
-            Candidate ret = MethodTarget.CompareEquivalentParameters(one.Method.Target, two.Method.Target);
-            if (ret.Chosen()) {
-                return ret;
-            }
-
-            return Candidate.Equivalent;
-        }
 
         public virtual bool ParametersEquivalent(ParameterWrapper parameter1, ParameterWrapper parameter2) {
             return parameter1.Type == parameter2.Type && parameter1.ProhibitNull == parameter2.ProhibitNull;
@@ -869,13 +843,13 @@ namespace Microsoft.Scripting.Actions.Calls {
         #region Step 5: Results, Errors
         
         private int[] GetExpectedArgCounts() {
-            if (_targetSets.Count == 0) {
+            if (_candidateSets.Count == 0) {
                 return new int[0];
             }
             
             int minParamsArray = Int32.MaxValue;
-            var arities = new BitArray(_targetSets.Keys.Max() + 1);
-            foreach (var targetSet in _targetSets.Values) {
+            var arities = new BitArray(_candidateSets.Keys.Max() + 1);
+            foreach (var targetSet in _candidateSets.Values) {
                 foreach (var candidate in targetSet.Candidates) {
                     int visibleCount = candidate.GetVisibleParameterCount();
                     arities[visibleCount] = true;
@@ -939,8 +913,8 @@ namespace Microsoft.Scripting.Actions.Calls {
         private ErrorInfo MakeAmbiguousCallError(BindingTarget target) {
             StringBuilder sb = new StringBuilder("Multiple targets could match: ");
             string outerComma = "";
-            foreach (MethodTarget mt in target.AmbiguousMatches) {
-                Type[] types = mt.GetParameterTypes();
+            foreach (MethodCandidate candidate in target.AmbiguousMatches) {
+                Type[] types = candidate.GetParameterTypes();
                 string innerComma = "";
 
                 sb.Append(outerComma);
@@ -1011,7 +985,7 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         // Get minimal number of arguments that must precede/follow splat mark in actual arguments.
         private void GetSplatLimits(out int preSplatLimit, out int postSplatLimit) {
-            Debug.Assert(_targetSets != null);
+            Debug.Assert(_candidateSets != null);
 
             if (_paramsCandidates != null) {
                 int preCount = -1;
@@ -1024,7 +998,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                     postCount = System.Math.Max(postCount, candidate.ParameterCount - candidate.ParamsArrayIndex - 1);
                 }
 
-                int maxArity = _targetSets.Keys.Max();
+                int maxArity = _candidateSets.Keys.Max();
                 if (preCount + postCount < maxArity) {
                     preCount = maxArity - postCount;
                 }
@@ -1087,110 +1061,11 @@ namespace Microsoft.Scripting.Actions.Calls {
 
         #endregion
 
-        #region Keyword arg binding support
-
-        private ReturnBuilder MakeKeywordReturnBuilder(ReturnBuilder returnBuilder, ParameterInfo[] methodParams, List<ParameterWrapper> parameters, bool isConstructor) {
-            if (isConstructor) {
-                List<string> unusedNames = GetUnusedKeywordParameters(methodParams);
-                List<MemberInfo> bindableMembers = GetBindableMembers(returnBuilder, unusedNames);
-                List<int> kwArgIndexs = new List<int>();
-                if (unusedNames.Count == bindableMembers.Count) {
-
-                    foreach (MemberInfo mi in bindableMembers) {
-                        ParameterWrapper pw = new ParameterWrapper(
-                            mi.MemberType == MemberTypes.Property ? 
-                                ((PropertyInfo)mi).PropertyType :
-                                ((FieldInfo)mi).FieldType,
-                            mi.Name,
-                            false);
-
-                        parameters.Add(pw);
-                        kwArgIndexs.Add(GetKeywordIndex(mi.Name));
-                    }
-
-                    KeywordConstructorReturnBuilder kwBuilder = new KeywordConstructorReturnBuilder(returnBuilder,
-                        _argNames.Count,
-                        kwArgIndexs.ToArray(),
-                        bindableMembers.ToArray(),
-                        _binder.PrivateBinding);
-
-                    return kwBuilder;
-                }
-
-            }
-            return returnBuilder;
-        }
-
-        private static List<MemberInfo> GetBindableMembers(ReturnBuilder returnBuilder, List<string> unusedNames) {
-            List<MemberInfo> bindableMembers = new List<MemberInfo>();
-
-            foreach (string name in unusedNames) {
-                Type curType = returnBuilder.ReturnType;
-                MemberInfo[] mis = curType.GetMember(name);
-                while (mis.Length != 1 && curType != null) {
-                    // see if we have a single member defined as the closest level
-                    mis = curType.GetMember(name, BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.SetField | BindingFlags.SetProperty | BindingFlags.Instance);
-
-                    if (mis.Length > 1) {
-                        break;
-                    }
-
-                    curType = curType.BaseType;
-                }
-
-                if (mis.Length == 1) {
-                    switch (mis[0].MemberType) {
-                        case MemberTypes.Property:
-                        case MemberTypes.Field:
-                            bindableMembers.Add(mis[0]);
-                            break;
-                    }
-                }
-            }
-            return bindableMembers;
-        }
-
-        private List<string> GetUnusedKeywordParameters(ParameterInfo[] methodParams) {
-            List<string> unusedNames = new List<string>();
-            foreach (string name in _argNames) {
-                bool found = false;
-                foreach (ParameterInfo pi in methodParams) {
-                    if (pi.Name == name) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    unusedNames.Add(name);
-                }
-            }
-            return unusedNames;
-        }
-
-        private const int ParameterNotPassedByKeyword = -1;
-
-        // Check if the given parameter from the candidate's signature matches a keyword argument from the callsite.
-        // Return ParameterNotPassedByKeyword if no match. Else returns index into callsite's keyword arglist if there is a match.
-        private int GetKeywordIndex(ParameterInfo pi) {
-            return GetKeywordIndex(pi.Name);
-        }
-
-        private int GetKeywordIndex(string kwName) {
-            for (int i = 0; i < _argNames.Count; i++) {
-                if (kwName == _argNames[i]) {
-                    return i;
-                }
-            }
-            return ParameterNotPassedByKeyword;
-        }
-
-        #endregion
-
         [Confined]
         public override string ToString() {
             string res = "";
-            foreach (TargetSet ts in _targetSets.Values) {
-                res += ts + Environment.NewLine;
+            foreach (CandidateSet set in _candidateSets.Values) {
+                res += set + Environment.NewLine;
             }
             return res;
         }

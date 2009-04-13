@@ -16,7 +16,12 @@
 from generate import generate
 import operator
 
-kwlist = ['and', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'exec', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass', 'print', 'raise', 'return', 'try', 'while', 'yield']
+# Add new keywords to the end of the list to preserve existing Enum values
+kwlist = [
+    'and', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'exec',
+    'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass',
+    'print', 'raise', 'return', 'try', 'while', 'yield', 'as', 'with'
+]
 
 class Symbol:
     def __init__(self, symbol, name, titleName = None):
@@ -355,7 +360,6 @@ def tokenkinds_generator(cw):
 
     cw.writeline()
     keyword_list = list(kwlist)
-    keyword_list.sort()
     
     cw.write("FirstKeyword = Keyword%s," % keywordToFriendly(keyword_list[0]));
     cw.write("LastKeyword = Keyword%s," % keywordToFriendly(keyword_list[len(keyword_list) - 1]));
