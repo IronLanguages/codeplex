@@ -16,7 +16,6 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
@@ -37,6 +36,9 @@ namespace Microsoft.Scripting {
         /// <param name="ignoreCase">true if the name should be matched ignoring case; false otherwise.</param>
         /// <param name="callInfo">The signature of the arguments at the call site.</param>
         protected InvokeMemberBinder(string name, bool ignoreCase, CallInfo callInfo) {
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(callInfo, "callInfo");
+
             _name = name;
             _ignoreCase = ignoreCase;
             _callInfo = callInfo;

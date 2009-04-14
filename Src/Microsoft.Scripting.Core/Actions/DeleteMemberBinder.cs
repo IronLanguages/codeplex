@@ -81,7 +81,7 @@ namespace Microsoft.Scripting {
         /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public sealed override DynamicMetaObject Bind(DynamicMetaObject target, DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
-            ContractUtils.Requires(args.Length == 0);
+            ContractUtils.Requires(args == null || args.Length == 0);
 
             return target.BindDeleteMember(this);
         }
