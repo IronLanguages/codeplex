@@ -312,6 +312,7 @@
       <!--          Runtime.Exceptions          -->
       <!--                                      -->
       <Compile Include="Runtime\Exceptions\AssertionException.Generated.cs" />
+      <Compile Include="Runtime\Exceptions\BufferException.Generated.cs" />
       <Compile Include="Runtime\Exceptions\BytesWarningException.cs" />
       <Compile Include="Runtime\Exceptions\DeprecationWarningException.Generated.cs" />
       <Compile Include="Runtime\Exceptions\EnvironmentException.Generated.cs" />

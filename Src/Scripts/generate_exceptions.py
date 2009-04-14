@@ -39,7 +39,7 @@ excs = collect_excs()
 pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDeprecationWarning', 'EnvironmentError',
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
               'FutureWarning', 'AssertionError', 'RuntimeWarning', 'ImportWarning', 'UserWarning', 'SyntaxWarning', 
-	          'UnicodeWarning', 'StopIteration', 'Warning', 'BytesWarning']
+	          'UnicodeWarning', 'StopIteration', 'Warning', 'BytesWarning', 'BufferError']
 
 
 class ExceptionInfo(object):
@@ -105,6 +105,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                     ExceptionInfo('GeneratorExit', 'IronPython.Runtime.Exceptions.GeneratorExitException', None, (), ()),
                     ExceptionInfo('StopIteration', 'IronPython.Runtime.Exceptions.StopIterationException', None, (), ()),
                     ExceptionInfo('StandardError', 'System.ApplicationException', None, (), (
+                            ExceptionInfo('BufferError', 'IronPython.Runtime.Exceptions.BufferException', None, (), ()),
                             ExceptionInfo('ArithmeticError', 'System.ArithmeticException', None, (), (
                                     ExceptionInfo('FloatingPointError', 'IronPython.Runtime.Exceptions.FloatingPointException', None, (), ()),
                                     ExceptionInfo('OverflowError', 'System.OverflowException', None, (), ()),
@@ -179,16 +180,18 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
 
 
 def get_all_exceps(l, curHierarchy):
+    # if we have duplicate CLR exceptions (e.g. VMSError and Exception)
+    # only generate the one highest in the Python hierarchy
     for exception in curHierarchy.subclasses:
-        # if we have duplicate CLR exceptions (e.g. VMSError and Exception)
-        # only generate the one highest in the Python hierarchy
         found = False
         for e in l:
             if e.clrException == exception.clrException:
                 found = True
+                break
         
         if not found:
             l.append(exception)
+    for exception in curHierarchy.subclasses:
         get_all_exceps(l, exception)
     return l
 
