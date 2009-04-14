@@ -16,7 +16,6 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
@@ -31,6 +30,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="callInfo">The signature of the arguments at the call site.</param>
         protected CreateInstanceBinder(CallInfo callInfo) {
+            ContractUtils.RequiresNotNull(callInfo, "callInfo");
             _callInfo = callInfo;
         }
 

@@ -32,6 +32,8 @@ namespace Microsoft.Scripting {
         /// <param name="type">The type to convert to.</param>
         /// <param name="explicit">true if the conversion should consider explicit conversions; otherwise, false.</param>
         protected ConvertBinder(Type type, bool @explicit) {
+            ContractUtils.RequiresNotNull(type, "type");
+
             _type = type;
             _explicit = @explicit;
         }
@@ -80,7 +82,7 @@ namespace Microsoft.Scripting {
         /// <returns>The <see cref="DynamicMetaObject"/> representing the result of the binding.</returns>
         public sealed override DynamicMetaObject Bind(DynamicMetaObject target, DynamicMetaObject[] args) {
             ContractUtils.RequiresNotNull(target, "target");
-            ContractUtils.Requires(args.Length == 0);
+            ContractUtils.Requires(args == null || args.Length == 0, "args");
 
             return target.BindConvert(this);
         }
@@ -102,7 +104,7 @@ namespace Microsoft.Scripting {
             ConvertBinder ca = obj as ConvertBinder;
             return ca != null && ca._type == _type && ca._explicit == _explicit;
         }
-        
+
         /// <summary>
         /// Returns the hash code for this instance.
         /// </summary>
