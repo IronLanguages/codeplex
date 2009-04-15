@@ -464,6 +464,11 @@ def test_iterate_closed():
     AssertError(MyError, g)
     AreEqual(l,[1,1])
 
+def test_generator_empty_tuple():
+    def f():
+        yield ()
+    AreEqual(list(f()), [()])
+    
 def test_generator_reentrancy():
     # Test that generator can't be called re-entrantly. This is explicitly called out in Pep 255.
     # Any operation should throw a ValueError if called.
