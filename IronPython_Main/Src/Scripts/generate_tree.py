@@ -195,30 +195,6 @@ def gen_compiler(cw):
             cw.write("    " + method + node.type + "(node, flags);")
         cw.write("    break;")
     
-def gen_interpreter(cw):
-    for node in expressions:
-        if node.reducible:
-            continue
-   
-        method = "Interpret"
-
-        # special case AndAlso and OrElse
-        if node.kind in ["AndAlso", "OrElse", "Quote", "Coalesce", "Unbox", "Throw", "Assign"]:
-            method += node.kind
-        elif node.kind in ["Convert", "ConvertChecked"]:
-            method += "Convert"
-
-        method += node.type           
-			
-        cw.write("case ExpressionType.%s: return %s(state, expr);" % (node.kind, method))
-    
-    # core reducible nodes
-    for node in expressions:
-        if node.reducible:
-            cw.write("case ExpressionType." + node.kind + ":")
-
-    cw.write("    return InterpretReducibleExpression(state, expr);")
-
 def gen_op_validator(type, cw):
     for node in expressions:
         if node.interop and node.type == type:
@@ -318,7 +294,6 @@ def main():
         ("Binary Operation Binder Validator", gen_binop_validator),
         ("Unary Operation Binder Validator", gen_unop_validator),
         ("StackSpiller Switch", gen_stackspiller_switch),
-        ("Ast Interpreter", gen_interpreter),
         ("Expression Compiler", gen_compiler)
     )
 

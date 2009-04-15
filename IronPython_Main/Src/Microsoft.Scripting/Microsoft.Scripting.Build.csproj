@@ -314,24 +314,6 @@
       <Compile Include="Hosting\Shell\Remote\RemoteRuntimeServer.cs" />
     </ItemGroup>
     <ItemGroup>
-      <!--                                  -->
-      <!--          Interpretation          -->
-      <!--                                  -->
-      <Compile Include="Interpretation\CommaAddress.cs" />
-      <Compile Include="Interpretation\ControlFlow.cs" />
-      <Compile Include="Interpretation\EvaluationAddress.cs" />
-      <Compile Include="Interpretation\InterpretedScriptCode.cs" />
-      <Compile Include="Interpretation\Interpreter.Block.cs" />
-      <Compile Include="Interpretation\Interpreter.cs" />
-      <Compile Include="Interpretation\Interpreter.Generated.cs" />
-      <Compile Include="Interpretation\Interpreter.MatchCaller.cs" />
-      <Compile Include="Interpretation\InterpreterHelpers.cs" />
-      <Compile Include="Interpretation\InterpreterState.cs" />
-      <Compile Include="Interpretation\InterpreterVariables.cs" />
-      <Compile Include="Interpretation\LambdaInvoker.cs" />
-      <Compile Include="Interpretation\VariableAddress.cs" />
-    </ItemGroup>
-    <ItemGroup>
       <!--                               -->
       <!--          Interpreter          -->
       <!--                               -->
