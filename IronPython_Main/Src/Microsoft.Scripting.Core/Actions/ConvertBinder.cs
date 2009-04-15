@@ -102,7 +102,7 @@ namespace Microsoft.Scripting {
         [Confined]
         public override bool Equals(object obj) {
             ConvertBinder ca = obj as ConvertBinder;
-            return ca != null && ca._type == _type && ca._explicit == _explicit;
+            return ca != null && TypeUtils.AreEquivalent(ca._type, _type) && ca._explicit == _explicit;
         }
 
         /// <summary>

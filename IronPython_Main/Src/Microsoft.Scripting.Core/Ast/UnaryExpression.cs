@@ -23,7 +23,7 @@ using Microsoft.Runtime.CompilerServices;
 
 
 namespace Microsoft.Linq.Expressions {
-    
+
     /// <summary>
     /// Represents an expression that has a unary operator.
     /// </summary>
@@ -87,8 +87,8 @@ namespace Microsoft.Linq.Expressions {
                 bool operandIsNullable = TypeUtils.IsNullableType(_operand.Type);
                 bool resultIsNullable = TypeUtils.IsNullableType(this.Type);
                 if (_method != null) {
-                    return (operandIsNullable && _method.GetParametersCached()[0].ParameterType != _operand.Type) ||
-                           (resultIsNullable && _method.ReturnType != this.Type);
+                    return (operandIsNullable && !TypeUtils.AreEquivalent(_method.GetParametersCached()[0].ParameterType, _operand.Type)) ||
+                           (resultIsNullable && !TypeUtils.AreEquivalent(_method.ReturnType, this.Type));
                 }
                 return operandIsNullable || resultIsNullable;
             }
@@ -158,7 +158,7 @@ namespace Microsoft.Linq.Expressions {
             }
             return new UnaryExpression(functional, operand, operand.Type, _method);
         }
-        
+
         private Expression ReduceVariable() {
             if (IsPrefix) {
                 // (op) var
@@ -234,7 +234,7 @@ namespace Microsoft.Linq.Expressions {
 
             bool prefix = IsPrefix;
             var index = (IndexExpression)_operand;
-            int count =  index.Arguments.Count;
+            int count = index.Arguments.Count;
             var block = new Expression[count + (prefix ? 2 : 4)];
             var temps = new ParameterExpression[count + (prefix ? 1 : 2)];
             var args = new ParameterExpression[count];
@@ -267,7 +267,7 @@ namespace Microsoft.Linq.Expressions {
     }
 
     public partial class Expression {
-        
+
         /// <summary>
         /// Creates a <see cref="UnaryExpression"></see>, given an operand, by calling the appropriate factory method.
         /// </summary>
@@ -280,7 +280,7 @@ namespace Microsoft.Linq.Expressions {
         public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) {
             return MakeUnary(unaryType, operand, type, null);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="UnaryExpression"></see>, given an operand and implementing method, by calling the appropriate factory method.
         /// </summary>
@@ -411,13 +411,13 @@ namespace Microsoft.Linq.Expressions {
             ParameterInfo[] pms = method.GetParametersCached();
             if (pms.Length != 1)
                 throw Error.IncorrectNumberOfMethodCallArguments(method);
-            if (ParameterIsAssignable(pms[0], operand.Type) && method.ReturnType == convertToType) {
+            if (ParameterIsAssignable(pms[0], operand.Type) && TypeUtils.AreEquivalent(method.ReturnType, convertToType)) {
                 return new UnaryExpression(unaryType, operand, method.ReturnType, method);
             }
             // check for lifted call
             if ((TypeUtils.IsNullableType(operand.Type) || TypeUtils.IsNullableType(convertToType)) &&
                 ParameterIsAssignable(pms[0], TypeUtils.GetNonNullableType(operand.Type)) &&
-                method.ReturnType == TypeUtils.GetNonNullableType(convertToType)) {
+                TypeUtils.AreEquivalent(method.ReturnType, TypeUtils.GetNonNullableType(convertToType))) {
                 return new UnaryExpression(unaryType, operand, convertToType, method);
             }
             throw Error.OperandTypesDoNotMatchParameters(unaryType, method.Name);
@@ -559,7 +559,7 @@ namespace Microsoft.Linq.Expressions {
         public static UnaryExpression IsFalse(Expression expression) {
             return IsFalse(expression, null);
         }
-      
+
         /// <summary>
         /// Returns whether the expression evaluates to false.
         /// </summary>
@@ -643,7 +643,7 @@ namespace Microsoft.Linq.Expressions {
             }
             return new UnaryExpression(ExpressionType.TypeAs, expression, type, null);
         }
-       
+
         /// <summary>
         /// <summary>Creates a <see cref="T:Microsoft.Linq.Expressions.UnaryExpression" /> that represents an explicit unboxing.</summary>
         /// </summary>     
@@ -761,7 +761,7 @@ namespace Microsoft.Linq.Expressions {
             ContractUtils.Requires(expression is LambdaExpression, Strings.QuotedExpressionMustBeLambda);
             return new UnaryExpression(ExpressionType.Quote, expression, expression.GetType(), null);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="T:Microsoft.Linq.Expressions.UnaryExpression" /> that represents a rethrowing of an exception.
         /// </summary>
@@ -863,8 +863,8 @@ namespace Microsoft.Linq.Expressions {
         /// <param name="expression">An <see cref="T:Microsoft.Linq.Expressions.Expression"></see> to apply the operations on.</param>
         /// <returns>A <see cref="T:Microsoft.Linq.Expressions.UnaryExpression"/> that represents the resultant expression.</returns>
         public static UnaryExpression PreIncrementAssign(Expression expression) {
-            return MakeOpAssignUnary(ExpressionType.PreIncrementAssign,expression, null);
-            
+            return MakeOpAssignUnary(ExpressionType.PreIncrementAssign, expression, null);
+
         }
 
         /// <summary>

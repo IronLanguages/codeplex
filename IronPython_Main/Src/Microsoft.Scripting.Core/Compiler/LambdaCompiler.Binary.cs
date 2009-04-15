@@ -476,7 +476,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 _ilg.MarkLabel(shortCircuit);
             }
 
-            if (resultType != TypeUtils.GetNonNullableType(resultType)) {
+            if (!TypeUtils.AreEquivalent(resultType, TypeUtils.GetNonNullableType(resultType))) {
                 _ilg.EmitConvertToType(TypeUtils.GetNonNullableType(resultType), resultType, true);
             }
 

@@ -586,7 +586,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         #region Linq Conversions
 
         internal static void EmitConvertToType(this ILGenerator il, Type typeFrom, Type typeTo, bool isChecked) {
-            if (typeFrom == typeTo) {
+            if (TypeUtils.AreEquivalent(typeFrom, typeTo)) {
                 return;
             }
 

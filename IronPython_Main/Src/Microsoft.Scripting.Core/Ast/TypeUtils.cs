@@ -90,7 +90,7 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        
+
         internal static bool IsArithmetic(Type type) {
             type = GetNonNullableType(type);
             if (!type.IsEnum) {
@@ -141,9 +141,17 @@ namespace Microsoft.Scripting.Utils {
             return false;
         }
 
+        internal static bool AreEquivalent(Type t1, Type t2) {
+#if MICROSOFT_SCRIPTING_CORE
+            return t1 == t2;
+#else
+            return t1 == t2 || t1.IsEquivalentTo(t2);
+#endif
+        }
+
         internal static bool AreReferenceAssignable(Type dest, Type src) {
             // WARNING: This actually implements "Is this identity assignable and/or reference assignable?"
-            if (dest == src) {
+            if (AreEquivalent(dest, src)) {
                 return true;
             }
             if (!dest.IsValueType && !src.IsValueType && dest.IsAssignableFrom(src)) {
@@ -185,15 +193,15 @@ namespace Microsoft.Scripting.Utils {
             Debug.Assert(source != null && dest != null);
 
             // Identity conversion
-            if (source == dest) {
+            if (AreEquivalent(source, dest)) {
                 return true;
             }
 
             // Nullable conversions
-            if (IsNullableType(source) && dest == GetNonNullableType(source)) {
+            if (IsNullableType(source) && AreEquivalent(dest, GetNonNullableType(source))) {
                 return true;
             }
-            if (IsNullableType(dest) && source == GetNonNullableType(dest)) {
+            if (IsNullableType(dest) && AreEquivalent(source, GetNonNullableType(dest))) {
                 return true;
             }
             // Primitive runtime conversions
@@ -298,7 +306,7 @@ namespace Microsoft.Scripting.Utils {
             }
             // Otherwise, if the types are not the same then we definitely 
             // do not have a built-in equality operator.
-            if (left != right) {
+            if (!AreEquivalent(left, right)) {
                 return false;
             }
             // We have two identical value types, modulo nullability.  (If they were both the 
@@ -314,7 +322,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         internal static bool IsImplicitlyConvertible(Type source, Type destination) {
-            return IsIdentityConversion(source, destination) ||
+            return AreEquivalent(source, destination) ||                // identity conversion
                 IsImplicitNumericConversion(source, destination) ||
                 IsImplicitReferenceConversion(source, destination) ||
                 IsImplicitBoxingConversion(source, destination) ||
@@ -338,7 +346,8 @@ namespace Microsoft.Scripting.Utils {
                 return method;
             }
             // try lifted conversion
-            if (nnExprType != convertFrom || nnConvType != convertToType) {
+            if (!TypeUtils.AreEquivalent(nnExprType, convertFrom) ||
+                !TypeUtils.AreEquivalent(nnConvType, convertToType)) {
                 method = FindConversionOperator(eMethods, nnExprType, nnConvType, implicitOnly);
                 if (method == null) {
                     method = FindConversionOperator(cMethods, nnExprType, nnConvType, implicitOnly);
@@ -352,20 +361,19 @@ namespace Microsoft.Scripting.Utils {
 
         internal static MethodInfo FindConversionOperator(MethodInfo[] methods, Type typeFrom, Type typeTo, bool implicitOnly) {
             foreach (MethodInfo mi in methods) {
-                if (mi.Name != "op_Implicit" && (implicitOnly || mi.Name != "op_Explicit"))
+                if (mi.Name != "op_Implicit" && (implicitOnly || mi.Name != "op_Explicit")) {
                     continue;
-                if (mi.ReturnType != typeTo)
+                }
+                if (!TypeUtils.AreEquivalent(mi.ReturnType, typeTo)) {
                     continue;
+                }
                 ParameterInfo[] pis = mi.GetParametersCached();
-                if (pis[0].ParameterType != typeFrom)
+                if (!TypeUtils.AreEquivalent(pis[0].ParameterType, typeFrom)) {
                     continue;
+                }
                 return mi;
             }
             return null;
-        }
-
-        private static bool IsIdentityConversion(Type source, Type destination) {
-            return source == destination;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
@@ -487,7 +495,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         internal static bool IsSameOrSubclass(Type type, Type subType) {
-            return (type == subType) || subType.IsSubclassOf(type);
+            return AreEquivalent(type, subType) || subType.IsSubclassOf(type);
         }
 
         internal static void ValidateType(Type type) {
@@ -502,8 +510,9 @@ namespace Microsoft.Scripting.Utils {
         //from TypeHelper
         internal static Type FindGenericType(Type definition, Type type) {
             while (type != null && type != typeof(object)) {
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == definition)
+                if (type.IsGenericType && AreEquivalent(type.GetGenericTypeDefinition(), definition)) {
                     return type;
+                }
                 if (definition.IsInterface) {
                     foreach (Type itype in type.GetInterfaces()) {
                         Type found = FindGenericType(definition, itype);

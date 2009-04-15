@@ -249,7 +249,7 @@ namespace Microsoft.Scripting {
         /// result of a dynamic operation.
         /// </summary>
         internal static Expression Convert(Expression expression, Type type) {
-            if (expression.Type == type) {
+            if (TypeUtils.AreEquivalent(expression.Type, type)) {
                 return expression;
             }
 

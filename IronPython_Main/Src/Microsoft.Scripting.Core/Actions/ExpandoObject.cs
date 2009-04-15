@@ -884,7 +884,7 @@ namespace Microsoft.Scripting {
             /// Returns our Expression converted to our known LimitType
             /// </summary>
             private Expression GetLimitedSelf() {
-                if (Expression.Type == LimitType) {
+                if (TypeUtils.AreEquivalent(Expression.Type, LimitType)) {
                     return Expression;
                 }
                 return Expression.Convert(Expression, LimitType);

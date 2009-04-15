@@ -139,7 +139,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     case ExpressionType.OnesComplement:
                     case ExpressionType.IsFalse:
                     case ExpressionType.IsTrue: {
-                            Debug.Assert(operandType == resultType);
+                            Debug.Assert(TypeUtils.AreEquivalent(operandType, resultType));
                             Label labIfNull = _ilg.DefineLabel();
                             Label labEnd = _ilg.DefineLabel();
                             LocalBuilder loc = GetLocal(operandType);
@@ -198,11 +198,13 @@ namespace Microsoft.Linq.Expressions.Compiler {
                     case ExpressionType.IsFalse:
                         _ilg.Emit(OpCodes.Ldc_I4_0);
                         _ilg.Emit(OpCodes.Ceq);
-                        break;
+                        // Not an arithmetic operation -> no conversion
+                        return;
                     case ExpressionType.IsTrue:
                         _ilg.Emit(OpCodes.Ldc_I4_1);
                         _ilg.Emit(OpCodes.Ceq);
-                        break;
+                        // Not an arithmetic operation -> no conversion
+                        return;
                     case ExpressionType.UnaryPlus:
                         _ilg.Emit(OpCodes.Nop);
                         break;
@@ -218,7 +220,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
                         if (TypeUtils.IsNullableType(resultType)) {
                             _ilg.Emit(OpCodes.Unbox_Any, resultType);
                         }
-                        break;
+                        // Not an arithmetic operation -> no conversion
+                        return;
                     case ExpressionType.Increment:
                         EmitConstantOne(resultType);
                         _ilg.Emit(OpCodes.Add);
@@ -314,7 +317,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             } else if (node.Type == typeof(void)) {
                 EmitExpressionAsVoid(node.Operand, flags);
             } else {
-                if (node.Operand.Type == node.Type) {
+                if (TypeUtils.AreEquivalent(node.Operand.Type, node.Type)) {
                     EmitExpression(node.Operand, flags);
                 } else {
                     // A conversion is emitted after emitting the operand, no tail call is emitted
