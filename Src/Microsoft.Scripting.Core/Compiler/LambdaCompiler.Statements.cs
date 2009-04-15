@@ -316,7 +316,8 @@ namespace Microsoft.Linq.Expressions.Compiler {
             // Make sure the switch value type and the right side type
             // are types we can optimize
             Type type = node.SwitchValue.Type;
-            if (!CanOptimizeSwitchType(type) || type != node.Cases[0].TestValues[0].Type) {
+            if (!CanOptimizeSwitchType(type) ||
+                !TypeUtils.AreEquivalent(type, node.Cases[0].TestValues[0].Type)) {
                 return false;
             }
 

@@ -764,7 +764,7 @@ namespace Microsoft.Linq.Expressions {
         // different operation, e.g. adding two doubles vs adding two ints.
         private static void ValidateChildType(Type before, Type after, string methodName) {
             if (before.IsValueType) {
-                if (before == after) {
+                if (TypeUtils.AreEquivalent(before, after)) {
                     // types are the same value type
                     return;
                 }
