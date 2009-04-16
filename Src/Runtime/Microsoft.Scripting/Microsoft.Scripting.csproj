@@ -11,11 +11,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Scripting</RootNamespace>
     <AssemblyName>Microsoft.Scripting</AssemblyName>
-    <DocumentationFile>..\..\Bin\Release\Microsoft.Scripting.XML</DocumentationFile>
+<DocumentationFile>$(OutputPath)\Microsoft.Scripting.XML</DocumentationFile>
     <WarningsNotAsErrors>1685,649</WarningsNotAsErrors>
     <NoWarn>1591</NoWarn>
     <OldToolsVersion>2.0</OldToolsVersion>
-    <AssemblyOriginatorKeyFile>..\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
@@ -24,7 +24,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\Bin\FxCop\</OutputPath>
+<OutputPath>$(SolutionDir)\..\Bin\fxcop\</OutputPath>
     <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -36,8 +36,8 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\Bin\Debug\</OutputPath>
-    <DocumentationFile>..\..\Bin\Debug\Microsoft.Scripting.xml</DocumentationFile>
+<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <DefineConstants>DEBUG;TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -47,8 +47,8 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\Bin\Release\</OutputPath>
-    <DocumentationFile>..\..\Bin\Release\Microsoft.Scripting.xml</DocumentationFile>
+<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -57,7 +57,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>..\..\Bin\Silverlight Debug\</OutputPath>
+<OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT;$(SignedSym)</DefineConstants>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>full</DebugType>
@@ -65,15 +65,15 @@
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <ErrorReport>prompt</ErrorReport>
     <NoStdLib>true</NoStdLib>
-    <DocumentationFile>..\..\Bin\Silverlight Debug\Microsoft.Scripting.xml</DocumentationFile>
+<DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <NoWarn>1591,618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
     <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.40115.0</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
-    <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
+<OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;$(SignedSym)</DefineConstants>
-    <DocumentationFile>..\..\Bin\Silverlight Release\Microsoft.Scripting.xml</DocumentationFile>
+<DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591,618</NoWarn>
     <NoStdLib>true</NoStdLib>
@@ -99,7 +99,7 @@
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
+    <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="Actions\Calls\ActualArguments.cs" />
