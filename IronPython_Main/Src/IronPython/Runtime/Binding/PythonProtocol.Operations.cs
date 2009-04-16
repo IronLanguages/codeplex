@@ -359,7 +359,19 @@ namespace IronPython.Runtime.Binding {
             SlotOrFunction func = SlotOrFunction.GetSlotOrFunction(state, Symbols.Hash, self);
             DynamicMetaObject res = func.Target;
 
-            if (func.ReturnType != typeof(int)) {
+            if (func.IsNull) {
+                // Python 2.6 setting __hash__ = None makes the type unhashable
+                res = new DynamicMetaObject(
+                    Expression.Throw(
+                        Expression.Call(
+                            typeof(PythonOps).GetMethod("TypeErrorForUnhashableObject"),
+                            self.Expression
+                        ),
+                        typeof(object)                        
+                    ),
+                    res.Restrictions
+                );
+            } else if (func.ReturnType != typeof(int)) {
                 if (func.ReturnType == typeof(BigInteger)) {
                     // Python 2.5 defines the result of returning a long as hashing the long
                     res = new DynamicMetaObject(
