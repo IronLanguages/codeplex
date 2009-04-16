@@ -18,7 +18,7 @@ using System; using Microsoft;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
-    public class PythonTypeValueSlot : PythonTypeSlot {
+    internal class PythonTypeValueSlot : PythonTypeSlot {
         private object _value;
 
         public PythonTypeValueSlot(object value) {
@@ -43,7 +43,7 @@ namespace IronPython.Runtime.Types {
             return false;            
         }
 
-        protected object Value {
+        internal object Value {
             get {
                 return _value;
             }

@@ -42,6 +42,7 @@ namespace IronPython.Runtime.Binding {
     sealed class SlotOrFunction {
         private readonly BindingTarget _function;
         private readonly DynamicMetaObject/*!*/ _target;
+        private readonly PythonTypeSlot _slot;
         public static readonly SlotOrFunction/*!*/ Empty = new SlotOrFunction(new DynamicMetaObject(AstUtils.Empty(), BindingRestrictions.Empty));
 
         private SlotOrFunction() {
@@ -54,6 +55,11 @@ namespace IronPython.Runtime.Binding {
 
         public SlotOrFunction(DynamicMetaObject/*!*/ target) {
             _target = target;
+        }
+
+        public SlotOrFunction(DynamicMetaObject/*!*/ target, PythonTypeSlot slot) {
+            _target = target;
+            _slot = slot;
         }
 
         public NarrowingLevel NarrowingLevel {
@@ -93,6 +99,16 @@ namespace IronPython.Runtime.Binding {
                 }
 
                 return this != Empty;
+            }
+        }
+
+        public bool IsNull {
+            get {
+                if (_slot is PythonTypeValueSlot && ((PythonTypeValueSlot)_slot).Value == null) {
+                    return true;
+                }
+
+                return false;
             }
         }
 
@@ -171,7 +187,8 @@ namespace IronPython.Runtime.Binding {
                             )
                         ),
                         BindingRestrictions.Combine(types).Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(types[0].Expression, types[0].GetLimitType()))
-                    )
+                    ),
+                    slot
                 );
             }
 

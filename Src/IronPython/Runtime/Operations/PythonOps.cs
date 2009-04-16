@@ -3825,6 +3825,10 @@ namespace IronPython.Runtime.Operations {
             return TypeError(typeName + " objects are unhashable");
         }
 
+        public static Exception TypeErrorForUnhashableObject(object obj) {
+            return TypeErrorForUnhashableType(DynamicHelpers.GetPythonType(obj).Name);
+        }
+
         internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
             return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
         }
