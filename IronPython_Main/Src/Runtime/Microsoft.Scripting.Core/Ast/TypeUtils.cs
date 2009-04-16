@@ -550,42 +550,6 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        // When emitting constants, we generally emit as the real type, even if
-        // it is non-visible. However, for some types (e.g. reflection types)
-        // we convert to the visible type, because the non-visible type isn't
-        // very useful.
-        internal static Type GetConstantType(Type type) {
-            // If it's a visible type, we're done
-            if (type.IsVisible) {
-                return type;
-            }
-
-            // Get the visible base type
-            Type bt = type;
-            do {
-                bt = bt.BaseType;
-
-                // Interfaces don't have base types, so just use the interface
-                // type.
-                if (bt == null) {
-                    return type;
-                }
-            } while (!bt.IsVisible);
-
-            // If it's one of the known reflection types, return the known type.
-            if (bt == typeof(Type) ||
-                bt == typeof(ConstructorInfo) ||
-                bt == typeof(EventInfo) ||
-                bt == typeof(FieldInfo) ||
-                bt == typeof(MethodInfo) ||
-                bt == typeof(PropertyInfo)) {
-                return bt;
-            }
-
-            // else return the original type
-            return type;
-        }
-
         /// <summary>
         /// Searches for an operator method on the type. The method must have
         /// the specified signature, no generic arguments, and have the

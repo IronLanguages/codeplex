@@ -494,6 +494,9 @@ namespace Microsoft.Linq.Expressions.Compiler {
             Type t = value as Type;
             if (t != null && ShouldLdtoken(t)) {
                 il.EmitType(t);
+                if (type != typeof(Type)) {
+                    il.Emit(OpCodes.Castclass, type);
+                }
                 return;
             }
 
@@ -507,7 +510,6 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 } else {
                     il.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
                 }
-                type = TypeUtils.GetConstantType(type);
                 if (type != typeof(MethodBase)) {
                     il.Emit(OpCodes.Castclass, type);
                 }
@@ -938,7 +940,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
                 for (int i = 0; i < rank; i++) {
                     types[i] = typeof(int);
                 }
-                il. EmitNew(arrayType, types);
+                il.EmitNew(arrayType, types);
             }
         }
 
