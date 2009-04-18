@@ -3308,6 +3308,30 @@ def test_finalizer():
     gc.collect()
     AreEqual(called, False)
 
+def test_metaclass_attribute_lookup():
+    class x(type):
+        @property
+        def Foo(self): return self._foo
+        @Foo.setter
+        def Foo(self, value): self._foo = value
+    
+    class y:
+        __metaclass__ = x
+        def Foo(self): return 42
+        _foo = 0
+    
+    # data descriptor should lookup in meta class first.
+    AreEqual(y.Foo, 0)
+    
+    class x(type):
+        Foo = 42
+    
+    class y:
+        __metaclass__ = x
+        Foo = 0
+        
+    # non-data descriptors lookup in the normal class first
+    AreEqual(y.Foo, 0)
 
 def test_len():
     class l(object):

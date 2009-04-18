@@ -23,7 +23,7 @@ using Microsoft.Runtime.CompilerServices;
 
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Actions.Calls;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Binding {
                     return res.Target;
                 }
             }
-
+            PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "InvokeNoFast " + CompilerHelpers.GetType(args[1]));
             return base.BindDelegate(site, args);
         }
 

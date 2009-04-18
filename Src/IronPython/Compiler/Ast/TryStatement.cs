@@ -219,7 +219,7 @@ namespace IronPython.Compiler.Ast {
                         // if we had an exception save the line # that was last executing during the try
                         AstUtils.If(
                             Ast.Not(noNestedException),
-                            ag.GetLineNumberUpdateExpression(false)
+                            ag.GetSaveLineNumberExpression(false)
                         ),
 
                         // clear the frames incase thae finally throws, and allow line number
@@ -372,7 +372,7 @@ namespace IronPython.Compiler.Ast {
                     // rethrow the exception if we have no catch-all block
                     if (catchAll == null) {
                         catchAll = Ast.Block(
-                            ag.GetLineNumberUpdateExpression(true),
+                            ag.GetSaveLineNumberExpression(true),
                             Ast.Throw(exception)
                         );
                     }
@@ -423,7 +423,7 @@ namespace IronPython.Compiler.Ast {
             return ag.AddDebugInfo(
                 Ast.Block(
                     // pass false so if we take another exception we'll add it to the frame list
-                    ag.GetLineNumberUpdateExpression(false),
+                    ag.GetSaveLineNumberExpression(false),
                     Ast.Call(
                         AstGenerator.GetHelperMethod("BuildExceptionInfo"),
                         ag.LocalContext,
