@@ -184,7 +184,7 @@ def test_reflected_type():
         # raises, this is consistent w/ CPython when accessing a
         # user defined property w/ a getter that raises.
         Assert(not hasattr(C, 'internal_static_field'))
-        Assert(not hasattr(C, 'protected_static_field'))
+        Assert(hasattr(C, 'protected_static_field'))
         Assert('internal_static_field' not in dir(C))
         Assert('protected_static_field' in dir(C))
 

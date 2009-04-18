@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
     [PythonType("type")]
     [Documentation(@"type(object) -> gets the type of the object
 type(name, bases, dict) -> creates a new type instance with the given name, base classes, and members from the dictionary")]
-    public class PythonType : IMembersList, IDynamicMetaObjectProvider, IWeakReferenceable, ICodeFormattable, IFastGettable {
+    public class PythonType : IMembersList, IDynamicMetaObjectProvider, IWeakReferenceable, ICodeFormattable, IFastGettable, IFastSettable {
         private Type/*!*/ _underlyingSystemType;            // the underlying CLI system type for this type
         private string _name;                               // the name of the type
         private Dictionary<SymbolId, PythonTypeSlot> _dict; // type-level slots & attributes
@@ -57,7 +57,8 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         internal Dictionary<string, UserGetBase> _cachedGets; // cached gets on user defined type instances
         internal Dictionary<string, UserGetBase> _cachedTryGets; // cached try gets on used defined type instances
         internal Dictionary<SetMemberKey, FastSetBase> _cachedSets; // cached sets on user defined instances
-        internal Dictionary<string, FastGetBase> _cachedTypeGets; // cached gets on types (system and user types)
+        internal Dictionary<string, TypeGetBase> _cachedTypeGets; // cached gets on types (system and user types)
+        internal Dictionary<string, TypeGetBase> _cachedTypeTryGets; // cached gets on types (system and user types)
 
         // commonly calculatable
         private List<PythonType> _resolutionOrder;          // the search order for methods in the type
@@ -1101,321 +1102,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         #region IFastGettable Members
 
         T IFastGettable.MakeGetBinding<T>(CallSite<T> site, PythonGetMemberBinder/*!*/ binder, CodeContext context, string name) {
-            Debug.Assert(typeof(T) == typeof(Func<CallSite, object, CodeContext, object>));
-
-            if (GetType() != typeof(PythonType)) {
-                // we don't optimize classes derived from meta classes yet                
-                return null;
-            }
-
-            switch (name) {
-                case "__dict__":
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(FastGetSingleton.Instance.GetDictionary);
-                case "__class__":
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(FastGetSingleton.Instance.GetClass);
-                case "__bases__":
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(FastGetSingleton.Instance.GetBases);
-                case "__name__":
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(FastGetSingleton.Instance.GetName);
-            }
-
-
-            int version = _version;
-            PythonTypeSlot dts;
-            SymbolId symName = SymbolTable.StringToId(name);
-            if (TryResolveSlot(context, symName, out dts) && dts.GetAlwaysSucceeds) {
-                return MakeFastGetDelegate<T>(binder, dts, _version, false);
-            }
-
-            // search the type
-            PythonType myType = DynamicHelpers.GetPythonType(this);
-            if (myType.TryResolveSlot(context, symName, out dts) && dts.GetAlwaysSucceeds) {
-                return MakeFastGetDelegate<T>(binder, dts, _version, true);
-            }
-
-            return null;
-        }
-
-        private T MakeFastGetDelegate<T>(PythonGetMemberBinder binder, PythonTypeSlot slot, int version, bool fromMetaClass) where T : class {
-            if (slot is ReflectedExtensionProperty) {
-                // very tricky, these include WrapperDescriptors.
-                return null;
-            }
-
-            if (IsSystemType) {
-                if (slot.CanOptimizeGets) {
-                    FastGetBase fastGet;
-                    EnsureFastTypeGets();
-                    lock (_cachedTypeGets) {
-                        if (!_cachedTypeGets.TryGetValue(binder.Name, out fastGet)) {
-                            _cachedTypeGets[binder.Name] = fastGet = new OptimizingFastGetSystemType(
-                                    binder,
-                                    this,
-                                    slot,
-                                    fromMetaClass
-                                );
-                        }
-
-                        OptimizingFastGetSystemType sysGet = (OptimizingFastGetSystemType)fastGet;
-                        if (sysGet.UseNonOptimizedSite) {
-                            return (T)(object)new Func<CallSite, object, CodeContext, object>(sysGet.GetSlot);
-                        }
-
-                        return null;
-                    }
-                } else {
-                    ReflectedField field = slot as ReflectedField;
-                    if (field != null) {
-                        return (T)(object)new Func<CallSite, object, CodeContext, object>(
-                            new FastGetSystemTypeValue(binder, this, field._info.GetValue(null)).GetSlot
-                        );
-                    }
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(new FastGetSystemTypeSlot(binder, this, slot, fromMetaClass).GetSlot);
-                }
-            }
-
-            if (slot.CanOptimizeGets) {
-                EnsureFastTypeGets();
-                lock (_cachedTypeGets) {
-                    FastGetBase fastGet;
-                    if (!_cachedTypeGets.TryGetValue(binder.Name, out fastGet) || ((OptimizingFastGetUserType)fastGet)._version != version) {
-                        _cachedTypeGets[binder.Name] = fastGet = new OptimizingFastGetUserType(
-                            binder,
-                            this,
-                            _version,
-                            slot,
-                            fromMetaClass
-                        );
-                    }
-
-                    OptimizingFastGetUserType userGet = (OptimizingFastGetUserType)fastGet;
-                    if (userGet.UseNonOptimizedSite) {
-                        return (T)(object)new Func<CallSite, object, CodeContext, object>(userGet.GetSlot);
-                    }
-
-                    return null;
-                }
-            } else {
-                ReflectedField field = slot as ReflectedField;                
-                if (field != null) {
-                    return (T)(object)new Func<CallSite, object, CodeContext, object>(
-                        new FastGetUserTypeValue(binder, this, _version, field._info.GetValue(null)).GetSlot
-                    );
-                }
-
-                return (T)(object)new Func<CallSite, object, CodeContext, object>(new FastGetUserTypeSlot(binder, this, _version, slot, fromMetaClass).GetSlot);
-            }
-        }
-
-        private void EnsureFastTypeGets() {
-            if (_cachedTypeGets == null) {
-                Interlocked.CompareExchange(ref _cachedTypeGets,
-                    new Dictionary<string, FastGetBase>(),
-                    null);
-            }
-        }
-
-        class FastGetUserTypeBase : FastGetBase {
-            protected readonly WeakReference _type;
-            internal readonly int _version;
-            protected int _hitCount;            
-
-            public FastGetUserTypeBase(PythonGetMemberBinder binder, PythonType type, int version)
-                : base(binder) {
-                if (type._weakRef == null) {
-                    type._weakRef = new WeakReference(type);
-                }
-                _type = type._weakRef;
-                _version = version;
-            }
-
-            public bool UseNonOptimizedSite {
-                get {
-                    return _hitCount < 100;
-                }
-            }
-        }
-
-        class FastGetUserTypeSlot : FastGetUserTypeBase {
-            private readonly PythonTypeSlot _slot;
-            private readonly bool _fromMetaClass;
-
-            public FastGetUserTypeSlot(PythonGetMemberBinder binder, PythonType type, int version, PythonTypeSlot slot, bool fromMetaClass)
-                : base(binder, type, version) {
-                if (type._weakRef == null) {
-                    type._weakRef = new WeakReference(type);
-                }
-                _fromMetaClass = fromMetaClass;
-                _slot = slot;
-            }
-            
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                object res;
-                if (self == _type.Target && ((PythonType)self).Version == _version && _slot.TryGetValue(context, _fromMetaClass ? self : null, (PythonType)self, out res)) {
-                    return res;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-        class OptimizingFastGetUserType : FastGetUserTypeBase {
-            private readonly PythonTypeSlot _slot;
-            private readonly bool _fromMetaClass;
-
-            public OptimizingFastGetUserType(PythonGetMemberBinder binder, PythonType type, int version, PythonTypeSlot slot, bool fromMetaClass)
-                : base(binder, type, version) {
-                if (type._weakRef == null) {
-                    type._weakRef = new WeakReference(type);
-                }
-                _fromMetaClass = fromMetaClass;
-                _slot = slot;
-            }
-
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                object res;
-                if (self == _type.Target && 
-                    ((PythonType)self).Version == _version && 
-                    UseNonOptimizedSite &&
-                    _slot.TryGetValue(context, _fromMetaClass ? self : null, (PythonType)self, out res)) {
-                    _hitCount++;
-                    return res;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-        class FastGetUserTypeValue : FastGetUserTypeBase {
-            private readonly object _value;
-
-            public FastGetUserTypeValue(PythonGetMemberBinder binder, PythonType type, int version, object value)
-                : base(binder, type, version) {
-                _value = value;
-            }
-
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                if (self == _type.Target && ((PythonType)self).Version == _version) {
-                    return _value;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-        class FastGetSystemTypeBase : FastGetBase {
-            protected readonly PythonType _type;
-            internal int _hitCount;            
-
-            public FastGetSystemTypeBase(PythonGetMemberBinder binder, PythonType type)
-                : base(binder) {
-                _type = type;
-            }
-
-            internal bool UseNonOptimizedSite {
-                get {
-                    return _hitCount < 100;
-                }
-            }
-        }
-
-        class FastGetSystemTypeSlot : FastGetSystemTypeBase {
-            private readonly PythonTypeSlot _slot;
-            private readonly PythonType _instance;
-
-            public FastGetSystemTypeSlot(PythonGetMemberBinder binder, PythonType type, PythonTypeSlot slot, bool fromMetaClass)
-                : base(binder, type) {
-                _slot = slot;
-                if (fromMetaClass) {
-                    _instance = type;
-                }
-            }
-
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                object res;
-                if (self == _type && _slot.TryGetValue(context, _instance, _type, out res)) {
-                    return res;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-        class OptimizingFastGetSystemType : FastGetSystemTypeBase {
-            private readonly PythonTypeSlot _slot;
-            private readonly PythonType _instance;
-
-            public OptimizingFastGetSystemType(PythonGetMemberBinder binder, PythonType type, PythonTypeSlot slot, bool fromMetaClass)
-                : base(binder, type) {
-                _slot = slot;
-                if (fromMetaClass) {
-                    _instance = type;
-                }
-            }
-
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                object res;
-                if (self == _type && UseNonOptimizedSite && _slot.TryGetValue(context, _instance, _type, out res)) {
-                    _hitCount++;
-                    return res;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-        class FastGetSystemTypeValue : FastGetSystemTypeBase {
-            private readonly object _value;
-
-            public FastGetSystemTypeValue(PythonGetMemberBinder binder, PythonType type, object value)
-                : base(binder, type) {
-                _value = value;
-            }
-
-            public object GetSlot(CallSite site, object self, CodeContext context) {
-                if (self == _type) {
-                    return _value;
-                }
-
-                return Update(site, self, context);
-            }
-        }
-
-
-        class FastGetSingleton {
-            public static FastGetSingleton Instance = new FastGetSingleton();
-
-            public object GetDictionary(CallSite site, object self, CodeContext context) {
-                if (self.GetType() == typeof(PythonType)) {
-                    return new DictProxy(((PythonType)self));
-                }
-
-                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, self, context);
-            }
-
-            public object GetClass(CallSite site, object self, CodeContext context) {
-                if (self.GetType() == typeof(PythonType)) {
-                    return TypeCache.PythonType;
-                }
-
-                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, self, context);
-            }
-
-            public object GetBases(CallSite site, object self, CodeContext context) {
-                if (self.GetType() == typeof(PythonType)) {
-                    return ((PythonType)self).GetBasesTuple();
-                }
-
-                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, self, context);
-            }
-
-            public object GetName(CallSite site, object self, CodeContext context) {
-                if (self.GetType() == typeof(PythonType)) {
-                    return ((PythonType)self).Name;
-                }
-
-                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, self, context);
-            }
+            return (T)(object)new MetaPythonType.FastGetBinderHelper(this, context, binder).GetBinding();
         }
 
         #endregion
@@ -2404,6 +2091,74 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         }
 
         #endregion
+
+        /// <summary>
+        /// Returns a CLR WeakReference object to this PythonType that can be shared
+        /// between anyone who needs a weak reference to the type.
+        /// </summary>
+        internal WeakReference/*!*/ GetSharedWeakReference() {
+            if (_weakRef == null) {
+                _weakRef = new WeakReference(this);                
+            }
+
+            return _weakRef;
+        }
+
+        #region IFastSettable Members
+
+        T IFastSettable.MakeSetBinding<T>(CallSite<T> site, PythonSetMemberBinder binder) {
+            if (!IsSystemType) {
+                CodeContext context = BinderState.GetBinderState(binder).Context;
+                string name = binder.Name;
+                
+                // optimized versions for possible literals that can show up in code.
+                Type setType = typeof(T);
+                if (setType == typeof(Func<CallSite, object, object, object>)) {
+                    return (T)(object)MakeFastSet<object>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, string, object>)) {
+                    return (T)(object)MakeFastSet<string>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, int, object>)) {
+                    return (T)(object)MakeFastSet<int>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, double, object>)) {
+                    return (T)(object)MakeFastSet<double>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, List, object>)) {
+                    return (T)(object)MakeFastSet<List>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, PythonTuple, object>)) {
+                    return (T)(object)MakeFastSet<PythonTuple>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, PythonDictionary, object>)) {
+                    return (T)(object)MakeFastSet<PythonDictionary>(context, name);
+                }
+            }
+
+            return null;
+        }
+
+        private static Func<CallSite, object, T, object> MakeFastSet<T>(CodeContext/*!*/ context, string name) {
+            return new Setter<T>(context, SymbolTable.StringToId(name)).Target;
+        }
+
+        class Setter<T> : FastSetBase<T> {
+            private readonly CodeContext/*!*/ _context;
+            private readonly SymbolId _name;
+
+            public Setter(CodeContext/*!*/ context, SymbolId name)
+                : base(-1) {
+                _context = context;
+                _name = name;
+            }
+
+            public object Target(CallSite site, object self, T value) {
+                PythonType type = self as PythonType;
+                if (type != null && !type.IsSystemType) {
+                    type.SetCustomMember(_context, _name, value);
+                    return value;
+                }
+
+                return Update(site, self, value);
+            }
+        }
+
+        #endregion
     }
 
     enum OptimizedGetKind {
@@ -2418,14 +2173,32 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         internal Func<CallSite, object, CodeContext, object> _func;
         internal int _hitCount;
 
-        public UserGetBase(PythonGetMemberBinder binder, int version)
-            : base(binder) {
+        public UserGetBase(PythonGetMemberBinder binder, int version) {
             _version = version;
         }
 
         internal bool ShouldUseNonOptimizedSite {
             get {
                 return _hitCount < 100;
+            }
+        }
+
+        internal virtual bool ShouldCache {
+            get {
+                return true;
+            }
+        }
+    }
+
+    class ChainedUserGet : UserGetBase {
+        public ChainedUserGet(PythonGetMemberBinder binder, int version, Func<CallSite, object, CodeContext, object> func)
+            : base(binder, version) {
+            _func = func;
+        }
+
+        internal override bool ShouldCache {
+            get {
+                return false;
             }
         }
     }
@@ -2436,6 +2209,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private readonly PythonTypeSlot _getAttrSlot;
         private readonly CallSite<Func<CallSite, object, CodeContext, object>> _site;
         private readonly SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, string, object>>>/*!*/ _storage;
+        private readonly bool _isNoThrow;
 
         public GetAttributeDelegates(CallSite<Func<CallSite, object, CodeContext, object>>/*!*/ site, PythonGetMemberBinder/*!*/ binder, string/*!*/ name, int version, PythonTypeSlot/*!*/ getAttributeSlot, PythonTypeSlot/*!*/ getAttrSlot)
             : base(binder, version) {
@@ -2447,12 +2221,13 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             _name = name;
             _site = site;
             _func = GetAttribute;
+            _isNoThrow = binder.IsNoThrow;
         }
 
         public object GetAttribute(CallSite site, object self, CodeContext context) {
             IPythonObject ipo = self as IPythonObject;
             if (ipo != null && ipo.PythonType.Version == _version) {
-                if (Binder.IsNoThrow) {
+                if (_isNoThrow) {
                     return UserTypeOps.GetAttributeNoThrow(context, self, _name, _getAttributeSlot, _getAttrSlot, _storage);
                 }
 
@@ -2464,15 +2239,19 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
     class GetMemberDelegates : UserGetBase {
         private readonly SymbolId _name;
+        private readonly bool _isNoThrow;
         private readonly PythonTypeSlot _slot, _getattrSlot;
         private readonly SlotGetValue _slotFunc;
+        private readonly Func<CallSite, object, CodeContext, object> _fallback;
 
-        public GetMemberDelegates(OptimizedGetKind getKind, PythonGetMemberBinder binder, SymbolId name, int version, PythonTypeSlot slot, PythonTypeSlot getattrSlot, SlotGetValue slotFunc)
+        public GetMemberDelegates(OptimizedGetKind getKind, PythonGetMemberBinder binder, SymbolId name, int version, PythonTypeSlot slot, PythonTypeSlot getattrSlot, SlotGetValue slotFunc, Func<CallSite, object, CodeContext, object> fallback)
             : base(binder, version) {
             _slot = slot;
             _name = name;
             _getattrSlot = getattrSlot;
             _slotFunc = slotFunc;
+            _fallback = fallback;
+            _isNoThrow = binder.IsNoThrow;
             switch (getKind) {
                 case OptimizedGetKind.SlotDict: _func = SlotDict; break;
                 case OptimizedGetKind.SlotOnly: _func = SlotOnly; break;
@@ -2499,7 +2278,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     return GetAttr(context, res);
                 }
 
-                return TypeError(ipo);
+                return TypeError(site, ipo, context);
             }
 
             return Update(site, self, context);
@@ -2519,7 +2298,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     return GetAttr(context, res);
                 }
 
-                return TypeError(ipo);
+                return TypeError(site, ipo, context);
             }
 
             return Update(site, self, context);
@@ -2537,14 +2316,14 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     return GetAttr(context, res);
                 }
 
-                return TypeError(ipo);
+                return TypeError(site, ipo, context);
             }
 
             return Update(site, self, context);
         }
 
         private object GetAttr(CodeContext context, object res) {
-            if (Binder.IsNoThrow) {
+            if (_isNoThrow) {
                 try {
                     return PythonOps.CallWithContext(context, res, SymbolTable.IdToString(_name));
                 } catch (MissingMemberException) {
@@ -2555,12 +2334,8 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             }
         }
 
-        private object TypeError(IPythonObject ipo) {
-            if (Binder.IsNoThrow) {
-                return OperationFailed.Value;
-            }
-
-            throw PythonOps.AttributeErrorForMissingAttribute(ipo.PythonType.Name, _name);
+        private object TypeError(CallSite site, IPythonObject ipo, CodeContext context) {
+            return _fallback(site, ipo, context);
         }
     }
 
@@ -2580,8 +2355,8 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private readonly CodeContext _context;
         private readonly OptimizedSetKind _kind;
 
-        public SetMemberDelegates(CodeContext context, OptimizedSetKind kind, CallSite<Func<CallSite, object, TValue, object>> site, PythonSetMemberBinder binder, SymbolId name, int version, PythonTypeSlot slot, SlotSetValue slotFunc) 
-            : base(binder, version) {
+        public SetMemberDelegates(CodeContext context, OptimizedSetKind kind, CallSite<Func<CallSite, object, TValue, object>> site, SymbolId name, int version, PythonTypeSlot slot, SlotSetValue slotFunc) 
+            : base(version) {
             _slot = slot;
             _name = name;
             _site = site;
@@ -2687,4 +2462,178 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         }
     }
 
+    abstract class TypeGetBase : FastGetBase {
+        private readonly FastGetDelegate[] _delegates;
+        internal Func<CallSite, object, CodeContext, object> _func;
+        private int _hitCount;
+
+        public TypeGetBase(PythonGetMemberBinder binder, FastGetDelegate[] delegates) {
+            _delegates = delegates;
+        }
+
+        protected object RunDelegates(object self, CodeContext context) {
+            _hitCount++;
+            for (int i = 0; i < _delegates.Length; i++) {
+                object res;
+                if (_delegates[i](context, self, out res)) {                    
+                    return res;
+                }
+            }
+
+            // last delegate should always throw or succeed, this should be unreachable
+            throw new InvalidOperationException();
+        }
+
+        protected object RunDelegatesNoOptimize(object self, CodeContext context) {
+            for (int i = 0; i < _delegates.Length; i++) {
+                object res;
+                if (_delegates[i](context, self, out res)) {
+                    return res;
+                }
+            }
+
+            // last delegate should always throw or succeed, this should be unreachable
+            throw new InvalidOperationException();
+        }
+
+        internal bool ShouldUseNonOptimizedSite {
+            get {
+                return _hitCount < 100;
+            }
+        }
+
+        public abstract bool IsValid(PythonType type);
+    }
+
+    delegate bool FastGetDelegate(CodeContext context, object self, out object result);
+
+    class TypeGet : TypeGetBase {
+        private int _version;
+
+        public TypeGet(PythonGetMemberBinder binder, FastGetDelegate[] delegates, int version, bool isMeta, bool canOptimize)
+            : base(binder, delegates) {
+            _version = version;
+            if (canOptimize) {
+                if (isMeta) {
+                    _func = MetaOnlyTargetOptimizing;
+                } else {
+                    _func = TargetOptimizing;
+                }
+            } else {
+                if (isMeta) {
+                    _func = MetaOnlyTarget;
+                } else {
+                    _func = Target;
+                }
+            }
+        }
+
+        public object Target(CallSite site, object self, CodeContext context) {
+            PythonType pt = self as PythonType;
+
+            if (pt != null && pt.Version == _version) {
+                return RunDelegatesNoOptimize(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object MetaOnlyTarget(CallSite site, object self, CodeContext context) {
+            PythonType pt = self as PythonType;
+            if (pt != null && PythonOps.CheckTypeVersion(pt, _version)) {
+                return RunDelegatesNoOptimize(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object TargetOptimizing(CallSite site, object self, CodeContext context) {
+            PythonType pt = self as PythonType;
+
+            if (pt != null && pt.Version == _version && ShouldUseNonOptimizedSite) {
+                return RunDelegates(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object MetaOnlyTargetOptimizing(CallSite site, object self, CodeContext context) {
+            PythonType pt = self as PythonType;
+            if (pt != null && PythonOps.CheckTypeVersion(pt, _version) && ShouldUseNonOptimizedSite) {
+                return RunDelegates(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public override bool IsValid(PythonType type) {
+            if (_func == MetaOnlyTarget || _func == MetaOnlyTargetOptimizing) {
+                return PythonOps.CheckTypeVersion(type, _version);
+            }
+
+            return type.Version == _version;
+        }
+    }
+
+    class SystemTypeGet : TypeGetBase {
+        private readonly PythonType _self;
+
+        public SystemTypeGet(PythonGetMemberBinder binder, FastGetDelegate[] delegates, PythonType type, bool isMeta, bool optimizing)
+            : base(binder, delegates) {
+            _self = type;
+            if (optimizing) {
+                if (isMeta) {
+                    _func = MetaOnlyTargetOptimizing;
+                } else {
+                    _func = TargetOptimizing;
+                }
+            } else {
+                if (isMeta) {
+                    _func = MetaOnlyTarget;
+                } else {
+                    _func = Target;
+                }
+            }
+        }
+
+        public object Target(CallSite site, object self, CodeContext context) {
+            if (self == _self) {
+                return RunDelegatesNoOptimize(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object MetaOnlyTarget(CallSite site, object self, CodeContext context) {
+            if (self is PythonType) {
+                return RunDelegatesNoOptimize(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object TargetOptimizing(CallSite site, object self, CodeContext context) {
+            if (self == _self && ShouldUseNonOptimizedSite) {
+                return RunDelegates(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public object MetaOnlyTargetOptimizing(CallSite site, object self, CodeContext context) {
+            if (self is PythonType && ShouldUseNonOptimizedSite) {
+                return RunDelegates(self, context);
+            }
+
+            return Update(site, self, context);
+        }
+
+        public override bool IsValid(PythonType type) {
+            if (_func == MetaOnlyTarget || _func == MetaOnlyTargetOptimizing) {
+                return true;
+            }
+
+            return type == _self;
+        }
+    }       
 }

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -102,6 +102,7 @@
     <Compile Include="Compiler\Ast\AssignmentStatement.cs" />
     <Compile Include="Compiler\Ast\AstGenerator.cs" />
     <Compile Include="Runtime\Binding\ContextArgBuilder.cs" />
+    <Compile Include="Runtime\Binding\IFastSettable.cs" />
     <Compile Include="Runtime\Binding\PythonBinder.Create.cs" />
     <Compile Include="Runtime\Binding\PythonMethodBinder.cs" />
     <Compile Include="Runtime\Binding\SiteLocalStorageBuilder.cs" />

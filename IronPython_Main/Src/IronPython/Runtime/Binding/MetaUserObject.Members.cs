@@ -528,11 +528,6 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected override void MakeSlotAccess(PythonTypeSlot foundSlot, bool systemTypeResolution) {
-                /*if (foundSlot is ReflectedProperty) {
-                    // currently protected members make this difficult to optimize.
-                    _noOptimizedForm = true;
-                }*/
-
                 if (systemTypeResolution) {
                     if (!_binder.Binder.Binder.TryResolveSlot(_context, this.Value.PythonType, this.Value.PythonType, SymbolTable.StringToId(_binder.Name), out foundSlot)) {
                         Debug.Assert(false);
@@ -550,13 +545,16 @@ namespace IronPython.Runtime.Binding {
                     if (!cachedGets.TryGetValue(name, out dlg) || dlg._version != Value.PythonType.Version) {
                         var binding = Bind(context, name);
                         if (binding != null) {
-                            dlg = cachedGets[name] = Bind(context, name);
+                            dlg = binding;
+
+                            if (dlg.ShouldCache) {
+                                cachedGets[name] = dlg;
+                            }
                         }
                     }
                 }
 
                 if (dlg != null && dlg.ShouldUseNonOptimizedSite) {                    
-                    // TODO: This magic number needs to be moved...
                     return new FastBindResult<Func<CallSite, object, CodeContext, object>>(dlg._func, false);
                 }
                 return new FastBindResult<Func<CallSite, object, CodeContext, object>>();
@@ -589,7 +587,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected override UserGetBase FinishRule() {
-                if(_noOptimizedForm) {
+                if (_noOptimizedForm) {
                     return null;
                 }
 
@@ -597,13 +595,27 @@ namespace IronPython.Runtime.Binding {
                 ReflectedSlotProperty rsp = _slot as ReflectedSlotProperty;
                 if (rsp != null) {
                     Debug.Assert(!_dictAccess); // properties for __slots__ are get/set descriptors so we should never access the dictionary.
-                    func = new GetMemberDelegates(OptimizedGetKind.UserSlot, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, rsp.Getter);
+                    func = new GetMemberDelegates(OptimizedGetKind.UserSlot, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, rsp.Getter, FallbackError());
                 } else if (_dictAccess) {
-                    func = new GetMemberDelegates(OptimizedGetKind.SlotDict, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, null);
+                    func = new GetMemberDelegates(OptimizedGetKind.SlotDict, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, null, FallbackError());
                 } else {
-                    func = new GetMemberDelegates(OptimizedGetKind.SlotOnly, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, null);
+                    func = new GetMemberDelegates(OptimizedGetKind.SlotOnly, _binder, SymbolTable.StringToId(_binder.Name), _version, _slot, _getattrSlot, null, FallbackError());
                 }
                 return func;
+            }
+
+            private Func<CallSite, object, CodeContext, object> FallbackError() {
+                Type finalType = PythonTypeOps.GetFinalSystemType(Value.PythonType.UnderlyingSystemType);
+                if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {                    
+                    return ((IFastGettable)Value).MakeGetBinding(_site, _binder, _context, _binder.Name);
+                }
+
+                if (_binder.IsNoThrow) {
+                    return (site, self, context) => OperationFailed.Value;
+                }
+
+                SymbolId name = SymbolTable.StringToId(_binder.Name);
+                return (site, self, context) => { throw PythonOps.AttributeErrorForMissingAttribute(((IPythonObject)self).PythonType.Name, name); };
             }
 
             protected override void MakeDictionaryAccess() {
@@ -611,6 +623,18 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected override UserGetBase BindGetAttribute(PythonTypeSlot foundSlot) {
+                Type finalType = PythonTypeOps.GetFinalSystemType(Value.PythonType.UnderlyingSystemType);
+                if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {
+                    Debug.Assert(Value is IFastGettable);
+
+                    PythonTypeSlot baseSlot;
+                    if (TryGetGetAttribute(_context, DynamicHelpers.GetPythonTypeFromType(finalType), out baseSlot) && 
+                        baseSlot == foundSlot) {
+                        var res = ((IFastGettable)Value).MakeGetBinding(_site, _binder, _context, _binder.Name);
+                        return new ChainedUserGet(_binder, _version, FallbackError());
+                    }
+                }
+
                 PythonTypeSlot getattr;
                 Value.PythonType.TryResolveSlot(_context, Symbols.GetBoundAttr, out getattr);
                 return new GetAttributeDelegates(_site, _binder, _binder.Name, _version, foundSlot, getattr);
@@ -826,13 +850,13 @@ namespace IronPython.Runtime.Binding {
                 if (_unsupported) {
                     return null;
                 } else if (_setattrSlot != null) {
-                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.SetAttr, _site, _binder, SymbolTable.StringToId(_binder.Name), _version, _setattrSlot, null);
+                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.SetAttr, _site, SymbolTable.StringToId(_binder.Name), _version, _setattrSlot, null);
                 } else if (_slotProp != null) {
-                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.UserSlot, _site, _binder, SymbolTable.StringToId(_binder.Name), _version, null, _slotProp.Setter);
+                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.UserSlot, _site, SymbolTable.StringToId(_binder.Name), _version, null, _slotProp.Setter);
                 } else if(_dictSet) {
-                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.SetDict, _site, _binder, SymbolTable.StringToId(_binder.Name), _version, null, null);
+                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.SetDict, _site, SymbolTable.StringToId(_binder.Name), _version, null, null);
                 } else {
-                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.Error, _site, _binder, SymbolTable.StringToId(_binder.Name), _version, null, null);
+                    return new SetMemberDelegates<TValue>(_context, OptimizedSetKind.Error, _site, SymbolTable.StringToId(_binder.Name), _version, null, null);
                 }                
             }
             
