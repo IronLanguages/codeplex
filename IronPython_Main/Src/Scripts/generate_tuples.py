@@ -19,19 +19,19 @@ def make_arg_list(size, name ='T%(id)d'):
     return ', '.join([name % {'id': x} for x in range(size)])
 
 def get_base(size):
-    if size: return 'Tuple<' + make_arg_list(size) + '>'
-    return 'Tuple'
+    if size: return 'MutableTuple<' + make_arg_list(size) + '>'
+    return 'MutableTuple'
 
 def gen_generic_args(i, type='object'):
     return ', '.join([type]*i)
 
 def gen_tuple(cw, size, prevSize):
 	cw.write('[GeneratedCode("DLR", "2.0")]')
-	cw.enter_block('public class Tuple<%s> : %s' % (make_arg_list(size), get_base(prevSize)))
+	cw.enter_block('public class MutableTuple<%s> : %s' % (make_arg_list(size), get_base(prevSize)))
 	
-	cw.write('public Tuple() { }')
+	cw.write('public MutableTuple() { }')
 	cw.write('')
-	cw.write('public Tuple(' + make_arg_list(size, 'T%(id)d item%(id)d') + ')')
+	cw.write('public MutableTuple(' + make_arg_list(size, 'T%(id)d item%(id)d') + ')')
 	cw.enter_block('  : base(' + make_arg_list(prevSize, 'item%(id)d') + ')')
 	
 	for i in range(prevSize, size):
@@ -86,13 +86,13 @@ def gen_tuples(cw):
 def gen_one_pgf(cw, i, first, last=False):
     if first: cw.enter_block("if (size <= %i)" %  i)
     elif not last: cw.else_block("if (size <= %i)" %  i)
-    cw.writeline("return typeof(Tuple<%s>);" % gen_generic_args(i, ''))
+    cw.writeline("return typeof(MutableTuple<%s>);" % gen_generic_args(i, ''))
 
 def gen_get_size(cw):
     ssizes = sorted(tuples)
 
     first = True
-    cw.enter_block("if (size <= Tuple.MaxSize)")
+    cw.enter_block("if (size <= MutableTuple.MaxSize)")
     for i in ssizes[:-1]:
         gen_one_pgf(cw, i, first)
         first = False

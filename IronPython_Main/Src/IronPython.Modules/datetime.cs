@@ -357,7 +357,7 @@ namespace IronPython.Modules {
 
         [PythonType]
         public class date : ICodeFormattable {
-            private DateTime _dateTime;
+            internal DateTime _dateTime;
             // class attributes
             public static readonly date min = new date(new DateTime(1, 1, 1));
             public static readonly date max = new date(new DateTime(9999, 12, 31));
@@ -545,8 +545,8 @@ namespace IronPython.Modules {
                     _dateTime.ToString(" HH:mm:ss yyyy", CultureInfo.InvariantCulture);
             }
 
-            public string strftime(CodeContext/*!*/ context, string dateFormat) {
-                return PythonTime.strftime(context, dateFormat, _dateTime);
+            public virtual string strftime(CodeContext/*!*/ context, string dateFormat) {
+                return PythonTime.strftime(context, dateFormat, _dateTime, null);
             }
 
             public override bool Equals(object obj) {
@@ -1021,6 +1021,10 @@ namespace IronPython.Modules {
                 );
             }
 
+            public override string strftime(CodeContext/*!*/ context, string dateFormat) {
+                return PythonTime.strftime(context, dateFormat, _dateTime, _lostMicroseconds);
+            }
+
             #region IRichComparable Members
 
             protected override int CompareTo(object other) {
@@ -1257,7 +1261,8 @@ namespace IronPython.Modules {
             public object strftime(CodeContext/*!*/ context, string format) {
                 return PythonTime.strftime(context,
                     format,
-                    new DateTime(1900, 1, 1, _timeSpan.Hours, _timeSpan.Minutes, _timeSpan.Seconds, _timeSpan.Milliseconds));
+                    new DateTime(1900, 1, 1, _timeSpan.Hours, _timeSpan.Minutes, _timeSpan.Seconds, _timeSpan.Milliseconds),
+                    _lostMicroseconds);
             }
 
             public timedelta utcoffset() {

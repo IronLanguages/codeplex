@@ -25,14 +25,12 @@ using IronPython.Compiler;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
-using Tuple = Microsoft.Scripting.Tuple;
-
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("generator")]
     public sealed class PythonGenerator : IEnumerator, IEnumerator<object>, IEnumerable, IEnumerable<object>, ICodeFormattable {
         private readonly PythonGeneratorNext/*!*/ _next;    // The delegate which contains the user code to perform the iteration.
         private readonly PythonFunction _function;          // the function which created the generator
-        private readonly Tuple _data;          // the closure data we need to pass into each iteration.  Item000 is the index, Item001 is the current value
+        private readonly MutableTuple _data;                // the closure data we need to pass into each iteration.  Item000 is the index, Item001 is the current value
         private GeneratorFlags _flags;                      // Flags capturing various state for the generator
 
         /// <summary>
@@ -47,7 +45,7 @@ namespace IronPython.Runtime {
         /// </summary>
         private object _sendValue;
 
-        internal PythonGenerator(PythonFunction function, PythonGeneratorNext next, Tuple data) {
+        internal PythonGenerator(PythonFunction function, PythonGeneratorNext next, MutableTuple data) {
             _function = function;
             _next = next;
             _data = data;
@@ -213,19 +211,19 @@ namespace IronPython.Runtime {
             }
         }
 
-        private Microsoft.Scripting.Tuple<int, object> GetDataTuple() {
-            Microsoft.Scripting.Tuple<int, object> res = _data as Microsoft.Scripting.Tuple<int, object>;
+        private MutableTuple<int, object> GetDataTuple() {
+            MutableTuple<int, object> res = _data as MutableTuple<int, object>;
             if (res == null) {
                 res = GetBigData(_data);
             }
             return res;
         }
 
-        private static Microsoft.Scripting.Tuple<int, object> GetBigData(Microsoft.Scripting.Tuple data) {
-            Microsoft.Scripting.Tuple<int, object> smallGen;
+        private static MutableTuple<int, object> GetBigData(MutableTuple data) {
+            MutableTuple<int, object> smallGen;
             do {
-                data = (Microsoft.Scripting.Tuple)data.GetValue(0);
-            } while ((smallGen = (data as Microsoft.Scripting.Tuple<int, object>)) == null);
+                data = (MutableTuple)data.GetValue(0);
+            } while ((smallGen = (data as MutableTuple<int, object>)) == null);
 
             return smallGen;
         }

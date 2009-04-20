@@ -215,12 +215,7 @@ def f():
         abc = a
     return c
 
-#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21914
-if is_cli or is_silverlight:
-    AreEqual(f().abc, 42)
-else:
-    AreEqual(f().abc, 2)
-
+AreEqual(f().abc, 2)
 
 #def f():
 #    a = 2

@@ -165,7 +165,7 @@ namespace IronPython.Runtime.Binding {
         public abstract class GetBinderHelper<TResult> {
             private readonly PythonType _value;
             private readonly string _name;
-            private readonly CodeContext/*!*/ _context;
+            internal readonly CodeContext/*!*/ _context;
 
             public GetBinderHelper(PythonType value, CodeContext/*!*/ context, string name) {
                 _value = value;
@@ -254,6 +254,7 @@ namespace IronPython.Runtime.Binding {
                         !pts.IsSetDescriptor(lookupContext, metaType)) { // we tried get/set descriptors initially
                         
                         AddMetaGetAttribute(metaType, pts);
+                        isFinal = pts.GetAlwaysSucceeds;
                     }
                 }
 
@@ -640,7 +641,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected override void AddMetaGetAttribute(PythonType metaType, PythonTypeSlot pts) {
-                _gets.Add(new MetaGetAttributeDelegate(pts, metaType, _binder.Name).Target);
+                _gets.Add(new MetaGetAttributeDelegate(_context, pts, metaType, _binder.Name).Target);
             }
 
             class MetaGetAttributeDelegate {
@@ -649,8 +650,9 @@ namespace IronPython.Runtime.Binding {
                 private readonly WeakReference _weakMetaType;
                 private readonly PythonTypeSlot _slot;
                 private readonly WeakReference _weakSlot;
+                private readonly CallSite<Func<CallSite, CodeContext, object, string, object>> _invokeSite;
 
-                public MetaGetAttributeDelegate(PythonTypeSlot slot, PythonType metaType, string name) {
+                public MetaGetAttributeDelegate(CodeContext context, PythonTypeSlot slot, PythonType metaType, string name) {
                     _name = name;
 
                     if (metaType.IsSystemType) {
@@ -660,13 +662,14 @@ namespace IronPython.Runtime.Binding {
                         _weakMetaType = metaType.GetSharedWeakReference();
                         _weakSlot = new WeakReference(slot);
                     }
+                    _invokeSite = CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(PythonContext.GetContext(context).DefaultBinderState.InvokeOne);
                 }
 
                 public bool Target(CodeContext context, object self, out object result) {
                     object value;
 
                     if (Slot.TryGetValue(context, self, MetaType, out value)) {
-                        result = PythonOps.CallWithContext(context, value, _name);
+                        result = _invokeSite.Target(_invokeSite, context, value, _name);
                         return true;
                     }
 

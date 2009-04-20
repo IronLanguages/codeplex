@@ -54,8 +54,8 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private int _version = GetNextVersion();            // version of the type
         private List<WeakReference> _subtypes;              // all of the subtypes of the PythonType
         private PythonContext _pythonContext;               // the context the type was created from, or null for system types.
-        internal Dictionary<string, UserGetBase> _cachedGets; // cached gets on user defined type instances
-        internal Dictionary<string, UserGetBase> _cachedTryGets; // cached try gets on used defined type instances
+        internal Dictionary<string, FastGetBase> _cachedGets; // cached gets on user defined type instances
+        internal Dictionary<string, FastGetBase> _cachedTryGets; // cached try gets on used defined type instances
         internal Dictionary<SetMemberKey, FastSetBase> _cachedSets; // cached sets on user defined instances
         internal Dictionary<string, TypeGetBase> _cachedTypeGets; // cached gets on types (system and user types)
         internal Dictionary<string, TypeGetBase> _cachedTypeTryGets; // cached gets on types (system and user types)
@@ -2170,23 +2170,13 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
     class UserGetBase : FastGetBase {
         internal readonly int _version;
-        internal Func<CallSite, object, CodeContext, object> _func;
-        internal int _hitCount;
 
         public UserGetBase(PythonGetMemberBinder binder, int version) {
             _version = version;
         }
 
-        internal bool ShouldUseNonOptimizedSite {
-            get {
-                return _hitCount < 100;
-            }
-        }
-
-        internal virtual bool ShouldCache {
-            get {
-                return true;
-            }
+        public override bool IsValid(PythonType type) {
+            return _version == type.Version;
         }
     }
 
@@ -2464,8 +2454,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
     abstract class TypeGetBase : FastGetBase {
         private readonly FastGetDelegate[] _delegates;
-        internal Func<CallSite, object, CodeContext, object> _func;
-        private int _hitCount;
 
         public TypeGetBase(PythonGetMemberBinder binder, FastGetDelegate[] delegates) {
             _delegates = delegates;
@@ -2495,14 +2483,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             // last delegate should always throw or succeed, this should be unreachable
             throw new InvalidOperationException();
         }
-
-        internal bool ShouldUseNonOptimizedSite {
-            get {
-                return _hitCount < 100;
-            }
-        }
-
-        public abstract bool IsValid(PythonType type);
     }
 
     delegate bool FastGetDelegate(CodeContext context, object self, out object result);

@@ -501,7 +501,7 @@ namespace IronPython.Runtime.Binding {
             }           
         }
 
-        internal class FastGetBinderHelper : GetOrInvokeBinderHelper<UserGetBase> {
+        internal class FastGetBinderHelper : GetOrInvokeBinderHelper<FastGetBase> {
             private readonly int _version;
             private readonly PythonGetMemberBinder/*!*/ _binder;
             private readonly CallSite<Func<CallSite, object, CodeContext, object>> _site;
@@ -538,11 +538,11 @@ namespace IronPython.Runtime.Binding {
             }
             
             public FastBindResult<Func<CallSite, object, CodeContext, object>> GetBinding(CodeContext context, string name) {
-                Dictionary<string, UserGetBase> cachedGets = GetCachedGets();
+                Dictionary<string, FastGetBase> cachedGets = GetCachedGets();
 
-                UserGetBase dlg;
+                FastGetBase dlg;
                 lock (cachedGets) {                    
-                    if (!cachedGets.TryGetValue(name, out dlg) || dlg._version != Value.PythonType.Version) {
+                    if (!cachedGets.TryGetValue(name, out dlg) || !dlg.IsValid(Value.PythonType)) {
                         var binding = Bind(context, name);
                         if (binding != null) {
                             dlg = binding;
@@ -560,24 +560,24 @@ namespace IronPython.Runtime.Binding {
                 return new FastBindResult<Func<CallSite, object, CodeContext, object>>();
             }
 
-            private Dictionary<string, UserGetBase> GetCachedGets() {
+            private Dictionary<string, FastGetBase> GetCachedGets() {
                 if (_binder.IsNoThrow) {
-                    Dictionary<string, UserGetBase> cachedGets = Value.PythonType._cachedTryGets;
+                    Dictionary<string, FastGetBase> cachedGets = Value.PythonType._cachedTryGets;
                     if (cachedGets == null) {
                         Interlocked.CompareExchange(
                             ref Value.PythonType._cachedTryGets,
-                            new Dictionary<string, UserGetBase>(),
+                            new Dictionary<string, FastGetBase>(),
                             null);
 
                         cachedGets = Value.PythonType._cachedTryGets;
                     }
                     return cachedGets;
                 } else {
-                    Dictionary<string, UserGetBase> cachedGets = Value.PythonType._cachedGets;
+                    Dictionary<string, FastGetBase> cachedGets = Value.PythonType._cachedGets;
                     if (cachedGets == null) {
                         Interlocked.CompareExchange(
                             ref Value.PythonType._cachedGets,
-                            new Dictionary<string, UserGetBase>(),
+                            new Dictionary<string, FastGetBase>(),
                             null);
 
                         cachedGets = Value.PythonType._cachedGets;
@@ -586,7 +586,7 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
-            protected override UserGetBase FinishRule() {
+            protected override FastGetBase FinishRule() {
                 if (_noOptimizedForm) {
                     return null;
                 }
@@ -622,7 +622,7 @@ namespace IronPython.Runtime.Binding {
                 _dictAccess = true;
             }
 
-            protected override UserGetBase BindGetAttribute(PythonTypeSlot foundSlot) {
+            protected override FastGetBase BindGetAttribute(PythonTypeSlot foundSlot) {
                 Type finalType = PythonTypeOps.GetFinalSystemType(Value.PythonType.UnderlyingSystemType);
                 if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {
                     Debug.Assert(Value is IFastGettable);
@@ -630,7 +630,7 @@ namespace IronPython.Runtime.Binding {
                     PythonTypeSlot baseSlot;
                     if (TryGetGetAttribute(_context, DynamicHelpers.GetPythonTypeFromType(finalType), out baseSlot) && 
                         baseSlot == foundSlot) {
-                        var res = ((IFastGettable)Value).MakeGetBinding(_site, _binder, _context, _binder.Name);
+                        
                         return new ChainedUserGet(_binder, _version, FallbackError());
                     }
                 }

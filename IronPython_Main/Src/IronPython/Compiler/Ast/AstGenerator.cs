@@ -322,7 +322,7 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(_parent != null);
             Debug.Assert(_parent._liftedVars != null);
 
-            return Microsoft.Scripting.Tuple.MakeTupleType(ArrayUtils.ConvertAll<ClosureInfo, Type>(_parent._liftedVars.ToArray(), x => typeof(ClosureCell)));
+            return MutableTuple.MakeTupleType(ArrayUtils.ConvertAll<ClosureInfo, Type>(_parent._liftedVars.ToArray(), x => typeof(ClosureCell)));
         }
 
         internal MSAst.ParameterExpression/*!*/ Parameter(Type/*!*/ type, string name) {
@@ -370,8 +370,8 @@ namespace IronPython.Compiler.Ast {
                 typeof(PythonOps).GetMethod("CreateLocalContext"),
                 parentContext,
                 _liftedVars != null ?
-                    Microsoft.Scripting.Tuple.Create(ArrayUtils.ConvertAll<ClosureInfo, MSAst.Expression>(_liftedVars.ToArray(), x => x.GetClosureCellExpression())) :
-                    Microsoft.Scripting.Tuple.Create(),
+                    MutableTuple.Create(ArrayUtils.ConvertAll<ClosureInfo, MSAst.Expression>(_liftedVars.ToArray(), x => x.GetClosureCellExpression())) :
+                    MutableTuple.Create(),
                 _liftedVars != null ?
                 Ast.Constant(ArrayUtils.ConvertAll<ClosureInfo, SymbolId>(_liftedVars.ToArray(), x => (x.IsClosedOver ? x.Name : SymbolId.Empty))) :
                     Ast.Constant(new SymbolId[0]),
