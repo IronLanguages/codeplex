@@ -180,12 +180,12 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.ParameterExpression noNestedException) {
+        private MSAst.Expression AddFinally(AstGenerator/*!*/ ag, MSAst.Expression/*!*/ body, MSAst.ParameterExpression nestedException) {
             if (_finally != null) {
                 bool isEmitting = ag._isEmittingFinally;
                 ag._isEmittingFinally = true;
                 try {
-                    Debug.Assert(noNestedException != null);
+                    Debug.Assert(nestedException != null);
 
                     MSAst.ParameterExpression nestedFrames = ag.GetTemporary("$nestedFrames", typeof(List<DynamicStackFrame>));
 
@@ -209,16 +209,16 @@ namespace IronPython.Compiler.Ast {
                         // either a return or the body completing successfully).
                         AstUtils.Try(
                             ag.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
-                            Ast.Assign(noNestedException, AstUtils.Constant(true)),
+                            Ast.Assign(nestedException, AstUtils.Constant(false)),
                             body
                         ).Fault(
                         // fault
-                            Ast.Assign(noNestedException, AstUtils.Constant(false))
+                            Ast.Assign(nestedException, AstUtils.Constant(true))
                         )
                     ).Finally(
                         // if we had an exception save the line # that was last executing during the try
                         AstUtils.If(
-                            Ast.Not(noNestedException),
+                            nestedException,
                             ag.GetSaveLineNumberExpression(false)
                         ),
 
@@ -238,11 +238,18 @@ namespace IronPython.Compiler.Ast {
                             AstGenerator.GetHelperMethod("SetDynamicStackFrames"),
                             nestedFrames
                         ),
-                        ag.UpdateLineUpdated(true)
+
+                        // if we took an exception in the try block we have saved the line number.  Otherwise
+                        // we have no line number saved and will need to continue saving them if
+                        // other exceptions are thrown.
+                        AstUtils.If(                            
+                            nestedException,
+                            ag.UpdateLineUpdated(true)
+                        )
                     );
 
                     ag.FreeTemp(nestedFrames);
-                    ag.FreeTemp(noNestedException);
+                    ag.FreeTemp(nestedException);
                 } finally {
                     ag._isEmittingFinally = isEmitting;
                 }

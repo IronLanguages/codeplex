@@ -41,7 +41,6 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 using PyAst = IronPython.Compiler.Ast;
-using Tuple = Microsoft.Scripting.Tuple;
 
 namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
@@ -335,11 +334,11 @@ namespace IronPython.Runtime {
             ));
         }
 
-        public void EnsureModuleException(object key, PythonType baseType, IAttributesCollection dict, string name, string module) {
-            dict[SymbolTable.StringToId(name)] = GetOrCreateModuleState(
+        public PythonType EnsureModuleException(object key, PythonType baseType, IAttributesCollection dict, string name, string module) {
+            return (PythonType)(dict[SymbolTable.StringToId(name)] = GetOrCreateModuleState(
                 key,
                 () => PythonExceptions.CreateSubType(this, baseType, name, module, "")
-            );
+            ));
         }
 
         internal PythonOptions/*!*/ PythonOptions {
