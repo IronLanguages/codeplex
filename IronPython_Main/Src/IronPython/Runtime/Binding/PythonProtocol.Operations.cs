@@ -91,8 +91,8 @@ namespace IronPython.Runtime.Binding {
             } else {
                 res = operation.FallbackBinaryOperation(target, arg);
             }
-            
-            return BindingHelpers.AddDynamicTestAndDefer(operation, AddPythonBoxing(res), args, valInfo);
+
+            return BindingHelpers.AddDynamicTestAndDefer(operation, BindingHelpers.AddPythonBoxing(res), args, valInfo);
         }
 
         public static DynamicMetaObject/*!*/ Operation(UnaryOperationBinder/*!*/ operation, DynamicMetaObject arg) {
@@ -107,22 +107,24 @@ namespace IronPython.Runtime.Binding {
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(args);
 
             DynamicMetaObject res = null;
-
+            Type retType = typeof(object);
             switch (operation.Operation) {
                 case ExpressionType.UnaryPlus: 
-                    res = MakeUnaryOperation(operation, arg, Symbols.Positive);
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.Positive));
                     break;
                 case ExpressionType.Negate: 
-                    res = MakeUnaryOperation(operation, arg, Symbols.OperatorNegate); 
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorNegate)); 
                     break;
                 case ExpressionType.OnesComplement: 
-                    res = MakeUnaryOperation(operation, arg, Symbols.OperatorOnesComplement); 
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorOnesComplement)); 
                     break;
                 case ExpressionType.IsFalse:
                     res = MakeUnaryNotOperation(operation, arg);
+                    retType = typeof(bool);
                     break;
                 case ExpressionType.IsTrue:
                     res = PythonProtocol.ConvertToBool(operation, arg);
+                    retType = typeof(bool);
                     break;
                 default:
                     res = TypeError(operation, "unknown operation: " + operation.ToString(), args);
@@ -130,7 +132,7 @@ namespace IronPython.Runtime.Binding {
                 
             }
 
-            return BindingHelpers.AddDynamicTestAndDefer(operation, AddPythonBoxing(res), args, valInfo);
+            return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo, retType);
         }
 
         public static DynamicMetaObject/*!*/ Index(DynamicMetaObjectBinder/*!*/ operation, PythonIndexType index, params DynamicMetaObject[] args) {
@@ -146,7 +148,7 @@ namespace IronPython.Runtime.Binding {
 
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(args[0]);
 
-            DynamicMetaObject res = AddPythonBoxing(MakeIndexerOperation(operation, index, args));            
+            DynamicMetaObject res = BindingHelpers.AddPythonBoxing(MakeIndexerOperation(operation, index, args));            
 
             return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo);
         }
@@ -162,49 +164,55 @@ namespace IronPython.Runtime.Binding {
                 return operation.Defer(args);
             }
 
-            ValidationInfo valInfo = BindingHelpers.GetValidationInfo(args);
-
-            DynamicMetaObject res = AddPythonBoxing(MakeOperationRule(operation, args));
-
-            return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo);
-        }
-
-        private static DynamicMetaObject AddPythonBoxing(DynamicMetaObject res) {
-            if (res.Expression.Type.IsValueType) {
-                // Use Python boxing rules if we're return a value type
-                res = new DynamicMetaObject(
-                    AstUtils.Convert(res.Expression, typeof(object)),
-                    res.Restrictions
-                );
-            }
-            return res;
+            return MakeOperationRule(operation, args);
         }
 
         private static DynamicMetaObject/*!*/ MakeOperationRule(PythonOperationBinder/*!*/ operation, DynamicMetaObject/*!*/[]/*!*/ args) {
+            ValidationInfo valInfo = BindingHelpers.GetValidationInfo(args);
+            DynamicMetaObject res;
+
+            Type deferType = typeof(object);
             switch (NormalizeOperator(operation.Operation)) {
                 case PythonOperationKind.Documentation:
-                    return MakeDocumentationOperation(operation, args);
+                    res = BindingHelpers.AddPythonBoxing(MakeDocumentationOperation(operation, args));
+                    break;
                 case PythonOperationKind.MemberNames:
-                    return MakeMemberNamesOperation(operation, args);
+                    deferType = typeof(IList<string>);
+                    res = MakeMemberNamesOperation(operation, args);
+                    break;
                 case PythonOperationKind.CallSignatures:
-                    return MakeCallSignatureOperation(args[0], CompilerHelpers.GetMethodTargets(args[0].Value));
+                    res = BindingHelpers.AddPythonBoxing(MakeCallSignatureOperation(args[0], CompilerHelpers.GetMethodTargets(args[0].Value)));
+                    break;
                 case PythonOperationKind.IsCallable:
-                    return MakeIscallableOperation(operation, args);
+                    res = MakeIscallableOperation(operation, args);
+                    break;
                 case PythonOperationKind.Hash:
-                    return MakeHashOperation(operation, args[0]);
+                    res = MakeHashOperation(operation, args[0]);
+                    break;
                 case PythonOperationKind.Not:
-                    return MakeUnaryNotOperation(operation, args[0]);
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryNotOperation(operation, args[0]));
+                    break;
                 case PythonOperationKind.Contains:
-                    return MakeContainsOperation(operation, args);
+                    res = MakeContainsOperation(operation, args);
+                    break;
                 case PythonOperationKind.AbsoluteValue:
-                    return MakeUnaryOperation(operation, args[0], Symbols.AbsoluteValue);
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, args[0], Symbols.AbsoluteValue));
+                    break;
                 case PythonOperationKind.Compare:
-                    return MakeSortComparisonRule(args, operation, operation.Operation);
+                    res = MakeSortComparisonRule(args, operation, operation.Operation);
+                    Debug.Assert(res.LimitType == typeof(int));
+                    break;
                 case PythonOperationKind.GetEnumeratorForIteration:
-                    return MakeEnumeratorOperation(operation, args[0]);
+                    res = BindingHelpers.AddPythonBoxing(MakeEnumeratorOperation(operation, args[0]));
+                    break;
                 default:
-                    return MakeBinaryOperation(operation, args, operation.Operation, null);
+                    res = BindingHelpers.AddPythonBoxing(MakeBinaryOperation(operation, args, operation.Operation, null));
+                    break;
             }
+
+
+            return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo, deferType);
+
         }
 
         private static DynamicMetaObject MakeBinaryOperation(DynamicMetaObjectBinder operation, DynamicMetaObject/*!*/[] args, PythonOperationKind opStr, DynamicMetaObject errorSuggestion) {
@@ -275,8 +283,12 @@ namespace IronPython.Runtime.Binding {
                         // if(getItemRes == param1) return true
                                     Utils.If(
                                         Ast.Dynamic(
-                                            state.BinaryOperation(
-                                                ExpressionType.Equal
+                                            state.BinaryOperationRetType(
+                                                state.BinaryOperation(ExpressionType.Equal),
+                                                state.Convert(
+                                                    typeof(bool),
+                                                    ConversionResultKind.ExplicitCast
+                                                )
                                             ),
                                             typeof(bool),
                                             types[1].Expression,
@@ -325,7 +337,8 @@ namespace IronPython.Runtime.Binding {
                                         types[1].Expression,
                                         typeof(object)
                                     )
-                                )
+                                ),
+                                typeof(bool)
                             ),
                             BindingRestrictions.Combine(types)
                         );
@@ -371,7 +384,7 @@ namespace IronPython.Runtime.Binding {
                             typeof(PythonOps).GetMethod("TypeErrorForUnhashableObject"),
                             self.Expression
                         ),
-                        typeof(object)                        
+                        typeof(int)                        
                     ),
                     res.Restrictions
                 );
@@ -484,12 +497,21 @@ namespace IronPython.Runtime.Binding {
 
             } else if (self.Value is IEnumerator ||                                 // check for COM object (and fast check when we have values)
                        typeof(IEnumerator).IsAssignableFrom(self.GetLimitType())) { // check if we don't have a value
-                DynamicMetaObject ieres = self.Restrict(self.GetLimitType());
+                DynamicMetaObject ieres = new DynamicMetaObject(
+                    Ast.Convert(
+                        self.Expression,
+                        typeof(IEnumerator)
+                    ),
+                    self.Restrict(self.GetLimitType()).Restrictions
+                );
 
 #if !SILVERLIGHT
                 if (ComOps.IsComObject(self.Value)) {
                     ieres = new DynamicMetaObject(
-                         self.Expression,
+                        Expression.Convert(
+                             self.Expression,
+                             typeof(IEnumerator)
+                         ),
                          ieres.Restrictions.Merge(
                             BindingRestrictions.GetExpressionRestriction(
                                 Ast.TypeIs(self.Expression, typeof(IEnumerator))
@@ -503,7 +525,16 @@ namespace IronPython.Runtime.Binding {
             }
 
             ParameterExpression tmp = Ast.Parameter(typeof(IEnumerator), "enum");
-            DynamicMetaObject res = self.BindConvert(new ConversionBinder(BinderState.GetBinderState(operation), typeof(IEnumerator), ConversionResultKind.ExplicitTry));
+            IPythonConvertible pyConv = self as IPythonConvertible;
+            PythonConversionBinder convBinder = new PythonConversionBinder(BinderState.GetBinderState(operation), typeof(IEnumerator), ConversionResultKind.ExplicitTry);
+            
+            DynamicMetaObject res;
+            if (pyConv != null) {
+                res = pyConv.BindConvert(convBinder);
+            } else {
+                res = convBinder.Bind(self, new DynamicMetaObject[0]);
+            }
+
             return new DynamicMetaObject(                
                 Expression.Block(
                     new[] { tmp },
@@ -555,18 +586,23 @@ namespace IronPython.Runtime.Binding {
                     if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, AstUtils.Constant(0));
                     } else {
-                        notExpr = Ast.Dynamic(
-                            BinderState.GetBinderState(operation).Operation(
-                                PythonOperationKind.Compare
-                            ),
-                            typeof(int),
-                            notExpr,
-                            AstUtils.Constant(0)
-                        );
+                        notExpr = 
+                            Ast.Equal(
+                                Ast.Dynamic(
+                                    BinderState.GetBinderState(operation).Operation(
+                                        PythonOperationKind.Compare
+                                    ),
+                                    typeof(int),
+                                    notExpr,
+                                    AstUtils.Constant(0)
+                                ),
+                                AstUtils.Constant(0)                            
+                            );
                     }
                 }
             }
 
+            Debug.Assert(notExpr.Type == typeof(bool));
             return new DynamicMetaObject(
                 notExpr,
                 self.Restrictions.Merge(nonzero.Target.Restrictions.Merge(length.Target.Restrictions))
@@ -842,7 +878,7 @@ namespace IronPython.Runtime.Binding {
                 SlotOrFunction function = SlotOrFunction.GetSlotOrFunction(BinderState.GetBinderState(operation), Symbols.OperatorToSymbol(op), types);
 
                 // we don't do a coerce for in place operators if the lhs implements __iop__
-                if (!MakeOneCompareGeneric(function, false, types, MakeCompareReturn, bodyBuilder)) {
+                if (!MakeOneCompareGeneric(function, false, types, MakeCompareReturn, bodyBuilder, typeof(object))) {
                     // the method handles it and always returns a useful value.
                     return bodyBuilder.GetMetaObject(types);
                 }
@@ -871,21 +907,21 @@ namespace IronPython.Runtime.Binding {
 
                 if (rSlot != null) {
                     MakeSlotCall(BinderState.GetBinderState(operation), types, bodyBuilder, rSlot, true);
-                    bodyBuilder.FinishCondition(MakeBinaryThrow(operation, op, types).Expression);
+                    bodyBuilder.FinishCondition(MakeBinaryThrow(operation, op, types).Expression, typeof(object));
                 } else if (MakeOneTarget(BinderState.GetBinderState(operation), rTarget, rSlot, bodyBuilder, false, types)) {
                     // need to fallback to throwing or coercion
-                    bodyBuilder.FinishCondition(MakeBinaryThrow(operation, op, types).Expression);
+                    bodyBuilder.FinishCondition(MakeBinaryThrow(operation, op, types).Expression, typeof(object));
                 }
             }
 
             return bodyBuilder.GetMetaObject(types);
         }
 
-        private static void MakeCompareReturn(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ retValue, bool isReverse) {
+        private static void MakeCompareReturn(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ retValue, bool isReverse, Type retType) {
             if (retCondition != null) {
                 bodyBuilder.AddCondition(retCondition, retValue);
             } else {
-                bodyBuilder.FinishCondition(retValue);
+                bodyBuilder.FinishCondition(retValue, retType);
             }
         }
 
@@ -893,14 +929,14 @@ namespace IronPython.Runtime.Binding {
         /// Delegate for finishing the comparison.   This takes in a condition and a return value and needs to update the ConditionalBuilder
         /// with the appropriate resulting body.  The condition may be null.
         /// </summary>
-        private delegate void ComparisonHelper(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ retValue, bool isReverse);
+        private delegate void ComparisonHelper(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ retValue, bool isReverse, Type retType);
 
         /// <summary>
         /// Helper to handle a comparison operator call.  Checks to see if the call can
         /// return NotImplemented and allows the caller to modify the expression that
         /// is ultimately returned (e.g. to turn __cmp__ into a bool after a comparison)
         /// </summary>
-        private static bool MakeOneCompareGeneric(SlotOrFunction/*!*/ target, bool reverse, DynamicMetaObject/*!*/[]/*!*/ types, ComparisonHelper returner, ConditionalBuilder/*!*/ bodyBuilder) {
+        private static bool MakeOneCompareGeneric(SlotOrFunction/*!*/ target, bool reverse, DynamicMetaObject/*!*/[]/*!*/ types, ComparisonHelper returner, ConditionalBuilder/*!*/ bodyBuilder, Type retType) {
             if (target == SlotOrFunction.Empty || !target.Success) return true;
 
             ParameterExpression tmp;
@@ -923,14 +959,16 @@ namespace IronPython.Runtime.Binding {
                         AstUtils.Constant(PythonOps.NotImplemented)
                     ),
                     tmp,
-                    reverse);
+                    reverse,
+                    retType);
                 return true;
             } else {
                 returner(
                     bodyBuilder,
                     null,
                     target.Target.Expression,
-                    reverse
+                    reverse,
+                    retType
                 );
                 return false;
             }
@@ -961,7 +999,7 @@ namespace IronPython.Runtime.Binding {
 
                 return true;
             } else {
-                bodyBuilder.FinishCondition(target.Target.Expression);
+                bodyBuilder.FinishCondition(target.Target.Expression, typeof(object));
                 return false;
             }
         }
@@ -1084,7 +1122,7 @@ namespace IronPython.Runtime.Binding {
                         returnTransform(
                             Ast.Dynamic(
                                 state.Operation(op | PythonOperationKind.DisableCoerce),
-                                typeof(object),
+                                op == PythonOperationKind.Compare ? typeof(int) : typeof(object),
                                 reverse ? CoerceTwo(coerceTuple) : CoerceOne(coerceTuple),
                                 reverse ? CoerceOne(coerceTuple) : CoerceTwo(coerceTuple)
                             )
@@ -1140,8 +1178,8 @@ namespace IronPython.Runtime.Binding {
             SlotOrFunction.GetCombinedTargets(cmp, rcmp, out cmp, out rcmp);
 
             // first try __op__ or __rop__ and return the value
-            if (MakeOneCompareGeneric(fop, false, types, MakeCompareReturn, bodyBuilder)) {
-                if (MakeOneCompareGeneric(rop, true, types, MakeCompareReturn, bodyBuilder)) {
+            if (MakeOneCompareGeneric(fop, false, types, MakeCompareReturn, bodyBuilder, typeof(object))) {
+                if (MakeOneCompareGeneric(rop, true, types, MakeCompareReturn, bodyBuilder, typeof(object))) {
 
                     // then try __cmp__ or __rcmp__ and compare the resulting int appropriaetly
                     if (ShouldCoerce(state, opString, xType, yType, true)) {
@@ -1154,10 +1192,11 @@ namespace IronPython.Runtime.Binding {
                         cmp,
                         false,
                         types,
-                        delegate(ConditionalBuilder builder, Expression retCond, Expression expr, bool reverse) {
-                            MakeCompareTest(op, builder, retCond, expr, reverse);
+                        delegate(ConditionalBuilder builder, Expression retCond, Expression expr, bool reverse, Type retType) {
+                            MakeCompareTest(op, builder, retCond, expr, reverse, retType);
                         },
-                        bodyBuilder)) {
+                        bodyBuilder,
+                        typeof(object))) {
 
                         if (ShouldCoerce(state, opString, yType, xType, true)) {
                             DoCoerce(state, bodyBuilder, PythonOperationKind.Compare, rTypes, true, delegate(Expression e) {
@@ -1169,11 +1208,12 @@ namespace IronPython.Runtime.Binding {
                             rcmp,
                             true,
                             types,
-                            delegate(ConditionalBuilder builder, Expression retCond, Expression expr, bool reverse) {
-                                MakeCompareTest(op, builder, retCond, expr, reverse);
+                            delegate(ConditionalBuilder builder, Expression retCond, Expression expr, bool reverse, Type retType) {
+                                MakeCompareTest(op, builder, retCond, expr, reverse, retType);
                             },
-                            bodyBuilder)) {
-                            bodyBuilder.FinishCondition(MakeFallbackCompare(operation, op, types));
+                            bodyBuilder,
+                            typeof(object))) {
+                            bodyBuilder.FinishCondition(BindingHelpers.AddPythonBoxing(MakeFallbackCompare(operation, op, types)), typeof(object));
                         }
                     }
                 }
@@ -1254,12 +1294,12 @@ namespace IronPython.Runtime.Binding {
                     DoCoerce(state, bodyBuilder, PythonOperationKind.Compare, types, false);
                 }
 
-                more = more && MakeOneCompareGeneric(cTarget, false, types, MakeCompareReverse, bodyBuilder);
+                more = more && MakeOneCompareGeneric(cTarget, false, types, MakeCompareReverse, bodyBuilder, typeof(int));
 
                 if (xType != TypeCache.OldInstance) {
                     // try __cmp__ backwards for new-style classes and don't fallback to
                     // rich comparisons if available
-                    more = more && MakeOneCompareGeneric(rcTarget, true, types, MakeCompareReverse, bodyBuilder);
+                    more = more && MakeOneCompareGeneric(rcTarget, true, types, MakeCompareReverse, bodyBuilder, typeof(int));
                     tryRich = false;
                 }
             }
@@ -1269,16 +1309,16 @@ namespace IronPython.Runtime.Binding {
                 // because they don't give a definitive answer even if they return bool.  Only if they
                 // return true do we know to return 0, -1, or 1.
                 // try eq
-                MakeOneCompareGeneric(eqTarget, false, types, MakeCompareToZero, bodyBuilder);
-                MakeOneCompareGeneric(reqTarget, true, types, MakeCompareToZero, bodyBuilder);
+                MakeOneCompareGeneric(eqTarget, false, types, MakeCompareToZero, bodyBuilder, typeof(int));
+                MakeOneCompareGeneric(reqTarget, true, types, MakeCompareToZero, bodyBuilder, typeof(int));
 
                 // try less than & reverse
-                MakeOneCompareGeneric(ltTarget, false, types, MakeCompareToNegativeOne, bodyBuilder);
-                MakeOneCompareGeneric(rgtTarget, true, types, MakeCompareToNegativeOne, bodyBuilder);
+                MakeOneCompareGeneric(ltTarget, false, types, MakeCompareToNegativeOne, bodyBuilder, typeof(int));
+                MakeOneCompareGeneric(rgtTarget, true, types, MakeCompareToNegativeOne, bodyBuilder, typeof(int));
 
                 // try greater than & reverse
-                MakeOneCompareGeneric(gtTarget, false, types, MakeCompareToOne, bodyBuilder);
-                MakeOneCompareGeneric(rltTarget, true, types, MakeCompareToOne, bodyBuilder);
+                MakeOneCompareGeneric(gtTarget, false, types, MakeCompareToOne, bodyBuilder, typeof(int));
+                MakeOneCompareGeneric(rltTarget, true, types, MakeCompareToOne, bodyBuilder, typeof(int));
             }
 
             if (xType != yType) {
@@ -1287,7 +1327,7 @@ namespace IronPython.Runtime.Binding {
                     DoCoerce(state, bodyBuilder, PythonOperationKind.Compare, types, false);
                 }
 
-                more = more && MakeOneCompareGeneric(cTarget, false, types, MakeCompareReverse, bodyBuilder);
+                more = more && MakeOneCompareGeneric(cTarget, false, types, MakeCompareReverse, bodyBuilder, typeof(int));
 
                 if (more && ShouldCoerce(state, op, types[1], types[0], true)) {
                     // try __coerce__ first
@@ -1296,12 +1336,12 @@ namespace IronPython.Runtime.Binding {
                     });
                 }
 
-                more = more && MakeOneCompareGeneric(rcTarget, true, types, MakeCompareReverse, bodyBuilder);
+                more = more && MakeOneCompareGeneric(rcTarget, true, types, MakeCompareReverse, bodyBuilder, typeof(int));
             }
 
             if (more) {
                 // fall back to compare types
-                bodyBuilder.FinishCondition(MakeFallbackCompare(operation, op, types));
+                bodyBuilder.FinishCondition(MakeFallbackCompare(operation, op, types), typeof(int));
             }
 
             return bodyBuilder.GetMetaObject(types);
@@ -1351,15 +1391,15 @@ namespace IronPython.Runtime.Binding {
             return null;
         }
 
-        private static void MakeCompareToZero(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse) {
+        private static void MakeCompareToZero(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse, Type retType) {
             MakeValueCheck(0, expr, bodyBuilder, retCondition);
         }
 
-        private static void MakeCompareToOne(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse) {
+        private static void MakeCompareToOne(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse, Type retType) {
             MakeValueCheck(1, expr, bodyBuilder, retCondition);
         }
 
-        private static void MakeCompareToNegativeOne(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse) {
+        private static void MakeCompareToNegativeOne(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse, Type retType) {
             MakeValueCheck(-1, expr, bodyBuilder, retCondition);
         }
 
@@ -1394,17 +1434,17 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static void MakeCompareReverse(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse) {
+        private static void MakeCompareReverse(ConditionalBuilder/*!*/ bodyBuilder, Expression retCondition, Expression/*!*/ expr, bool reverse, Type retType) {
             Expression res = expr;
             if (reverse) {
                 res = ReverseCompareValue(expr);
             }
 
-            MakeCompareReturn(bodyBuilder, retCondition, res, reverse);
+            MakeCompareReturn(bodyBuilder, retCondition, res, reverse, retType);
         }
 
-        private static void MakeCompareTest(PythonOperationKind op, ConditionalBuilder/*!*/ bodyBuilder, Expression retCond, Expression/*!*/ expr, bool reverse) {
-            MakeCompareReturn(bodyBuilder, retCond, GetCompareTest(op, expr, reverse), reverse);
+        private static void MakeCompareTest(PythonOperationKind op, ConditionalBuilder/*!*/ bodyBuilder, Expression retCond, Expression/*!*/ expr, bool reverse, Type retType) {
+            MakeCompareReturn(bodyBuilder, retCond, GetCompareTest(op, expr, reverse), reverse, retType);
         }
 
         private static Expression/*!*/ MakeFallbackCompare(DynamicMetaObjectBinder/*!*/ binder, PythonOperationKind op, DynamicMetaObject[] types) {
@@ -1731,7 +1771,7 @@ namespace IronPython.Runtime.Binding {
                         res = info.AddWarning(Ast.Constant(BinderState.Context), res);
                     }
                 } else if (customFailure == null || (res = customFailure()) == null) {
-                    res = DefaultBinder.MakeError(resolver.MakeInvalidParametersError(target), BindingRestrictions.Combine(ConvertArgs(args)));
+                    res = DefaultBinder.MakeError(resolver.MakeInvalidParametersError(target), BindingRestrictions.Combine(ConvertArgs(args)), typeof(object));
                 }
 
                 return res;
@@ -1974,15 +2014,22 @@ namespace IronPython.Runtime.Binding {
                     if (args[1].GetLimitType() != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.Context, Symbols.Index, out indexSlot)) {
                         args[1] = new DynamicMetaObject(
                             Ast.Dynamic(
-                                binder.InvokeNone,
+                                binder.Convert(
+                                    typeof(int),
+                                    ConversionResultKind.ExplicitCast
+                                ),
                                 typeof(int),
-                                AstUtils.Constant(binder.Context),
-                                Binders.Get(
-                                    AstUtils.Constant(binder.Context),
-                                    binder,
+                                Ast.Dynamic(                            
+                                    binder.InvokeNone,
                                     typeof(object),
-                                    "__index__",
-                                    args[1].Expression
+                                    AstUtils.Constant(binder.Context),
+                                    Binders.Get(
+                                        AstUtils.Constant(binder.Context),
+                                        binder,
+                                        typeof(object),
+                                        "__index__",
+                                        args[1].Expression
+                                    )
                                 )
                             ),
                             BindingRestrictions.Empty
@@ -2229,15 +2276,18 @@ namespace IronPython.Runtime.Binding {
             Debug.Assert(value.Type == typeof(int));
 
             Expression zero = AstUtils.Constant(0);
+            Expression res;
             switch (reverse ? OperatorToReverseOperator(op) : op) {
-                case PythonOperationKind.Equal: return Ast.Equal(value, zero);
-                case PythonOperationKind.NotEqual: return Ast.NotEqual(value, zero);
-                case PythonOperationKind.GreaterThan: return Ast.GreaterThan(value, zero); ;
-                case PythonOperationKind.GreaterThanOrEqual: return Ast.GreaterThanOrEqual(value, zero);
-                case PythonOperationKind.LessThan: return Ast.LessThan(value, zero);
-                case PythonOperationKind.LessThanOrEqual: return Ast.LessThanOrEqual(value, zero);
+                case PythonOperationKind.Equal: res = Ast.Equal(value, zero); break;
+                case PythonOperationKind.NotEqual: res = Ast.NotEqual(value, zero); break;
+                case PythonOperationKind.GreaterThan: res = Ast.GreaterThan(value, zero); break;
+                case PythonOperationKind.GreaterThanOrEqual: res = Ast.GreaterThanOrEqual(value, zero); break;
+                case PythonOperationKind.LessThan: res = Ast.LessThan(value, zero); break;
+                case PythonOperationKind.LessThanOrEqual: res = Ast.LessThanOrEqual(value, zero); break;
                 default: throw new InvalidOperationException();
             }
+
+            return BindingHelpers.AddPythonBoxing(res);
         }
 
         private static MethodInfo/*!*/ GetComparisonFallbackMethod(PythonOperationKind op) {
@@ -2365,7 +2415,8 @@ namespace IronPython.Runtime.Binding {
                             AstUtils.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(NormalizeOperator(op)))),
                             AstUtils.Convert(args[0].Expression, typeof(object)),
                             AstUtils.Convert(args[1].Expression, typeof(object))
-                        )
+                        ),
+                        typeof(object)
                     ),
                     BindingRestrictions.Combine(args)
                 );
@@ -2411,7 +2462,8 @@ namespace IronPython.Runtime.Binding {
                             typeof(String).GetMethod("Format", typeArgs),
                             formatArgs
                         )
-                    )
+                    ),
+                    typeof(object)
                 );
 
                 return new DynamicMetaObject(

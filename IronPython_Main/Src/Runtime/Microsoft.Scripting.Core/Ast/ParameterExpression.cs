@@ -21,9 +21,7 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>
-    /// Base class for specialized parameter expressions.  This version only holds onto the
-    /// name which all subclasses need.  Specialized subclasses provide the type and by ref
-    /// flags.
+    /// Represents a named parameter expression.
     /// </summary>
 #if !SILVERLIGHT
     [DebuggerTypeProxy(typeof(Expression.ParameterExpressionProxy))]
@@ -166,29 +164,29 @@ namespace Microsoft.Linq.Expressions {
     public partial class Expression {
 
         /// <summary>
-        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// Creates a <see cref="ParameterExpression" /> node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
-        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        /// <returns>A <see cref="ParameterExpression" /> node with the specified name and type.</returns>
         public static ParameterExpression Parameter(Type type) {
             return Parameter(type, null);
         }
 
         /// <summary>
-        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// Creates a <see cref="ParameterExpression" /> node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
-        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        /// <returns>A <see cref="ParameterExpression" /> node with the specified name and type.</returns>
         public static ParameterExpression Variable(Type type) {
             return Variable(type, null);
         }
 
         /// <summary>
-        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// Creates a <see cref="ParameterExpression" /> node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
         /// <param name="name">The name of the parameter or variable, used for debugging or pretty printing purpose only.</param>
-        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        /// <returns>A <see cref="ParameterExpression" /> node with the specified name and type.</returns>
         public static ParameterExpression Parameter(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
 
@@ -205,11 +203,11 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// Creates a ParameterExpression node that can be used to identify a parameter or a variable in an expression tree.
+        /// Creates a <see cref="ParameterExpression" /> node that can be used to identify a parameter or a variable in an expression tree.
         /// </summary>
         /// <param name="type">The type of the parameter or variable.</param>
         /// <param name="name">The name of the parameter or variable, used for debugging or pretty printing purpose only.</param>
-        /// <returns>A ParameterExpression node with the specified name and type.</returns>
+        /// <returns>A <see cref="ParameterExpression" /> node with the specified name and type.</returns>
         public static ParameterExpression Variable(Type type, string name) {
             ContractUtils.RequiresNotNull(type, "type");
             ContractUtils.Requires(type != typeof(void), "type", Strings.ArgumentCannotBeOfTypeVoid);

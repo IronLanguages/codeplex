@@ -67,11 +67,15 @@ namespace IronPython.Runtime.Binding {
                 }
             }
 
+            DynamicMetaObject res;
             if (IsStandardDotNetType(call)) {
-                return MakeStandardDotNetTypeCall(call, codeContext, args);
+                res = MakeStandardDotNetTypeCall(call, codeContext, args);
+            } else {
+                res = MakePythonTypeCall(call, codeContext, args);
             }
 
-            return MakePythonTypeCall(call, codeContext, args);
+            return BindingHelpers.AddPythonBoxing(res);
+
         }
 
         /// <summary>

@@ -748,7 +748,8 @@ namespace IronPython.Runtime.Binding {
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
                     AstUtils.Constant(type.Name),
                     AstUtils.Constant(SymbolTable.StringToId(name))
-                )
+                ),
+                typeof(object)
             );
         }
 
@@ -975,6 +976,8 @@ namespace IronPython.Runtime.Binding {
                     _result.Expression,
                     _target.Restrict(Instance.GetType()).Restrictions.Merge(_result.Restrictions)
                 );
+                
+                Debug.Assert(!_result.Expression.Type.IsValueType);
 
                 return BindingHelpers.AddDynamicTestAndDefer(
                     _info.Action,
@@ -1126,9 +1129,12 @@ namespace IronPython.Runtime.Binding {
                                     info.Args[0].Expression,
                                     AstUtils.Convert(tmp, typeof(object))
                                 ),
-                                tmp
+                                Ast.Convert(
+                                    tmp,
+                                    typeof(object)
+                                )
                             ),
-                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnsetableProperty")), tmp.Type)
+                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnsetableProperty")), typeof(object))
                         )
                     )
                 );
@@ -1158,7 +1164,7 @@ namespace IronPython.Runtime.Binding {
                         AstUtils.Convert(tmp, typeof(object))
                     )
                 ),
-                tmp
+                AstUtils.Convert(tmp, typeof(object))
             );
             return null;
         }
@@ -1178,7 +1184,8 @@ namespace IronPython.Runtime.Binding {
                         Ast.New(
                             typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                             AstUtils.Constant("can't delete __class__ attribute")
-                        )
+                        ),
+                        typeof(object)
                     ),
                     self.Restrictions
                 );

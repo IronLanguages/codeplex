@@ -788,23 +788,9 @@ al_getattributeinst = MyArrayList_getattribute()
             }
 
             foreach (object inst in convertableObjects) {
+                // These may be invalid according to the DLR (wrong ret type) but currently work today.
                 site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(string)));
                 AreEqual(site.Target(site, inst), "Python");
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(int), 23));
-                AreEqual(site.Target(site, inst), 42);
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(double), 23.0));
-                AreEqual(site.Target(site, inst), 42.0);
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(bool), true));
-                AreEqual(site.Target(site, inst), false);
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(Complex64), new Complex64(0, 23)));
-                AreEqual(site.Target(site, inst), new Complex64(0, 42));
-                
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(BigInteger), (BigInteger)23));
-                AreEqual(site.Target(site, inst), (Microsoft.Scripting.Math.BigInteger)42);
 
                 var dlgsiteo = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(Func<object, object>), null));
                 VerifyFunction(new[] { "foo" }, new string[0], ((Func<object, object>)(dlgsiteo.Target(dlgsiteo, inst)))("foo"));
@@ -839,20 +825,9 @@ al_getattributeinst = MyArrayList_getattribute()
             }
 
             foreach (object inst in unconvertableObjects) {
+                // These may be invalid according to the DLR (wrong ret type) but currently work today.
                 site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(string)));
                 AreEqual(site.Target(site, inst), "Converted");
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(int), 23));
-                AreEqual(site.Target(site, inst), 23);
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(double), 23.0));
-                AreEqual(site.Target(site, inst), 23.0);
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(Complex64), new Complex64(0, 23.0)));
-                AreEqual(site.Target(site, inst), new Complex64(0, 23.0));
-
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(bool), true));
-                AreEqual(site.Target(site, inst), true);
 
                 site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(Microsoft.Scripting.Math.BigInteger), (BigInteger)23));
                 AreEqual(site.Target(site, inst), (BigInteger)23);
