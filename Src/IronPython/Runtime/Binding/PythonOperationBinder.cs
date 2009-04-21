@@ -15,6 +15,7 @@
 
 using System; using Microsoft;
 using System.Collections;
+using System.Collections.Generic;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -260,6 +261,23 @@ namespace IronPython.Runtime.Binding {
                 return _operation;
             }
         }
+
+        /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public /*override*/ Type ReturnType {
+            get {
+                switch (Operation & (~PythonOperationKind.DisableCoerce)) {
+                    case PythonOperationKind.Compare: return typeof(int);
+                    case PythonOperationKind.MemberNames: return typeof(IList<string>);
+                    case PythonOperationKind.IsCallable: return typeof(bool);
+                    case PythonOperationKind.Hash: return typeof(int);
+                    case PythonOperationKind.Contains: return typeof(bool);
+                }
+                return typeof(object); 
+            }
+        }
+
 
         public override int GetHashCode() {
             return base.GetHashCode() ^ _state.Binder.GetHashCode() ^ _operation.GetHashCode();

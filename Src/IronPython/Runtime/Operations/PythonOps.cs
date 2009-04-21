@@ -441,8 +441,8 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeError("bad operand type for unary ~");
         }
 
-        public static object Not(object o) {
-            return IsTrue(o) ? ScriptingRuntimeHelpers.False : ScriptingRuntimeHelpers.True;
+        public static bool Not(object o) {
+            return !IsTrue(o);
         }
 
         public static object Is(object x, object y) {
@@ -2806,6 +2806,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         public static bool SlotTryGetBoundValue(CodeContext/*!*/ context, PythonTypeSlot/*!*/ slot, object instance, PythonType owner, out object value) {
+            Debug.Assert(slot != null);
             return slot.TryGetValue(context, instance, owner, out value);
         }
 
@@ -3075,20 +3076,24 @@ namespace IronPython.Runtime.Operations {
             return null;
         }
 
-        public static void OldClassSetBases(OldClass oc, object value) {
+        public static object OldClassSetBases(OldClass oc, object value) {
             oc.SetBases(value);
+            return value;
         }
         
-        public static void OldClassSetName(OldClass oc, object value) {
+        public static object OldClassSetName(OldClass oc, object value) {
             oc.SetName(value);
+            return value;
         }
 
-        public static void OldClassSetDictionary(OldClass oc, object value) {
+        public static object OldClassSetDictionary(OldClass oc, object value) {
             oc.SetDictionary(value);
+            return value;
         }
 
-        public static void OldClassSetNameHelper(OldClass oc, SymbolId name, object value) {
+        public static object OldClassSetNameHelper(OldClass oc, SymbolId name, object value) {
             oc.SetNameHelper(name, value);
+            return value;
         }
 
         public static bool OldClassTryLookupInit(OldClass oc, object inst, out object ret) {
@@ -3136,12 +3141,14 @@ namespace IronPython.Runtime.Operations {
             return instance.GetBoundMember(context, name);
         }
         
-        public static void OldInstanceDictionarySetExtraValue(object dict, int index, object value) {
+        public static object OldInstanceDictionarySetExtraValue(object dict, int index, object value) {
             ((CustomOldClassDictionaryStorage)dict).SetExtraValue(index, value);
+            return value;
         }
 
-        public static bool OldClassDeleteMember(CodeContext context, OldClass self, SymbolId name) {
-            return self.DeleteCustomMember(context, name);
+        public static object OldClassDeleteMember(CodeContext context, OldClass self, SymbolId name) {
+            self.DeleteCustomMember(context, name);
+            return null;
         }
 
         public static bool OldClassTryLookupOneSlot(OldClass self, SymbolId name, out object value) {
@@ -3152,22 +3159,26 @@ namespace IronPython.Runtime.Operations {
             return self.TryGetBoundCustomMember(context, name, out value);
         }
 
-        public static void OldInstanceSetCustomMember(CodeContext context, OldInstance self, SymbolId name, object value) {
+        public static object OldInstanceSetCustomMember(CodeContext context, OldInstance self, SymbolId name, object value) {
             self.SetCustomMember(context, name, value);
+            return value;
         }
 
-        public static bool OldInstanceDeleteCustomMember(CodeContext context, OldInstance self, SymbolId name) {
-            return self.DeleteCustomMember(context, name);
+        public static object OldInstanceDeleteCustomMember(CodeContext context, OldInstance self, SymbolId name) {
+            self.DeleteCustomMember(context, name);
+            return null;
         }
 
         #endregion
 
-        public static void PythonTypeSetCustomMember(CodeContext context, PythonType self, SymbolId name, object value) {
+        public static object PythonTypeSetCustomMember(CodeContext context, PythonType self, SymbolId name, object value) {
             self.SetCustomMember(context, name, value);
+            return value;
         }
 
-        public static bool PythonTypeDeleteCustomMember(CodeContext context, PythonType self, SymbolId name) {
-            return self.DeleteCustomMember(context, name);
+        public static object PythonTypeDeleteCustomMember(CodeContext context, PythonType self, SymbolId name) {
+            self.DeleteCustomMember(context, name);
+            return null;
         }
 
         public static bool IsPythonType(PythonType type) {
@@ -3295,7 +3306,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static DynamicMetaObjectBinder MakeComboAction(CodeContext/*!*/ context, DynamicMetaObjectBinder opBinder, DynamicMetaObjectBinder convBinder) {
-            return GetBinderState(context).BinaryOperationRetType((PythonBinaryOperationBinder)opBinder, (ConversionBinder)convBinder);
+            return GetBinderState(context).BinaryOperationRetType((PythonBinaryOperationBinder)opBinder, (PythonConversionBinder)convBinder);
         }
 
         public static DynamicMetaObjectBinder MakeInvokeAction(CodeContext/*!*/ context, CallSignature signature) {
@@ -3315,6 +3326,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static DynamicMetaObjectBinder MakeConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
+            return GetBinderState(context).Convert(type, kind);
+        }
+
+        public static DynamicMetaObjectBinder MakeTryConversionAction(CodeContext/*!*/ context, Type type, ConversionResultKind kind) {
             return GetBinderState(context).Convert(type, kind);
         }
 

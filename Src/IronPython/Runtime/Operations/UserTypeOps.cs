@@ -172,11 +172,11 @@ namespace IronPython.Runtime.Operations {
             return dict[name] = value;
         }
 
-        public static void RemoveDictionaryValue(IPythonObject self, SymbolId name) {
+        public static object RemoveDictionaryValue(IPythonObject self, SymbolId name) {
             IAttributesCollection dict = self.Dict;
             if (dict != null) {
                 if (dict.Remove(name)) {
-                    return;
+                    return null;
                 }
             }
 
