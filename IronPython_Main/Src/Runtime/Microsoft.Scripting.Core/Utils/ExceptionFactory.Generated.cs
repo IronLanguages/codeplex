@@ -882,10 +882,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "Method '{0}' is not defined for type '{1}'"
+        /// A string like  "Method '{0}' declared on type '{1}' cannot be called with instance of type '{2}'"
         /// </summary>
-        internal static string MethodNotDefinedForType(object p0, object p1) {
-            return FormatString("Method '{0}' is not defined for type '{1}'", p0, p1);
+        internal static string InstanceAndMethodTypeMismatch(object p0, object p1, object p2) {
+            return FormatString("Method '{0}' declared on type '{1}' cannot be called with instance of type '{2}'", p0, p1, p2);
         }
 
         /// <summary>
@@ -1940,10 +1940,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// ArgumentException with message like "Method '{0}' is not defined for type '{1}'"
+        /// ArgumentException with message like "Method '{0}' declared on type '{1}' cannot be called with instance of type '{2}'"
         /// </summary>
-        internal static Exception MethodNotDefinedForType(object p0, object p1) {
-            return new ArgumentException(Strings.MethodNotDefinedForType(p0, p1));
+        internal static Exception InstanceAndMethodTypeMismatch(object p0, object p1, object p2) {
+            return new ArgumentException(Strings.InstanceAndMethodTypeMismatch(p0, p1, p2));
         }
 
         /// <summary>

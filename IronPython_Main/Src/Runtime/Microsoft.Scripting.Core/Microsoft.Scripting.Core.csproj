@@ -231,7 +231,6 @@
     <Compile Include="Utils\TrueReadOnlyCollection.cs" />
     <Compile Include="Utils\TypeExtensions.cs" />
     <Compile Include="Stubs.cs" />
-    <Compile Include="Utils\WeakUniqueSet.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="Microsoft.Scripting.ExtensionAttribute.csproj">
