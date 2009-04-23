@@ -30,7 +30,6 @@ def test_sanity():
     AssertErrorWithMessage(TypeError, "Combine() takes at least 1 argument (0 given)", md.Combine)
     md.Combine(md)
 
-
     x = BindingTestClass.Bind("Hello")
     Assert(x == "Hello")
     x = BindingTestClass.Bind(10)

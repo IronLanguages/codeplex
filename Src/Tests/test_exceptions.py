@@ -49,45 +49,12 @@ if is_cli or is_silverlight:
 if is_cli or is_silverlight:
     def test_raise():
         try:
-            def Raise1():
-                raise "some string"
-            
-            try:
-                Raise1()
-                Assert(False, "FAILED! Should have thrown string!")
-            except Exception, e:
-                Assert(False, "FAILED! Should not have caught string!")
-        except "some string":
-            pass
-        
-        try:
-            def Raise2():
-                raise "some string"
-            try:
-                Raise2()
-                Assert(False, "FAILED! Should have caught string!")
-            except "some string":
-                pass
-        except Exception, e:
-            Assert(False, "FAILED!")
-        
-        try:
              Fail("Message")
         except AssertionError, e:
              AreEqual(e.__str__(), e.args[0])
         else:
             Fail("Expected exception")
         
-        try:
-            def Raise3():
-                raise "some string"
-            try:
-                Raise3()
-                Assert(False, "FAILED! Should have thrown string!")
-            except "NOT some string":
-                Assert(False, "FAILED! Should not have caught this string!")
-        except "some string":
-            pass
 
 def test_bigint_division():
     def divide(a, b):
@@ -293,13 +260,6 @@ if is_cli or is_silverlight:
         # /BUG
         
         
-        # BUG 424 except "string", <data>
-        try:
-            raise "foo", 32
-        except "foo", X:
-            Assert(X == 32)
-        # /BUG
-        
         # BUG 393 exceptions throw when bad value passed to except
         try:
             try:
@@ -329,9 +289,9 @@ if is_cli or is_silverlight:
         
         # BUG 481 Trying to pass raise in Traceback should cause an error until it is implemented
         try:
-            raise "BadTraceback", "somedata", "a string is not a traceback"
+            raise StopIteration("BadTraceback"), "somedata", "a string is not a traceback"
             Assert (False, "fell through raise for some reason")
-        except "BadTraceback":
+        except StopIteration:
             Assert(False)
         except TypeError:
             pass
@@ -345,8 +305,8 @@ if is_cli or is_silverlight:
                 for name in ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']:
                     Assert(name in x, name)
                 try:
-                    raise "foo", "Msg", sys.exc_traceback
-                except "foo", X:
+                    raise Exception("foo"), "Msg", sys.exc_traceback
+                except Exception, X:
                     pass
         
                           
@@ -901,13 +861,10 @@ def test_deprecated_string_exception():
     except:
         pass
     m = w.finish()
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21909
-    if is_cli or is_silverlight:
-        AreEqual(len(m), 1)
-        AreEqual(m[0].category, DeprecationWarning)
-        AreEqual(m[0].message, 'raising a string exception is deprecated')
-    else:
-        AreEqual(len(m), 0)
+    try:
+        raise 'foo'
+    except TypeError, e:
+        print e.message
     
 
 def test_nested_try():

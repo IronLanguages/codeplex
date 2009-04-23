@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Binding {
                 case ExpressionType.LessThanOrEqual: opString = PythonOperationKind.LessThanOrEqual; break;
                 case ExpressionType.NotEqual: opString = PythonOperationKind.NotEqual; break;
             }
-            
+
             DynamicMetaObject res = null;
             if (opString != null) {
                 res = MakeBinaryOperation(operation, args, opString.Value, errorSuggestion);
@@ -109,14 +109,14 @@ namespace IronPython.Runtime.Binding {
             DynamicMetaObject res = null;
             Type retType = typeof(object);
             switch (operation.Operation) {
-                case ExpressionType.UnaryPlus: 
+                case ExpressionType.UnaryPlus:
                     res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.Positive));
                     break;
-                case ExpressionType.Negate: 
-                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorNegate)); 
+                case ExpressionType.Negate:
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorNegate));
                     break;
-                case ExpressionType.OnesComplement: 
-                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorOnesComplement)); 
+                case ExpressionType.OnesComplement:
+                    res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorOnesComplement));
                     break;
                 case ExpressionType.IsFalse:
                     res = MakeUnaryNotOperation(operation, arg);
@@ -129,7 +129,7 @@ namespace IronPython.Runtime.Binding {
                 default:
                     res = TypeError(operation, "unknown operation: " + operation.ToString(), args);
                     break;
-                
+
             }
 
             return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo, retType);
@@ -148,7 +148,7 @@ namespace IronPython.Runtime.Binding {
 
             ValidationInfo valInfo = BindingHelpers.GetValidationInfo(args[0]);
 
-            DynamicMetaObject res = BindingHelpers.AddPythonBoxing(MakeIndexerOperation(operation, index, args));            
+            DynamicMetaObject res = BindingHelpers.AddPythonBoxing(MakeIndexerOperation(operation, index, args));
 
             return BindingHelpers.AddDynamicTestAndDefer(operation, res, args, valInfo);
         }
@@ -250,80 +250,77 @@ namespace IronPython.Runtime.Binding {
             } else {
                 RestrictTypes(types);
 
-                ParameterExpression curIndex = Ast.Variable(typeof(int), "count");
-                sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.GetItem, types[0], new DynamicMetaObject(curIndex, BindingRestrictions.Empty));
+                sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iterator, types[0]);
                 if (sf.Success) {
-                    // defines __getitem__, need to loop over the indexes and see if we match
-
-                    ParameterExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
-                    ParameterExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
-
-                    LabelTarget target = Ast.Label();
+                    // iterate using __iter__
                     res = new DynamicMetaObject(
-                        Ast.Block(
-                            new ParameterExpression[] { curIndex, getItemRes, containsRes },
-                            Utils.Loop(
-                                null,                                                     // test
-                                Ast.Assign(curIndex, Ast.Add(curIndex, AstUtils.Constant(1))), // increment
-                                Ast.Block(                                            // body
-                        // getItemRes = param0.__getitem__(curIndex)
-                                    Utils.Try(
-                                        Ast.Block(
-                                            Ast.Assign(
-                                                getItemRes,
-                                                sf.Target.Expression
-                                            ),
-                                            Ast.Empty()
-                                        )
-                                    ).Catch(
-                        // end of indexes, return false
-                                        typeof(IndexOutOfRangeException),
-                                        Ast.Break(target)
-                                    ),
-                        // if(getItemRes == param1) return true
-                                    Utils.If(
-                                        Ast.Dynamic(
-                                            state.BinaryOperationRetType(
-                                                state.BinaryOperation(ExpressionType.Equal),
-                                                state.Convert(
-                                                    typeof(bool),
-                                                    ConversionResultKind.ExplicitCast
-                                                )
-                                            ),
-                                            typeof(bool),
-                                            types[1].Expression,
-                                            getItemRes
-                                        ),
-                                        Ast.Assign(containsRes, AstUtils.Constant(true)),
-                                        Ast.Break(target)
-                                    ),
-                                    AstUtils.Empty()
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
+                            AstUtils.Constant(state.Context),
+                            Ast.Dynamic(
+                                state.Convert(
+                                    typeof(IEnumerator),
+                                    ConversionResultKind.ExplicitCast
                                 ),
-                                null,                                               // loop else
-                                target,                                             // break label target
-                                null
+                                typeof(IEnumerator),
+                                sf.Target.Expression
                             ),
-                            containsRes
+                            AstUtils.Convert(types[1].Expression, typeof(object))
                         ),
                         BindingRestrictions.Combine(types)
                     );
                 } else {
-                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.Iterator, types[0]);
+                    ParameterExpression curIndex = Ast.Variable(typeof(int), "count");
+                    sf = SlotOrFunction.GetSlotOrFunction(state, Symbols.GetItem, types[0], new DynamicMetaObject(curIndex, BindingRestrictions.Empty));
                     if (sf.Success) {
-                        // iterate using __iter__
+                        // defines __getitem__, need to loop over the indexes and see if we match
+
+                        ParameterExpression getItemRes = Ast.Variable(sf.ReturnType, "getItemRes");
+                        ParameterExpression containsRes = Ast.Variable(typeof(bool), "containsRes");
+
+                        LabelTarget target = Ast.Label();
                         res = new DynamicMetaObject(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
-                                AstUtils.Constant(state.Context),
-                                Ast.Dynamic(
-                                    state.Convert(
-                                        typeof(IEnumerator),
-                                        ConversionResultKind.ExplicitCast
+                            Ast.Block(
+                                new ParameterExpression[] { curIndex, getItemRes, containsRes },
+                                Utils.Loop(
+                                    null,                                                     // test
+                                    Ast.Assign(curIndex, Ast.Add(curIndex, AstUtils.Constant(1))), // increment
+                                    Ast.Block(                                            // body
+                            // getItemRes = param0.__getitem__(curIndex)
+                                        Utils.Try(
+                                            Ast.Block(
+                                                Ast.Assign(
+                                                    getItemRes,
+                                                    sf.Target.Expression
+                                                ),
+                                                Ast.Empty()
+                                            )
+                                        ).Catch(
+                            // end of indexes, return false
+                                            typeof(IndexOutOfRangeException),
+                                            Ast.Break(target)
+                                        ),
+                            // if(getItemRes == param1) return true
+                                        Utils.If(
+                                            Ast.Dynamic(
+                                                state.BinaryOperationRetType(
+                                                    state.BinaryOperation(ExpressionType.Equal),
+                                                    state.Convert(typeof(bool), ConversionResultKind.ExplicitCast)
+                                                ),
+                                                typeof(bool),
+                                                types[1].Expression,
+                                                getItemRes
+                                            ),
+                                            Ast.Assign(containsRes, AstUtils.Constant(true)),
+                                            Ast.Break(target)
+                                        ),
+                                        AstUtils.Empty()
                                     ),
-                                    typeof(IEnumerator),
-                                    sf.Target.Expression
+                                    null,                                               // loop else
+                                    target,                                             // break label target
+                                    null
                                 ),
-                                AstUtils.Convert(types[1].Expression, typeof(object))
+                                containsRes
                             ),
                             BindingRestrictions.Combine(types)
                         );
@@ -384,7 +381,7 @@ namespace IronPython.Runtime.Binding {
                             typeof(PythonOps).GetMethod("TypeErrorForUnhashableObject"),
                             self.Expression
                         ),
-                        typeof(int)                        
+                        typeof(int)
                     ),
                     res.Restrictions
                 );
@@ -401,7 +398,7 @@ namespace IronPython.Runtime.Binding {
 
                     res = new DynamicMetaObject(
                             Expression.Block(
-                                new [] { tempVar },
+                                new[] { tempVar },
                                 Expression.Assign(tempVar, res.Expression),
                                 Expression.Condition(
                                     Expression.TypeIs(tempVar, typeof(int)),
@@ -527,7 +524,7 @@ namespace IronPython.Runtime.Binding {
             ParameterExpression tmp = Ast.Parameter(typeof(IEnumerator), "enum");
             IPythonConvertible pyConv = self as IPythonConvertible;
             PythonConversionBinder convBinder = new PythonConversionBinder(BinderState.GetBinderState(operation), typeof(IEnumerator), ConversionResultKind.ExplicitTry);
-            
+
             DynamicMetaObject res;
             if (pyConv != null) {
                 res = pyConv.BindConvert(convBinder);
@@ -535,7 +532,7 @@ namespace IronPython.Runtime.Binding {
                 res = convBinder.Bind(self, new DynamicMetaObject[0]);
             }
 
-            return new DynamicMetaObject(                
+            return new DynamicMetaObject(
                 Expression.Block(
                     new[] { tmp },
                     Ast.Condition(
@@ -586,7 +583,7 @@ namespace IronPython.Runtime.Binding {
                     if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, AstUtils.Constant(0));
                     } else {
-                        notExpr = 
+                        notExpr =
                             Ast.Equal(
                                 Ast.Dynamic(
                                     BinderState.GetBinderState(operation).Operation(
@@ -596,7 +593,7 @@ namespace IronPython.Runtime.Binding {
                                     notExpr,
                                     AstUtils.Constant(0)
                                 ),
-                                AstUtils.Constant(0)                            
+                                AstUtils.Constant(0)
                             );
                     }
                 }
@@ -728,7 +725,7 @@ namespace IronPython.Runtime.Binding {
             // a __call__ attribute. The default base binder also checks these, but since we're overriding
             // the base binder, we check them here.
             DynamicMetaObject self = args[0];
-            
+
             // only applies when called from a Python site
             if (typeof(Delegate).IsAssignableFrom(self.GetLimitType()) ||
                 typeof(MethodGroup).IsAssignableFrom(self.GetLimitType())) {
@@ -790,8 +787,8 @@ namespace IronPython.Runtime.Binding {
             rSlot = null;
             PythonType fParent, rParent;
 
-            if (oper == PythonOperationKind.Multiply && 
-                IsSequence(types[0]) && 
+            if (oper == PythonOperationKind.Multiply &&
+                IsSequence(types[0]) &&
                 !PythonOps.IsNonExtensibleNumericType(types[1].GetLimitType())) {
                 // class M:
                 //      def __rmul__(self, other):
@@ -893,7 +890,7 @@ namespace IronPython.Runtime.Binding {
                 return MakeRuleForNoMatch(operation, op, errorSuggestion, types);
             }
 
-            if (ShouldCoerce(state, op, types[0], types[1], false) && 
+            if (ShouldCoerce(state, op, types[0], types[1], false) &&
                 (op != PythonOperationKind.Mod || !MetaPythonObject.GetPythonType(types[0]).IsSubclassOf(TypeCache.String))) {
                 // need to try __coerce__ first.
                 DoCoerce(state, bodyBuilder, op, types, false);
@@ -1226,8 +1223,8 @@ namespace IronPython.Runtime.Binding {
         /// Makes the comparison rule which returns an int (-1, 0, 1).  TODO: Better name?
         /// </summary>
         private static DynamicMetaObject/*!*/ MakeSortComparisonRule(DynamicMetaObject/*!*/[]/*!*/ types, DynamicMetaObjectBinder/*!*/ operation, PythonOperationKind op) {
-            RestrictTypes(types); 
-            
+            RestrictTypes(types);
+
             DynamicMetaObject fastPath = FastPathCompare(types);
             if (fastPath != null) {
                 return fastPath;
@@ -1741,7 +1738,7 @@ namespace IronPython.Runtime.Binding {
                 BindingTarget target;
 
                 var resolver = new PythonOverloadResolver(
-                    Binder, 
+                    Binder,
                     args[0],
                     ArrayUtils.RemoveFirst(args),
                     new CallSignature(args.Length - 1),
@@ -1765,7 +1762,7 @@ namespace IronPython.Runtime.Binding {
                             res.Restrictions
                         );
                     }
-                    
+
                     WarningInfo info;
                     if (BindingWarnings.ShouldWarn(Binder, target.Method, out info)) {
                         res = info.AddWarning(Ast.Constant(BinderState.Context), res);
@@ -1932,7 +1929,7 @@ namespace IronPython.Runtime.Binding {
                                             )
                                         )
                                     )
-                                ),                               
+                                ),
                                 args[i].Restrictions
                             )
                         );
@@ -2019,7 +2016,7 @@ namespace IronPython.Runtime.Binding {
                                     ConversionResultKind.ExplicitCast
                                 ),
                                 typeof(int),
-                                Ast.Dynamic(                            
+                                Ast.Dynamic(
                                     binder.InvokeNone,
                                     typeof(object),
                                     AstUtils.Constant(binder.Context),
@@ -2321,7 +2318,7 @@ namespace IronPython.Runtime.Binding {
                 toCheck
             );
         }
-        
+
         private static DynamicMetaObject/*!*/ MakeRuleForNoMatch(DynamicMetaObjectBinder/*!*/ operation, PythonOperationKind op, DynamicMetaObject errorSuggestion, params DynamicMetaObject/*!*/[]/*!*/ types) {
             // we get the error message w/ {0}, {1} so that TypeError formats it correctly
             return errorSuggestion ?? TypeError(

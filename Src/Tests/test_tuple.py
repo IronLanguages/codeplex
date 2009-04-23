@@ -153,5 +153,12 @@ def test_mul_subclass():
     u = subclass([0,1])
     Assert(u is not u*1)
 
+
+def test_compare_to_none():
+    AreEqual(tuple() > None, True)
+    AreEqual(tuple() < None, False)
+    AreEqual(tuple() >= None, True)
+    AreEqual(tuple() <= None, False)
+
 run_test(__name__)
 

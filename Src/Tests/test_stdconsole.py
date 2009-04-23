@@ -128,7 +128,7 @@ def test_exit():
 
 def test_c():
     TestCommandLine(("-c", "print 'foo'"), "foo\n")
-    TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo"), 1)
+    TestCommandLine(("-c", "raise Exception('foo')"), ("lastline", "Exception: foo"), 1)
     TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
     TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
     TestCommandLine(("-c",), "Argument expected for the -c option.\n", -1)

@@ -293,6 +293,49 @@ def test_invalid_args_cp20616():
         expected_err_msg = test_cases[key]
         AssertErrorWithMessage(TypeError, expected_err_msg, temp_lambda)
 
+def test_cp19678():
+    global iterCalled, getItemCalled
+    iterCalled = False
+    getItemCalled = False
+    class o(object):
+        def __iter__(self):
+            global iterCalled
+            iterCalled = True
+            return iter([1, 2, 3])
+        def __getitem__(self, index):
+            global getItemCalled
+            getItemCalled = True
+            return [1, 2, 3][index]
+        def __len__(self):
+            return 3
+
+    AreEqual(1 in o(), True)
+    AreEqual(iterCalled, True)
+    AreEqual(getItemCalled, False)
+
+
+def test_exception_multiple_inheritance_cp20208():
+    class FTPError(Exception): pass
+    class FTPOSError(FTPError, OSError): pass
+    
+    AreEqual(FTPOSError, type(FTPOSError()))
+
+def test_conversions_cp19508():
+    class MyFloatType(float):
+        def __int__(self):
+            return 42    
+        def __str__(self):
+            return 'hello'
+    
+    MyFloat = MyFloatType()
+    AreEqual(int(MyFloat), 42)
+    AreEqual(str(MyFloat), 'hello')
+
+    class MyFloatType(float): pass
+    
+    MyFloat = MyFloatType()
+    AreEqual(int(MyFloat), 0)
+    AreEqual(str(MyFloat), '0.0')
 
 #------------------------------------------------------------------------------
 #--Main

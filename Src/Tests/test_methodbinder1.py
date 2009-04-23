@@ -863,6 +863,12 @@ def test_ref_bytearr():
     AreEqual(i, 42)
     AreEqual(sarr.Value, arr)
 
+def test_struct_prop_assign():
+    from IronPythonTest.BinderTest import SOtherConcern
+    a = SOtherConcern()
+    a.P100 = 42
+    AreEqual(a.P100, 42)
+    
 print '>>>> methods in reference type'
 target = CNoOverloads()
 run_test(__name__)

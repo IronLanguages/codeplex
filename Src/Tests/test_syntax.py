@@ -204,6 +204,10 @@ compile_tests = [
     ('def f():\n    a = yield 3 = yield 4', "can't assign to yield expression", 2),
     ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
     ('(2,3) = (3,4)', "can't assign to literal", 1),
+    ("def e():\n    break", "'break' outside loop", 2),
+    ("def g():\n    for x in range(10):\n        print x\n    break\n", "'break' outside loop", 4),
+    ("def g():\n    for x in range(10):\n        print x\n    if True:\n        break\n", "'break' outside loop", 5),
+    ("def z():\n    if True:\n        break\n", "'break' outside loop", 3),
     ('from import abc', "invalid syntax", 1),
     ("""for x in range(100):\n"""
      """    try:\n"""

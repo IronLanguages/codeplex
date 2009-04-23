@@ -378,4 +378,19 @@ def test_xafter_finally_raise():
 
     f()
 
+Line381 = 381
+def test_uncaught_exception_thru_try():
+    def baz():
+        raise StopIteration
+    
+    def f():
+        try:
+            baz()
+        except TypeError:
+            pass
+    try:
+        f()
+    except:
+        assert_traceback([(Line381+11, 30, 'test_traceback.py', 'test_uncaught_exception_thru_try'), (Line381+7, 3, 'test_traceback.py', 'f'), (Line381+3, 3, 'test_traceback.py', 'baz')])
+
 run_test(__name__)

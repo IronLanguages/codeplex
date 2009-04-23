@@ -69,6 +69,18 @@ namespace IronPython.Runtime.Binding {
             _context = codeContext;
         }
 
+        public override bool CanConvertFrom(Type fromType, ParameterWrapper toParameter, NarrowingLevel level) {
+            if ((fromType == typeof(List) || fromType.IsSubclassOf(typeof(List))) && 
+                toParameter.Type.IsGenericType && 
+                toParameter.Type.GetGenericTypeDefinition() == typeof(IList<>)) {
+                if (toParameter.ParameterInfo.IsDefined(typeof(ProhibitGenericListConversionAttribute), false)) {
+                    return false;
+                }
+            }
+
+            return base.CanConvertFrom(fromType, toParameter, level);
+        }
+
         protected override BitArray MapSpecialParameters(ParameterMapping/*!*/ mapping) {
             var infos = mapping.ParameterInfos;
             BitArray special = base.MapSpecialParameters(mapping);
