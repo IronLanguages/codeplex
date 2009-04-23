@@ -1583,7 +1583,7 @@ if id(a) == id(b):
             try {
                 scope.Engine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", scope);
                 throw new Exception("We should not get here");
-            } catch (StringException e2) {
+            } catch (StopIterationException e2) {
                 if (scope.Engine.Runtime.Setup.DebugMode != e2.StackTrace.Contains(lineNumber))
                     throw new Exception("Debugging is enabled even though Options.DebugMode is not specified");
             }

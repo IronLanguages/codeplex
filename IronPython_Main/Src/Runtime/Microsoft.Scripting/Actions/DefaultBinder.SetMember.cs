@@ -252,7 +252,15 @@ namespace Microsoft.Scripting.Actions {
                                 AstUtils.Constant(((ReflectedPropertyTracker)info).Property), // TODO: Private binding on extension properties
                                 typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
                                 instance == null ? AstUtils.Constant(null) : AstUtils.Convert(instance, typeof(object)),
-                                AstUtils.Convert(target.Expression, typeof(object)),
+                                AstUtils.Convert(
+                                    ConvertExpression(
+                                        target.Expression,
+                                        setter.GetParameters()[0].ParameterType,
+                                        ConversionResultKind.ExplicitCast,
+                                        memInfo.CodeContext
+                                    ),
+                                    typeof(object)
+                                ),
                                 Ast.NewArrayInit(typeof(object))
                             ),
                             target

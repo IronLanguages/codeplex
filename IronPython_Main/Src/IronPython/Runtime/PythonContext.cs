@@ -1197,8 +1197,6 @@ namespace IronPython.Runtime {
                 string str = pythonException as string;
                 if (str != null) {
                     result += str;
-                } else if (pythonException is StringException) {
-                    result += pythonException.ToString();
                 } else {
                     result += GetPythonExceptionClassName(pythonException);
 

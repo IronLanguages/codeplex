@@ -520,6 +520,11 @@ def in_main():
     
     in_main_sub1()
     return in_main_sub2
+
+
+def test_error_messages():
+    AssertErrorWithMessages(TypeError, "join() takes exactly 1 argument (2 given)", "join() takes exactly one argument (2 given)", "".join, ["a", "b"], "c")
+    
     
 temp_func = in_main()
 locals_globals = 7

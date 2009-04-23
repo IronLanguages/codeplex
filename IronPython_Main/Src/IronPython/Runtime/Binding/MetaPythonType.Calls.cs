@@ -15,16 +15,19 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
@@ -130,6 +133,8 @@ namespace IronPython.Runtime.Binding {
 
             if (TooManyArgsForDefaultNew(call, args)) {
                 return MakeIncorrectArgumentsForCallError(call, ai, valInfo);
+            } else if (Value.UnderlyingSystemType.IsGenericTypeDefinition) {
+                return MakeGenericTypeDefinitionError(call, ai, valInfo);
             }
 
             GetAdapters(ai, call, codeContext, out newAdapter, out initAdapter);
@@ -611,6 +616,27 @@ namespace IronPython.Runtime.Binding {
                     GetErrorRestrictions(ai)
                 ), 
                 ai.Arguments,                
+                valInfo
+            );
+        }
+
+        private DynamicMetaObject/*!*/ MakeGenericTypeDefinitionError(DynamicMetaObjectBinder/*!*/ call, ArgumentValues/*!*/ ai, ValidationInfo/*!*/ valInfo) {
+            Debug.Assert(Value.IsSystemType);
+            string message = "cannot create instances of " + Value.Name + " because it is a generic type definition";
+
+            return BindingHelpers.AddDynamicTestAndDefer(
+                call,
+                new DynamicMetaObject(
+                    Ast.Throw(
+                        Ast.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            AstUtils.Constant(message)
+                        ),
+                        typeof(object)
+                    ),
+                    GetErrorRestrictions(ai)
+                ),
+                ai.Arguments,
                 valInfo
             );
         }

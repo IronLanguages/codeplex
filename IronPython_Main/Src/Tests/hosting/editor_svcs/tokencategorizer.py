@@ -245,4 +245,35 @@ def test_categorizer_class():
     actual = list(get_tokens("class Stack(object):\n    def __init__(self):\npass"))
     AreEqual(actual, expected)
 
+def test_tokenizer_restartable():
+    categorizer = engine.GetService[TokenCategorizer]()
+    Assert(categorizer.IsRestartable)
+
+def test_tokenizer_restart_multistring():
+    expected1 = [
+        t.Identifier(From(0,1,1), To(1,1,2)),
+        t.Operator(From(2, 1, 3), To(3, 1, 4)),
+        t.StringLiteral(From(4, 1, 5), To(10, 1, 11)),
+        t.WhiteSpace(From(10, 1, 11), To(10, 1, 11)),
+    ]
+    expected2 = [
+        t.StringLiteral(From(0, 1, 1), To(6, 1, 7)),
+    ]
+    
+    categorizer = engine.GetService[TokenCategorizer]()
+    
+    source = engine.CreateScriptSourceFromString('''s = """abc''')
+    categorizer.Initialize(None, source, SourceLocation.MinValue)
+    actual = list(categorizer.ReadTokens(len(source.GetCode())))
+
+    AreEqual(actual, expected1)
+
+    state = categorizer.CurrentState
+    
+    source = engine.CreateScriptSourceFromString('''def"""''')
+    categorizer.Initialize(state, source, SourceLocation.MinValue)
+    actual = list(categorizer.ReadTokens(len(source.GetCode())))
+
+    AreEqual(actual, expected2)
+
 run_test(__name__)

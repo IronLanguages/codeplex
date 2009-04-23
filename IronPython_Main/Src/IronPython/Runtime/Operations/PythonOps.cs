@@ -1966,7 +1966,6 @@ namespace IronPython.Runtime.Operations {
         public static object CheckException(object exception, object test) {
             Debug.Assert(exception != null);
 
-            StringException strex;
             ObjectException objex;
 
             if (test is PythonTuple) {
@@ -1976,14 +1975,6 @@ namespace IronPython.Runtime.Operations {
                     object res = CheckException(exception, tt[i]);
                     if (res != null) return res;
                 }
-            } else if ((strex = exception as StringException) != null) {
-                // catching a string
-                if (test.GetType() != typeof(string)) return null;
-                if (strex.Message == (string)test) {
-                    if (strex.Value == null) return strex.Message;
-                    return strex.Value;
-                }
-                return null;
             } else if ((objex = exception as ObjectException) != null) {
                 if (PythonOps.IsSubClass(objex.Type, test)) {
                     return objex.Instance;
@@ -2071,27 +2062,13 @@ namespace IronPython.Runtime.Operations {
             PythonContext pc = PythonContext.GetContext(context);
             pc.SystemExceptionTraceBack = tb;
 
-            StringException se = pyExcep as StringException;
-            if (se == null) {
-                object excType = PythonOps.GetBoundAttr(context, pyExcep, Symbols.Class);
-                pc.SystemExceptionType = excType;
-                pc.SystemExceptionValue = pyExcep;
-
-                return PythonTuple.MakeTuple(
-                    excType,
-                    pyExcep,
-                    tb);
-            }
-
-            // string exceptions are special...  there tuple looks
-            // like string, argument, traceback instead of
-            //      type,   instance, traceback
-            pc.SystemExceptionType = pyExcep;
-            pc.SystemExceptionValue = se.Value;
+            object excType = PythonOps.GetBoundAttr(context, pyExcep, Symbols.Class);
+            pc.SystemExceptionType = excType;
+            pc.SystemExceptionValue = pyExcep;
 
             return PythonTuple.MakeTuple(
+                excType,
                 pyExcep,
-                se.Value,
                 tb);
         }
 
@@ -2130,9 +2107,6 @@ namespace IronPython.Runtime.Operations {
                 throwable = PythonExceptions.ToClr(type);
             } else if ((pt = type as PythonType) != null && typeof(PythonExceptions.BaseException).IsAssignableFrom(pt.UnderlyingSystemType)) {
                 throwable = PythonExceptions.CreateThrowableForRaise(context, pt, value);
-            } else if (type is string) {
-                PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "raising a string exception is deprecated");
-                throwable = new StringException(type.ToString(), value);
             } else if (type is OldClass) {
                 if (value == null) {
                     throwable = new OldInstanceException((OldInstance)PythonCalls.Call(context, type));
@@ -3904,7 +3878,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="type">original type of exception requested</param>
         /// <returns>a TypeEror exception</returns>
         internal static Exception MakeExceptionTypeError(object type) {
-            return PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
+            return PythonOps.TypeError("exceptions must be classes or instances, not {0}", DynamicHelpers.GetPythonType(type).Name);
         }
 
         public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {

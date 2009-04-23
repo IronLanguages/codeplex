@@ -16,10 +16,21 @@
 """Test cases for class-related features specific to CLI"""
 from __future__ import with_statement
 
+# this needs to run before we add ref to Microsoft.Scripting where we'll get the
+# non-generic version of Action[T].  Therefore it also can't run in test_interpret_sanity.
+import sys
+if __name__  == '__main__' and sys.platform == 'cli' or sys.platform == 'silverlight':
+    def f(): print 'hello'
+    import System
+    try:
+        System.Action(f)
+        raise Exception('action[t] test failed')
+    except TypeError:
+        pass
+
 from iptest.assert_util import *
 skiptest("win32")
 import clr
-import System
 
 load_iron_python_test()
 
@@ -1474,6 +1485,7 @@ def test_inherited_interface_impl():
     BinderTest.InterfaceTestHelper.Flag = False
     BinderTest.InterfaceTestHelper.GetObject2().M()
     AreEqual(BinderTest.InterfaceTestHelper.Flag, True)
+
 
 run_test(__name__)
 

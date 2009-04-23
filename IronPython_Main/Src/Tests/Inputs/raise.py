@@ -18,7 +18,7 @@ x = 1
 class C(object):
     def __init__(self):
         self.attr = 1
-        raise "Hello"
+        raise StopIteration
 
 c = C()
 

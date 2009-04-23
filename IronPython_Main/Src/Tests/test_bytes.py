@@ -62,6 +62,7 @@ def test_center():
         AreEqual(testType(b'aa').center(2), b'aa')
         AreEqual(testType(b'aa').center(2, '*'), b'aa')
         AreEqual(testType(b'aa').center(2, b'*'), b'aa')
+        AssertError(TypeError, testType(b'abc').center, 3, [2, ])
     
     x = b'aa'
     AreEqual(id(x.center(2, '*')), id(x))
@@ -70,6 +71,8 @@ def test_center():
     x = bytearray(b'aa')
     Assert(id(x.center(2, '*')) != id(x))
     Assert(id(x.center(2, b'*')) != id(x))
+    
+    
 
 def test_count():
     for testType in types:
@@ -80,6 +83,10 @@ def test_count():
         AreEqual(testType(b"adbaddads").count(b"ad", 0, -1), 3)
         AreEqual(testType(b"adbaddads").count(b"", 0, -1), 9)
         AreEqual(testType(b"adbaddads").count(b"", 27), 0)
+        
+        AssertError(TypeError, testType(b"adbaddads").count, [2,])
+        AssertError(TypeError, testType(b"adbaddads").count, [2,], 0)
+        AssertError(TypeError, testType(b"adbaddads").count, [2,], 0, 1)
 
 def test_decode():
     for testType in types:
@@ -88,6 +95,9 @@ def test_decode():
 def test_endswith():
     for testType in types:
         AssertError(TypeError, testType(b'abcdef').endswith, ([], ))
+        AssertError(TypeError, testType(b'abcdef').endswith, [])
+        AssertError(TypeError, testType(b'abcdef').endswith, [], 0)
+        AssertError(TypeError, testType(b'abcdef').endswith, [], 0, 1)
         AreEqual(testType(b'abcdef').endswith(b'def'), True)
         AreEqual(testType(b'abcdef').endswith(b'def', -1, -2), False)
         AreEqual(testType(b'abcdef').endswith(b'def', 0, 42), True)
@@ -130,6 +140,9 @@ def test_extend():
     AreEqual(b, b'abcdef')
     b.extend(bytearray(b'ghi'))
     AreEqual(b, b'abcdefghi')
+    b = bytearray(b'abc')
+    b.extend([2,3,4])
+    AreEqual(b, b'abc' + b'\x02\x03\x04')
     
 def test_find():
     for testType in types:
@@ -156,6 +169,10 @@ def test_find():
                 
         AreEqual(testType(b'x').find(b'x', 3, 0), -1)
         AreEqual(testType(b'x').find(b'', 3, 0), -1)
+        
+        AssertError(TypeError, testType(b'x').find, [1])
+        AssertError(TypeError, testType(b'x').find, [1], 0)
+        AssertError(TypeError, testType(b'x').find, [1], 0, 1)
         
 def test_fromhex():
     for testType in types:
@@ -187,6 +204,10 @@ def test_index():
         AreEqual(testType(b'abc').index(b'bc'), 1)
         AssertError(ValueError, testType(b'abc').index, b'abcd')
         AssertError(ValueError, testType(b'abc').index, b'e')
+
+        AssertError(TypeError, testType(b'x').index, [1])
+        AssertError(TypeError, testType(b'x').index, [1], 0)
+        AssertError(TypeError, testType(b'x').index, [1], 0, 1)
 
 def test_insert():
     b = bytearray(b'abc')
@@ -321,10 +342,14 @@ def test_lstrip():
 
 def test_partition():
     for testType in types:
-        AssertError(TypeError, testType(b'').partition, None)
-        AssertError(TypeError, testType(b'').partition, None)
+        AssertError(TypeError, testType(b'').partition, None)        
         AssertError(ValueError, testType(b'').partition, b'')
         AssertError(ValueError, testType(b'').partition, b'')
+        
+        if testType == bytearray:
+            AreEqual(testType(b'a\x01c').partition([1]), (b'a', b'\x01', b'c'))
+        else:
+            AssertError(TypeError, testType(b'a\x01c').partition, [1])
         
         AreEqual(testType(b'abc').partition(b'b'), (b'a', b'b', b'c'))
         AreEqual(testType(b'abc').partition(b'd'), (b'abc', b'', b''))
@@ -363,7 +388,13 @@ def test_replace():
     for testType in types:
         AssertError(TypeError, testType(b'abc').replace, None, b'abc')
         AssertError(TypeError, testType(b'abc').replace, b'abc', None)
-        
+        AssertError(TypeError, testType(b'abc').replace, None, b'abc', 1)
+        AssertError(TypeError, testType(b'abc').replace, b'abc', None, 1)
+        AssertError(TypeError, testType(b'abc').replace, [1], b'abc')
+        AssertError(TypeError, testType(b'abc').replace, b'abc', [1])
+        AssertError(TypeError, testType(b'abc').replace, [1], b'abc', 1)
+        AssertError(TypeError, testType(b'abc').replace, b'abc', [1], 1)
+                
         AreEqual(testType(b'abc').replace(b'b', b'foo'), b'afooc')
         AreEqual(testType(b'abc').replace(b'b', b''), b'ac')
         AreEqual(testType(b'abcb').replace(b'b', b'foo', 1), b'afoocb')
@@ -409,6 +440,9 @@ def test_rfind():
         AreEqual(testType(b"abcdbcda").rfind(b"cd", -1, -2), -1)
         AreEqual(testType(b"abc").rfind(b"add", 3, 0), -1)
         AreEqual(testType(b'abc').rfind(b'bd'), -1)
+        AssertError(TypeError, testType(b'abc').rfind, [1])
+        AssertError(TypeError, testType(b'abc').rfind, [1], 1)
+        AssertError(TypeError, testType(b'abc').rfind, [1], 1, 2)
 
         if testType == bytes:
             AreEqual(testType(b"abc").rfind(b"add", None, 0), -1)
@@ -431,7 +465,10 @@ def test_rindex():
         AssertError(TypeError, testType(b'abc').rindex, 257)
         AreEqual(testType(b'abc').rindex(b'a'), 0)
         AreEqual(testType(b'abc').rindex(b'a', 0, -1), 0)
-        
+        AssertError(TypeError, testType(b'abc').rindex, [1])
+        AssertError(TypeError, testType(b'abc').rindex, [1], 1)
+        AssertError(TypeError, testType(b'abc').rindex, [1], 1, 2)
+
         AssertError(ValueError, testType(b'abc').rindex, b'c', 0, -1)
         AssertError(ValueError, testType(b'abc').rindex, b'a', -1)
 
@@ -440,6 +477,7 @@ def test_rjust():
         AssertError(TypeError, testType(b'').rjust, 42, '  ')
         AssertError(TypeError, testType(b'').rjust, 42, b'  ')
         AssertError(TypeError, testType(b'').rjust, 42, u'\u0100')
+        AssertError(TypeError, testType(b'').rjust, 42, [2])
         AreEqual(testType(b'abc').rjust(4), b' abc')
         AreEqual(testType(b'abc').rjust(4, b'x'), b'xabc')
         AreEqual(testType(b'abc').rjust(4, 'x'), b'xabc')
@@ -453,9 +491,12 @@ def test_rjust():
 def test_rpartition():
     for testType in types:
         AssertError(TypeError, testType(b'').rpartition, None)
-        AssertError(TypeError, testType(b'').rpartition, None)
         AssertError(ValueError, testType(b'').rpartition, b'')
-        AssertError(ValueError, testType(b'').rpartition, b'')
+        
+        if testType == bytearray:
+            AreEqual(testType(b'a\x01c').rpartition([1]), (b'a', b'\x01', b'c'))
+        else:
+            AssertError(TypeError, testType(b'a\x01c').rpartition, [1])
         
         AreEqual(testType(b'abc').rpartition(b'b'), (b'a', b'b', b'c'))
         AreEqual(testType(b'abc').rpartition(b'd'), (b'', b'', b'abc'))
@@ -498,6 +539,9 @@ def test_rsplit():
         
         AreEqual(testType(b"ab").rsplit(None), [b"ab"])
         AreEqual(testType(b"a b").rsplit(None), [b"a", b"b"])
+        
+        AssertError(TypeError, testType(b'').rsplit, [2])
+        AssertError(TypeError, testType(b'').rsplit, [2], 2)
 
 def test_rstrip():
     for testType in types:
@@ -508,6 +552,8 @@ def test_rstrip():
         AreEqual(testType(b'abcx').rstrip(b'x'), b'abc')
         AreEqual(testType(b'xabc').rstrip(b'x'), b'xabc')
         AreEqual(testType(b'x').rstrip(b'x'), b'')
+        
+        AssertError(TypeError, testType(b'').rstrip, [2])
 
     x = b'abc'
     AreEqual(id(x.rstrip()), id(x))
@@ -542,8 +588,12 @@ def test_split():
         AreEqual(testType(b"").split(None), [])
         AreEqual(testType(b"ab").split(None), [b"ab"])
         AreEqual(testType(b"a b").split(None), [b"a", b"b"])
+        AreEqual(bytearray(b' a bb c ').split(None, 1), [bytearray(b'a'), bytearray(b'bb c ')])
         
         AreEqual(testType(b'    ').split(), [])
+        
+        AssertError(TypeError, testType(b'').split, [2])
+        AssertError(TypeError, testType(b'').split, [2], 2)
 
 def test_splitlines():
     for testType in types:
@@ -559,6 +609,10 @@ def test_splitlines():
     
 def test_startswith():
     for testType in types:
+        AssertError(TypeError, testType(b'abcdef').startswith, [])
+        AssertError(TypeError, testType(b'abcdef').startswith, [], 0)
+        AssertError(TypeError, testType(b'abcdef').startswith, [], 0, 1)
+
         AreEqual(testType(b"abcde").startswith(b'c', 2, 6), True)
         AreEqual(testType(b"abc").startswith(b'c', 4, 6), False)
         AreEqual(testType(b"abcde").startswith(b'cde', 2, 9), True)
@@ -707,6 +761,9 @@ def test_translate():
         # CPython bug 4348 - http://bugs.python.org/issue4348
         b = bytearray(b'')
         Assert(id(b.translate(identTable)) != id(b))
+        
+    AssertError(TypeError, testType(b'').translate, [])
+    AssertError(TypeError, testType(b'').translate, [], [])
 
 def test_upper():
     expected = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f'  \
@@ -1011,7 +1068,9 @@ def test_bytearray():
     AssertError(TypeError, hash, bytearray(b'abc'))
     AssertError(TypeError, bytearray(b'').__setitem__, None, b'abc')
     AssertError(TypeError, bytearray(b'').__delitem__, None)
-    
+    x = bytearray(b'abc')
+    del x[-1]
+    AreEqual(x, b'ab')
     
     def f():
         x = bytearray(b'abc')
@@ -1261,6 +1320,11 @@ def test_init():
             AssertError(ValueError, testType, [257])
             
         testType(range(256))
+        
+    def f():
+        yield 42
+
+    AreEqual(bytearray(f()), b'*')
 
 def test_slicing():
     for testType in types:

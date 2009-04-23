@@ -91,7 +91,7 @@ function test-setup
 	
 	#--Exceptions
 	echo "def hwExcept():" | out-file -encoding ascii $global:EXCEPTION
-	echo "    raise 'Hello World Exception'" | out-file -encoding ascii -append $global:EXCEPTION
+	echo "    raise Exception('Hello World Exception')" | out-file -encoding ascii -append $global:EXCEPTION
 	echo "" | out-file -encoding ascii -append $global:EXCEPTION
 	echo "def complexExcept():" | out-file -encoding ascii -append $global:EXCEPTION
 	echo "    import System" | out-file -encoding ascii -append $global:EXCEPTION
@@ -375,16 +375,7 @@ function saveassemblies-helper
 	pushd $global:TEST_DIR\SaveAssembliesTemp 
 	
 	#####
-			
-	hello-helper $dlrexe "-X:NoAdaptiveCompilation" "-X:SaveAssemblies" $args[1..$args.Length]
-	
-	expect-files(("Snippets.scripting.dll"))
-	not-expect-files(("Snippets.scripting.pdb"))
-	
-	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp\*
-	
-	#####
-	
+				
 	hello-helper $dlrexe -D "-X:SaveAssemblies" $args[1..$args.Length]
 	
 	expect-files(("Snippets.debug.scripting.dll", "Snippets.debug.scripting.pdb"))
@@ -527,9 +518,8 @@ function showclrexceptions-helper
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *; hwExcept()" 2>&1
 	$ErrorActionPreference = "stop"
-	if(! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
-	if(! "$stuff".Contains("CLR Exception:")) {show-failure "Failed: $stuff"; }
-	if(! "$stuff".Contains("StringException")) {show-failure "Failed: $stuff"; }
+	if(! "$stuff".Contains("Hello World Exception")) {show-failure "Failed (1): $stuff"; }
+	if(! "$stuff".Contains("CLR Exception:")) {show-failure "Failed (2): $stuff"; }
 	
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
@@ -538,8 +528,8 @@ function showclrexceptions-helper
 	{
 		show-failure "Failed: $stuff"; 
 	}
-	if (! "$stuff".Contains("CLR Exception:")) { show-failure "Failed: $stuff";  }
-	if (! "$stuff".Contains("OverflowException")) { show-failure "Failed: $stuff";  }
+	if (! "$stuff".Contains("CLR Exception:")) { show-failure "Failed (3): $stuff";  }
+	if (! "$stuff".Contains("OverflowException")) { show-failure "Failed (4): $stuff";  }
 }
 
 function mta-helper
