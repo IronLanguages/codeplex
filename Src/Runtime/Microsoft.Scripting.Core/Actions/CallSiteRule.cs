@@ -129,7 +129,7 @@ namespace Microsoft.Runtime.CompilerServices {
         public string Dump {
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
-                    ExpressionWriter.Dump(_binding, "Rule", writer);
+                    ExpressionWriter.Dump(_binding, writer);
                     return writer.ToString();
                 }
             }

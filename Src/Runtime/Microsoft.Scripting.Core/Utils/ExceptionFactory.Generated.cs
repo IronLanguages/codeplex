@@ -1119,12 +1119,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// A string like  "More than one matching member is found in the ExpandoObject."
+        /// A string like  "More than one key matching '{0}' was found in the ExpandoObject."
         /// </summary>
-        internal static string AmbiguousMatchInExpandoObject {
-            get {
-                return "More than one matching member is found in the ExpandoObject.";
-            }
+        internal static string AmbiguousMatchInExpandoObject(object p0) {
+            return FormatString("More than one key matching '{0}' was found in the ExpandoObject.", p0);
         }
 
         /// <summary>
@@ -2157,10 +2155,10 @@ namespace Microsoft.Linq.Expressions {
         }
 
         /// <summary>
-        /// System.Reflection.AmbiguousMatchException with message like "More than one matching member is found in the ExpandoObject."
+        /// System.Reflection.AmbiguousMatchException with message like "More than one key matching '{0}' was found in the ExpandoObject."
         /// </summary>
-        internal static Exception AmbiguousMatchInExpandoObject() {
-            return new System.Reflection.AmbiguousMatchException(Strings.AmbiguousMatchInExpandoObject);
+        internal static Exception AmbiguousMatchInExpandoObject(object p0) {
+            return new System.Reflection.AmbiguousMatchException(Strings.AmbiguousMatchInExpandoObject(p0));
         }
 
         /// <summary>
