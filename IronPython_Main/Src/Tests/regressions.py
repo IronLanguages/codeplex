@@ -269,6 +269,8 @@ def test_enumerate_index_increment_cp20016():
         return item[0] in [0, 1]
     
     AreEqual(filter(f, enumerate(['a', 'b'])), [(0, 'a'), (1, 'b')])
+    AreEqual(filter( lambda (j, _): j in [0, 1], enumerate([10.0, 27.0])),
+             [(0, 10.0), (1, 27.0)])
 
 def test_invalid_args_cp20616():
     test_cases = {
