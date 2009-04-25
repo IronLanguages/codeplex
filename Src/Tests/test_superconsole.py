@@ -547,7 +547,7 @@ def test_cp16520():
     for i in xrange(0, len(lines)):
         AreEqual(lines[i], expected_lines[i])                        
     
-def test_decorator26():
+def test_decorator_cp21984():
     superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
     superConsole.SendKeys('{@}property{ENTER}')
     superConsole.SendKeys('def foo{(}{)}: pass{ENTER}{ENTER}')
