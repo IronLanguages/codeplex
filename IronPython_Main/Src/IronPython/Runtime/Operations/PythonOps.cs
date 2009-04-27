@@ -2132,6 +2132,10 @@ namespace IronPython.Runtime.Operations {
                 dict.Remove(typeof(TraceBack));
             }
 
+            if (!forRethrow) {
+                ExceptionHelpers.ClearDynamicStackFrames(throwable);
+            }
+
             PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, throwable);
 
             return throwable;
@@ -3188,10 +3192,6 @@ namespace IronPython.Runtime.Operations {
 
         public static void ListAddForComprehension(List l, object o) {
             l.AddNoLock(o);
-        }
-
-        public static object GetUserDescriptorValue(object instance, PythonTypeSlot slot) {
-            return GetUserDescriptor(((PythonTypeUserDescriptorSlot)slot).Value, instance, ((IPythonObject)instance).PythonType);
         }
 
         public static void ModuleStarted(CodeContext/*!*/ context, object binderState, PythonLanguageFeatures features) {

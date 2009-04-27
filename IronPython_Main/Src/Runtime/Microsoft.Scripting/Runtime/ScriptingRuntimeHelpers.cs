@@ -145,6 +145,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             if (!filter) return frames.ToArray();
+
 #if !SILVERLIGHT
             frames = new List<DynamicStackFrame>(frames);
             List<DynamicStackFrame> res = new List<DynamicStackFrame>();

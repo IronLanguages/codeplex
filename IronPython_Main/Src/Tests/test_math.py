@@ -442,6 +442,26 @@ def test_long_log():
 		    
     AreEqual(round(math.log10(N()), 5),1.0)
     AreEqual(round(math.log(N()), 5),2.30259)
+
+def test_math_subclass():
+    """verify subtypes of float/long work w/ math functions"""
+    import math
+    class myfloat(float): pass
+    class mylong(long): pass
+    
+    mf = myfloat(1)
+    ml = mylong(1)
+    
+    for x in math.log, math.log10, math.log1p, math.asinh, math.acosh, math.atanh, math.factorial, math.trunc, math.isinf:        
+        try:
+            resf = x(mf)
+        except ValueError:
+            resf = None
+        try:
+            resl = x(ml)
+        except ValueError:
+            resl = None
+        AreEqual(resf, resl)
     
 def test_float_26():
     from_hex_tests = [('1.fffffffffffff7', 1.9999999999999998),

@@ -393,4 +393,103 @@ def test_uncaught_exception_thru_try():
     except:
         assert_traceback([(Line381+11, 30, 'test_traceback.py', 'test_uncaught_exception_thru_try'), (Line381+7, 3, 'test_traceback.py', 'f'), (Line381+3, 3, 'test_traceback.py', 'baz')])
 
+
+Line397=397
+def test_with_traceback():
+    from thread import allocate_lock
+    def f():
+        g()
+    
+    def g():
+        h()
+    
+    def h():
+        raise Exception('hello!!')
+        
+    try:
+        with allocate_lock():
+            f()
+    except:
+        assert_traceback([(Line397+14, 30, 'test_traceback.py', 'test_with_traceback'), 
+                          (Line397+4, 3, 'test_traceback.py', 'f'), 
+                          (Line397+7, 3, 'test_traceback.py', 'g'),
+                          (Line397+10, 3, 'test_traceback.py', 'h')])
+        
+
+Line419=419
+def test_xraise_again():
+    def f():
+        g()
+    
+    def g():
+        h()
+    
+    def h():
+        raise Exception('hello!!')
+        
+    try:
+        try:
+            f()
+        except Exception, e:
+            raise e
+    except:
+        assert_traceback([(Line419+15, 30, 'test_traceback.py', 'test_xraise_again'), ])
+
+Line438=438
+def test_with_traceback_enter_throws():
+    class ctx_mgr(object):
+        def __enter__(*args):
+            raise Exception('hello')
+        def __exit__(*args):
+            pass
+    
+    def h():
+        raise Exception('hello!!')
+        
+        
+    try:
+        with ctx_mgr():
+            h()
+    except:
+        assert_traceback([(Line438+13, 30, 'test_traceback.py', 'test_with_traceback_enter_throws'), 
+                          (Line438+4, 3, 'test_traceback.py', '__enter__')])
+                          
+Line457=457
+def test_with_traceback_exit_throws():
+    class ctx_mgr(object):
+        def __enter__(*args):
+            pass
+        def __exit__(*args):
+            raise Exception('hello')
+    
+    def h():
+        raise Exception('hello!!')
+        
+    try:
+        with ctx_mgr():
+            h()
+    except:
+        assert_traceback([(Line457+13, 30, 'test_traceback.py', 'test_with_traceback_exit_throws'), 
+                          (Line457+6, 3, 'test_traceback.py', '__exit__')])
+
+Line475=475
+def test_with_traceback_ctor_throws():
+    class ctx_mgr(object):
+        def __init__(self):
+            raise Exception('hello')
+        def __enter__(*args):
+            pass
+        def __exit__(*args):
+            pass
+    
+    def h():
+        raise Exception('hello!!')
+        
+    try:
+        with ctx_mgr():
+            h()
+    except:
+        assert_traceback([(Line475+14, 30, 'test_traceback.py', 'test_with_traceback_ctor_throws'), 
+                          (Line475+4, 3, 'test_traceback.py', '__init__')])
+
 run_test(__name__)

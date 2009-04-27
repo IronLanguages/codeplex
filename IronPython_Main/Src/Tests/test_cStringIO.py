@@ -142,6 +142,10 @@ def call_seek_tell(i):
     AssertError(ValueError, i.seek, 0)
     AssertError(ValueError, i.seek, 0, 2)
     
+    m = cStringIO.StringIO()
+    m.seek(2)
+    m.write("hello!")
+    AreEqual(m.getvalue(), '\x00\x00hello!')
     
 
 # truncate
