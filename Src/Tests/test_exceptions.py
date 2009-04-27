@@ -394,6 +394,21 @@ def test_assert():
 
 
 def test_syntax_error_exception():
+    try: 
+        compile('a = """\n\n', 'foo', 'single', 0x200)
+    except SyntaxError, se: 
+        AreEqual(se.offset, 9)
+    
+    try: 
+        compile('a = """\n\nxxxx\nxxx\n', 'foo', 'single', 0x200)
+    except SyntaxError, se: 
+        AreEqual(se.offset, 18)
+
+    try: 
+        compile('abc\na = """\n\n', 'foo', 'exec', 0x200)
+    except SyntaxError, se: 
+        AreEqual(se.offset, 9)
+
     try:
         compile("if 2==2: x=2\nelse:y=", "Error", "exec")
     except SyntaxError, se:
@@ -403,6 +418,7 @@ def test_syntax_error_exception():
         Assert('filename' in l1)
         Assert('text' in l1)
         if is_cli or is_silverlight:
+            import clr
             l2 = dir(se.clsException)
             Assert('Line' in l2)
             Assert('Column' in l2)
@@ -925,5 +941,16 @@ def test_raise_inside_str():
 def test_exception_doc():
     # should be accessible, CPython and IronPython have different strings though.
     Exception().__doc__
+
+def test_repr_not_called():
+    """__repr__ shouldn't be called when message is a tuple w/ multiple args"""
+    class x(object):
+        def __repr__(self):
+            raise StopIteration('repr should not be called')
+    
+    try:
+        sys.exit((x(), x()))
+    except SystemExit:
+        pass
 
 run_test(__name__)

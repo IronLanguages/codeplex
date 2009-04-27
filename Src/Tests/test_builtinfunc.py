@@ -287,6 +287,10 @@ def test_zip():
 
     AreEqual(zip(bar(), foo()), [(2,2)])
     AreEqual(zip(foo(), bar()), [(2,2)])
+    
+    # test passing the same object for multiple iterables
+    AreEqual(zip(*[iter(["0", "1"])] * 2), [('0', '1')])
+    AreEqual(zip(*[iter(["0", "1", "2"])] * 3), [('0', '1', '2')])
    
 def test_dir():
     local_var = 10
