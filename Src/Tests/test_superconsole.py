@@ -563,7 +563,24 @@ def test_decorator_cp21984():
     AreEqual(len(lines), len(expected_lines))
     for i in xrange(0, len(lines)):
         AreEqual(lines[i], expected_lines[i])                        
-    
+
+
+def test_triple_strings():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('"""{ENTER}')
+    superConsole.SendKeys('hello"""{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    #verification
+    lines = getTestOutput()[0]
+    expected_lines = [  ">>> \"\"\"\n",
+                        "... hello\"\"\"\n",
+                        "'\\nhello'\n",
+                        ">>> outputRedirectStop()\n"]
+                   
+    AreEqual(len(lines), len(expected_lines))
+    for i in xrange(0, len(lines)):
+        AreEqual(lines[i], expected_lines[i])  
+
 #------------------------------------------------------------------------------
 #--__main__
 

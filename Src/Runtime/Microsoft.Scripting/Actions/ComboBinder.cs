@@ -12,12 +12,11 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
-
-
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
@@ -87,10 +86,9 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public virtual/*override*/ System.Type ReturnType {
+        public override Type ReturnType {
             get {
-                return typeof(object);
-                //return _metaBinders[_metaBinders.Length - 1].Binder.ReturnType;
+                return _metaBinders[_metaBinders.Length - 1].Binder.ReturnType;
             }
         }
 

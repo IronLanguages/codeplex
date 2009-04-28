@@ -16,9 +16,9 @@ using System; using Microsoft;
 
 
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -410,6 +410,18 @@ namespace Microsoft.Scripting {
                 callArgs[callArgs.Length - 1] = result;
 
                 var resultMO = new DynamicMetaObject(result, BindingRestrictions.Empty);
+
+                // Need to add a conversion if calling TryConvert
+                if (binder.ReturnType != typeof(object)) {
+                    Debug.Assert(binder is ConvertBinder && fallbackInvoke == null);
+
+                    var convert = Expression.Convert(resultMO.Expression, binder.ReturnType);
+                    // will always be a cast or unbox
+                    Debug.Assert(convert.Method == null);
+
+                    resultMO = new DynamicMetaObject(convert, resultMO.Restrictions);
+                }
+
                 if (fallbackInvoke != null) {
                     resultMO = fallbackInvoke(resultMO);
                 }
@@ -424,7 +436,8 @@ namespace Microsoft.Scripting {
                                 callArgs
                             ),
                             resultMO.Expression,
-                            DynamicMetaObjectBinder.Convert(fallbackResult.Expression, typeof(object))
+                            fallbackResult.Expression,
+                            binder.ReturnType
                         )
                     ),
                     GetRestrictions().Merge(resultMO.Restrictions).Merge(fallbackResult.Restrictions)
@@ -476,7 +489,8 @@ namespace Microsoft.Scripting {
                                 callArgs
                             ),
                             result,
-                            DynamicMetaObjectBinder.Convert(fallbackResult.Expression, typeof(object))
+                            fallbackResult.Expression,
+                            typeof(object)
                         )
                     ),
                     GetRestrictions().Merge(fallbackResult.Restrictions)
@@ -508,7 +522,7 @@ namespace Microsoft.Scripting {
 
                 //
                 // Build a new expression like:
-                //   TryDeleteMember(payload) ? null : fallbackResult
+                //   if (TryDeleteMember(payload)) { } else { fallbackResult }
                 //
                 var callDynamic = new DynamicMetaObject(
                     Expression.Condition(
@@ -517,8 +531,9 @@ namespace Microsoft.Scripting {
                             typeof(DynamicObject).GetMethod(methodName),
                             args.AddFirst(Constant(binder))
                         ),
-                        Expression.Constant(null),
-                        DynamicMetaObjectBinder.Convert(fallbackResult.Expression, typeof(object))
+                        Expression.Empty(),
+                        fallbackResult.Expression,
+                        typeof(void)
                     ),
                     GetRestrictions().Merge(fallbackResult.Restrictions)
                 );

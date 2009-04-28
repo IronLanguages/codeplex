@@ -95,6 +95,13 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get { return _type; }
+        }
+
+        /// <summary>
         /// Determines whether the specified <see cref="Object" /> is equal to the current object.
         /// </summary>
         /// <param name="obj">The <see cref="Object" /> to compare with the current object.</param>

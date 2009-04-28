@@ -45,6 +45,13 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get { return typeof(object); }
+        }
+
+        /// <summary>
         /// Gets the name of the member to invoke.
         /// </summary>
         public string Name {

@@ -36,6 +36,21 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get {
+                switch(_operation) {
+                    case ExpressionType.IsFalse:
+                    case ExpressionType.IsTrue:
+                        return typeof(bool);
+                    default:
+                        return typeof(object);
+                }
+            }
+        }
+
+        /// <summary>
         /// The unary operation kind.
         /// </summary>
         public ExpressionType Operation {

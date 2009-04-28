@@ -37,6 +37,13 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get { return typeof(object); }
+        }
+
+        /// <summary>
         /// Gets the signature of the arguments at the call site.
         /// </summary>
         public CallInfo CallInfo {
