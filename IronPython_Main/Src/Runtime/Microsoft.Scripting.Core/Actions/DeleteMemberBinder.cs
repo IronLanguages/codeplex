@@ -57,6 +57,13 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get { return typeof(void); }
+        }
+
+        /// <summary>
         /// Performs the binding of the dynamic delete member operation if the target dynamic object cannot bind.
         /// </summary>
         /// <param name="target">The target of the dynamic delete member operation.</param>

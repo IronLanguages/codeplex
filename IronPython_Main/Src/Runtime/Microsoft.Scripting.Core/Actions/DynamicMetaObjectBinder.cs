@@ -16,6 +16,7 @@ using System; using Microsoft;
 
 
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
@@ -66,6 +67,20 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public virtual Type ReturnType {
+            get { return typeof(object); }
+        }
+
+        /// <summary>
+        /// Gets the value indicating if we should validate the result of the binding.
+        /// </summary>
+        protected virtual bool ValidateBindingResult {
+            get { return true; }
+        }
+
+        /// <summary>
         /// Performs the runtime binding of the dynamic operation on a set of arguments.
         /// </summary>
         /// <param name="args">An array of arguments to the dynamic operation.</param>
@@ -82,6 +97,25 @@ namespace Microsoft.Scripting {
                 throw new InvalidOperationException();
             }
 
+            // Ensure that the binder's ReturnType matches CallSite's return
+            // type. We do this so meta objects and language binders can
+            // compose trees together without needing to insert converts.
+            //
+            // For now, we need to allow binders to opt out of this check.
+            Type expectedResult;
+            if (ValidateBindingResult) {
+                expectedResult = ReturnType;
+
+                if (returnLabel.Type != typeof(void) &&
+                    !TypeUtils.AreReferenceAssignable(returnLabel.Type, expectedResult)) {
+                    throw Error.BinderNotCompatibleWithCallSite(expectedResult, this, returnLabel.Type);
+                }
+            } else {
+                // We have to at least make sure it works with the CallSite's
+                // type to build the return.
+                expectedResult = returnLabel.Type;
+            }
+
             DynamicMetaObject target = DynamicMetaObject.Create(args[0], parameters[0]);
             DynamicMetaObject[] metaArgs = CreateArgumentMetaObjects(args, parameters);
 
@@ -94,6 +128,12 @@ namespace Microsoft.Scripting {
             Expression body = binding.Expression;
             BindingRestrictions restrictions = binding.Restrictions;
 
+            // Ensure the result matches the expected result type.
+            if (expectedResult != typeof(void) &&
+                !TypeUtils.AreReferenceAssignable(expectedResult, body.Type)) {
+                throw Error.DynamicResultNotAssignable(body.Type, this, expectedResult);
+            }
+
             // if the target is IDO, standard binders ask it to bind the rule so we may have a target-specific binding. 
             // it makes sense to restrict on the target's type in such cases.
             // ideally IDO metaobjects should do this, but they often miss that type of "this" is significant.
@@ -105,7 +145,7 @@ namespace Microsoft.Scripting {
 
             // Add the return
             if (body.NodeType != ExpressionType.Goto) {
-                body = Expression.Return(returnLabel, Convert(body, returnLabel.Type));
+                body = Expression.Return(returnLabel, body);
             }
 
             // Finally, add restrictions
@@ -117,7 +157,7 @@ namespace Microsoft.Scripting {
         }
 
         private static void VerifyRestrictions(BindingRestrictions restrictions) {
-            if (restrictions.Equals(BindingRestrictions.Empty)) {
+            if (restrictions == BindingRestrictions.Empty) {
                 throw new InvalidOperationException();
             }
         }
@@ -230,47 +270,17 @@ namespace Microsoft.Scripting {
         private DynamicMetaObject MakeDeferred(BindingRestrictions rs, params DynamicMetaObject[] args) {
             var exprs = DynamicMetaObject.GetExpressions(args);
 
-            Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(args, typeof(object));
+            Type delegateType = DelegateHelpers.MakeDeferredSiteDelegate(args, ReturnType);
 
             // Because we know the arguments match the delegate type (we just created the argument types)
             // we go directly to DynamicExpression.Make to avoid a bunch of unnecessary argument validation
             return new DynamicMetaObject(
-                DynamicExpression.Make(typeof(object), delegateType, this, new TrueReadOnlyCollection<Expression>(exprs)),
+                DynamicExpression.Make(ReturnType, delegateType, this, new TrueReadOnlyCollection<Expression>(exprs)),
                 rs
             );
         }
 
         #endregion
-
-        /// <summary>
-        /// Converts the result of a dynamic operation to the given type.
-        /// Void converts to default(T). This will not find a userdefined
-        /// conversion method, and its error is specific to converting the
-        /// result of a dynamic operation.
-        /// </summary>
-        internal static Expression Convert(Expression expression, Type type) {
-            if (TypeUtils.AreEquivalent(expression.Type, type)) {
-                return expression;
-            }
-
-            // Result type can be void but non-void expression.
-            if (type == typeof(void)) {
-                return Expression.Block(typeof(void), expression);
-            }
-
-            // Dynamic operations can convert void -> default(T)
-            if (expression.Type == typeof(void)) {
-                return Expression.Block(expression, Expression.Default(type));
-            }
-
-            // If we don't have a valid primtive conversion, it's an error.
-            if (!TypeUtils.HasIdentityPrimitiveOrNullableConversion(expression.Type, type) &&
-                !TypeUtils.HasReferenceConversion(expression.Type, type)) {
-                throw Error.CannotConvertDynamicResult(expression.Type, type);
-            }
-
-            return Expression.Convert(expression, type);
-        }
 
         // used to detect standard MetaObjectBinders.
         internal virtual bool IsStandardBinder {

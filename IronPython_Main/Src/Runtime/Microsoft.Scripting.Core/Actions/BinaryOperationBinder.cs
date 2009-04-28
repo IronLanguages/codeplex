@@ -36,6 +36,13 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// The result type of the operation.
+        /// </summary>
+        public override sealed Type ReturnType {
+            get { return typeof(object); }
+        }
+
+        /// <summary>
         /// The binary operation kind.
         /// </summary>
         public ExpressionType Operation {

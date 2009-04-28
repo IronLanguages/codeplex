@@ -43,7 +43,7 @@ from System.Collections.Generic import List
 import IronPython.Hosting as Hosting
 from IronPython.Runtime.Operations import PythonOps
 import System
-from System.Reflection import Emit
+from System.Reflection import Emit, Assembly
 from System.Reflection.Emit import OpCodes, AssemblyBuilderAccess
 from System.Reflection import AssemblyName, TypeAttributes, MethodAttributes
 
@@ -54,15 +54,25 @@ def GenerateExe(name, targetKind, platform, machine, main_module):
     mb = ab.DefineDynamicModule(name,  aName.Name + '.exe')
     tb = mb.DefineType('PythonMain', TypeAttributes.Public)
     mainMethod = tb.DefineMethod('Main', MethodAttributes.Public | MethodAttributes.Static, int, ())
+    if targetKind == System.Reflection.Emit.PEFileKinds.WindowApplication:
+        mainMethod.SetCustomAttribute(clr.GetClrType(System.STAThreadAttribute).GetConstructor(()), System.Array[System.Byte](())) 
     gen = mainMethod.GetILGenerator()
     
     # get the ScriptCode assembly...    
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(Assembly).GetMethod("GetEntryAssembly"), ());
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(Assembly).GetMethod("get_CodeBase"), ());
+    gen.Emit(OpCodes.Newobj, clr.GetClrType(System.Uri).GetConstructor( (str, ) ));
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(System.Uri).GetMethod("get_LocalPath"), ());
+    gen.Emit(OpCodes.Newobj, clr.GetClrType(System.IO.FileInfo).GetConstructor( (str, ) ))
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(System.IO.FileInfo).GetMethod("get_Directory"), ())
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(System.IO.DirectoryInfo).GetMethod("get_FullName"), ())
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(System.Environment).GetMethod("set_CurrentDirectory"), ())
     gen.Emit(OpCodes.Ldstr, name + ".dll")
     gen.EmitCall(OpCodes.Call, clr.GetClrType(System.IO.Path).GetMethod("GetFullPath", (clr.GetClrType(str), )), ())
     gen.EmitCall(OpCodes.Call, clr.GetClrType(System.Reflection.Assembly).GetMethod("LoadFile", (clr.GetClrType(str), )), ())
     
     # emit module name
-    gen.Emit(OpCodes.Ldstr, System.IO.Path.GetFileNameWithoutExtension(main_module))
+    gen.Emit(OpCodes.Ldstr, "__main__")
     
     gen.Emit(OpCodes.Ldnull)
     
@@ -120,6 +130,11 @@ def Main(args):
         print __doc__
         sys.exit(0)
 
+    if target != System.Reflection.Emit.PEFileKinds.Dll and main_name == None:
+        print __doc__
+        sys.exit(0)
+        print "EXEs require /main:<filename> to be specified"
+    
     if not output and main_name:
         output = System.IO.Path.GetFileNameWithoutExtension(main_name)
     elif not output and files:
