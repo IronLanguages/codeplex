@@ -16,7 +16,6 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -99,26 +98,6 @@ namespace Microsoft.Scripting {
         /// </summary>
         public override sealed Type ReturnType {
             get { return _type; }
-        }
-
-        /// <summary>
-        /// Determines whether the specified <see cref="Object" /> is equal to the current object.
-        /// </summary>
-        /// <param name="obj">The <see cref="Object" /> to compare with the current object.</param>
-        /// <returns>true if the specified System.Object is equal to the current object; otherwise false.</returns>
-        [Confined]
-        public override bool Equals(object obj) {
-            ConvertBinder ca = obj as ConvertBinder;
-            return ca != null && TypeUtils.AreEquivalent(ca._type, _type) && ca._explicit == _explicit;
-        }
-
-        /// <summary>
-        /// Returns the hash code for this instance.
-        /// </summary>
-        /// <returns>An <see cref="Int32" /> containing the hash code for this instance.</returns>
-        [Confined]
-        public override int GetHashCode() {
-            return ConvertBinderHash ^ _type.GetHashCode() ^ (_explicit ? 0x8000000 : 0);
         }
     }
 }

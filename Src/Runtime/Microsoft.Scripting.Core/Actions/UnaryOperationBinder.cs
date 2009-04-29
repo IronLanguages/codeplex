@@ -15,9 +15,8 @@
 using System; using Microsoft;
 
 
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
+using Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -94,26 +93,6 @@ namespace Microsoft.Scripting {
             get {
                 return true;
             }
-        }
-
-        /// <summary>
-        /// Determines whether the specified System.Object is equal to the current <see cref="BinaryOperationBinder"/>.
-        /// </summary>
-        /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="BinaryOperationBinder"/>.</param>
-        /// <returns>true if the specified object is equal to the current <see cref="BinaryOperationBinder"/>; otherwise, false.</returns>
-        [Confined]
-        public override bool Equals(object obj) {
-            UnaryOperationBinder oa = obj as UnaryOperationBinder;
-            return oa != null && oa._operation == _operation;
-        }
-
-        /// <summary>
-        /// Returns the hash code for this instance. 
-        /// </summary>
-        /// <returns>An <see cref="Int32"/> containing the hash code for this instance.</returns>
-        [Confined]
-        public override int GetHashCode() {
-            return UnaryOperationBinderHash ^ (int)_operation;
         }
 
         internal static bool OperationIsValid(ExpressionType operation) {

@@ -16,8 +16,6 @@ using System; using Microsoft;
 
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -47,26 +45,6 @@ namespace Microsoft.Scripting {
         /// </summary>
         public CallInfo CallInfo {
             get { return _callInfo; }
-        }
-
-        /// <summary>
-        /// Determines whether the specified <see cref="Object" /> is equal to the current object.
-        /// </summary>
-        /// <param name="obj">The <see cref="Object" /> to compare with the current object.</param>
-        /// <returns>true if the specified object is equal to the current object; otherwise false.</returns>
-        [Confined]
-        public override bool Equals(object obj) {
-            DeleteIndexBinder ia = obj as DeleteIndexBinder;
-            return ia != null && ia._callInfo.Equals(_callInfo);
-        }
-
-        /// <summary>
-        /// Returns the hash code for this instance.
-        /// </summary>
-        /// <returns>An <see cref="Int32" /> containing the hash code for this instance.</returns>
-        [Confined]
-        public override int GetHashCode() {
-            return DeleteIndexBinderHash ^ _callInfo.GetHashCode();
         }
 
         /// <summary>
