@@ -1662,7 +1662,7 @@ def test_default_new_init():
             
     for x in anyInitList:
         if is_cli or is_silverlight or x!=object:
-            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21906
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=19585
             x().__init__(1,2,3)
         else:
             AssertError(TypeError, x().__init__, x, 1, 2, 3)
