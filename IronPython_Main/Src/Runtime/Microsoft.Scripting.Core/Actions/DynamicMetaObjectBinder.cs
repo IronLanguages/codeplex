@@ -36,28 +36,6 @@ namespace Microsoft.Scripting {
     /// </remarks>
     public abstract class DynamicMetaObjectBinder : CallSiteBinder {
 
-        #region Standard Binder Kinds
-
-        internal const int OperationBinderHash = 0x4000000;
-        internal const int UnaryOperationBinderHash = 0x8000000;
-        internal const int BinaryOperationBinderHash = 0xc000000;
-        internal const int GetMemberBinderHash = 0x10000000;
-        internal const int SetMemberBinderHash = 0x14000000;
-        internal const int DeleteMemberBinderHash = 0x18000000;
-        internal const int GetIndexBinderHash = 0x1c000000;
-        internal const int SetIndexBinderHash = 0x20000000;
-        internal const int DeleteIndexBinderHash = 0x24000000;
-        internal const int InvokeMemberBinderHash = 0x28000000;
-        internal const int ConvertBinderHash = 0x2c000000;
-        internal const int CreateInstanceBinderHash = 0x30000000;
-        internal const int InvokeBinderHash = 0x34000000;
-        internal const int BinaryOperationOnMemberBinderHash = 0x38000000;
-        internal const int BinaryOperationOnIndexBinderHash = 0x3c000000;
-        internal const int UnaryOperationOnMemberBinderHash = 0x40000000;
-        internal const int UnaryOperationOnIndexBinderHash = 0x44000000;
-
-        #endregion
-
         #region Public APIs
 
         /// <summary>

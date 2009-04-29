@@ -17,7 +17,6 @@ using System; using Microsoft;
 
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
-using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -92,24 +91,6 @@ namespace Microsoft.Scripting {
             get {
                 return true;
             }
-        }
-
-        /// <summary>
-        /// Determines whether the specified System.Object is equal to the current <see cref="BinaryOperationBinder"/>.
-        /// </summary>
-        /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="BinaryOperationBinder"/>.</param>
-        /// <returns>true if the specified System.Object is equal to the current <see cref="BinaryOperationBinder"/>; otherwise, false.</returns>
-        public override bool Equals(object obj) {
-            BinaryOperationBinder oa = obj as BinaryOperationBinder;
-            return oa != null && oa._operation == _operation;
-        }
-
-        /// <summary>
-        /// Returns the hash code for this instance. 
-        /// </summary>
-        /// <returns>An <see cref="Int32"/> containing the hash code for this instance.</returns>
-        public override int GetHashCode() {
-            return BinaryOperationBinderHash ^ (int)_operation;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
