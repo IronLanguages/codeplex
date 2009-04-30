@@ -46,7 +46,14 @@ namespace IronPython.Runtime {
         public ModuleLoader find_module(CodeContext/*!*/ context, string fullname, List path) {
             ScriptCode sc;
             if (_codes.TryGetValue(fullname, out sc)) {
-                return new ModuleLoader(sc);
+                int sep = fullname.LastIndexOf('.');
+                string name = fullname;
+                string parentName = null;
+                if (sep != -1) {
+                    parentName = fullname.Substring(0, sep);
+                    name = fullname.Substring(sep + 1);
+                }
+                return new ModuleLoader(sc, parentName, name);
             }
 
             return null;
