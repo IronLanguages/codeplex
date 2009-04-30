@@ -42,5 +42,4 @@ if sys.platform=="win32":
 
 
 #--Run tests-------------------------------------------------------------------
-from iptest.cominterop_util import run_pkg_helper
-run_pkg_helper(__file__, exclude_list = ["hw"])
+#TODO

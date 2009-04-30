@@ -12,18 +12,3 @@
 #
 #
 #####################################################################################
-
-# COM Interop tests for IronPython
-
-#For the time being just delegate this to the cominterop package...
-import sys
-from iptest.assert_util import skiptest
-skiptest("win32", "silverlight")
-
-failed = 0
-try:
-    import cominterop
-except:
-    failed = 1
-
-sys.exit(failed)

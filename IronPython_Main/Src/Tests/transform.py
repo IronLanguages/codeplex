@@ -103,8 +103,6 @@ def try_all(visitor):
         f_name = Path.GetFileName(f)
         if (f_name=="test_builds.py"):
             pass
-        elif (f_name=="test_cominterop.py"):          
-            pass 
         elif (f_name=="test_complex.py"):          
             pass 
         elif (f_name=="test_dllsite.py"):          
@@ -151,8 +149,6 @@ def cpy_try_all(visitor):
         f_name = Path.GetFileName(f)
         if (f_name=="test_builds.py"):
             pass
-        elif (f_name=="test_cominterop.py"):          
-            pass 
         else:
             print "Attempting to transform: ", f_name
             rw.Convert(f, generated(f))
