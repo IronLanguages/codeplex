@@ -109,4 +109,3 @@ def LoadNames(tree, namespace):
     for node in Walk(tree):
         if hasattr(node, 'Name'):
             namespace[node.Name] = node
-
