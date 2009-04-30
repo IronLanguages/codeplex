@@ -3350,6 +3350,7 @@ namespace IronPython.Runtime.Operations {
             return AppDomain.CurrentDomain.DefineDynamicAssembly(name, access);
         }
 
+#if !SILVERLIGHT
         /// <summary>
         /// Provides the entry point for a compiled module.  The stub exe calls into InitializeModule which
         /// does the actual work of adding references and importing the main module.  Upon completion it returns
@@ -3359,9 +3360,13 @@ namespace IronPython.Runtime.Operations {
             ContractUtils.RequiresNotNull(precompiled, "precompiled");
             ContractUtils.RequiresNotNull(main, "main");
 
-            var pythonEngine = Python.CreateEngine();
+            Dictionary<string, object> options = new Dictionary<string, object>();
+            options["Arguments"] = ArrayUtils.RemoveFirst(Environment.GetCommandLineArgs()); // remove the EXE
+
+            var pythonEngine = Python.CreateEngine(options);
             
             var pythonContext = (PythonContext)HostingHelpers.GetLanguageContext(pythonEngine);
+
 
             foreach (var scriptCode in ScriptCode.LoadFromAssembly(pythonContext.DomainManager, precompiled)) {
                 pythonContext.GetCompiledLoader().AddScriptCode(scriptCode);
@@ -3383,6 +3388,7 @@ namespace IronPython.Runtime.Operations {
 
             return 0;
         }
+#endif
 
         public static CodeContext GetPythonTypeContext(PythonType pt) {
             return pt.PythonContext.DefaultBinderState.Context;

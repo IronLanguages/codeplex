@@ -64,7 +64,7 @@ function prepare-testcase {
 }
 
 
-function testcase-helper ($cmd, $expected_files, $exe, $expected_exe_exitcode, $expected_exe_stdout) {
+function testcase-helper ($cmd, $expected_files, $exe, $expected_exe_exitcode, $expected_exe_stdout, $arguments) {
     prepare-testcase
     echo "------------------------------------------------------------------------------"
     echo "TEST CASE: $cmd"
@@ -95,7 +95,9 @@ function testcase-helper ($cmd, $expected_files, $exe, $expected_exe_exitcode, $
     }
     
     #--Run the generated exe
-    $exe_out = &"$PWD\$exe"
+    $command = Get-Command "$PWD\$exe"
+    echo $arguments
+    $exe_out = &$command $arguments
     if ($LASTEXITCODE -ne $expected_exe_exitcode) {
         echo "FAILED: actual exit code, $LASTEXITCODE, of $exe was not the expected value ($expected_exe_exitcode)"
         $FINALEXIT = 1
@@ -137,15 +139,17 @@ foreach ($x in (dir $CURRPATH\*.py)) {
 	cp -force $x $TOOLSPATH\$temp_name
 }
 
+#--Console HelloWorld w/ args
+testcase-helper "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " @("pycpkgtest.exe", "pycpkgtest.dll") "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
 
+#--Console HelloWorld w/ args
+testcase-helper "/main:$CURRPATH\console_hw_args.py" @("console_hw_args.exe", "console_hw_args.dll") "console_hw_args.exe" 0 "(Compiled) Hello World ['foo']" "foo"
 
 #--Console HelloWorld
 testcase-helper "/main:$CURRPATH\console_hw.py" @("console_hw.exe", "console_hw.dll") "console_hw.exe" 0 "(Compiled) Hello World"
 
-
 #--Console HelloWorld with a single dependency
 testcase-helper "$CURRPATH\other_hw.py /main:$CURRPATH\console_hw.py" @("console_hw.exe", "console_hw.dll") "console_hw.exe" 0 "(Compiled) Hello World"
-
 
 #--WinForms HelloWorld
 testcase-helper "/main:$CURRPATH\winforms_hw.py /target:winexe" @("winforms_hw.exe", "winforms_hw.dll") "winforms_hw.exe" 0 "(Compiled WinForms) Hello World"
