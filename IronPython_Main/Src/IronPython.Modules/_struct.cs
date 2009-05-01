@@ -1200,7 +1200,7 @@ namespace IronPython.Modules {
 
         #region Misc. Private APIs
 
-        private static int Align(int length, int size) {
+        internal static int Align(int length, int size) {
             return length + (size - 1) & ~(size - 1);
         }
 

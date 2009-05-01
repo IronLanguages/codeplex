@@ -41,6 +41,7 @@ using IronPython.Hosting;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {
 
@@ -59,6 +60,7 @@ namespace IronPython.Runtime.Operations {
         internal static Exception RawException;
 
         public static readonly PythonTuple EmptyTuple = PythonTuple.EMPTY;
+        private static readonly Type[] _DelegateCtorSignature = new Type[] { typeof(object), typeof(IntPtr) };
 
         #endregion
 
@@ -949,35 +951,7 @@ namespace IronPython.Runtime.Operations {
         public static bool TryGetBoundAttr(object o, SymbolId name, out object ret) {
             return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
         }
-
-        class AttrKey : IEquatable<AttrKey> {
-            private Type _type;
-            private SymbolId _name;
-
-            public AttrKey(Type type, SymbolId name) {
-                _type = type;
-                _name = name;
-            }
-
-            #region IEquatable<AttrKey> Members
-
-            public bool Equals(AttrKey other) {
-                if (other == null) return false;
-
-                return _type == other._type && _name == other._name;
-            }
-
-            #endregion
-
-            public override bool Equals(object obj) {
-                return Equals(obj as AttrKey);
-            }
-
-            public override int GetHashCode() {
-                return _type.GetHashCode() ^ _name.GetHashCode();
-            }
-        }
-
+        
         public static void SetAttr(CodeContext/*!*/ context, object o, SymbolId name, object value) {
             PythonContext.GetContext(context).SetAttr(context, o, name, value);
         }
@@ -1086,14 +1060,6 @@ namespace IronPython.Runtime.Operations {
             }
 
             return res;
-        }
-
-        public static IDictionary<object, object> GetAttrDict(CodeContext/*!*/ context, object o) {
-            IAttributesCollection iac = DynamicHelpers.GetPythonType(o).GetMemberDictionary(context, o);
-            if (iac != null) {
-                return iac.AsObjectKeyedDictionary();
-            }
-            throw PythonOps.AttributeErrorForMissingAttribute(PythonTypeOps.GetName(o), Symbols.Dict);
         }
 
         /// <summary>
@@ -3348,6 +3314,38 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static AssemblyBuilder DefineDynamicAssembly(AssemblyName name, AssemblyBuilderAccess access) {
             return AppDomain.CurrentDomain.DefineDynamicAssembly(name, access);
+        }
+
+        /// <summary>
+        /// Generates a new delegate type.  The last type in the array is the return type.
+        /// </summary>
+        public static Type/*!*/ MakeNewCustomDelegate(Type/*!*/[]/*!*/ types) {
+            return MakeNewCustomDelegate(types, null);
+        }
+
+        /// <summary>
+        /// Generates a new delegate type.  The last type in the array is the return type.
+        /// </summary>
+        public static Type/*!*/ MakeNewCustomDelegate(Type/*!*/[]/*!*/ types, CallingConvention? callingConvention) {
+            const MethodAttributes CtorAttributes = MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public;
+            const MethodImplAttributes ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed;
+            const MethodAttributes InvokeAttributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
+
+            Type returnType = types[types.Length - 1];
+            Type[] parameters = ArrayUtils.RemoveLast(types);
+
+            TypeBuilder builder = Snippets.Shared.DefineDelegateType("Delegate" + types.Length);
+            builder.DefineConstructor(CtorAttributes, CallingConventions.Standard, _DelegateCtorSignature).SetImplementationFlags(ImplAttributes);
+            builder.DefineMethod("Invoke", InvokeAttributes, returnType, parameters).SetImplementationFlags(ImplAttributes);
+
+            if (callingConvention != null) {
+                builder.SetCustomAttribute(new CustomAttributeBuilder(
+                    typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) }),
+                    new object[] { callingConvention })
+                );
+            }
+
+            return builder.CreateType();
         }
 
 #if !SILVERLIGHT
