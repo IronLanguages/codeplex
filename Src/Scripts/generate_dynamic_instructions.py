@@ -65,7 +65,7 @@ def gen_instruction(cw, n):
     cw.write('public override int ProducedStack { get { return 1; } }')
     cw.write('public override int ConsumedStack { get { return %d; } }' % n)
     
-    cw.enter_block('public override int Run(StackFrame frame)')
+    cw.enter_block('public override int Run(InterpretedFrame frame)')
     args = get_args(n)
     for arg in args[::-1]:
         cw.write('object %s = frame.Pop();' % arg)
@@ -130,6 +130,8 @@ def gen_run_method(cw, n, is_void):
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
     
+    if n > 0:
+        cw.write('frame.BoxLocals();')
     
     if is_void: cw.write('_interpreter.Run(frame);')
     else: cw.write('return (TRet)_interpreter.Run(frame);')

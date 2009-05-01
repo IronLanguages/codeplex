@@ -585,6 +585,22 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         }
 
         /// <summary>
+        /// Sets the python type that corresponds with the provided static type.
+        /// 
+        /// This is used for built-in types which have a metaclass.  Currently
+        /// only used by ctypes.
+        /// </summary>
+        internal static PythonType SetPythonType(Type type, PythonType pyType) {
+            lock (_pythonTypes) {
+                Debug.Assert(!_pythonTypes.Contains(type));
+                Debug.Assert(pyType.GetType() != typeof(PythonType));
+
+                _pythonTypes.Add(type, pyType);
+            }
+            return pyType;
+        }
+
+        /// <summary>
         /// Allocates the storage for the instance running the .NET constructor.  This provides
         /// the creation functionality for __new__ implementations.
         /// </summary>
@@ -1018,6 +1034,18 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             _dict[name] = slot;
         }
 
+        internal bool TryGetCustomSetAttr(CodeContext context, out PythonTypeSlot pts) {
+            PythonContext pc = PythonContext.GetContext(context);
+            return pc.Binder.TryResolveSlot(
+                    context,
+                    DynamicHelpers.GetPythonType(this),
+                    this,
+                    SymbolTable.StringToId("__setattr__"),
+                    out pts) &&
+                    pts is BuiltinMethodDescriptor &&
+                    ((BuiltinMethodDescriptor)pts).DeclaringType != typeof(PythonType);
+        }
+
         internal void SetCustomMember(CodeContext/*!*/ context, SymbolId name, object value) {
             Debug.Assert(context != null);
 
@@ -1115,17 +1143,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             object res;
             if (TryGetMember(context, instance, name, out res)) {
                 return res;
-            }
-
-            throw new MissingMemberException(String.Format(CultureInfo.CurrentCulture,
-                IronPython.Resources.CantFindMember,
-                SymbolTable.IdToString(name)));
-        }
-
-        internal object GetBoundMember(CodeContext context, object instance, SymbolId name) {
-            object value;
-            if (TryGetBoundMember(context, instance, name, out value)) {
-                return value;
             }
 
             throw new MissingMemberException(String.Format(CultureInfo.CurrentCulture,
@@ -1522,16 +1539,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                 }
             }
             return iac;
-        }
-
-        internal IAttributesCollection GetMemberDictionary(CodeContext context, object self) {
-            if (self != null) {
-                IPythonObject sdo = self as IPythonObject;
-                if (sdo != null) return sdo.Dict;
-
-                return null;
-            }
-            return GetMemberDictionary(context);
         }
 
         #endregion
@@ -1963,10 +1970,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
         #region Private implementation details
 
-        internal void Initialize() {
-            EnsureDict();
-        }
-
         private void UpdateVersion() {
             foreach (WeakReference wr in SubTypes) {
                 if (wr.IsAlive) {
@@ -2107,7 +2110,12 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         #region IFastSettable Members
 
         T IFastSettable.MakeSetBinding<T>(CallSite<T> site, PythonSetMemberBinder binder) {
-            if (!IsSystemType) {
+            PythonTypeSlot pts;
+            // if our meta class has a custom __setattr__ then we don't handle it in the
+            // fast path.  Usually this is handled by a user defined type (UserTypeOps) IDynamicMetaObjectProvider
+            // class.  But w/ _ctypes support we can have a built-in meta class which doesn't
+            // get this treatment.
+            if (!IsSystemType && !TryGetCustomSetAttr(Context.DefaultBinderState.Context, out pts)) {
                 CodeContext context = BinderState.GetBinderState(binder).Context;
                 string name = binder.Name;
                 
@@ -2358,12 +2366,6 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                 case OptimizedSetKind.UserSlot: _func = new Func<CallSite, object, TValue, object>(UserSlot); break;
                 case OptimizedSetKind.SetDict: _func = new Func<CallSite, object, TValue, object>(SetDict); break;
                 case OptimizedSetKind.Error: _func = new Func<CallSite, object, TValue, object>(Error); break;
-            }
-        }
-
-        public OptimizedSetKind Kind {
-            get {
-                return _kind;
             }
         }
 

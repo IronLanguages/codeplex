@@ -59,11 +59,12 @@ namespace Microsoft.Scripting.Interpreter {
             get { return _closure; }
         }
 
-        private StackFrame PrepareToRun() {
+        private InterpretedFrame PrepareToRun() {
             if (_delegateCreator != null) {
                 _delegateCreator.UpdateExecutionCount();
             }
-            return _interpreter.MakeFrame(_closure);
+
+            return new InterpretedFrame(_interpreter, _closure);
         }
 
         private static MethodInfo GetRunMethod(Type delegateType) {
@@ -141,6 +142,7 @@ namespace Microsoft.Scripting.Interpreter {
             // copy in and copy out for today...
             frame.Data[0] = arg0;
             frame.Data[1] = arg1;
+            frame.BoxLocals();
             var ret = _interpreter.Run(frame);
             arg0 = (T0)frame.Data[0];
             arg1 = (T1)frame.Data[1];
@@ -156,6 +158,7 @@ namespace Microsoft.Scripting.Interpreter {
             for (int i = 0; i < arguments.Length; i++) {
                 frame.Data[i] = arguments[i];
             }
+            frame.BoxLocals();
             object ret = _interpreter.Run(frame);
             return ret;
         }

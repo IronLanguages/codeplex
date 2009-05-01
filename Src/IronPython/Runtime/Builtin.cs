@@ -1026,10 +1026,6 @@ namespace IronPython.Runtime {
             return context.Scope.Dict;
         }
 
-        internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext/*!*/ context) {
-            return LocalScopeDictionaryStorage.GetDictionaryFromScope(context.Scope);
-        }
-
         public static PythonType @long {
             get {
                 return TypeCache.BigInteger;

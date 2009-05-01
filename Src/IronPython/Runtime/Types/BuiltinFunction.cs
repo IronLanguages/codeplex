@@ -234,18 +234,6 @@ namespace IronPython.Runtime.Types {
             return bf;
         }
 
-        internal void DictArgsHelper(IDictionary<object, object> dictArgs, object[] args, out object[] realArgs, out string[] argNames) {
-            realArgs = ArrayOps.CopyArray(args, args.Length + dictArgs.Count);
-            argNames = new string[dictArgs.Count];
-
-            int index = 0;
-            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dictArgs) {
-                argNames[index] = kvp.Key as string;
-                realArgs[index + args.Length] = kvp.Value;
-                index++;
-            }
-        }
-
         /// <summary>
         /// Returns a descriptor for the built-in function if one is
         /// neededed
@@ -1073,15 +1061,11 @@ namespace IronPython.Runtime.Types {
                             // force a type test on self
                             createArgs[3] = CompilerHelpers.GetType(__self__);
                         }
-                        try {
-                            object fc = Activator.CreateInstance(callerType, createArgs);
 
-                            PerfTrack.NoteEvent(PerfTrack.Categories.BindingFast, "BuiltinFunction");
-                            return new FastBindResult<T>((T)(object)fc.GetType().GetField("MyDelegate").GetValue(fc), false);
-                        } catch {
-                            Debug.Assert(false);
-                            throw;
-                        }
+                        object fc = Activator.CreateInstance(callerType, createArgs);
+
+                        PerfTrack.NoteEvent(PerfTrack.Categories.BindingFast, "BuiltinFunction");
+                        return new FastBindResult<T>((T)(object)fc.GetType().GetField("MyDelegate").GetValue(fc), false);
                     }
                 }
 
