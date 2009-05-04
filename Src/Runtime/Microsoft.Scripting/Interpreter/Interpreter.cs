@@ -108,6 +108,32 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        internal void RunBlock(InterpretedFrame frame, int endIndex) {
+            while (true) {
+                try {
+                    RunInstructions(frame, endIndex);
+                    return;
+                } catch (Exception exc) {
+                    endIndex = _instructions.Length;
+                    frame.FaultingInstruction = frame.InstructionIndex;
+
+                    ExceptionHandler handler = HandleCatch(frame, exc);
+                    if (handler == null) {
+                        throw;
+                    }
+
+                    // stay in the current catch so that ThreadAbortException is not rethrown by CLR:
+                    var abort = exc as ThreadAbortException;
+                    if (abort != null) {
+                        _anyAbortException = abort;
+                        frame.CurrentAbortHandler = handler;
+                        RunBlock(frame, endIndex);
+                        return;
+                    } 
+                }
+            }
+        }
+
         // To get to the current AbortReason object on Thread.CurrentThread 
         // we need to use ExceptionState property of any ThreadAbortException instance.
         private static ThreadAbortException _anyAbortException;
@@ -153,7 +179,7 @@ namespace Microsoft.Scripting.Interpreter {
             if (handler.IsFinallyOrFault) {
                 frame.InstructionIndex = handler.StartHandlerIndex;
 
-                RunFinallyOrFaultBlock(frame, handler.EndHandlerIndex);
+                RunBlock(frame, handler.EndHandlerIndex);
                 if (frame.InstructionIndex == handler.EndHandlerIndex) {
                     frame.InstructionIndex -= 1; // push back into the right range
 
@@ -168,23 +194,6 @@ namespace Microsoft.Scripting.Interpreter {
 
                 frame.InstructionIndex = handler.StartHandlerIndex;
                 return handler;
-            }
-        }
-
-        // If an exception is thrown and caught in finally the operation (goto or exception handling) goes on.
-        // If an exception is thrown but not handled within finally/fault block the operation is cancelled and a new exception is propagated.
-        internal void RunFinallyOrFaultBlock(InterpretedFrame frame, int endIndex) {
-            while (true) {
-                try {
-                    RunInstructions(frame, endIndex);
-                    return;
-                } catch (Exception exc) {
-                    frame.FaultingInstruction = frame.InstructionIndex;
-
-                    if (HandleCatch(frame, exc) == null) {
-                        throw;
-                    }
-                }
             }
         }
 
