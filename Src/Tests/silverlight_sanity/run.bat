@@ -22,4 +22,4 @@ start "Silverlight IronPython Sanity Test" /WAIT %CHIRON_PATH%\chiron.exe /b:ind
 set ECODE=%ERRORLEVEL%
 popd
 
-echo TODO: the ERRORLEVEL of Chiron was %ECODE%
+echo TODO: the ERRORLEVEL of Chiron was %ECODE%.
