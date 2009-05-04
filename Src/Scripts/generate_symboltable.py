@@ -140,6 +140,7 @@ fieldList = [
     ('update', 'Update'),
     ('this', 'ThisArgument'),
     ('__index__', 'Index'),
+    ('__trunc__', 'Truncate'),
     ('absolute_import', 'AbsoluteImport'),
     ('print_function', 'PrintFunction'),
     ('unicode_literals', 'UnicodeLiterals'),

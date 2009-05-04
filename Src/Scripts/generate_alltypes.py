@@ -106,6 +106,11 @@ for type in SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Do
     
 bigint = types[-1]
 
+simple_identity_method = """\
+public static %(type)s %(method_name)s(%(type)s x) {
+    return x;
+}"""
+
 identity_method = """\
 [SpecialName]
 public static %(type)s %(method_name)s(%(type)s x) {
@@ -143,6 +148,15 @@ public static object %(method_name)s(%(type)s x) {
     return %(bigger_signed)sOps.%(method_name)s((%(bigger_signed)s)x);
 }"""
      
+float_trunc = """\
+public static object __trunc__(%(type)s x) {
+    if (x >= int.MaxValue || x <= int.MinValue) {
+        return (BigInteger)x;
+    } else {
+        return (int)x;
+    }
+}"""
+
 def gen_unaryops(cw, ty):    
     cw.write("// Unary Operations")
     cw.write(identity_method, method_name="Plus")
@@ -165,7 +179,10 @@ def gen_unaryops(cw, ty):
         cw.exit_block()
         cw.writeline()
     
-    if not ty.is_float:
+    if ty.is_float:
+        cw.write(float_trunc, type=ty.name)
+    else:
+        cw.write(simple_identity_method, type=ty.name, method_name="__trunc__")
         if ty.max > UInt32.MaxValue:    
             cw.enter_block('public static int __hash__(%s x)' % (ty.name))
             if ty.is_signed:                
@@ -397,7 +414,39 @@ def gen_conversions(cw, ty):
         if oty == ty: continue
         
         write_conversion(cw, ty, oty)
-            
+
+identity_property_method = """\
+[PropertyMethod, SpecialName]
+public static %(type)s Get%(method_name)s(%(type)s x) {
+    return x;
+}"""
+
+const_property_method = """\
+[PropertyMethod, SpecialName]
+public static %(type)s Get%(method_name)s(%(type)s x) {
+    return (%(type)s)%(const)s;
+}"""
+
+# const=None indicates an identity property, i.e. a property that returns 'self'
+def write_property(cw, ty, name, const=None):
+    if const == None:
+        cw.write(identity_property_method, type=ty.name, method_name=name)
+    else:
+        cw.write(const_property_method, type=ty.name, method_name=name, const=const)
+
+def gen_api(cw, ty):
+    if ty.name in ["BigInteger", "Complex"]:
+        return
+    cw.writeline()
+    cw.write("// Public API - Numerics")
+    write_property(cw, ty, "real")
+    write_property(cw, ty, "imag", const="0")
+    cw.write(simple_identity_method, type=ty.name, method_name="conjugate")
+    if ty.is_float:
+        pass
+    else:
+        write_property(cw, ty, "numerator")
+        write_property(cw, ty, "denominator", const="1")
             
 type_header = """\
 [StaticExtensionMethod]
@@ -440,7 +489,7 @@ public static object __new__(PythonType cls, object value) {
 def gen_header(cw, ty):
     if ty.name not in ['Int32', 'Double', 'Single', 'BigInteger', 'Complex64']:
         cw.write(type_header)
-            
+
 def gen_type(cw, ty):
     cw.kws.update(ty.get_dict())
     extra = ""
@@ -449,9 +498,10 @@ def gen_type(cw, ty):
     gen_unaryops(cw, ty)
     gen_binaryops(cw, ty)
     gen_conversions(cw, ty)
+    gen_api(cw, ty)
     cw.exit_block()
     cw.writeline()
-    
+
 def gen_all(cw):
     for ty in types[:-2]: #don't generate complex or BigInteger
         gen_type(cw, ty)

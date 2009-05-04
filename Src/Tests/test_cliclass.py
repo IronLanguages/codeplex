@@ -184,6 +184,7 @@ def test_op_Implicit_inheritance():
     """should inherit op_Implicit from base classes"""
     a = NewClass()
     AreEqual(int(a), 1002)
+    AreEqual(long(a), 1002)
     AreEqual(NewClass.op_Implicit(a), 1002)
 
 def test_symbol_dict():
