@@ -81,7 +81,7 @@ function test-nooutput
     #cleanup
     #Kill off ipyw processess
     echo "CodePlex Work Item 12900 - must forcefully kill ipyw.exe processes"
-	taskkill /F /IM ipyw.exe /T 2> $null
+	stop-process -name ipyw 2> $null
 	sleep 5
     $proc_list = @(get-process | where-object { $_.ProcessName -match "^ipyw" })
     if ($proc_list.Length -ne 0) 
@@ -111,7 +111,7 @@ function test-noargs
     #cleanup
     #Kill off ipyw processess
     echo "CodePlex Work Item 12900 - must forcefully kill ipyw.exe processes"
-	taskkill /F /IM ipyw.exe /T 2> $null
+	stop-process -name ipyw 2> $null
 	sleep 5
     $proc_list = @(get-process | where-object { $_.ProcessName -match "^ipyw" })
     if ($proc_list.Length -ne 0) 

@@ -198,6 +198,14 @@ def test_deque():
     d = deque([1,2, BadCmp()])
     AssertError(RuntimeError, d.remove, 3)
 
+    x = deque()
+    class y(object):
+        def __eq__(self, other):
+            return True
+    
+    x.append(y())
+    AreEqual(y() in x, True)
+
 if isPython25:
     def test_singleton():
         """Verify that an empty frozenset is a singleton"""

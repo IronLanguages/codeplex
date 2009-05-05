@@ -137,6 +137,11 @@ namespace IronPython.Runtime.Binding {
                 return MakeGenericTypeDefinitionError(call, ai, valInfo);
             }
 
+            DynamicMetaObject translated = BuiltinFunction.TranslateArguments(call, codeContext, self, args, false, Value.Name);
+            if (translated != null) {
+                return translated;
+            }
+
             GetAdapters(ai, call, codeContext, out newAdapter, out initAdapter);
             BinderState state = BinderState.GetBinderState(call);
             

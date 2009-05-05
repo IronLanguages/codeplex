@@ -26,7 +26,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
 
-    partial class OperationRetBoolBinder : ComboBinder {
+    partial class BinaryRetTypeBinder : ComboBinder {
         public override T BindDelegate<T>(CallSite<T> site, object[] args) {
             if (_convBinder.Type == typeof(bool) && _opBinder is PythonBinaryOperationBinder) {
                 T res = null;

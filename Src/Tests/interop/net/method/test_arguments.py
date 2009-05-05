@@ -529,7 +529,7 @@ def test_splatting_errors():
     f = o.M200
     
     AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not NoneType", lambda: f(*None))
-    AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not str", lambda: f(*'x'))
+    AssertErrorWithMessage(TypeError, "expected int, got str", lambda: f(*'x'))
     AssertErrorWithMessage(TypeError, "M200() argument after * must be a sequence, not int", lambda: f(*1))
 
 run_test(__name__)
