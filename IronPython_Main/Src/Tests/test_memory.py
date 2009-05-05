@@ -82,10 +82,14 @@ t_list = [
         "def f():\n    class C: pass\n    pass",
         "def f():pass\nclass C:pass\nf()",
     ]
-    
-for code in t_list:
+
+expectedMem = 12000
+if is_cli64:
+    expectedMem = int(expectedMem*1.10)
+
+for code in t_list:    
     baseMem = evalTest(10)
-    usedMax = max(12000, 4*baseMem)
+    usedMax = max(expectedMem, 4*baseMem)
     if not skipMemoryCheck:
         for repetitions in [100, 500]:
             usedMem = evalTest(repetitions)

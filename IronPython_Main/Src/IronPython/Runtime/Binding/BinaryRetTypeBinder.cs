@@ -27,11 +27,11 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
 
-    partial class OperationRetBoolBinder : ComboBinder, IExpressionSerializable {
-        private readonly PythonBinaryOperationBinder _opBinder;
+    partial class BinaryRetTypeBinder : ComboBinder, IExpressionSerializable {
+        private readonly DynamicMetaObjectBinder _opBinder;
         private readonly PythonConversionBinder _convBinder;
 
-        public OperationRetBoolBinder(PythonBinaryOperationBinder operationBinder, PythonConversionBinder conversionBinder) :
+        public BinaryRetTypeBinder(DynamicMetaObjectBinder operationBinder, PythonConversionBinder conversionBinder) :
             base(new BinderMappingInfo(
                     operationBinder,
                     ParameterMappingInfo.Parameter(0),
@@ -48,7 +48,7 @@ namespace IronPython.Runtime.Binding {
 
         public override Type ReturnType {
             get {
-                return typeof(bool);
+                return _convBinder.Type;
             }
         }
 
@@ -59,7 +59,7 @@ namespace IronPython.Runtime.Binding {
             return Expression.Call(
                 typeof(PythonOps).GetMethod("MakeComboAction"),
                 BindingHelpers.CreateBinderStateExpression(),
-                _opBinder.CreateExpression(),
+                ((IExpressionSerializable)_opBinder).CreateExpression(),
                 _convBinder.CreateExpression()
             );
         }
