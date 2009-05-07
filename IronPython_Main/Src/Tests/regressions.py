@@ -339,6 +339,16 @@ def test_conversions_cp19508():
     AreEqual(int(MyFloat), 0)
     AreEqual(str(MyFloat), '0.0')
 
+@skip("win32")
+def test_type_delegate_conversion():
+    import clr
+    clr.AddReference('Microsoft.Scripting.Core')
+    import System
+    class x(object): pass
+    ctor = System.Func[object](x)
+    AreEqual(type(ctor()), x)
+
+    
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

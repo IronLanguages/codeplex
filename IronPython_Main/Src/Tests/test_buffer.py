@@ -18,6 +18,7 @@
 ##
 
 from iptest.assert_util import *
+import array
 
 def test_negative():
     AssertError(TypeError, buffer, None)
@@ -27,6 +28,16 @@ def test_negative():
     AssertError(ValueError, buffer, "abc", -1, 0) #offset < 0
     #size < -1; -1 is allowed since that is the way to ask for the default value
     AssertError(ValueError, buffer, "abc", 0, -2)
+
+def test_len():
+    testData = ('hello world', array.array('b', 'hello world'), buffer('hello world'), buffer('abchello world', 3))
+    if is_cli:
+        import System
+        testData += (System.Array[System.Char]('hello world'), )
+    
+    for x in testData:        
+        b = buffer(x, 6)
+        AreEqual(len(b), 5)
 
 def test_pass_in_string():
     b = buffer("abc", 0, -1)
@@ -118,4 +129,40 @@ def test_buffer_tostr():
     AreEqual(str(buffer('abc')), 'abc')
     AreEqual(str(buffer(array.array('b', [1,2,3,4,5]))), '\x01\x02\x03\x04\x05')
 
+
+def test_buffer_bytes():
+    for x in (b'abc', bytearray(b'abc')):
+        AreEqual(str(buffer(x)), 'abc')
+        AreEqual(buffer(x)[0:1], b'a')
+        
+@skip("silverlight")
+def test_write_file():
+    inputs = [buffer('abcdef'), buffer(b'abcdef'), buffer(bytearray(b'abcdef'))]
+    text_inputs = [buffer(array.array('b', 'abcdef')), array.array('b', 'abcdef'), array.array('c', 'abcdef')]
+    #if is_cli:
+    #    inputs.append(System.Array[System.Char]('abcdef'))
+
+    for inp in inputs + text_inputs:
+        f = file('foo', 'wb')
+        f.write(inp)
+        f.close()
+        f = file('foo')
+        AreEqual(f.readlines(), ['abcdef'])
+        f.close()
+        
+    
+    # TODO: Arrays not allowed in non-binary mode
+    for inp in inputs:
+        f = file('foo', 'w')
+        f.write(inp)
+        f.close()
+        f = file('foo')
+        AreEqual(f.readlines(), ['abcdef'])
+        f.close()
+
+    for inp in text_inputs:
+        f = file('foo', 'w')
+        AssertError(TypeError, f.write, inp)
+        f.close()
+        
 run_test(__name__)

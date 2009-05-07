@@ -160,5 +160,13 @@ def test_compare_to_none():
     AreEqual(tuple() >= None, True)
     AreEqual(tuple() <= None, False)
 
+def test_wacky_contains():
+    for retval in None, 0, [], (), 0.0, 0L, {}:
+        class x(tuple):
+            def  __contains__(self, other):
+                return retval
+            
+        AreEqual('abc' in x(), False)
+
 run_test(__name__)
 

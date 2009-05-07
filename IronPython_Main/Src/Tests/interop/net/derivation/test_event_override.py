@@ -55,8 +55,11 @@ def test_sanity_interface_impl():
     x.call()
     AreEqual(EVENT_COUNT, 1)
 
-@disabled("Dev10 438724")
-def test_sanity_derived():
+def test_sanity_derived_neg():
+    '''
+    The snippet below does not work and the related bug, Dev10 438724,
+    was closed by design.  Keeping this around as a negative scenario.
+    '''
     global EVENT_COUNT
     EVENT_COUNT = 0
     
@@ -74,11 +77,12 @@ def test_sanity_derived():
         print x, y
     
     x.add_Act(f)
-    x.call()
-    AreEqual(EVENT_COUNT, 1)
-    x.remove_Act(f)
-    x.call()
-    AreEqual(EVENT_COUNT, 1)
+    AssertErrorWithMessage(TypeError, "BoundEvent is not callable", x.call)
+    #x.call()
+    #AreEqual(EVENT_COUNT, 1)
+    #x.remove_Act(f)
+    #x.call()
+    #AreEqual(EVENT_COUNT, 1)
 
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

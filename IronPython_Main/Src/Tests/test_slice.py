@@ -2946,23 +2946,20 @@ def test_oldclass_and_direct():
     
     # using the slice syntax
     AreEqual(NewStyle()[:-1], slice(None, -1, None))
-    #Dev10 588465
-    #AreEqual(OldStyleWithLen()[:-1], slice(0, 9, None))
-    #AreEqual(OldStyleWithLenAndGetSlice()[:-1], (0, 9))
+    AreEqual(OldStyleWithLen()[:-1], slice(0, 9, None))
+    AreEqual(OldStyleWithLenAndGetSlice()[:-1], (0, 9))
     AreEqual(OldStyle()[:-1:1], slice(None, -1, 1))
     
     # need __len__ to be defined for negative indexing
     try:
         OldStyle()[:-1],
-        #Dev10 588465
-        #AssertUnreachable()
+        AssertUnreachable()
     except AttributeError:
         pass
     
     try:
         OldStyle()[-1:],
-        #Dev10 588465
-        #AssertUnreachable()
+        AssertUnreachable()
     except AttributeError:
         pass
         
@@ -2973,8 +2970,7 @@ def test_oldclass_and_direct():
                  ]:
         try:
             OldStyle()[x:y],
-            #Dev10 588465
-            #AssertUnreachable()
+            AssertUnreachable()
         except AttributeError:
             pass
     
@@ -3103,11 +3099,9 @@ def test_oldclass_and_direct_delete():
     del NewStyle()[:-1]
     AreEqual(setVal, (slice(None, -1, None)))
     del OldStyleWithLen()[:-1]
-    #Dev10 588465
-    #AreEqual(setVal, (slice(0, 9, None)))
+    AreEqual(setVal, (slice(0, 9, None)))
     del OldStyleWithLenAndGetSlice()[:-1]
-    #Dev10 588465
-    #AreEqual(setVal, (0, 9))
+    AreEqual(setVal, (0, 9))
     del OldStyle()[:-1:1]
     AreEqual(setVal, (slice(None, -1, 1)))
     
