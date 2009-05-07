@@ -285,7 +285,7 @@ def test_str_equals():
 
 def test_str_dict():
     print "CodePlex Work Item 13115"
-    extra_str_dict_keys = [ "__cmp__", "__radd__", "isdecimal", "isnumeric", "isunicode"]
+    extra_str_dict_keys = [ "__radd__", "isdecimal", "isnumeric", "isunicode"]
     missing_str_dict_keys = ["__rmod__"]
     
     #It's OK that __getattribute__ does not show up in the __dict__.  It is

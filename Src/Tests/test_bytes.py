@@ -1420,4 +1420,15 @@ def test_zzz_cli_features():
     lst.Add(42)
     AssertErrorWithMessage(TypeError, "expected a character, but string of length 2 found", ord, lst)
 
+def test_bytes_hashing():
+    """test interaction of bytes w/ hashing modules"""
+    import _sha, _sha256, _sha512, _md5
+    
+    for hashLib in (_sha.new, _sha256.sha256, _sha512.sha512, _sha512.sha384, _md5.new):
+        x = hashLib(b'abc')
+        x.update(b'abc')
+        
+        AssertError(TypeError, hashLib, bytearray(b'abc'))
+        AssertError(TypeError, x.update, bytearray(b'abc'))
+
 run_test(__name__)

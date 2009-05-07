@@ -745,5 +745,52 @@ def test_cp16623():
     #for line in lines:
     #    Assert(line in expected_lines, line)
 
+
+def test_write_buffer():
+    for mode in ('b', ''):
+        foo = open('foo', 'w+' + mode)
+        b = buffer(b'hello world', 6)
+        foo.write(b)
+        foo.close()
+        
+        foo = open('foo', 'r')
+        AreEqual(foo.readlines(), ['world'])
+        foo.close()
+
+
+    foo = open('foo', 'w+')
+    b = buffer(u'hello world', 6)
+    foo.write(b)
+    foo.close()
+    
+    foo = open('foo', 'r')
+    AreEqual(foo.readlines(), ['world'])
+    foo.close()
+
+    foo = open('foo', 'w+b')
+    b = buffer(u'hello world', 6)
+    foo.write(b)
+    foo.close()
+    
+    #foo = open('foo', 'r')
+    #AreEqual(foo.readlines(), ['l\x00o\x00 \x00w\x00o\x00r\x00l\x00d\x00'])
+    #foo.close()
+
+def test_errors():
+    try:
+        file('some_file_that_really_does_not_exist')        
+    except Exception, e:
+        AreEqual(e.errno, 2)
+    else:
+        AssertUnreachable()
+
+    try:
+        file('path_too_long' * 100) 
+    except Exception, e:
+        AreEqual(e.errno, 2)
+    else:
+        AssertUnreachable()
+
+
 #------------------------------------------------------------------------------    
 run_test(__name__)

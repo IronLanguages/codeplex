@@ -535,7 +535,9 @@ def test_from_cmdline_neg():
         if not preferComDispatch:
             Assert("TypeError: m0()" in response)
         else:
-            Assert("EnvironmentError: Does not support a collection." in response)  #Merlin 324233
+            Assert("Does not support a collection." in response)  #Merlin 324233
+            Assert("EnvironmentError:" in response)  #Merlin 324233
+            
     finally:
         ipi.End()
     
