@@ -832,6 +832,17 @@ def test__getfullpathname_neg():
     for bad in [None, 0, 34, -12345L, 3.14, object, test__getfullpathname]:
         AssertError(TypeError, nt._getfullpathname, bad)
 
+def test_cp15514():
+    cmd_variation_list = ['%s -c "print __name__"' % sys.executable,
+                          '"%s -c "print __name__""' % sys.executable,
+                          ]
+    cmd_cmd = get_environ_variable("windir") + "\system32\cmd"
+    for x in cmd_variation_list:
+        ec = nt.spawnv(nt.P_WAIT, cmd_cmd , ["cmd", "/C", 
+                                             x])
+        AreEqual(ec, 0)
+   
+
 #------------------------------------------------------------------------------
 try:
     run_test(__name__)

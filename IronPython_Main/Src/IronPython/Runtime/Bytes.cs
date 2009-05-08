@@ -17,13 +17,9 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
-using System.Text;
 
-using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -329,6 +325,17 @@ namespace IronPython.Runtime {
 
             }
             return new Bytes(res);
+        }
+
+        public Bytes/*!*/ lstrip([ProhibitGenericListConversion]IList<byte> bytes) {
+            lock (this) {
+                List<byte> res = _bytes.LeftStrip(bytes);
+                if (res == null) {
+                    return this;
+                }
+
+                return new Bytes(res);
+            }
         }
 
         public PythonTuple partition([ProhibitGenericListConversion]IList<byte>/*!*/ sep) {
@@ -696,6 +703,17 @@ namespace IronPython.Runtime {
             [PythonHidden]
             set {
                 throw new InvalidOperationException();
+            }
+        }
+
+        public object this[BigInteger index] {
+            get {
+                int iVal;
+                if (index.AsInt32(out iVal)) {
+                    return this[iVal];
+                }
+
+                throw PythonOps.IndexError("cannot fit long in index");
             }
         }
 

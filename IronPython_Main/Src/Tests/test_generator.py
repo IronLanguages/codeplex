@@ -496,5 +496,15 @@ def test_generator_expr_in():
     def f(): yield 2
 
     AreEqual(2 in f(), True)
+
+def test_generator_attrs():
+    expectedAttributes = ['gi_running', 'send', 'next', '__iter__', '__name__', 'close', 'throw', 'gi_frame', 'gi_code']
+    expectedAttributes.sort()
+    def f(): yield 2
     
+    got = set(dir(f())) - set(dir(object))
+    got = list(got)
+    got.sort()
+    AreEqual(got, expectedAttributes)
+
 run_test(__name__)

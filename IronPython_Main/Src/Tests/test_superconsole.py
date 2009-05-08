@@ -581,6 +581,13 @@ def test_triple_strings():
     for i in xrange(0, len(lines)):
         AreEqual(lines[i], expected_lines[i])  
 
+def test_areraise():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}{TAB}some(){ENTER}{ENTER}try:{ENTER}{TAB}foo{(}{)}{ENTER}{BACKSPACE}{BACKSPACE}{BACKSPACE}{BACKSPACE}except:{ENTER}{TAB}raise{ENTER}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    lines = getTestOutput()[1]
+    AreEqual(lines, ['Traceback (most recent call last):\r\n', '  File "<stdin>", line 2, in <module>\r\n', '  File "<stdin>", line 2, in foo\r\n', "NameError: name 'some' is not defined\r\n"])
+
 #------------------------------------------------------------------------------
 #--__main__
 
