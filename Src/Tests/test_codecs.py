@@ -404,13 +404,9 @@ def test_cp11334():
     t_out.close()
     t_in.close()
     
-    if not is_cli:
-        AreEqual(len(t_out_lines), 0)
-        Assert(t_err_lines[0].startswith("  File"))
-        Assert(t_err_lines[1].startswith("SyntaxError: Non-ASCII character '\\xb5' in file"))
-    else:
-        print "CodePlex 11334"
-        AreEqual(len(t_out_lines), 1)
+    AreEqual(len(t_out_lines), 0)
+    Assert(t_err_lines[0].startswith("  File"))
+    Assert(t_err_lines[1].startswith("SyntaxError: Non-ASCII character '\\xb5' in file"))
     
     #--Test that using "# coding ..." is OK
     t_in, t_out, t_err = nt.popen3(sys.executable + " " + nt.getcwd() + r"\encoded_files\cp11334_ok.py")

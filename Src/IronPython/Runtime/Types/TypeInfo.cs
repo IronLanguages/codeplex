@@ -921,7 +921,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static MemberGroup/*!*/ EnterResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (typeof(IDisposable).IsAssignableFrom(type)) {
+            if (type != typeof(PythonGenerator) && typeof(IDisposable).IsAssignableFrom(type)) {
                 return GetInstanceOpsMethod(type, "EnterMethod");
             }
 
@@ -929,7 +929,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static MemberGroup/*!*/ ExitResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (typeof(IDisposable).IsAssignableFrom(type)) {
+            if (type != typeof(PythonGenerator) && typeof(IDisposable).IsAssignableFrom(type)) {
                 return GetInstanceOpsMethod(type, "ExitMethod");
             }
 

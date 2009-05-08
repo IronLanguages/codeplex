@@ -454,7 +454,7 @@ namespace IronPython.Modules {
         }
 
         /// <summary>
-        /// Shared helper between struct & union for getting field info and validating it.
+        /// Shared helper between struct and union for getting field info and validating it.
         /// </summary>
         private static void GetFieldInfo(INativeType type, object o, out string fieldName, out INativeType cdata, out int? bitCount) {
             PythonTuple pt = o as PythonTuple;

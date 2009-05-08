@@ -3757,6 +3757,23 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        public static SyntaxErrorException BadSourceError(byte badByte, SourceSpan span, string path) {
+            SyntaxErrorException res = new SyntaxErrorException(
+                String.Format("Non-ASCII character '\\x{0:x}' in file x.py on line {1}, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details",
+                    badByte,
+                    span.Start.Line
+                ),
+                path,
+                null,
+                null,
+                span,
+                ErrorCodes.SyntaxError,
+                Severity.FatalError
+            );
+            res.Data[PythonContext._syntaxErrorNoCaret] = ScriptingRuntimeHelpers.True;
+            return res;
+        }
+
         public static Exception StopIteration() {
             return StopIteration("");
         }

@@ -93,7 +93,11 @@ function testcase-helper ($cmd, $expected_files, $exe, $expected_exe_exitcode, $
         $FINALEXIT = 1
         return
     }
-    
+ 
+    testcase-runner $cmd $exe $expected_exe_exitcode $expected_exe_stdout $arguments
+}
+
+function testcase-runner ($cmd, $exe, $expected_exe_exitcode, $expected_exe_stdout, $arguments) {    
     #--Run the generated exe
     $command = Get-Command "$PWD\$exe"
     echo $arguments
@@ -155,13 +159,16 @@ testcase-helper "$CURRPATH\other_hw.py /main:$CURRPATH\console_hw.py" @("console
 testcase-helper "/main:$CURRPATH\winforms_hw.py /target:winexe" @("winforms_hw.exe", "winforms_hw.dll") "winforms_hw.exe" 0 "(Compiled WinForms) Hello World"
 
 
-
 #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21976
+testcase-helper "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " @("pycpkgtest.exe", "pycpkgtest.dll") "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
+
 foreach ($x in (dir $CURRPATH\*.py)) {
+    echo $x.Name
 	$temp_name = $x.Name
 	rm -force $TOOLSPATH\$temp_name
 }
 
+testcase-runner "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
 
 #------------------------------------------------------------------------------
 #Cleanup and exit

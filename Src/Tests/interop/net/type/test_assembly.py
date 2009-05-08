@@ -32,16 +32,12 @@ def test_assembly_instance():
     AssertError(AttributeError, lambda: mscorlib.NonExistentNamespace)
 
 def test_assemblybuilder_instance():    
-    if "-X:SaveAssemblies" not in System.Environment.CommandLine:
-        print "disabled due to CP16485"
-        return
-    
     name = System.Reflection.AssemblyName()
     name.Name = 'Test'
     assemblyBuilder = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, System.Reflection.Emit.AssemblyBuilderAccess.Run)    
     
     asm_builder_dir = dir(assemblyBuilder)
-    AreEqual(len(asm_builder_dir), 75)
+    AreEqual(len(asm_builder_dir), 77)
     Assert("AddResourceFile" in asm_builder_dir)
     Assert("CreateInstance" in asm_builder_dir)
     
