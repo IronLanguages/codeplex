@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override DynamicMetaObject BindCreateInstance(CreateInstanceBinder create, params DynamicMetaObject[] args) {
-            return InvokeWorker(create, args, AstUtils.Constant(BinderState.GetBinderState(create).Context));
+            return InvokeWorker(create, args, AstUtils.Constant(PythonContext.GetPythonContext(create).SharedContext));
         }
 
         public override DynamicMetaObject BindConvert(ConvertBinder/*!*/ conversion) {
@@ -55,7 +55,7 @@ namespace IronPython.Runtime.Binding {
         public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
             PythonContext pc = Value.PythonContext ?? DefaultContext.DefaultPythonContext;
 
-            foreach (object o in Value.GetMemberNames(pc.DefaultBinderState.Context)) {
+            foreach (object o in Value.GetMemberNames(pc.SharedContext)) {
                 if (o is string) {
                     yield return (string)o;
                 }

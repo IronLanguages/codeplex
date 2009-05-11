@@ -82,7 +82,7 @@ namespace IronPython.Runtime {
 
         private static CallSite<Func<CallSite, object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, T>>.Create(
-                DefaultContext.DefaultPythonContext.DefaultBinderState.Convert(
+                DefaultContext.DefaultPythonContext.Convert(
                     typeof(T),
                     kind
                 )
@@ -95,7 +95,7 @@ namespace IronPython.Runtime {
 
         private static CallSite<Func<CallSite, object, object>> MakeTrySite<T>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, object>>.Create(
-                DefaultContext.DefaultPythonContext.DefaultBinderState.Convert(
+                DefaultContext.DefaultPythonContext.Convert(
                     typeof(T),
                     kind
                 )
@@ -283,7 +283,7 @@ namespace IronPython.Runtime {
             lock (_siteDict) {
                 if (!_siteDict.TryGetValue(to, out site)) {
                     _siteDict[to] = site = CallSite<Func<CallSite, object, object>>.Create(
-                        DefaultContext.DefaultPythonContext.DefaultBinderState.ConvertRetObject(
+                        DefaultContext.DefaultPythonContext.ConvertRetObject(
                             to, 
                             ConversionResultKind.ExplicitCast
                         )

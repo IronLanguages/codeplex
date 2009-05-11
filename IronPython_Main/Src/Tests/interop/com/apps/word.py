@@ -72,10 +72,6 @@ def quit_word(wd):
         wd.Quit(0)
 
 def test_word_typelibsupport():
-    if not preferComDispatch:
-        print "skipping test_word_typelibsupoprt - reason: type Lib support is only enabled in PreferComDispatch mode."
-        return
-
     # load Word namespace directly from the TypeLib
     typeLib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
 
@@ -152,14 +148,6 @@ def test_wordevents():
         print "Found PIAs for Word"
     else:
         print "No PIAs for Word were Found!!!!" 
-
-    # running "tlbimp" for Word is VERY expensive and usually fails
-    # let's disable the scenarios when Ipy attempts to generate
-    # an interop assembly on the fly i.e. when there is no PIA
-    # and -X:PreferComInteropAssembly
-    if not isPiaInstalled and not preferComDispatch:
-        print "Prefer COM dispatch is required when Word PIA is not installed!!!"
-        return
 
     doc.Range().Text = "test"
 

@@ -51,7 +51,7 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonGetable Members
 
-        public DynamicMetaObject GetMember(PythonGetMemberBinder member, Expression codeContext) {
+        public DynamicMetaObject GetMember(PythonGetMemberBinder member, DynamicMetaObject codeContext) {
             // no codeContext filtering but avoid an extra site by handling this action directly
             return MakeMemberAccess(member, member.Name, MemberAccess.Get, this);
         }
@@ -148,7 +148,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ invoke, params DynamicMetaObject/*!*/[]/*!*/ args) {
-            return InvokeWorker(invoke, BinderState.GetCodeContext(invoke), args);
+            return InvokeWorker(invoke, PythonContext.GetCodeContext(invoke), args);
         }
 
         public override System.Collections.Generic.IEnumerable<string> GetDynamicMemberNames() {
@@ -196,7 +196,7 @@ namespace IronPython.Runtime.Binding {
                                 Ast.Assign(
                                     tmp,
                                     Ast.Dynamic(
-                                        BinderState.GetBinderState(invoke).Invoke(
+                                        PythonContext.GetPythonContext(invoke).Invoke(
                                             BindingHelpers.GetCallSignature(invoke)
                                         ),
                                         typeof(object),
@@ -235,7 +235,7 @@ namespace IronPython.Runtime.Binding {
                                 tmp,
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldInstanceConvertToIEnumerableNonThrowing"),
-                                    AstUtils.Constant(BinderState.GetBinderState(conversion).Context),
+                                    AstUtils.Constant(PythonContext.GetPythonContext(conversion).SharedContext),
                                     self.Expression
                                 )
                             ),
@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Binding {
                                 tmp,
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldInstanceConvertToIEnumeratorNonThrowing"),
-                                    AstUtils.Constant(BinderState.GetBinderState(conversion).Context),
+                                    AstUtils.Constant(PythonContext.GetPythonContext(conversion).SharedContext),
                                     self.Expression
                                 )
                             ),
@@ -301,7 +301,7 @@ namespace IronPython.Runtime.Binding {
                                 tmp,
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldInstanceConvertToIEnumerableOfTNonThrowing").MakeGenericMethod(genericType),
-                                    AstUtils.Constant(BinderState.GetBinderState(conversion).Context),
+                                    AstUtils.Constant(PythonContext.GetPythonContext(conversion).SharedContext),
                                     self.Expression                                   
                                 )
                             ),
@@ -347,7 +347,7 @@ namespace IronPython.Runtime.Binding {
                     tmp,
                     Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceConvertNonThrowing"),
-                        AstUtils.Constant(BinderState.GetBinderState(conversion).Context),
+                        AstUtils.Constant(PythonContext.GetPythonContext(conversion).SharedContext),
                         self.Expression,
                         AstUtils.Constant(symbolId)
                     )
@@ -372,7 +372,7 @@ namespace IronPython.Runtime.Binding {
                                 tmp,
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("OldInstanceConvertToBoolNonThrowing"),
-                                    AstUtils.Constant(BinderState.GetBinderState(conversion).Context),
+                                    AstUtils.Constant(PythonContext.GetPythonContext(conversion).SharedContext),
                                     self.Expression
                                 )
                             ),
@@ -462,7 +462,7 @@ namespace IronPython.Runtime.Binding {
                 case MemberAccess.Delete:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
-                        AstUtils.Constant(BinderState.GetBinderState(member).Context),
+                        AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                         AstUtils.Convert(Expression, typeof(OldInstance)),
                         AstUtils.Constant(SymbolTable.StringToId(name))
                     );
@@ -514,7 +514,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Condition(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                                Ast.Constant(BinderState.GetBinderState(member).Context),
+                                Ast.Constant(PythonContext.GetPythonContext(member).SharedContext),
                                 self.Expression,
                                 AstUtils.Constant(symName),
                                 tmp
@@ -533,7 +533,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Condition(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                                AstUtils.Constant(BinderState.GetBinderState(member).Context),
+                                AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                                 self.Expression,
                                 AstUtils.Constant(symName),
                                 tmp
@@ -549,7 +549,7 @@ namespace IronPython.Runtime.Binding {
                 case MemberAccess.Set:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceSetCustomMember"),
-                        AstUtils.Constant(BinderState.GetBinderState(member).Context),
+                        AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                         self.Expression,
                         AstUtils.Constant(symName),
                         AstUtils.Convert(args[1].Expression, typeof(object))
@@ -558,7 +558,7 @@ namespace IronPython.Runtime.Binding {
                 case MemberAccess.Delete:
                     target = Ast.Call(
                         typeof(PythonOps).GetMethod("OldInstanceDeleteCustomMember"),
-                        AstUtils.Constant(BinderState.GetBinderState(member).Context),
+                        AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                         self.Expression,
                         AstUtils.Constant(symName)
                     );
@@ -579,7 +579,7 @@ namespace IronPython.Runtime.Binding {
                 return sa.FallbackGetMember(args[0]).Expression;
             }
 
-            return ((PythonGetMemberBinder)member).Fallback(args[0], AstUtils.Constant(BinderState.GetBinderState(member).Context)).Expression;
+            return ((PythonGetMemberBinder)member).Fallback(args[0], PythonContext.GetCodeContextMO(member)).Expression;
         }
 
         #endregion
@@ -612,7 +612,7 @@ namespace IronPython.Runtime.Binding {
             return new DynamicMetaObject(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("OldInstanceIsCallable"),
-                    AstUtils.Constant(BinderState.GetBinderState(operation).Context),
+                    AstUtils.Constant(PythonContext.GetPythonContext(operation).SharedContext),
                     self.Expression
                 ),
                 self.Restrictions

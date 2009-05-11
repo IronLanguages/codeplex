@@ -82,13 +82,9 @@ def test__1_registered_nopia():
         
     _test_common_on_object(pwcInst)
         
-    if preferComDispatch:
-        # looks like: "<System.__ComObject  (TypeInfo : IPassword)>"
-        types = ['__ComObject', 'IPassword']
-    else:
-        # looks like: "<System.__ComObject  (TypeInfo : Password)>"
-        types = ['__ComObject', 'Password']
-
+    # looks like: "<System.__ComObject  (TypeInfo : IPassword)>"
+    types = ['__ComObject', 'IPassword']
+    
     for x in types:
         Assert(x in repr(pwcInst), x + " not in repr(pwcInst)")
     

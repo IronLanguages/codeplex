@@ -214,7 +214,6 @@ nte_mapper = {
                 
 def test_nte_exceptions():
     for meth in nte_mapper.keys():
-        AssertError(nte_mapper[meth], meth, skip=preferComDispatch)
         AssertError(COMException, meth)
     
 ###############################################################################

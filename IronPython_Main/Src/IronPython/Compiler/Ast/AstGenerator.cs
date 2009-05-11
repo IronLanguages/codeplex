@@ -46,7 +46,7 @@ namespace IronPython.Compiler.Ast {
         private int? _curLine;                                          // tracks what the current line we've emitted at code-gen time
         private MSAst.ParameterExpression _lineNoVar, _lineNoUpdated;   // the variable used for storing current line # and if we need to store to it
         private List<MSAst.ParameterExpression/*!*/> _temps;            // temporary variables allocated against the lambda so we can re-use them
-        private readonly BinderState/*!*/ _binderState;                 // the state stored for the binder
+        private readonly PythonContext/*!*/ _pythonContext;             // the state stored for the binder
         private bool _inFinally;                                        // true if we are currently in a finally (coordinated with our loop state)
         private LabelTarget _breakLabel;                                // the current label for break, if we're in a loop
         private LabelTarget _continueLabel;                             // the current label for continue, if we're in a loop
@@ -55,7 +55,7 @@ namespace IronPython.Compiler.Ast {
         private readonly GlobalAllocator/*!*/ _globals;                 // helper class for generating globals code gen
         private readonly List<ParameterExpression> _locals;             // local variables allocated during the transformation of the code
         private readonly List<ParameterExpression> _params;             // parameters allocated during the transformation of the code
-        private List<ClosureInfo> _liftedVars;                         // list of all variables and which ones are closed over.
+        private List<ClosureInfo> _liftedVars;                          // list of all variables and which ones are closed over.
         private MSAst.ParameterExpression _localCodeContext;            // the current context if it's different from the global context.
         private readonly Profiler _profiler;                            // captures timing data if profiling
         private readonly AstGenerator/*!*/ _parent;                     // the parent generator
@@ -93,9 +93,9 @@ namespace IronPython.Compiler.Ast {
             : this(name, generator, profilerName, false) {
             Assert.NotNull(parent);
             _context = parent.Context;
-            _binderState = parent.BinderState;
+            _pythonContext = parent.PyContext;
             _parent = parent;
-            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PythonContext.LanguageGuid, PythonContext.VendorGuid);
+            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PyContext.LanguageGuid, PyContext.VendorGuid);
             _profiler = parent._profiler;
 
             _globals = parent._globals;
@@ -105,8 +105,8 @@ namespace IronPython.Compiler.Ast {
             : this(name, generator, null, print) {
             Assert.NotNull(context);
             _context = context;
-            _binderState = new BinderState(Binder);
-            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PythonContext.LanguageGuid, PythonContext.VendorGuid);
+            _pythonContext = (PythonContext)context.SourceUnit.LanguageContext;
+            _document = _context.SourceUnit.Document ?? Ast.SymbolDocument(name, PyContext.LanguageGuid, PyContext.VendorGuid);
 
             LanguageContext pc = context.SourceUnit.LanguageContext;
             switch (mode) {
@@ -119,7 +119,7 @@ namespace IronPython.Compiler.Ast {
             PythonOptions po = (pc.Options as PythonOptions);
             Assert.NotNull(po);
             if (po.EnableProfiler && mode != CompilationMode.ToDisk) {
-                _profiler = Profiler.GetProfiler(PythonContext);
+                _profiler = Profiler.GetProfiler(PyContext);
                 if (mode == CompilationMode.Lookup) {
                     _profilerName = NameForExec;
                 }
@@ -127,11 +127,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         public bool Optimize {
-            get { return PythonContext.PythonOptions.Optimize; }
+            get { return PyContext.PythonOptions.Optimize; }
         }
 
         public bool StripDocStrings {
-            get { return PythonContext.PythonOptions.StripDocStrings; }
+            get { return PyContext.PythonOptions.StripDocStrings; }
         }
 
         public bool DebugMode {
@@ -158,13 +158,13 @@ namespace IronPython.Compiler.Ast {
 
         public PythonDivisionOptions DivisionOptions {
             get {
-                return PythonContext.PythonOptions.DivisionOptions;
+                return PyContext.PythonOptions.DivisionOptions;
             }
         }
 
-        private PythonContext/*!*/ PythonContext {
+        internal PythonContext/*!*/ PyContext {
             get {
-                return ((PythonContext)_context.SourceUnit.LanguageContext);
+                return _pythonContext;
             }
         }
 
@@ -174,10 +174,6 @@ namespace IronPython.Compiler.Ast {
 
         public PythonBinder/*!*/ Binder {
             get { return (PythonBinder)_context.SourceUnit.LanguageContext.Binder; }
-        }
-
-        public BinderState/*!*/ BinderState {
-            get { return _binderState; }
         }
 
         public bool PrintExpressions {
@@ -441,9 +437,9 @@ namespace IronPython.Compiler.Ast {
                     }
 
                     expression = Globals.Dynamic(
-                        BinderState.BinaryOperationRetType(
+                        PyContext.BinaryOperationRetType(
                             binder,
-                            BinderState.Convert(
+                            PyContext.Convert(
                                 type,
                                 ConversionResultKind.ExplicitCast
                             )
@@ -894,7 +890,7 @@ namespace IronPython.Compiler.Ast {
         #region Binder Factories
 
         public MSAst.Expression/*!*/ Invoke(Type/*!*/ resultType, CallSignature signature, params MSAst.Expression/*!*/[]/*!*/ args) {
-            PythonInvokeBinder invoke = BinderState.Invoke(signature);
+            PythonInvokeBinder invoke = PyContext.Invoke(signature);
             switch (args.Length) {
                 case 0: return Globals.Dynamic(invoke, resultType, LocalContext);
                 case 1: return Globals.Dynamic(invoke, resultType, LocalContext, args[0]);
@@ -912,7 +908,7 @@ namespace IronPython.Compiler.Ast {
 
         public MSAst.Expression/*!*/ Convert(Type/*!*/ type, ConversionResultKind resultKind, MSAst.Expression/*!*/ target) {
             return Globals.Dynamic(
-                BinderState.Convert(
+                PyContext.Convert(
                     type,
                     resultKind
                 ),
@@ -924,7 +920,7 @@ namespace IronPython.Compiler.Ast {
         public MSAst.Expression/*!*/ Operation(Type/*!*/ resultType, PythonOperationKind operation, MSAst.Expression arg0) {
             return Globals.Dynamic(
                 Binders.UnaryOperationBinder(
-                    BinderState,
+                    PyContext,
                     operation
                 ),
                 resultType,
@@ -935,7 +931,7 @@ namespace IronPython.Compiler.Ast {
         public MSAst.Expression/*!*/ Operation(Type/*!*/ resultType, PythonOperationKind operation, MSAst.Expression arg0, MSAst.Expression arg1) {
             return Globals.Dynamic(
                 Binders.BinaryOperationBinder(
-                    BinderState,
+                    PyContext,
                     operation
                 ),
                 resultType,
@@ -946,7 +942,7 @@ namespace IronPython.Compiler.Ast {
 
         public MSAst.Expression/*!*/ Set(Type/*!*/ resultType, string/*!*/ name, MSAst.Expression/*!*/ target, MSAst.Expression/*!*/ value) {
             return Globals.Dynamic(
-                BinderState.SetMember(
+                PyContext.SetMember(
                     name
                 ),
                 resultType,
@@ -956,16 +952,16 @@ namespace IronPython.Compiler.Ast {
         }
 
         public MSAst.Expression/*!*/ Get(Type/*!*/ resultType, string/*!*/ name, MSAst.Expression/*!*/ target) {
-            return Binders.Get(LocalContext, BinderState, resultType, name, target);
+            return Binders.Get(LocalContext, PyContext, resultType, name, target);
         }
 
         public MSAst.Expression/*!*/ TryGet(Type/*!*/ resultType, string/*!*/ name, MSAst.Expression/*!*/ target) {
-            return Binders.TryGet(LocalContext, BinderState, resultType, name, target);
+            return Binders.TryGet(LocalContext, PyContext, resultType, name, target);
         }
 
         public MSAst.Expression/*!*/ Delete(Type/*!*/ resultType, string/*!*/ name, MSAst.Expression/*!*/ target) {
             return Globals.Dynamic(
-                BinderState.DeleteMember(
+                PyContext.DeleteMember(
                     name
                 ),
                 resultType,
@@ -975,7 +971,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ GetIndex(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.GetIndex(
+                PyContext.GetIndex(
                     expression.Length
                 ),
                 type,
@@ -985,7 +981,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ GetSlice(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.GetSlice,
+                PyContext.GetSlice,
                 type,
                 expression
             );
@@ -993,7 +989,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ SetIndex(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.SetIndex(
+                PyContext.SetIndex(
                     expression.Length - 1
                 ),
                 type,
@@ -1003,7 +999,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ SetSlice(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.SetSlice,
+                PyContext.SetSliceBinder,
                 type,
                 expression
             );
@@ -1011,7 +1007,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ DeleteIndex(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.DeleteIndex(
+                PyContext.DeleteIndex(
                     expression.Length
                 ),
                 type,
@@ -1021,7 +1017,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ DeleteSlice(Type/*!*/ type, MSAst.Expression/*!*/[]/*!*/ expression) {
             return Globals.Dynamic(
-                BinderState.DeleteSlice,
+                PyContext.DeleteSlice,
                 type,
                 expression
             );

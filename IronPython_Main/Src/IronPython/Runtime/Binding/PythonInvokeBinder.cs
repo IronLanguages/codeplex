@@ -39,11 +39,11 @@ namespace IronPython.Runtime.Binding {
     /// When a foreign object is encountered the arguments are expanded into normal position/keyword arguments.
     /// </summary>
     class PythonInvokeBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
-        private readonly BinderState/*!*/ _state;
+        private readonly PythonContext/*!*/ _context;
         private readonly CallSignature _signature;
 
-        public PythonInvokeBinder(BinderState/*!*/ binder, CallSignature signature) {
-            _state = binder;
+        public PythonInvokeBinder(PythonContext/*!*/ context, CallSignature signature) {
+            _context = context;
             _signature = signature;
         }
 
@@ -104,7 +104,12 @@ namespace IronPython.Runtime.Binding {
                     return res.Target;
                 }
             }
-            PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "InvokeNoFast " + CompilerHelpers.GetType(args[1]));
+
+            if (args[1] is Types.PythonType) {
+                PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "InvokeNoFast " + ((Types.PythonType)args[1]).Name);
+            } else {
+                PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "InvokeNoFast " + CompilerHelpers.GetType(args[1]));
+            }
             return base.BindDelegate(site, args);
         }
 
@@ -122,8 +127,8 @@ namespace IronPython.Runtime.Binding {
             }
 
             return PythonProtocol.Call(this, target, args) ??
-                Binder.Binder.Create(Signature, target, args, codeContext) ??
-                Binder.Binder.Call(Signature, new PythonOverloadResolverFactory(Binder.Binder, codeContext), target, args);
+                Context.Binder.Create(Signature, target, args, codeContext) ??
+                Context.Binder.Call(Signature, new PythonOverloadResolverFactory(Context.Binder, codeContext), target, args);
         }
 
         #endregion
@@ -131,7 +136,7 @@ namespace IronPython.Runtime.Binding {
         #region Object Overrides
 
         public override int GetHashCode() {
-            return _signature.GetHashCode() ^ _state.Binder.GetHashCode();
+            return _signature.GetHashCode() ^ _context.Binder.GetHashCode();
         }
 
         public override bool Equals(object obj) {
@@ -140,7 +145,7 @@ namespace IronPython.Runtime.Binding {
                 return false;
             }
 
-            return ob._state.Binder == _state.Binder &&
+            return ob._context.Binder == _context.Binder &&
                 _signature == ob._signature;
         }
 
@@ -183,7 +188,7 @@ namespace IronPython.Runtime.Binding {
                 this,
                 new DynamicMetaObject(
                     Expression.Dynamic(
-                        _state.CompatInvoke(callInfo),
+                        _context.CompatInvoke(callInfo),
                         typeof(object),
                         metaArgs.ToArray()
                     ),
@@ -284,8 +289,8 @@ namespace IronPython.Runtime.Binding {
 
         #region IPythonSite Members
 
-        public BinderState Binder {
-            get { return _state; }
+        public PythonContext Context {
+            get { return _context; }
         }
 
         #endregion

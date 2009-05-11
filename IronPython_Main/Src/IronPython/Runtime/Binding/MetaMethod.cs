@@ -111,11 +111,11 @@ namespace IronPython.Runtime.Binding {
                         Ast.Block(
                             MakeCheckSelf(signature, args),
                             Ast.Dynamic(
-                                BinderState.GetBinderState(callAction).Invoke(
+                                PythonContext.GetPythonContext(callAction).Invoke(
                                     BindingHelpers.GetCallSignature(callAction)
                                 ),
                                 typeof(object),
-                                ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicUtils.GetExpressions(ArrayUtils.Insert(func, args)))
+                                ArrayUtils.Insert(PythonContext.GetCodeContext(callAction), DynamicUtils.GetExpressions(ArrayUtils.Insert(func, args)))
                             )
                         ),
                         BindingRestrictions.Empty
@@ -151,11 +151,11 @@ namespace IronPython.Runtime.Binding {
 
                 call = new DynamicMetaObject(
                     Ast.Dynamic(
-                        BinderState.GetBinderState(callAction).Invoke(
+                        PythonContext.GetPythonContext(callAction).Invoke(
                             newSig
                         ),
                         typeof(object),
-                        ArrayUtils.Insert(BinderState.GetCodeContext(callAction), DynamicUtils.GetExpressions(newArgs))
+                        ArrayUtils.Insert(PythonContext.GetCodeContext(callAction), DynamicUtils.GetExpressions(newArgs))
                     ),
                     BindingRestrictions.Empty
                 );
@@ -163,7 +163,7 @@ namespace IronPython.Runtime.Binding {
                 /*
                 call = func.Invoke(
                     new CallBinder(
-                        BinderState.GetBinderState(callAction),
+                        PythonContext.GetBinderState(callAction),
                         newSig
                     ),
                     newArgs

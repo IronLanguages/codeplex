@@ -57,11 +57,6 @@ def test_calling_signatures():
     AreEqual(a.Value, f1+2) 
     AreEqual(b.Value, f1 + f2+2)
     
-    if not preferComDispatch:    
-        a = StrongBox[System.Decimal](3)    
-        com_obj.mInAndInOutParams(2,a)
-        AreEqual(a.Value, 2)
-    
     now = System.DateTime.Now
     a = StrongBox[System.DateTime](now)
     b = StrongBox[System.DateTime](now)
