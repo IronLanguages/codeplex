@@ -117,7 +117,7 @@ def gen_run_method(cw, n, is_void):
                                                 types, 
                                                 ','.join(param_names)))
         
-    cw.enter_block('if (_compiled != null)')
+    cw.enter_block('if (_compiled != null || TryGetCompiled())')
     args = ', '.join(['arg%d' % i for i in xrange(n)])
     if is_void:
         cw.write('((Action%s)_compiled)(%s);' % (types, args))
@@ -126,7 +126,7 @@ def gen_run_method(cw, n, is_void):
         cw.write('return ((Func%s)_compiled)(%s);' % (types, args))
     cw.exit_block()
     
-    cw.write('var frame = PrepareToRun();')
+    cw.write('var frame = MakeFrame();')
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
     
@@ -148,9 +148,9 @@ def gen_run_methods(cw):
 
 def main():
     return generate(
+        ("LightLambda Run Methods", gen_run_methods),
         ("Dynamic Instructions", gen_instructions),
         ("Dynamic Instruction Types", gen_types),
-        ("LightLambda Run Methods", gen_run_methods),
     )
 
 if __name__ == "__main__":

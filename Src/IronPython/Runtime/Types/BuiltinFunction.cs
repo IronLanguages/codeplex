@@ -51,21 +51,30 @@ namespace IronPython.Runtime.Types {
     /// </summary>    
     [PythonType("builtin_function_or_method")]
     public partial class BuiltinFunction : PythonTypeSlot, ICodeFormattable, IDynamicMetaObjectProvider, IDelegateConvertible, IFastInvokable  {
-        private readonly BuiltinFunctionData/*!*/ _data;            // information describing the BuiltinFunction
-        private readonly object _instance;                          // the bound instance or null if unbound
+        internal readonly BuiltinFunctionData/*!*/ _data;            // information describing the BuiltinFunction
+        internal readonly object _instance;                          // the bound instance or null if unbound
         private static readonly object _noInstance = new object();  
 
         #region Static factories
 
         internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase info, Type declaringType, FunctionType ft) {
+            Debug.Assert(!info.ContainsGenericParameters);
+
             return new BuiltinFunction(name, new MethodBase[] { info }, declaringType, ft);
         }
 
         internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase[] infos, Type declaringType, FunctionType ft) {
+            foreach (MethodBase mi in infos) {
+                if (mi.ContainsGenericParameters) {
+                    return new GenericBuiltinFunction(name, infos, declaringType, ft);
+                }
+            }
+
             return new BuiltinFunction(name, infos, declaringType, ft);
         }
 
         internal static BuiltinFunction/*!*/ MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, Type declaringType, FunctionType funcType) {
+            Debug.Assert(!mi.ContainsGenericParameters);
             PythonBinder.AssertNotExtensionType(declaringType);
 
             if (existing != null) {
@@ -76,7 +85,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal BuiltinFunction/*!*/ BindToInstance(object instance) {
+        internal virtual BuiltinFunction/*!*/ BindToInstance(object instance) {
             return new BuiltinFunction(instance, _data);
         }
 
@@ -97,7 +106,7 @@ namespace IronPython.Runtime.Types {
         /// Creates a bound built-in function.  The instance may be null for built-in functions
         /// accessed for None.
         /// </summary>
-        private BuiltinFunction(object instance, BuiltinFunctionData/*!*/ data) {
+        internal BuiltinFunction(object instance, BuiltinFunctionData/*!*/ data) {
             Assert.NotNull(data);
 
             _instance = instance;
@@ -167,7 +176,7 @@ namespace IronPython.Runtime.Types {
         private static SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object>>> GetInitializedStorage(CodeContext context, SiteLocalStorage<CallSite<Func<CallSite, CodeContext, object, object>>> storage) {
             if (storage.Data == null) {
                 storage.Data = CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                    PythonContext.GetContext(context).DefaultBinderState.InvokeNone
+                    PythonContext.GetContext(context).InvokeNone
                 );
             }
             return storage;
@@ -430,7 +439,7 @@ namespace IronPython.Runtime.Types {
                 // Add profiling information for this builtin function, if applicable
                 IPythonSite pythonSite = (call as IPythonSite);
                 if (pythonSite != null) {
-                    var pc = PythonContext.GetContext(pythonSite.Binder.Context);
+                    var pc = pythonSite.Context;
                     var po = pc.Options as PythonOptions;
                     if (po != null && po.EnableProfiler) {
                         Profiler profiler = Profiler.GetProfiler(pc);
@@ -445,7 +454,7 @@ namespace IronPython.Runtime.Types {
             // add any warnings that are applicable for calling this function
             WarningInfo info;
 
-            if (target.Method != null && BindingWarnings.ShouldWarn(BinderState.GetBinderState(call).Binder, target.Method, out info)) {
+            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call).Binder, target.Method, out info)) {
                 res = info.AddWarning(codeContext, res);
             }            
 
@@ -497,7 +506,7 @@ namespace IronPython.Runtime.Types {
                            AstUtils.Constant(name)
                         ),
                         BindingRestrictionsHelpers.GetRuntimeTypeRestriction(dict.Expression, dict.GetLimitType()),
-                        PythonOps.UserMappingToPythonDictionary(BinderState.GetBinderState(call).Context, dict.Value, name)
+                        PythonOps.UserMappingToPythonDictionary(PythonContext.GetPythonContext(call).SharedContext, dict.Value, name)
                     );
 
                     if (call is IPythonSite) {
@@ -635,7 +644,7 @@ namespace IronPython.Runtime.Types {
             // add any warnings that are applicable for calling this function
             WarningInfo info;
 
-            if (target.Method != null && BindingWarnings.ShouldWarn(BinderState.GetBinderState(call).Binder, target.Method, out info)) {
+            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call).Binder, target.Method, out info)) {
                 res = info.AddWarning(res);
             }
 
@@ -670,7 +679,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            var pc = PythonContext.GetContext(BinderState.GetBinderState(call).Context);
+            var pc = PythonContext.GetContext(PythonContext.GetPythonContext(call).SharedContext);
             var po = pc.Options as PythonOptions;
             if (po != null && po.EnableProfiler) {
                 Profiler profiler = Profiler.GetProfiler(pc);
@@ -803,60 +812,10 @@ namespace IronPython.Runtime.Types {
             return Call(context, storage, null, args, dictArgs);
         }
 
-        public BuiltinFunction/*!*/ this[PythonTuple tuple] {
-            [PythonHidden]
+        
+        internal virtual bool IsOnlyGeneric {
             get {
-                return this[tuple._data];
-            }
-        }
-
-        /// <summary>
-        /// Use indexing on generic methods to provide a new reflected method with targets bound with
-        /// the supplied type arguments.
-        /// </summary>
-        public BuiltinFunction/*!*/ this[params object[] key] {
-            [PythonHidden]
-            get {
-                // Retrieve the list of type arguments from the index.
-                Type[] types = new Type[key.Length];
-                for (int i = 0; i < types.Length; i++) {
-                    types[i] = Converter.ConvertToType(key[i]);
-                }
-
-                BuiltinFunction res = MakeGenericMethod(types);
-                if (res == null) {
-                    bool hasGenerics = false;
-                    foreach (MethodBase mb in Targets) {
-                        MethodInfo mi = mb as MethodInfo;
-                        if (mi != null && mi.ContainsGenericParameters) {
-                            hasGenerics = true;
-                        }
-                    }
-
-                    if (hasGenerics) {
-                        throw PythonOps.TypeError(string.Format("bad type args to this generic method {0}", Name));
-                    } else {
-                        throw PythonOps.TypeError(string.Format("{0} is not a generic method and is unsubscriptable", Name));
-                    }
-                }
-
-                if (IsUnbound) {
-                    return res;
-                }
-
-                return new BuiltinFunction(_instance, res._data);
-            }
-        }
-
-        internal bool IsOnlyGeneric {
-            get {
-                foreach (MethodBase mb in Targets) {
-                    if (!mb.IsGenericMethod || !mb.ContainsGenericParameters) {
-                        return false;
-                    }
-                }
-
-                return true;
+                return false;
             }
         }
 
@@ -954,7 +913,7 @@ namespace IronPython.Runtime.Types {
 
         #region BuiltinFunctionData
 
-        private sealed class BuiltinFunctionData {
+        internal sealed class BuiltinFunctionData {
             public string/*!*/ Name;
             public MethodBase/*!*/[]/*!*/ Targets;
             public readonly Type/*!*/ DeclaringType;
@@ -984,7 +943,7 @@ namespace IronPython.Runtime.Types {
 
         #region IFastInvokable Members
 
-        class CallKey : IEquatable<CallKey> {
+        internal class CallKey : IEquatable<CallKey> {
             public readonly Type DelegateType;
             public readonly CallSignature Signature;
             public readonly Type[] Types;
@@ -1122,7 +1081,7 @@ namespace IronPython.Runtime.Types {
 
         private KeyValuePair<OptimizingCallDelegate, Type[]> MakeCall<T>(PythonInvokeBinder binder, object[] args) where T : class {
             Expression codeContext = Expression.Parameter(typeof(CodeContext), "context");
-            var pybinder = BinderState.GetBinderState(binder).Binder;
+            var pybinder = PythonContext.GetPythonContext(binder).Binder;
             KeyValuePair<OptimizingCallDelegate, Type[]> call;
             if (IsUnbound) {
                 call = MakeBuiltinFunctionDelegate(
@@ -1217,6 +1176,79 @@ namespace IronPython.Runtime.Types {
         }        
 
         #endregion
+    }
+
+    /// <summary>
+    /// A custom built-in function which supports indexing 
+    /// </summary>
+    public class GenericBuiltinFunction : BuiltinFunction {
+        internal GenericBuiltinFunction(string/*!*/ name, MethodBase/*!*/[]/*!*/ originalTargets, Type/*!*/ declaringType, FunctionType functionType)
+            : base(name, originalTargets, declaringType, functionType) {
+        }
+
+        public BuiltinFunction/*!*/ this[PythonTuple tuple] {
+            get {
+                return this[tuple._data];
+            }
+        }
+
+        internal GenericBuiltinFunction(object instance, BuiltinFunctionData/*!*/ data) : base(instance, data) {
+        }
+
+
+        internal override BuiltinFunction BindToInstance(object instance) {
+            return new GenericBuiltinFunction(instance, _data);
+        }
+
+        /// <summary>
+        /// Use indexing on generic methods to provide a new reflected method with targets bound with
+        /// the supplied type arguments.
+        /// </summary>
+        public BuiltinFunction/*!*/ this[params object[] key] {
+            get {
+                // Retrieve the list of type arguments from the index.
+                Type[] types = new Type[key.Length];
+                for (int i = 0; i < types.Length; i++) {
+                    types[i] = Converter.ConvertToType(key[i]);
+                }
+
+                BuiltinFunction res = MakeGenericMethod(types);
+                if (res == null) {
+                    bool hasGenerics = false;
+                    foreach (MethodBase mb in Targets) {
+                        MethodInfo mi = mb as MethodInfo;
+                        if (mi != null && mi.ContainsGenericParameters) {
+                            hasGenerics = true;
+                        }
+                    }
+
+                    if (hasGenerics) {
+                        throw PythonOps.TypeError(string.Format("bad type args to this generic method {0}", Name));
+                    } else {
+                        throw PythonOps.TypeError(string.Format("{0} is not a generic method and is unsubscriptable", Name));
+                    }
+                }
+
+                if (IsUnbound) {
+                    return res;
+                }
+
+                return new BuiltinFunction(_instance, res._data);
+            }
+        }
+
+        internal override bool IsOnlyGeneric {
+            get {
+                foreach (MethodBase mb in Targets) {
+                    if (!mb.IsGenericMethod || !mb.ContainsGenericParameters) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
     }
 }
 

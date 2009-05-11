@@ -458,10 +458,6 @@ def test_eNull():
  
 
 def test_eInOutretBool():
-    if not preferComDispatch:
-        #Merlin 384378
-        return
-    
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerInOutretBool
     com_event = com_obj.eInOutretBool
@@ -513,10 +509,6 @@ def test_eInOutretBool():
     
     
 def test_eInOutBstr():
-    if not preferComDispatch:
-        #Merlin 384378
-        return
-    
     global HANDLER_CALL_COUNT
     e_trigger = com_obj.triggerInOutBstr
     com_event = com_obj.eInOutBstr
@@ -569,7 +561,7 @@ def test_eInOutBstr():
         handler_helper(lambda: e_trigger("abc", o), com_event, None, event_handlers)
         
     except EnvironmentError, e:
-        print "Merlin 386367"
+        print "Dev10 409998"
 
 def test_eInUshort():
     global HANDLER_CALL_COUNT
@@ -690,9 +682,8 @@ def test_eNull_neg_handler_signatures():
                         #f4, #Merlin 384332
                         #f5, #Merlin 384332
                         ]
-    #Merlin 384336
-    if preferComDispatch:
-        bad_arg_handlers = []                        
+    #Dev10 410001
+    bad_arg_handlers = []                        
     
     bad_handler_signature_helper(e_trigger, com_event, bad_arg_handlers)
 
@@ -734,9 +725,8 @@ def test_eInOutretBool_neg_handler_signatures():
                         #f4, #Merlin 384332
                         #f5, #Merlin 384332
                         ]
-    #Merlin 384336
-    if preferComDispatch:
-        bad_arg_handlers = []                        
+    #Dev10 410001
+    bad_arg_handlers = []                 
 
     bad_handler_signature_helper(lambda: e_trigger(True), com_event, bad_arg_handlers)
         
@@ -777,9 +767,8 @@ def test_eInOutBstr_neg_handler_signatures():
                         #f4, #Merlin 384332
                         #f5, #Merlin 384332
                         ]
-    #Merlin 384336
-    if preferComDispatch:
-        bad_arg_handlers = []                        
+    #Dev10 410001
+    bad_arg_handlers = []                   
 
     bad_handler_signature_helper(lambda: e_trigger("abc"), com_event, bad_arg_handlers)
     
@@ -821,9 +810,8 @@ def test_eInUshort_neg_handler_signatures():
                         #f4, #Merlin 384332
                         #f5, #Merlin 384332
                         ]
-    #Merlin 384336
-    if preferComDispatch:
-        bad_arg_handlers = []                        
+    #Dev10 410001
+    bad_arg_handlers = []                       
 
     bad_handler_signature_helper(lambda: e_trigger(1), com_event, bad_arg_handlers)
 
@@ -870,9 +858,8 @@ def test_eNullShort_neg_handler_signatures():
                         #f4, #Merlin 384332
                         #f5, #Merlin 384332
                         ]
-    #Merlin 384336
-    if preferComDispatch:
-        bad_arg_handlers = []                        
+    #Dev10 410001
+    bad_arg_handlers = []                    
     
     bad_handler_signature_helper(e_trigger, com_event, bad_arg_handlers)
     
@@ -894,7 +881,7 @@ def test_eNull_neg_handler_return_values():
         
         #Expect this to throw an exception
         #AssertError(EnvironmentError, e_trigger)
-        e_trigger()  #Merlin 384367
+        e_trigger()  #Dev10 409792
         
         #Also expect the HANDLER_CALL_COUNT to have been incremented
         expected_call_count += 1
@@ -920,13 +907,11 @@ def test_eInOutretBool_neg_handler_return_values():
             HANDLER_CALL_COUNT+=1
             return retVal
 
-        if not preferComDispatch:
-            continue #Merlin 384378 - TypeError
         com_event += bad_handler
         
         #Expect this to throw an exception
         #AssertError(EnvironmentError, e_trigger, True)
-        e_trigger(True)  #Merlin 384367
+        e_trigger(True)  #Dev10 409792
         
         #Also expect the HANDLER_CALL_COUNT to have been incremented
         expected_call_count += 1
@@ -952,18 +937,15 @@ def test_eInOutBstr_neg_handler_return_values():
             HANDLER_CALL_COUNT+=1
             return retVal
 
-        if not preferComDispatch:
-            continue #Merlin 384378 - TypeError
         com_event += bad_handler
         
         #Expect this to throw an exception
         #AssertError(EnvironmentError, e_trigger, "abc")
-        if preferComDispatch:
-            print "Merlin 386367"  #cannot continue as bad_handler never gets called
-            com_event -= bad_handler
-            continue
+        print "Dev10 409998"  #cannot continue as bad_handler never gets called
+        com_event -= bad_handler
+        continue
         
-        e_trigger("abc")  #Merlin 384367
+        e_trigger("abc")  #Dev10 409792
         
         #Also expect the HANDLER_CALL_COUNT to have been incremented
         expected_call_count += 1
@@ -992,7 +974,7 @@ def test_eInUshort_neg_handler_return_values():
         
         #Expect this to throw an exception
         #AssertError(EnvironmentError, e_trigger, 42)
-        e_trigger(42)  #Merlin 384367
+        e_trigger(42)  #Dev10 409792
         
         #Also expect the HANDLER_CALL_COUNT to have been incremented
         expected_call_count += 1
@@ -1020,10 +1002,9 @@ def test_eNullShort_neg_handler_return_values():
         com_event += bad_handler
         
         #Expect this to throw an exception
-        if not preferComDispatch:
-            AssertError(EnvironmentError, e_trigger)  
-        else:
-            e_trigger()  #Merlin 384367
+        #Dev10 384367
+        #AssertError(EnvironmentError, e_trigger)  
+        e_trigger()  
         
         #Also expect the HANDLER_CALL_COUNT to have been incremented
         expected_call_count += 1

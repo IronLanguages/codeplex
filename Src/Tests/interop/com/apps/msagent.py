@@ -54,8 +54,7 @@ def test_merlin():
     c.Play('Read', reqID)
     c.GestureAt(True, False, reqID)
     c.GestureAt(100, 200, reqID)
-    if not preferComDispatch:
-        AssertError(OverflowError, c.GestureAt, 65537.34, 32) # It should be an error to convert a float to Int16 since it will not fit
+    AssertError(OverflowError, c.GestureAt, 65537.34, 32) # It should be an error to convert a float to Int16 since it will not fit
 
     c.Speak('hello world', None, reqID)
 
@@ -64,8 +63,7 @@ def test_merlin():
     sleep(1)
     com_obj.Unload(cid)
         
-    if not preferComDispatch:
-        delete_files("AgentServerObjects.dll")
+    delete_files("AgentServerObjects.dll")
     
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

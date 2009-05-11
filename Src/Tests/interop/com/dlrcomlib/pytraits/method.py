@@ -84,10 +84,7 @@ def test_sanity():
             #Ignore known failures
             if is_pywin32: raise e
             
-            if not preferComDispatch:
-                if std_attr not in BROKEN_STD_METHOD_ATTRIBUTES: raise e
-            else:
-                if std_attr not in BROKEN_ID_STD_METHOD_ATTRIBUTES: raise e
+            if std_attr not in BROKEN_ID_STD_METHOD_ATTRIBUTES: raise e
 
 #--------------------------------------    
 def test_args_m0():
@@ -97,40 +94,34 @@ def test_args_m0():
     AreEqual(m0(*[], **{}), None)
 
 def test_args_m0_neg():
+    #Dev10 409926
+    #expected_except_type = TypeError
+    expected_except_type = StandardError
+
     bad_cases = [None, 1, "None", object, u""]
 
-    AssertError(TypeError, 
-                lambda: m0(None),
-                skip=preferComDispatch, bugid=369650)
-    AssertError(TypeError, 
-                lambda: m0(1),
-                skip=preferComDispatch, bugid=369650)  
-
-    AssertError(TypeError, 
-                lambda: m0(1, "None"),
-                skip=preferComDispatch, bugid=369650)  
-    AssertError(TypeError, 
-                lambda: m0(1, "None", object),
-                skip=preferComDispatch, bugid=369650)   
-    AssertError(TypeError, 
-                lambda: m0(None, *[]),
-                skip=preferComDispatch, bugid=369650)   
-    AssertError(TypeError, 
-                lambda: m0(None, *[None]),
-                skip=preferComDispatch, bugid=369650)         
-    AssertError(TypeError, 
-                lambda: m0(None, **{None:None}),
-                skip=preferComDispatch, bugid=369650)       
-    AssertError(TypeError, 
-                lambda: m0(None, *[None], **{None:None}),
-                skip=preferComDispatch, bugid=369650)              
+    AssertError(expected_except_type, 
+                lambda: m0(None))
+    AssertError(expected_except_type, 
+                lambda: m0(1))  
+    AssertError(expected_except_type, 
+                lambda: m0(1, "None"))  
+    AssertError(expected_except_type, 
+                lambda: m0(1, "None", object))   
+    AssertError(expected_except_type, 
+                lambda: m0(None, *[]))   
+    AssertError(expected_except_type, 
+                lambda: m0(None, *[None]))         
+    AssertError(expected_except_type, 
+                lambda: m0(None, **{None:None}))       
+    AssertError(expected_except_type, 
+                lambda: m0(None, *[None], **{None:None}))              
     
     #m0(*[])
     for bad in bad_cases:
         for i in xrange(1, 4):
-            AssertError(TypeError, 
-                        lambda: m0(*list([bad] * i)),
-                        skip=preferComDispatch, bugid=369650)
+            AssertError(expected_except_type, 
+                        lambda: m0(*list([bad] * i)))
 
     #m0(**{})
     for i in xrange(1, len(bad_cases)):
@@ -138,9 +129,8 @@ def test_args_m0_neg():
         for j in xrange(i):
             t_dict[bad_cases[j]] = bad_cases[j]
         
-        AssertError(TypeError, 
-                    lambda: m0(**t_dict),
-                    skip=preferComDispatch, bugid=369650)                        
+        AssertError(expected_except_type, 
+                    lambda: m0(**t_dict))                        
     
     #m0(*[], **{})
     for i in xrange(0, len(bad_cases)):
@@ -151,10 +141,9 @@ def test_args_m0_neg():
         for arg_bad in bad_cases:
             for k in xrange(0, 4):
                 if k + len(t_dict.keys())==0: continue
-                AssertError(TypeError, 
+                AssertError(expected_except_type, 
                             lambda: m0( *list([arg_bad] * k), 
-                                        **t_dict),
-                            skip=preferComDispatch, bugid=369650)              
+                                        **t_dict))              
     
     
 def test_args_m2():
@@ -172,18 +161,20 @@ def test_args_m2_neg():
         print "...skipping under pywin32"
         return
     
+    #Dev10 409926
+    #expected_except_type = TypeError
+    expected_except_type = StandardError
+    
     bad_cases = ["", "None", "xyz"]
     #m2(.)
     for bad in bad_cases:
-        AssertError(TypeError, 
-                    lambda: m2(bad),
-                    skip=preferComDispatch, bugid=369650)
+        AssertError(expected_except_type, 
+                    lambda: m2(bad))
     
     #m2(...)
     for bad in bad_cases:
-        AssertError(TypeError, 
-                    lambda: m2(bad, bad, bad),
-                    skip=preferComDispatch, bugid=369650)
+        AssertError(expected_except_type, 
+                    lambda: m2(bad, bad, bad))
     
     #m2(.,?)
     #m2(.., ?)
@@ -196,18 +187,16 @@ def test_args_m2_neg():
                 for i in xrange(kwarg_len): t_kwargs[bad_cases[i] + str(i)] = bad_cases[i]
 
                 if arg_len + kwarg_len!=1: #m2(., ?)
-                    AssertError(TypeError, 
+                    AssertError(expected_except_type, 
                                 lambda: m2(bad,
                                            *t_args, 
-                                           **t_kwargs),
-                                skip=preferComDispatch, bugid=369650)   
+                                           **t_kwargs))   
                                 
                 if arg_len + kwarg_len!=0: #m2(.., ?)
-                    AssertError(TypeError, 
+                    AssertError(expected_except_type, 
                                 lambda: m2(bad, bad,
                                            *t_args, 
-                                           **t_kwargs),
-                                skip=preferComDispatch, bugid=369650)   
+                                           **t_kwargs))   
                 
     
 def test_args_m1kw1():
@@ -236,6 +225,10 @@ def test_args_m1kw1_neg():
     '''
     TODO: there are still a few more interesting cases here.
     '''
+    #Dev10 409926
+    #expected_except_type = TypeError
+    expected_except_type = StandardError
+    
     #pywin32 throws a pywintypes.com_error.  Just skip it
     if sys.platform=="win32" and not isinstance(com_obj, DlrUniversalObj):
         print "...skipping under pywin32"
@@ -243,67 +236,53 @@ def test_args_m1kw1_neg():
     
     
     #m1kw1()
-    AssertError(TypeError, 
-                lambda: m1kw1(),
-                skip=preferComDispatch, bugid=369650) 
+    AssertError(expected_except_type, 
+                lambda: m1kw1()) 
     #m1kw1(*[])
-    AssertError(TypeError, 
-                lambda: m1kw1(*[]),
-                skip=preferComDispatch, bugid=369650) 
+    AssertError(expected_except_type, 
+                lambda: m1kw1(*[])) 
     #m1kw1(**{})
-    AssertError(TypeError, 
-                lambda: m1kw1(**{}),
-                skip=preferComDispatch, bugid=369650) 
+    AssertError(expected_except_type, 
+                lambda: m1kw1(**{})) 
     #m1kw1(*[], **{})
-    AssertError(TypeError, 
-                lambda: m1kw1(*[], **{}),
-                skip=preferComDispatch, bugid=369650) 
+    AssertError(expected_except_type, 
+                lambda: m1kw1(*[], **{})) 
                 
     #m1kw1(arg2=.)
-    AssertError(TypeError, 
-                lambda: m1kw1(arg2=3),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(arg2=3))
     #m1kw1(arg2=., **{arg2:?})      
-    AssertError(TypeError, 
-                lambda: m1kw1(arg2=3, **{"arg2":7}),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(arg2=3, **{"arg2":7}))
     #m1kw1(arg2=., *[], **{})      
-    AssertError(TypeError, 
-                lambda: m1kw1(arg2=3, *[], **{}),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(arg2=3, *[], **{}))
     #m1kw1(arg2=., c=.)
-    AssertError(TypeError, 
-                lambda: m1kw1(arg2=3, c=7),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(arg2=3, c=7))
     
     #m1kw1(arg1, arg1=.)
-    AssertError(TypeError, 
-                lambda: m1kw1(1, arg1=3),
-                skip=preferComDispatch, bugid=369650)    
+    AssertError(expected_except_type, 
+                lambda: m1kw1(1, arg1=3))    
     #m1kw1(arg1, arg2=., **{arg2:?})      
-    AssertError(TypeError, 
-                lambda: m1kw1(4, arg2=3, **{"arg2":7}),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(4, arg2=3, **{"arg2":7}))
                 
     #m1kw1(arg1, arg2=., **{c:?})      
-    AssertError(TypeError, 
-                lambda: m1kw1(4, arg2=3, **{"c":9}),
-                skip=preferComDispatch, bugid=369650)
+    AssertError(expected_except_type, 
+                lambda: m1kw1(4, arg2=3, **{"c":9}))
                 
     #m1kw1(arg1, arg2=., c=.)   
-    AssertError(TypeError, 
-                lambda: m1kw1(4, arg2=3, c=7),
-                skip=preferComDispatch, bugid=369650)  
+    AssertError(expected_except_type, 
+                lambda: m1kw1(4, arg2=3, c=7))  
                 
     #m1kw1(*[arg1,arg2,c])   
-    AssertError(TypeError, 
-                lambda: m1kw1(*[1, 2, 3]),
-                skip=preferComDispatch, bugid=369650)  
+    AssertError(expected_except_type, 
+                lambda: m1kw1(*[1, 2, 3]))  
     
     #m1kw1(*[arg1, arg2], **{arg2:?})
-    AssertError(TypeError, 
-                lambda: m1kw1(*[1, 2], **{"arg2": 3}),
-                skip=preferComDispatch, bugid=369650)  
+    AssertError(expected_except_type, 
+                lambda: m1kw1(*[1, 2], **{"arg2": 3}))  
     
     
 #--------------------------------------
@@ -442,19 +421,28 @@ def test_invoke_from_exec_neg():
         print "...skipping under pywin32"
         return
         
-    for exec_string in [
-                        "AreEqual(m0(3), None)",
-                        "AreEqual(m2('xyz'), None)",
-                        "AreEqual(m1kw1(arg2=None), None)",
-                        ]:
-        try:
-            exec exec_string in globals(), {}
-            Fail("Should have raised a TypeError on: " + exec_string)
-        except TypeError, e:
+    try:
+        exec "AreEqual(m0(3), None)" in globals(), {}
+        Fail("Should have raised an EnvironmentError")
+    except EnvironmentError, e:
+        #TODO: this is a bug
+        pass
+    except TypeError, e:
+        if isinstance(com_obj, DlrUniversalObj):
             pass
-        except StandardError, e:
-            if not preferComDispatch: raise e
-            print "Merlin 324223"
+        
+    try:
+        exec "AreEqual(m2('xyz'), None)" in globals(), {}
+        Fail("Should have raised a StandardError")
+    except StandardError, e:
+        pass
+        
+    try:
+        exec "AreEqual(m1kw1(arg2=None), None)" in globals(), {}
+        Fail("Should have raised a StandardError")
+    except StandardError, e:
+        pass
+
 
 def test_invoke_from_eval():
     for eval_string in [
@@ -470,21 +458,11 @@ def test_invoke_from_eval_neg():
     if sys.platform=="win32" and not isinstance(com_obj, DlrUniversalObj):
         print "...skipping under pywin32"
         return
-            
-    for eval_string in [
-                        "m0(3)",
-                        "m2('xyz')",
-                        "m1kw1(arg2=None)",
-                        ]:
-        try:
-            AreEqual(eval(eval_string, globals(), {}), 
-                     None)
-            Fail("Should have raised a TypeError on: " + eval_string)
-        except TypeError, e:
-            pass
-        except StandardError, e:
-            if not preferComDispatch: raise e
-            print "Merlin 324223"
+    
+    AssertError(StandardError, eval, "m0(3)", globals(), {})
+    AssertError(StandardError, eval, "m2('xyz')", globals(), {})
+    AssertError(StandardError, eval, "m1kw1(arg2=None)", globals(), {})
+    
 
 @skip("win32")
 def test_from_cmdline():
@@ -532,11 +510,8 @@ def test_from_cmdline_neg():
         ipi.ExecuteLine("com_obj = Activator.CreateInstance(Type.GetTypeFromProgID('DlrComLibrary.DlrUniversalObj'))")
         ipi.ExecuteLine("sys.stderr = sys.stdout")  #Limitation of ipi.  Cannot get sys.stderr...
         response = ipi.ExecuteLine("com_obj.m0(3)")
-        if not preferComDispatch:
-            Assert("TypeError: m0()" in response)
-        else:
-            Assert("Does not support a collection." in response)  #Merlin 324233
-            Assert("EnvironmentError:" in response)  #Merlin 324233
+        Assert("Does not support a collection." in response)  #Merlin 324233
+        Assert("EnvironmentError:" in response)  #Merlin 324233
             
     finally:
         ipi.End()
@@ -581,19 +556,8 @@ m0(self) method of %s.DlrUniversalObj instance
 m0(self) method of win32com.client.CDispatch instance
 
 """
-
-        #IP w/o preferComDispatch
-        elif not preferComDispatch:
-            #Merlin 378006
-            expected = """Help on built-in function m0
-
- |  m0(...)
- |          m0(self)
-
-"""
-        #IP w/ preferComDispatch
         else:
-            #Merlin 378007
+            #Dev10 409942
             expected = """Help on DispCallable in module __builtin__"""
             Assert(expected in fake_stdout.text)
             return
@@ -637,11 +601,8 @@ def test_type():
     for m in m0, m2, m1kw1:
         if isinstance(com_obj, DlrUniversalObj) or not is_cli:
             AreEqual(str(type(m)), "<type 'instancemethod'>")
-        elif not preferComDispatch:
-            #Merlin 378009
-            AreEqual(str(type(m)), "<type 'builtin_function_or_method'>")
         else:
-            #Merlin 378011
+            #Dev10 409943
             AreEqual(str(type(m)), "<type 'DispCallable'>")
     
 def test_isinstance():
@@ -655,7 +616,7 @@ def test_isinstance():
 #--MEDIUM PRIORITY TESTS
 
 #--Method attributes
-@skip_comdispatch("Merlin 370043")
+@disabled("Dev10 409928")
 def test__call__():
     pass
 
@@ -672,7 +633,7 @@ def test__delattr__():
 def test__doc__():
     pass    
     
-@skip_comdispatch("Merlin 370043")
+@disabled("Dev10 409928")
 def test__get__():
     pass
     
@@ -811,13 +772,12 @@ def test_compile():
 run_com_test(__name__, __file__)
 
 #Keep ourselves honest by running the test again using a normal Python class
-if not preferComDispatch:
-    print
-    print "#" * 80
-    print "-- Re-running test with standard Python class substitute for DlrComLibrary.DlrUniversalObj..."
-    com_obj = DlrUniversalObj()
-    m0 = com_obj.m0
-    m2 = com_obj.m2
-    m1kw1 = com_obj.m1kw1
+print
+print "#" * 80
+print "-- Re-running test with standard Python class substitute for DlrComLibrary.DlrUniversalObj..."
+com_obj = DlrUniversalObj()
+m0 = com_obj.m0
+m2 = com_obj.m2
+m1kw1 = com_obj.m1kw1
 
-    run_test(__name__)
+run_test(__name__)

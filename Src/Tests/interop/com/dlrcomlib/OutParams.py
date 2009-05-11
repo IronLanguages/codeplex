@@ -165,7 +165,7 @@ def test_ulong():
         testhelper(com_obj.mUlong, UInt32, test_list)
 
 #------------------------------------------------------------------------------
-#@skip_comdispatch("Dev10 409933")
+#@disabled("Dev10 409933")
 def test_ulonglong():
     for test_list in pythonToCOM("ULONG"):  #Hack:  See bug on why we're using ULong instead of ULongLong
         testhelper(com_obj.mULongLong, UInt64, test_list)
@@ -181,7 +181,7 @@ def test_long():
         testhelper(com_obj.mLong, int, test_list)
 
 #------------------------------------------------------------------------------
-#@skip_comdispatch("Dev10 409933")
+#@disabled("Dev10 409933")
 def test_longlong():
     for test_list in pythonToCOM("LONG"): #Hack:  See bug on why we're using Long instead of LongLong
         testhelper(com_obj.mLongLong, Int64, test_list)

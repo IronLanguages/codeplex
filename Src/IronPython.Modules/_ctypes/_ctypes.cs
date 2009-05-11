@@ -101,7 +101,7 @@ namespace IronPython.Modules {
                 CData cdata = objHandle.Target as CData;
                 PythonType pt = (PythonType)typeHandle.Target;
 
-                CData res = (CData)pt.CreateInstance(pt.Context.DefaultBinderState.Context);
+                CData res = (CData)pt.CreateInstance(pt.Context.SharedContext);
                 if (cdata != null) {
                     res._memHolder = new MemoryHolder(data, cdata._memHolder);
                 } else {

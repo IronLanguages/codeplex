@@ -80,10 +80,4 @@ def test_negative():
     
     AssertError(EnvironmentError, clr.LoadTypeLibrary, Guid.NewGuid())
 
-if not preferComDispatch:
-    print "Importing typelib is supported only in Comdispatch mode."
-    print "Verifying that it doesnt blow up otherwise."
-    AssertError(SystemError, clr.LoadTypeLibrary, dlrcomlib_guid)
-    AssertError(SystemError, clr.AddReferenceToTypeLibrary, dlrcomlib_guid)
-else:    
-    run_test(__name__)
+run_test(__name__)

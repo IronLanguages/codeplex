@@ -58,9 +58,9 @@ def test_excel():
 
         AreEqual('Sheet1', ws.Name)
 
-        if not preferComDispatch: # Bug 325464
-            # COM has 1-based arrays
-            AssertError(EnvironmentError, lambda: ws.Rows[0])
+        #Dev10 409961
+        # COM has 1-based arrays
+        #AssertError(EnvironmentError, lambda: ws.Rows[0])
 
         for i in range(1, 10):
             for j in range(1, 10):
@@ -85,10 +85,6 @@ def test_excel():
         else: print "ex is %s" % ex
 
 def test_excel_typelibsupport():
-    if not preferComDispatch:
-        print "skipping test_word_typelibsupoprt - reason: type Lib support is only enabled in PreferComDispatch mode."
-        return
-
     ex = None
 
     try: 

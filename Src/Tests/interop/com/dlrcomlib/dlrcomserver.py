@@ -70,10 +70,7 @@ def test_errorInfo():
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.Python.CreateRuntime().GetEngine('py').Operations
-    if preferComDispatch:
-        AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
-    else:
-        AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
+    AreEqual(ops.GetDocumentation(com_obj.IntArguments), "void IntArguments(Int32 arg1, Int32 arg2)")
 
 @disabled('CodePlex bug 19282')
 def test_method_equality():
@@ -113,11 +110,9 @@ def test_namedArgs():
     
 
     # DISP_E_UNKNOWNNAME
-    AssertError(COMException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6, "runonly":preferComDispatch, "bugid":"TODO"})
-    AssertError(ArgumentTypeException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6, "skip":preferComDispatch, "bugid":"TODO"})
+    AssertError(COMException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6, "bugid":"TODO"})
     
-    AssertError(StandardError, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "runonly":preferComDispatch, "bugid":"TODO"}) 
-    AssertError(ArgumentTypeException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "skip":preferComDispatch, "bugid":"TODO"})
+    AssertError(StandardError, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "bugid":"TODO"}) 
 
 #Verify that one is able to enumerate over the object in a loop
 #TODO: add more tests for enumerators - bad enumerator, different array sizes, different types.

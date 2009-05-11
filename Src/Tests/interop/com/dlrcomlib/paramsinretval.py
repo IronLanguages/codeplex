@@ -96,18 +96,34 @@ def test_sanity():
     #mOleOptExclusive
 
     
-#@skip_comdispatch("Dev10 409919")
+    
+def test_will_not_fix():
+    '''
+    The following probably should not work but does and 
+    won't be fixed by the DLR.
+    '''
+    AreEqual(com_obj.mByte("123"),  System.Byte(123))
+    AreEqual(com_obj.mChar("123"),  System.SByte(123))
+    AreEqual(com_obj.mFloat("123"), 123.0)
+    AreEqual(com_obj.mBstr(object()), 'System.Object')
+    AreEqual(type(com_obj.mIDispatch(object())), object)
+    AreEqual(com_obj.mByte(None), System.Byte(0))
+    AreEqual(com_obj.mFloat(None), 0.0)
+    AreEqual(com_obj.mBstr(3.14), "3.14")
+    
 def test_sanity_int_types_broken():
     a = StrongBox[ErrorWrapper](ErrorWrapper(System.Int32.MinValue))
     AreEqual(com_obj.mScode(a), System.Int32.MinValue)
     
     a = ErrorWrapper(5)
-    AreEqual(com_obj.mScode(a), 5)    
+    AreEqual(com_obj.mScode(a), 5)
+    
+    AssertErrorWithMessage(ValueError, "Could not convert argument 0 for call to mScode.",
+                           com_obj.mScode, 0)
     
         
 ###############################################################################
 ##SIMPLE TYPES#################################################################
-###############################################################################
 '''
 X    [id(32), helpstring("method mVariantBool")] HRESULT mVariantBool([in] VARIANT_BOOL a, [out,retval] VARIANT_BOOL* b);
 X    [id(1), helpstring("method mBstr")] HRESULT mBstr([in] BSTR a, [out,retval] BSTR* b);
@@ -133,6 +149,10 @@ def test_variant_bool():
 def test_variant_bool_typeerrror():
     for val in typeErrorTrigger("VARIANT_BOOL"):
         AssertError(TypeError, com_obj.mVariantBool, val)
+
+def test_variant_bool_valueerrror():
+    for val in valueErrorTrigger("VARIANT_BOOL"):
+        AssertError(ValueError, com_obj.mVariantBool, val)
         
 def test_variant_bool_overflowerror():
     for val in overflowErrorTrigger("VARIANT_BOOL"):
@@ -145,6 +165,10 @@ def test_byte():
 
 def test_byte_typeerrror():
     for val in typeErrorTrigger("BYTE"):
+        AssertError(TypeError, com_obj.mByte, val)
+
+def test_byte_valueerrror():
+    for val in valueErrorTrigger("BYTE"):
         AssertError(ValueError, com_obj.mByte, val)
         
 def test_byte_overflowerror():
@@ -158,6 +182,10 @@ def test_bstr():
 
 def test_bstr_typeerrror():
     for val in typeErrorTrigger("BSTR"):
+        AssertError(TypeError, com_obj.mBstr, val)
+
+def test_bstr_valueerrror():
+    for val in valueErrorTrigger("BSTR"):
         AssertError(ValueError, com_obj.mBstr, val)
 
 def test_bstr_overflowerror():
@@ -171,6 +199,10 @@ def test_char():
 
 def test_char_typeerrror():
     for val in typeErrorTrigger("CHAR"):
+        AssertError(TypeError, com_obj.mChar, val)
+
+def test_char_valueerrror():
+    for val in valueErrorTrigger("CHAR"):
         AssertError(ValueError, com_obj.mChar, val)
 
 def test_char_overflowerror():
@@ -188,6 +220,10 @@ def test_float():
 
 def test_float_typeerrror():
     for val in typeErrorTrigger("FLOAT"):
+        AssertError(TypeError, com_obj.mFloat, val)
+
+def test_float_valueerrror():
+    for val in valueErrorTrigger("FLOAT"):
         AssertError(ValueError, com_obj.mFloat, val)
 
 def test_float_overflowerror():
@@ -205,6 +241,10 @@ def test_double():
 
 def test_double_typeerrror():
     for val in typeErrorTrigger("DOUBLE"):
+        AssertError(TypeError, com_obj.mDouble, val)
+
+def test_double_valueerrror():
+    for val in valueErrorTrigger("DOUBLE"):
         AssertError(ValueError, com_obj.mDouble, val)
 
 def test_double_overflowerror():
@@ -218,6 +258,10 @@ def test_ushort():
 
 def test_ushort_typeerrror():
     for val in typeErrorTrigger("USHORT"):
+        AssertError(TypeError, com_obj.mUShort, val)
+
+def test_ushort_valueerrror():
+    for val in valueErrorTrigger("USHORT"):
         AssertError(ValueError, com_obj.mUShort, val)
 
 def test_ushort_overflowerror():
@@ -231,6 +275,10 @@ def test_ulong():
 
 def test_ulong_typeerrror():
     for val in typeErrorTrigger("ULONG"):
+        AssertError(TypeError, com_obj.mUlong, val)
+
+def test_ulong_valueerrror():
+    for val in valueErrorTrigger("ULONG"):
         AssertError(ValueError, com_obj.mUlong, val)
 
 def test_ulong_overflowerror():
@@ -238,7 +286,7 @@ def test_ulong_overflowerror():
         AssertError(OverflowError, com_obj.mUlong, val)
 
 #------------------------------------------------------------------------------
-#@skip_comdispatch("Dev10 409933")
+#@disabled("Dev10 409933")
 #Hack: b/c PY converts long numeric literals to bigints which has different coercion rules than .net does
 #we'll just be using the ulong literals instead
 def test_ulonglong():
@@ -247,6 +295,10 @@ def test_ulonglong():
 
 def test_ulonglong_typeerrror():
     for val in typeErrorTrigger("ULONGLONG"):
+        AssertError(TypeError, com_obj.mULongLong, val)
+
+def test_ulonglong_valueerrror():
+    for val in valueErrorTrigger("ULONGLONG"):
         AssertError(ValueError, com_obj.mULongLong, val)
 
 def test_ulonglong_overflowerror():
@@ -260,6 +312,10 @@ def test_short():
 
 def test_short_typeerrror():
     for val in typeErrorTrigger("SHORT"):
+        AssertError(TypeError, com_obj.mShort, val)
+
+def test_short_valueerrror():
+    for val in valueErrorTrigger("SHORT"):
         AssertError(ValueError, com_obj.mShort, val)
 
 def test_short_overflowerror():
@@ -273,6 +329,10 @@ def test_long():
 
 def test_long_typeerrror():
     for val in typeErrorTrigger("LONG"):
+        AssertError(TypeError, com_obj.mLong, val)
+
+def test_long_valueerrror():
+    for val in valueErrorTrigger("LONG"):
         AssertError(ValueError, com_obj.mLong, val)
 
 def test_long_overflowerror():
@@ -280,7 +340,7 @@ def test_long_overflowerror():
         AssertError(OverflowError, com_obj.mLong, val)
 
 #------------------------------------------------------------------------------
-#@skip_comdispatch("Dev10 409933")
+#@disabled("Dev10 409933")
 #Hack: b/c PY converts long numeric literals to bigints which has different coercion rules than .net does
 #we'll just be using the long literals instead
 def test_longlong():
@@ -289,6 +349,10 @@ def test_longlong():
 
 def test_longlong_typeerrror():
     for val in typeErrorTrigger("LONGLONG"):
+        AssertError(TypeError, com_obj.mLongLong, val)
+
+def test_longlong_valueerrror():
+    for val in valueErrorTrigger("LONGLONG"):
         AssertError(ValueError, com_obj.mLongLong, val)
 
 def test_longlong_overflowerror():
@@ -318,7 +382,8 @@ def test_interface_types():
     AssertError(ValueError, com_obj.mIUnknown, None) # DISP_E_TYPEMISMATCH when using VT_EMPTY
     
     AssertError(ValueError, com_obj.mIUnknown, 3j)   # Dev10 409936   
-    
+    AssertError(ValueError, com_obj.mIUnknown, "")
+    AssertError(ValueError, com_obj.mIUnknown, 123)
 	
 def test_interface_types_typerror():
     '''
@@ -327,12 +392,17 @@ def test_interface_types_typerror():
     - mIPictureDisp
     '''
     test_cases = shallow_copy(NON_NUMBER_VALUES)
+    test_cases = [x for x in test_cases if type(x)!=object and type(x)!=KOld and type(x)!=KNew]
     
     for val in test_cases:
         AssertError(TypeError, com_obj.mIDispatch, val)
         com_obj.mIUnknown(val)
         #AssertError(TypeError, com_obj.mIUnknown, val)
 
+def test_interface_types_valueerror():
+    test_cases = [None]
+    for val in test_cases:
+        AssertError(ValueError, com_obj.mIDispatch, val)
 
 ###############################################################################
 ##COMPLEX TYPES################################################################

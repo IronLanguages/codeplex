@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Binding {
 
         public override DynamicMetaObject/*!*/ BindInvoke(InvokeBinder/*!*/ call, params DynamicMetaObject/*!*/[]/*!*/ args) {
             // TODO: Context should come from BuiltinFunction
-            return InvokeWorker(call, BinderState.GetCodeContext(call), args);
+            return InvokeWorker(call, PythonContext.GetCodeContext(call), args);
         }
 
         public override DynamicMetaObject BindConvert(ConvertBinder/*!*/ conversion) {
@@ -62,7 +62,7 @@ namespace IronPython.Runtime.Binding {
             PerfTrack.NoteEvent(PerfTrack.Categories.BindingTarget, "BuiltinFunc Convert");
 
             if (toType.IsSubclassOf(typeof(Delegate))) {
-                return MakeDelegateTarget(binder, toType, Restrict(typeof(BuiltinFunction)));
+                return MakeDelegateTarget(binder, toType, Restrict(LimitType));
             }
 
             return FallbackConvert(binder);
@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Binding {
                 selfRestrict,
                 (newArgs) => {
                     BindingTarget target;
-                    var binder = BinderState.GetBinderState(call).Binder;
+                    var binder = PythonContext.GetPythonContext(call).Binder;
 
                     DynamicMetaObject res = binder.CallMethod(
                         new PythonOverloadResolver(
@@ -153,7 +153,7 @@ namespace IronPython.Runtime.Binding {
             BindingRestrictions selfRestrict = Restrictions.Merge(
                 BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
                     Expression,
-                    typeof(BuiltinFunction)
+                    LimitType
                 )
             ).Merge(
                 BindingRestrictions.GetExpressionRestriction(
@@ -182,7 +182,7 @@ namespace IronPython.Runtime.Binding {
                 (newArgs) => {
                     CallSignature signature = BindingHelpers.GetCallSignature(call);
                     DynamicMetaObject res;
-                    BinderState state = BinderState.GetBinderState(call);
+                    PythonContext state = PythonContext.GetPythonContext(call);
                     BindingTarget target;
                     PythonOverloadResolver resolver;
                     if (Value.IsReversedOperator) {

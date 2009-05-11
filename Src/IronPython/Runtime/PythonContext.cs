@@ -60,7 +60,6 @@ namespace IronPython.Runtime {
         private readonly PythonOptions/*!*/ _options;
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
-        private readonly BinderState _defaultBinderState, _defaultClsBinderState;
 #if !SILVERLIGHT
         private readonly AssemblyResolveHolder _resolveHolder;
 #endif
@@ -134,7 +133,7 @@ namespace IronPython.Runtime {
         private ClrModule.ReferencesList _referencesList;
         private FloatFormat _floatFormat, _doubleFormat;
         private CultureInfo _collateCulture, _ctypeCulture, _timeCulture, _monetaryCulture, _numericCulture;
-        private CodeContext _defaultContext;
+        private CodeContext _defaultContext, _defaultClsContext;
         private readonly IEqualityComparer<object> _equalityComparer;
 
         private Dictionary<Type, CallSite<Func<CallSite, object, object, bool>>> _equalSites;
@@ -142,6 +141,33 @@ namespace IronPython.Runtime {
         private Dictionary<Type, PythonSiteCache> _systemSiteCache;
         private Dictionary<object, Delegate> _optimizedDelegates;
         internal static object _syntaxErrorNoCaret = new object();
+
+        // atomized binders
+        private PythonInvokeBinder _invokeNoArgs, _invokeOneArg;
+        private Dictionary<CallSignature, PythonInvokeBinder/*!*/> _invokeBinders;
+        private Dictionary<string/*!*/, PythonGetMemberBinder/*!*/> _getMemberBinders;
+        private Dictionary<string/*!*/, PythonGetMemberBinder/*!*/> _tryGetMemberBinders;
+        private Dictionary<string/*!*/, PythonSetMemberBinder/*!*/> _setMemberBinders;
+        private Dictionary<string/*!*/, PythonDeleteMemberBinder/*!*/> _deleteMemberBinders;
+        private Dictionary<string/*!*/, CompatibilityGetMember/*!*/> _compatGetMember;
+        private Dictionary<PythonOperationKind, PythonOperationBinder/*!*/> _operationBinders;
+        private Dictionary<ExpressionType, PythonUnaryOperationBinder/*!*/> _unaryBinders;
+        private Dictionary<ExpressionType, PythonBinaryOperationBinder/*!*/> _binaryBinders;
+        private Dictionary<OperationRetTypeKey<ExpressionType>, BinaryRetTypeBinder/*!*/> _binaryRetTypeBinders;
+        private Dictionary<OperationRetTypeKey<PythonOperationKind>, BinaryRetTypeBinder/*!*/> _operationRetTypeBinders;
+        private Dictionary<Type/*!*/, PythonConversionBinder/*!*/>[] _conversionBinders;
+        private Dictionary<Type/*!*/, ConvertBinder/*!*/> _explicitCompatConvertBinders;
+        private Dictionary<Type/*!*/, ConvertBinder/*!*/> _implicitCompatConvertBinders;
+        private Dictionary<Type/*!*/, DynamicMetaObjectBinder/*!*/>[] _convertRetObjectBinders;
+        private Dictionary<CallSignature, CreateFallback/*!*/> _createBinders;
+        private Dictionary<CallSignature, CompatibilityInvokeBinder/*!*/> _compatInvokeBinders;
+        private PythonGetSliceBinder _getSlice;
+        private PythonSetSliceBinder _setSlice;
+        private PythonDeleteSliceBinder _deleteSlice;
+        private PythonGetIndexBinder[] _getIndexBinders;
+        private PythonSetIndexBinder[] _setIndexBinders;
+        private PythonDeleteIndexBinder[] _deleteIndexBinders;
+        private DynamicMetaObjectBinder _invokeTwoConvertToInt;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -156,10 +182,9 @@ namespace IronPython.Runtime {
             _defaultContext = new CodeContext(defaultScope, this);
             PythonBinder binder = new PythonBinder(manager, this, _defaultContext);
             Binder = binder;
-            _defaultBinderState = new BinderState(binder, _defaultContext);
 
             CodeContext defaultClsContext = DefaultContext.CreateDefaultCLSContext(this);
-            _defaultClsBinderState = new BinderState(binder, defaultClsContext);
+            _defaultClsContext = defaultClsContext;
 
             if (DefaultContext._default == null) {
                 DefaultContext.InitializeDefaults(_defaultContext, defaultClsContext);
@@ -220,8 +245,7 @@ namespace IronPython.Runtime {
             _collateCulture = _ctypeCulture = _timeCulture = _monetaryCulture = _numericCulture = CultureInfo.InvariantCulture;
             _equalityComparer = new PythonEqualityComparer(this);
 
-            PythonModule module = EnsureModule(_defaultContext);
-            module.BinderState = _defaultBinderState;
+            EnsureModule(_defaultContext);
         }
 
         public IEqualityComparer<object>/*!*/ EqualityComparer {
@@ -927,7 +951,6 @@ namespace IronPython.Runtime {
             ContractUtils.RequiresNotNull(scope, "scope");
 
             PythonModule module = new PythonModule(scope);
-            module.BinderState = new BinderState(Binder);
             module = (PythonModule)scope.SetExtension(ContextId, module);
 
             // adds __builtin__ variable if necessary.  Python adds the module directly to
@@ -1786,45 +1809,45 @@ namespace IronPython.Runtime {
         #region Object Operations
 
         public override ConvertBinder/*!*/ CreateConvertBinder(Type/*!*/ toType, bool explicitCast) {
-            return DefaultBinderState.CompatConvert(toType, explicitCast);
+            return CompatConvert(toType, explicitCast);
         }
 
         public override DeleteMemberBinder/*!*/ CreateDeleteMemberBinder(string/*!*/ name, bool ignoreCase) {
             if (ignoreCase) {
-                return new PythonDeleteMemberBinder(DefaultBinderState, name, ignoreCase);
+                return new PythonDeleteMemberBinder(this, name, ignoreCase);
             }
-            return DefaultBinderState.DeleteMember(name);
+            return DeleteMember(name);
         }
 
         public override GetMemberBinder/*!*/ CreateGetMemberBinder(string/*!*/ name, bool ignoreCase) {
             if (ignoreCase) {
-                return new CompatibilityGetMember(DefaultBinderState, name, ignoreCase);
+                return new CompatibilityGetMember(this, name, ignoreCase);
             }
-            return DefaultBinderState.CompatGetMember(name);
+            return CompatGetMember(name);
         }
 
         public override InvokeBinder/*!*/ CreateInvokeBinder(CallInfo /*!*/ callInfo) {
-            return DefaultBinderState.CompatInvoke(callInfo);
+            return CompatInvoke(callInfo);
         }
 
         public override BinaryOperationBinder CreateBinaryOperationBinder(ExpressionType operation) {
-            return DefaultBinderState.BinaryOperation(operation);
+            return BinaryOperation(operation);
         }
 
         public override UnaryOperationBinder CreateUnaryOperationBinder(ExpressionType operation) {
-            return DefaultBinderState.UnaryOperation(operation);
+            return UnaryOperation(operation);
         }
 
         public override SetMemberBinder/*!*/ CreateSetMemberBinder(string/*!*/ name, bool ignoreCase) {
             if (ignoreCase) {
-                return new PythonSetMemberBinder(DefaultBinderState, name, ignoreCase);
+                return new PythonSetMemberBinder(this, name, ignoreCase);
             }
-            return DefaultBinderState.SetMember(name);
+            return SetMember(name);
         }
 
         public override CreateInstanceBinder/*!*/ CreateCreateBinder(CallInfo /*!*/ callInfo) {
-            return DefaultBinderState.Create(
-                DefaultBinderState.CompatInvoke(callInfo),
+            return Create(
+                CompatInvoke(callInfo),
                 callInfo
             );
         }
@@ -1846,7 +1869,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _newUnarySites[(int)oper],
                     CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                        DefaultBinderState.InvokeNone
+                        InvokeNone
                     ),
                     null
                 );
@@ -1895,7 +1918,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _newTernarySites[(int)oper],
                     CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
-                        DefaultBinderState.Invoke(
+                        Invoke(
                             new CallSignature(2)
                         )
                     ),
@@ -1967,7 +1990,7 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, object, int>> MakeSortCompareSite() {
             return CallSite<Func<CallSite, object, object, int>>.Create(
-                DefaultBinderState.Operation(
+                Operation(
                     PythonOperationKind.Compare
                 )
             );
@@ -1983,7 +2006,7 @@ namespace IronPython.Runtime {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_setAttrSites.TryGetValue(key, out site)) {
                     _setAttrSites[key] = site = CallSite<Func<CallSite, object, object, object>>.Create(
-                        DefaultBinderState.SetMember(
+                        SetMember(
                             SymbolTable.IdToString(name)
                         )
                     );
@@ -2004,7 +2027,7 @@ namespace IronPython.Runtime {
             lock (_deleteAttrSites) {
                 if (!_deleteAttrSites.TryGetValue(key, out site)) {
                     _deleteAttrSites[key] = site = CallSite<Action<CallSite, object>>.Create(
-                        DefaultBinderState.DeleteMember(SymbolTable.IdToString(name))
+                        DeleteMember(SymbolTable.IdToString(name))
                     );
                 }
             }
@@ -2018,7 +2041,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _metaClassSite,
                         CallSite<Func<CallSite, CodeContext, object, string, PythonTuple, IAttributesCollection, object>>.Create(
-                            _defaultBinderState.Invoke(
+                            Invoke(
                                 new CallSignature(3)
                             )
                         ),
@@ -2036,7 +2059,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _writeSite,
                         CallSite<Func<CallSite, CodeContext, object, string, object>>.Create(
-                            _defaultBinderState.InvokeOne
+                            InvokeOne
                         ),
                         null
                     );
@@ -2052,7 +2075,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _getIndexSite,
                         CallSite<Func<CallSite, object, object, object>>.Create(
-                            _defaultBinderState.GetIndex(
+                            GetIndex(
                                 1
                             )
                         ),
@@ -2069,7 +2092,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _delIndexSite,
                     CallSite<Action<CallSite, object, object>>.Create(
-                        _defaultBinderState.DeleteIndex(
+                        DeleteIndex(
                             1
                         )
                     ),
@@ -2086,7 +2109,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _delSliceSite,
                     CallSite<Func<CallSite, object, object, object, object>>.Create(
-                        _defaultBinderState.DeleteSlice
+                        DeleteSlice
                     ),
                     null
                 );
@@ -2101,9 +2124,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _setIndexSite,
                     CallSite<Func<CallSite, object, object, object, object>>.Create(
-                        _defaultBinderState.SetIndex(
-                            1
-                        )
+                        SetIndex(1)
                     ),
                     null
                 );
@@ -2117,7 +2138,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _setSliceSite,
                     CallSite<Func<CallSite, object, object, object, object, object>>.Create(
-                        _defaultBinderState.SetSlice
+                        SetSliceBinder
                     ),
                     null
                 );
@@ -2132,7 +2153,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _equalSite,
                         CallSite<Func<CallSite, object, object, object>>.Create(
-                            _defaultBinderState.BinaryOperation(
+                            BinaryOperation(
                                 ExpressionType.Equal
                             )
                         ),
@@ -2150,9 +2171,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _memberNamesSite,
                         CallSite<Func<CallSite, CodeContext, object, IList<string>>>.Create(
-                            _defaultBinderState.Operation(
-                                PythonOperationKind.MemberNames
-                            )
+                            Operation(PythonOperationKind.MemberNames)
                         ),
                         null
                     );
@@ -2168,7 +2187,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _getMemberNamesSite,
                         CallSite<Func<CallSite, object, IList<string>>>.Create(
-                            Binders.UnaryOperationBinder(DefaultBinderState, PythonOperationKind.MemberNames)
+                            Binders.UnaryOperationBinder(this, PythonOperationKind.MemberNames)
                         ),
                         null
                     );
@@ -2184,7 +2203,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _finalizerSite,
                         CallSite<Func<CallSite, CodeContext, object, object>>.Create(
-                            DefaultBinderState.InvokeNone
+                            InvokeNone
                         ),
                         null
                     );
@@ -2200,7 +2219,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _functionCallSite,
                         CallSite<Func<CallSite, CodeContext, PythonFunction, object>>.Create(
-                            _defaultBinderState.InvokeNone
+                            InvokeNone
                         ),
                         null
                     );
@@ -2247,7 +2266,7 @@ namespace IronPython.Runtime {
         public override string GetDocumentation(object obj) {
             if (_docSite == null) {
                 _docSite = CallSite<Func<CallSite, object, string>>.Create(
-                    DefaultBinderState.Operation(
+                    Operation(
                         PythonOperationKind.Documentation
                     )
                 );
@@ -2336,7 +2355,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, TRet>> MakeTrySite<T, TRet>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, TRet>>.Create(
-                DefaultBinderState.Convert(
+                Convert(
                     typeof(T),
                     kind
                 )
@@ -2373,7 +2392,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, object>> MakeImplicitConvertSite<T>() {
             return CallSite<Func<CallSite, object, object>>.Create(
-                DefaultBinderState.ConvertRetObject(
+                ConvertRetObject(
                     typeof(T),
                     ConversionResultKind.ImplicitCast
                 )
@@ -2382,7 +2401,7 @@ namespace IronPython.Runtime {
 
         private CallSite<Func<CallSite, object, T>> MakeConvertSite<T>(ConversionResultKind kind) {
             return CallSite<Func<CallSite, object, T>>.Create(
-                DefaultBinderState.Convert(
+                Convert(
                     typeof(T),
                     kind
                 )
@@ -2408,7 +2427,7 @@ namespace IronPython.Runtime {
             lock (_binarySites) {
                 if (!_binarySites.TryGetValue(operation, out site)) {
                     _binarySites[operation] = site = CallSite<Func<CallSite, object, object, object>>.Create(
-                        Binders.BinaryOperationBinder(_defaultBinderState, operation)
+                        Binders.BinaryOperationBinder(this, operation)
                     );
                 }
             }
@@ -2458,9 +2477,9 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, object, bool>> CreateComparisonSite(ExpressionType op) {
             return CallSite<Func<CallSite, object, object, bool>>.Create(
-                DefaultBinderState.BinaryOperationRetType(
-                    DefaultBinderState.BinaryOperation(op),
-                    DefaultBinderState.Convert(typeof(bool), ConversionResultKind.ExplicitCast)
+                BinaryOperationRetType(
+                    BinaryOperation(op),
+                    Convert(typeof(bool), ConversionResultKind.ExplicitCast)
                 )
             );
         }
@@ -2479,9 +2498,9 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, object, bool>> CreateComparisonSite(PythonOperationKind op) {
             return CallSite<Func<CallSite, object, object, bool>>.Create(
-                DefaultBinderState.OperationRetType(
-                    DefaultBinderState.Operation(op),
-                    DefaultBinderState.Convert(typeof(bool), ConversionResultKind.ExplicitCast)
+                OperationRetType(
+                    Operation(op),
+                    Convert(typeof(bool), ConversionResultKind.ExplicitCast)
                 )
             );
         }
@@ -2489,7 +2508,7 @@ namespace IronPython.Runtime {
         internal object CallSplat(object func, params object[] args) {
             EnsureCallSplatSite();
 
-            return _callSplatSite.Target(_callSplatSite, DefaultBinderState.Context, func, args);
+            return _callSplatSite.Target(_callSplatSite, SharedContext, func, args);
         }
 
         internal object CallWithContext(CodeContext/*!*/ context, object func, params object[] args) {
@@ -2521,14 +2540,14 @@ namespace IronPython.Runtime {
         }
 
         internal CallSite<Func<CallSite, CodeContext, object, object[], object>> MakeSplatSite() {
-            return CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(Binders.InvokeSplat(DefaultBinderState));
+            return CallSite<Func<CallSite, CodeContext, object, object[], object>>.Create(Binders.InvokeSplat(this));
         }
 
         private void EnsureCall2Site() {
             if (_callSite2 == null) {
                 Interlocked.CompareExchange(
                     ref _callSite2,
-                    CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(DefaultBinderState.Invoke(new CallSignature(2))),
+                    CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(Invoke(new CallSignature(2))),
                     null
                 );
             }
@@ -2538,7 +2557,7 @@ namespace IronPython.Runtime {
             if (_callSite1 == null) {
                 Interlocked.CompareExchange(
                     ref _callSite1,
-                    CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(DefaultBinderState.InvokeOne),
+                    CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(InvokeOne),
                     null
                 );
             }
@@ -2553,11 +2572,11 @@ namespace IronPython.Runtime {
                 );
             }
 
-            return _callDictSite.Target(_callDictSite, DefaultBinderState.Context, func, args, dict);
+            return _callDictSite.Target(_callDictSite, SharedContext, func, args, dict);
         }
 
         internal CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> MakeKeywordSplatSite() {
-            return CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>.Create(Binders.InvokeKeywords(DefaultBinderState));
+            return CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>>.Create(Binders.InvokeKeywords(this));
         }
 
         internal CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>> ImportSite {
@@ -2566,7 +2585,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _importSite,
                         CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>>.Create(
-                            DefaultBinderState.Invoke(
+                            Invoke(
                                 new CallSignature(5)
                             )
                         ),
@@ -2584,7 +2603,7 @@ namespace IronPython.Runtime {
                     Interlocked.CompareExchange(
                         ref _oldImportSite,
                         CallSite<Func<CallSite, CodeContext, object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>>.Create(
-                            DefaultBinderState.Invoke(
+                            Invoke(
                                 new CallSignature(4)
                             )
                         ),
@@ -2601,7 +2620,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _isCallableSite,
                     CallSite<Func<CallSite, object, bool>>.Create(
-                        DefaultBinderState.Operation(
+                        Operation(
                             PythonOperationKind.IsCallable
                         )
                     ),
@@ -2640,7 +2659,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _addSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        DefaultBinderState.BinaryOperation(ExpressionType.Add)
+                        BinaryOperation(ExpressionType.Add)
                     ),
                     null
                 );
@@ -2654,7 +2673,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _divModSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        DefaultBinderState.Operation(PythonOperationKind.DivMod)
+                        Operation(PythonOperationKind.DivMod)
                     ),
                     null
                 );
@@ -2669,7 +2688,7 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _rdivModSite,
                     CallSite<Func<CallSite, object, object, object>>.Create(
-                        DefaultBinderState.Operation(PythonOperationKind.ReverseDivMod)
+                        Operation(PythonOperationKind.ReverseDivMod)
                     ),
                     null
                 );
@@ -2708,15 +2727,25 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        internal BinderState DefaultBinderState {
+        /// <summary>
+        /// Returns a shared code context for the current PythonContext.  This shared
+        /// context can be used for performing general operations which usually
+        /// require a CodeContext.
+        /// </summary>
+        internal CodeContext SharedContext {
             get {
-                return _defaultBinderState;
+                return _defaultContext;
             }
         }
 
-        internal BinderState DefaultClsBinderState {
+        /// <summary>
+        /// Returns a shared code context for the current PythonContext.  This shared
+        /// context can be used for doing lookups which need to occur as if they
+        /// happened in a module which has done "import clr".
+        /// </summary>
+        internal CodeContext SharedClsContext {
             get {
-                return _defaultClsBinderState;
+                return _defaultClsContext;
             }
         }
 
@@ -2782,7 +2811,7 @@ namespace IronPython.Runtime {
                 if (_propGetSite == null) {
                     Interlocked.CompareExchange(ref _propGetSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
-                            DefaultBinderState.InvokeOne
+                            InvokeOne
                         ),
                         null
                     );
@@ -2797,7 +2826,7 @@ namespace IronPython.Runtime {
                 if (_propDelSite == null) {
                     Interlocked.CompareExchange(ref _propDelSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(
-                            DefaultBinderState.InvokeOne
+                            InvokeOne
                         ),
                         null
                     );
@@ -2812,7 +2841,7 @@ namespace IronPython.Runtime {
                 if (_propSetSite == null) {
                     Interlocked.CompareExchange(ref _propSetSite,
                         CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(
-                            DefaultBinderState.Invoke(
+                            Invoke(
                                 new CallSignature(2)
                             )
                         ),
@@ -2837,7 +2866,7 @@ namespace IronPython.Runtime {
             private CallSite<Func<CallSite, object, object, int>> _site;
             public DefaultPythonComparer(PythonContext context) {
                 _site = CallSite<Func<CallSite, object, object, int>>.Create(
-                    context.DefaultBinderState.Operation(PythonOperationKind.Compare)
+                    context.Operation(PythonOperationKind.Compare)
                 );
             }
 
@@ -2857,7 +2886,7 @@ namespace IronPython.Runtime {
 
             public FunctionComparer(PythonContext/*!*/ context, T cmpfunc, CallSite<Func<CallSite, CodeContext, T, object, object, int>> site) {
                 _cmpfunc = cmpfunc;
-                _context = context.DefaultBinderState.Context;
+                _context = context.SharedContext;
                 _funcSite = site;
             }
 
@@ -2868,7 +2897,7 @@ namespace IronPython.Runtime {
 
         private static CallSite<Func<CallSite, CodeContext, T, object, object, int>> MakeCompareSite<T>(PythonContext context) {
             return CallSite<Func<CallSite, CodeContext, T, object, object, int>>.Create(
-                context.DefaultBinderState.InvokeTwoConvertToInt
+                context.InvokeTwoConvertToInt
             );
         }
 
@@ -2939,7 +2968,7 @@ namespace IronPython.Runtime {
                         ref _getItemCallSite,
                         CallSite<Func<CallSite, CodeContext, object, int, object>>.Create(
                             new PythonInvokeBinder(
-                                DefaultBinderState,
+                                this,
                                 new CallSignature(1)
                             )
                         ),
@@ -2974,7 +3003,7 @@ namespace IronPython.Runtime {
 
         internal CallSite<Func<CallSite, object, int>> MakeHashSite() {
             return CallSite<Func<CallSite, object, int>>.Create(
-                DefaultBinderState.Operation(
+                Operation(
                     PythonOperationKind.Hash
                 )
             );
@@ -2985,13 +3014,547 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _getSignaturesSite,
                     CallSite<Func<CallSite, object, IList<string>>>.Create(
-                        DefaultBinderState.Operation(PythonOperationKind.CallSignatures)
+                        Operation(PythonOperationKind.CallSignatures)
                     ),
                     null
                 );
             }
             return _getSignaturesSite.Target(_getSignaturesSite, obj);
         }
+
+
+        #region Binder Factories
+
+        internal CompatibilityInvokeBinder/*!*/ CompatInvoke(CallInfo /*!*/ callInfo) {
+            if (_compatInvokeBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _compatInvokeBinders,
+                    new Dictionary<CallSignature, CompatibilityInvokeBinder>(),
+                    null
+                );
+            }
+
+            lock (_compatInvokeBinders) {
+                CallSignature sig = BindingHelpers.CallInfoToSignature(callInfo);
+                CompatibilityInvokeBinder res;
+                if (!_compatInvokeBinders.TryGetValue(sig, out res)) {
+                    _compatInvokeBinders[sig] = res = new CompatibilityInvokeBinder(this, callInfo);
+                }
+
+                return res;
+            }
+        }
+
+
+        internal PythonConversionBinder/*!*/ Convert(Type/*!*/ type, ConversionResultKind resultKind) {
+            if (_conversionBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _conversionBinders,
+                    new Dictionary<Type, PythonConversionBinder>[(int)ConversionResultKind.ExplicitTry + 1], // max conversion result kind
+                    null
+                );
+            }
+
+            if (_conversionBinders[(int)resultKind] == null) {
+                Interlocked.CompareExchange(
+                    ref _conversionBinders[(int)resultKind],
+                    new Dictionary<Type, PythonConversionBinder>(),
+                    null
+                );
+            }
+
+            Dictionary<Type, PythonConversionBinder> dict = _conversionBinders[(int)resultKind];
+            lock (dict) {
+                PythonConversionBinder res;
+                if (!dict.TryGetValue(type, out res)) {
+                    dict[type] = res = new PythonConversionBinder(this, type, resultKind);
+                }
+
+                return res;
+            }
+        }
+
+        internal ConvertBinder/*!*/ CompatConvert(Type/*!*/ toType, bool isExplicit) {
+            Dictionary<Type, ConvertBinder> binders;
+            if (isExplicit) {
+                if (_explicitCompatConvertBinders == null) {
+                    Interlocked.CompareExchange(
+                        ref _explicitCompatConvertBinders,
+                        new Dictionary<Type, ConvertBinder>(),
+                        null
+                    );
+                }
+
+                binders = _explicitCompatConvertBinders;
+            } else {
+                if (_implicitCompatConvertBinders == null) {
+                    Interlocked.CompareExchange(
+                        ref _implicitCompatConvertBinders,
+                        new Dictionary<Type, ConvertBinder>(),
+                        null
+                    );
+                }
+
+                binders = _implicitCompatConvertBinders;
+            }
+
+            ConvertBinder res;
+            lock (binders) {
+                if (!binders.TryGetValue(toType, out res)) {
+                    binders[toType] = res = new CompatConversionBinder(this, toType, isExplicit);
+                }
+            }
+
+            return res;
+        }
+
+        internal DynamicMetaObjectBinder/*!*/ ConvertRetObject(Type/*!*/ type, ConversionResultKind resultKind) {
+            if (_convertRetObjectBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _convertRetObjectBinders,
+                    new Dictionary<Type, DynamicMetaObjectBinder>[(int)ConversionResultKind.ExplicitTry + 1], // max conversion result kind
+                    null
+                );
+            }
+
+            if (_convertRetObjectBinders[(int)resultKind] == null) {
+                Interlocked.CompareExchange(
+                    ref _convertRetObjectBinders[(int)resultKind],
+                    new Dictionary<Type, DynamicMetaObjectBinder>(),
+                    null
+                );
+            }
+
+            Dictionary<Type, DynamicMetaObjectBinder> dict = _convertRetObjectBinders[(int)resultKind];
+            lock (dict) {
+                DynamicMetaObjectBinder res;
+                if (!dict.TryGetValue(type, out res)) {
+                    dict[type] = res = new PythonConversionBinder(this, type, resultKind, true);
+                }
+
+                return res;
+            }
+        }
+
+        internal CreateFallback/*!*/ Create(CompatibilityInvokeBinder/*!*/ realFallback, CallInfo /*!*/ callInfo) {
+            if (_createBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _createBinders,
+                    new Dictionary<CallSignature, CreateFallback>(),
+                    null
+                );
+            }
+
+            lock (_createBinders) {
+                CallSignature sig = BindingHelpers.CallInfoToSignature(callInfo);
+                CreateFallback res;
+                if (!_createBinders.TryGetValue(sig, out res)) {
+                    _createBinders[sig] = res = new CreateFallback(realFallback, callInfo);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonGetMemberBinder/*!*/ GetMember(string/*!*/ name) {
+            return GetMember(name, false);
+        }
+
+        internal PythonGetMemberBinder/*!*/ GetMember(string/*!*/ name, bool isNoThrow) {
+            Dictionary<string, PythonGetMemberBinder> dict;
+            if (isNoThrow) {
+                if (_tryGetMemberBinders == null) {
+                    Interlocked.CompareExchange(
+                        ref _tryGetMemberBinders,
+                        new Dictionary<string, PythonGetMemberBinder>(),
+                        null
+                    );
+                }
+
+                dict = _tryGetMemberBinders;
+            } else {
+                if (_getMemberBinders == null) {
+                    Interlocked.CompareExchange(
+                        ref _getMemberBinders,
+                        new Dictionary<string, PythonGetMemberBinder>(),
+                        null
+                    );
+                }
+
+                dict = _getMemberBinders;
+            }
+
+            lock (dict) {
+                PythonGetMemberBinder res;
+                if (!dict.TryGetValue(name, out res)) {
+                    dict[name] = res = new PythonGetMemberBinder(this, name, isNoThrow);
+                }
+
+                return res;
+            }
+        }
+
+        internal CompatibilityGetMember/*!*/ CompatGetMember(string/*!*/ name) {
+            if (_compatGetMember == null) {
+                Interlocked.CompareExchange(
+                    ref _compatGetMember,
+                    new Dictionary<string, CompatibilityGetMember>(),
+                    null
+                );
+            }
+
+            lock (_compatGetMember) {
+                CompatibilityGetMember res;
+                if (!_compatGetMember.TryGetValue(name, out res)) {
+                    _compatGetMember[name] = res = new CompatibilityGetMember(this, name);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonSetMemberBinder/*!*/ SetMember(string/*!*/ name) {
+            if (_setMemberBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _setMemberBinders,
+                    new Dictionary<string, PythonSetMemberBinder>(),
+                    null
+                );
+            }
+
+            lock (_setMemberBinders) {
+                PythonSetMemberBinder res;
+                if (!_setMemberBinders.TryGetValue(name, out res)) {
+                    _setMemberBinders[name] = res = new PythonSetMemberBinder(this, name);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonDeleteMemberBinder/*!*/ DeleteMember(string/*!*/ name) {
+            if (_deleteMemberBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _deleteMemberBinders,
+                    new Dictionary<string, PythonDeleteMemberBinder>(),
+                    null
+                );
+            }
+
+            lock (_deleteMemberBinders) {
+                PythonDeleteMemberBinder res;
+                if (!_deleteMemberBinders.TryGetValue(name, out res)) {
+                    _deleteMemberBinders[name] = res = new PythonDeleteMemberBinder(this, name);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonInvokeBinder/*!*/ Invoke(CallSignature signature) {
+            if (_invokeBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _invokeBinders,
+                    new Dictionary<CallSignature, PythonInvokeBinder>(),
+                    null
+                );
+            }
+
+            lock (_invokeBinders) {
+                PythonInvokeBinder res;
+                if (!_invokeBinders.TryGetValue(signature, out res)) {
+                    _invokeBinders[signature] = res = new PythonInvokeBinder(this, signature);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonInvokeBinder/*!*/ InvokeNone {
+            get {
+                if (_invokeNoArgs == null) {
+                    _invokeNoArgs = Invoke(new CallSignature(0));
+                }
+
+                return _invokeNoArgs;
+            }
+        }
+
+        internal PythonInvokeBinder/*!*/ InvokeOne {
+            get {
+                if (_invokeOneArg == null) {
+                    _invokeOneArg = Invoke(new CallSignature(1));
+                }
+
+                return _invokeOneArg;
+            }
+        }
+
+        internal DynamicMetaObjectBinder/*!*/ InvokeTwoConvertToInt {
+            get {
+                if (_invokeTwoConvertToInt == null) {
+                    // +2 for the target object and CodeContext which InvokeBinder recevies
+                    const int argCount = 2;
+                    ParameterMappingInfo[] args = new ParameterMappingInfo[argCount + 2];
+                    for (int i = 0; i < argCount + 2; i++) {
+                        args[i] = ParameterMappingInfo.Parameter(i);
+                    }
+
+                    _invokeTwoConvertToInt = new ComboBinder(
+                        new BinderMappingInfo(
+                            Invoke(new CallSignature(2)),
+                            args
+                        ),
+                        new BinderMappingInfo(
+                            Convert(typeof(int), ConversionResultKind.ExplicitCast),
+                            ParameterMappingInfo.Action(0)
+                        )
+                    );
+                }
+
+                return _invokeTwoConvertToInt;
+            }
+        }
+
+        internal PythonOperationBinder/*!*/ Operation(PythonOperationKind operation) {
+            if (_operationBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _operationBinders,
+                    new Dictionary<PythonOperationKind, PythonOperationBinder>(),
+                    null
+                );
+            }
+
+            lock (_operationBinders) {
+                PythonOperationBinder res;
+                if (!_operationBinders.TryGetValue(operation, out res)) {
+                    _operationBinders[operation] = res = new PythonOperationBinder(this, operation);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonUnaryOperationBinder/*!*/ UnaryOperation(ExpressionType operation) {
+            if (_unaryBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _unaryBinders,
+                    new Dictionary<ExpressionType, PythonUnaryOperationBinder>(),
+                    null
+                );
+            }
+
+            lock (_unaryBinders) {
+                PythonUnaryOperationBinder res;
+                if (!_unaryBinders.TryGetValue(operation, out res)) {
+                    _unaryBinders[operation] = res = new PythonUnaryOperationBinder(this, operation);
+                }
+
+                return res;
+            }
+
+        }
+
+        internal PythonBinaryOperationBinder/*!*/ BinaryOperation(ExpressionType operation) {
+            if (_binaryBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _binaryBinders,
+                    new Dictionary<ExpressionType, PythonBinaryOperationBinder>(),
+                    null
+                );
+            }
+
+            lock (_binaryBinders) {
+                PythonBinaryOperationBinder res;
+                if (!_binaryBinders.TryGetValue(operation, out res)) {
+                    _binaryBinders[operation] = res = new PythonBinaryOperationBinder(this, operation);
+                }
+
+                return res;
+            }
+        }
+
+        internal BinaryRetTypeBinder/*!*/ BinaryOperationRetType(PythonBinaryOperationBinder opBinder, PythonConversionBinder convBinder) {
+            if (_binaryRetTypeBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _binaryRetTypeBinders,
+                    new Dictionary<OperationRetTypeKey<ExpressionType>, BinaryRetTypeBinder>(),
+                    null
+                );
+            }
+
+            lock (_binaryRetTypeBinders) {
+                BinaryRetTypeBinder res;
+                OperationRetTypeKey<ExpressionType> key = new OperationRetTypeKey<ExpressionType>(convBinder.Type, opBinder.Operation);
+                if (!_binaryRetTypeBinders.TryGetValue(key, out res)) {
+                    _binaryRetTypeBinders[key] = res = new BinaryRetTypeBinder(opBinder, convBinder);
+                }
+
+                return res;
+            }
+        }
+
+        internal BinaryRetTypeBinder/*!*/ OperationRetType(PythonOperationBinder opBinder, PythonConversionBinder convBinder) {
+            if (_operationRetTypeBinders == null) {
+                Interlocked.CompareExchange(
+                    ref _operationRetTypeBinders,
+                    new Dictionary<OperationRetTypeKey<PythonOperationKind>, BinaryRetTypeBinder>(),
+                    null
+                );
+            }
+
+            lock (_operationRetTypeBinders) {
+                BinaryRetTypeBinder res;
+                OperationRetTypeKey<PythonOperationKind> key = new OperationRetTypeKey<PythonOperationKind>(convBinder.Type, opBinder.Operation);
+                if (!_operationRetTypeBinders.TryGetValue(key, out res)) {
+                    _operationRetTypeBinders[key] = res = new BinaryRetTypeBinder(opBinder, convBinder);
+                }
+
+                return res;
+            }
+        }
+
+        internal PythonGetIndexBinder/*!*/ GetIndex(int argCount) {
+            if (_getIndexBinders == null) {
+                Interlocked.CompareExchange(ref _getIndexBinders, new PythonGetIndexBinder[argCount + 1], null);
+            }
+
+            lock (this) {
+                if (_getIndexBinders.Length <= argCount) {
+                    Array.Resize(ref _getIndexBinders, argCount + 1);
+                }
+
+                if (_getIndexBinders[argCount] == null) {
+                    _getIndexBinders[argCount] = new PythonGetIndexBinder(this, argCount);
+                }
+
+                return _getIndexBinders[argCount];
+            }
+        }
+
+        internal PythonSetIndexBinder/*!*/ SetIndex(int argCount) {
+            if (_setIndexBinders == null) {
+                Interlocked.CompareExchange(ref _setIndexBinders, new PythonSetIndexBinder[argCount + 1], null);
+            }
+
+            lock (this) {
+                if (_setIndexBinders.Length <= argCount) {
+                    Array.Resize(ref _setIndexBinders, argCount + 1);
+                }
+
+                if (_setIndexBinders[argCount] == null) {
+                    _setIndexBinders[argCount] = new PythonSetIndexBinder(this, argCount);
+                }
+
+                return _setIndexBinders[argCount];
+            }
+        }
+
+        internal PythonDeleteIndexBinder/*!*/ DeleteIndex(int argCount) {
+            if (_deleteIndexBinders == null) {
+                Interlocked.CompareExchange(ref _deleteIndexBinders, new PythonDeleteIndexBinder[argCount + 1], null);
+            }
+
+            lock (this) {
+                if (_deleteIndexBinders.Length <= argCount) {
+                    Array.Resize(ref _deleteIndexBinders, argCount + 1);
+                }
+
+                if (_deleteIndexBinders[argCount] == null) {
+                    _deleteIndexBinders[argCount] = new PythonDeleteIndexBinder(this, argCount);
+                }
+
+                return _deleteIndexBinders[argCount];
+            }
+        }
+
+        internal PythonGetSliceBinder/*!*/ GetSlice {
+            get {
+                if (_getSlice == null) {
+                    Interlocked.CompareExchange(ref _getSlice, new PythonGetSliceBinder(this), null);
+                }
+
+                return _getSlice;
+            }
+        }
+
+        internal PythonSetSliceBinder/*!*/ SetSliceBinder {
+            get {
+                if (_setSlice == null) {
+                    Interlocked.CompareExchange(ref _setSlice, new PythonSetSliceBinder(this), null);
+                }
+
+                return _setSlice;
+            }
+        }
+
+        internal PythonDeleteSliceBinder/*!*/ DeleteSlice {
+            get {
+                if (_deleteSlice == null) {
+                    Interlocked.CompareExchange(ref _deleteSlice, new PythonDeleteSliceBinder(this), null);
+                }
+
+                return _deleteSlice;
+            }
+        }
+
+        class OperationRetTypeKey<T> : IEquatable<OperationRetTypeKey<T>> {
+            public readonly Type ReturnType;
+            public readonly T Operation;
+
+            public OperationRetTypeKey(Type retType, T operation) {
+                ReturnType = retType;
+                Operation = operation;
+            }
+
+            #region IEquatable<BinaryOperationRetTypeKey> Members
+
+            public bool Equals(OperationRetTypeKey<T> other) {
+                return other.ReturnType == ReturnType && other.Operation.Equals(Operation);
+            }
+
+            #endregion
+
+            public override int GetHashCode() {
+                return ReturnType.GetHashCode() ^ Operation.GetHashCode();
+            }
+
+            public override bool Equals(object obj) {
+                OperationRetTypeKey<T> other = obj as OperationRetTypeKey<T>;
+                if (other != null) {
+                    return Equals(other);
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets a PythonContext given a DynamicMetaObjectBinder.
+        /// </summary>
+        public static PythonContext/*!*/ GetPythonContext(DynamicMetaObjectBinder/*!*/ action) {
+            IPythonSite pySite = action as IPythonSite;
+            if (pySite != null) {
+                return pySite.Context;
+            }
+
+            return DefaultContext.DefaultPythonContext;
+        }
+
+        public static Expression/*!*/ GetCodeContext(DynamicMetaObjectBinder/*!*/ action) {
+            return Microsoft.Scripting.Ast.Utils.Constant(PythonContext.GetPythonContext(action)._defaultContext);
+        }
+
+        public static DynamicMetaObject/*!*/ GetCodeContextMO(DynamicMetaObjectBinder/*!*/ action) {
+            return new DynamicMetaObject(
+                Microsoft.Scripting.Ast.Utils.Constant(PythonContext.GetPythonContext(action)._defaultContext),
+                BindingRestrictions.Empty,
+                PythonContext.GetPythonContext(action)._defaultContext
+            );
+        }
+
+        #endregion
+
     }
 
     /// <summary>
