@@ -66,6 +66,9 @@ def test_dict_inherit():
 
     a = MyDict()
     a[0] = 'abc'
+    AreEqual(a[0], 'abc')
+    a[None] = 3
+    AreEqual(a[None], 3)
 
 
     class MyDict(dict):
@@ -74,6 +77,9 @@ def test_dict_inherit():
 
     a = MyDict()
     a[0] = 'abc'
+    AreEqual(a[0], 'abc')
+    a[None] = 3
+    AreEqual(a[None], 3)
 
 #------------------------------------------------------------------------------
 # verify function environments, FieldIdDict,

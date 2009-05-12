@@ -12,16 +12,16 @@
 #
 #
 #####################################################################################
-
 # Word Interop tests for IronPython
 
 from iptest.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from iptest.cominterop_util import *
+from iptest.file_util import file_exists, delete_files
+import nt
 
-from Microsoft.Win32 import Registry
-from System.IO import File
-
+#------------------------------------------------------------------------------
+#--SANITY CHECK
 if not IsWordInstalled():
     from sys import exit
     print "Word is not installed.  Cannot run this test!"
@@ -32,28 +32,16 @@ else:
 
 #------------------------------------------------------------------------------
 #--HELPERS
-
 def IsWordPIAInstalled():
+    from Microsoft.Win32 import Registry
     word_pia_registry  = None
-
     wordapp_pia_registry = Registry.ClassesRoot.OpenSubKey("CLSID\\{000209FF-0000-0000-C000-000000000046}\\InprocServer32")
     #worddoc_pia_registry = Registry.ClassesRoot.OpenSubKey("CLSID\\{00020906-0000-0000-C000-000000000046}\\InprocServer32")
-
     return wordapp_pia_registry != None
 
-isPiaInstalled = IsWordPIAInstalled();
-
-selection_counter = 0
-
-word = CreateWordApplication()
-# word.Visible = True
-doc = word.Documents.Add()
-
-#------------------------------------------------------------------------------
-
 def wd_selection_change_eventhandler(range):
-    global selection_counter
-    selection_counter = selection_counter + 1
+    global SELECTION_COUNTER
+    SELECTION_COUNTER = SELECTION_COUNTER + 1
     #print "selected range - ", range.Start, range.End
 
 def add_wordapp_event(wdapp):
@@ -66,11 +54,20 @@ def get_range(doc, start, end):
     return doc.Range(start, end)
     
 def quit_word(wd):
-    if isPiaInstalled : 
+    if IS_PIA_INSTALLED : 
         wd.Quit(clr.Reference[System.Object](0))
     else: 
         wd.Quit(0)
 
+#------------------------------------------------------------------------------
+#--GLOBALS
+IS_PIA_INSTALLED = IsWordPIAInstalled()
+SELECTION_COUNTER = 0
+word = CreateWordApplication()
+doc = word.Documents.Add()
+
+#------------------------------------------------------------------------------
+#--TEST CASES
 def test_word_typelibsupport():
     # load Word namespace directly from the TypeLib
     typeLib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
@@ -144,31 +141,32 @@ def test_word_typelibsupport():
 
 
 def test_wordevents():
-    if isPiaInstalled:
+    global SELECTION_COUNTER
+    SELECTION_COUNTER = 0
+    
+    if IS_PIA_INSTALLED:
         print "Found PIAs for Word"
     else:
         print "No PIAs for Word were Found!!!!" 
 
     doc.Range().Text = "test"
-
-    global selection_counter 
-    selection_counter = 0
-
+    
     add_wordapp_event(word)
     get_range(doc, 1, 1).Select()
-    AreEqual(selection_counter, 1)
+    AreEqual(SELECTION_COUNTER, 1)
 
     add_wordapp_event(word)
     get_range(doc, 1, 2).Select()
-    AreEqual(selection_counter, 3)
+    AreEqual(SELECTION_COUNTER, 3)
 
     remove_wordapp_event(word)
     get_range(doc, 2, 2).Select()
-    AreEqual(selection_counter, 4)
+    AreEqual(SELECTION_COUNTER, 4)
 
     remove_wordapp_event(word)
     get_range(doc, 2, 3).Select()
-    AreEqual(selection_counter, 4)
+    AreEqual(SELECTION_COUNTER, 4)
+
 
 def test_spellChecker():
     suggestions = word.GetSpellingSuggestions("waht")
@@ -178,6 +176,27 @@ def test_spellChecker():
     # Check to see that some expected suggestions actually exist
     Assert("what" in suggestions.GetEnumerator())
     Assert("with" in suggestions.GetEnumerator())
+
+
+def test_word_basic():
+    '''
+    http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=14166
+    '''
+    temp_file_name = nt.tempnam() + ".word_basic.doc"
+    
+    word_basic = getRCWFromProgID("Word.Basic")
+    if is_snap:
+        word_basic.AppShow()
+    word_basic.FileNewDefault()
+    word_basic.Insert("some stuff...")
+    word_basic.FileSaveAs(temp_file_name)
+    if is_snap:
+        word_basic.AppHide()
+    del word_basic
+    
+    Assert(file_exists(temp_file_name))
+    delete_files(temp_file_name)
+    
 
 #------------------------------------------------------------------------------
 try:

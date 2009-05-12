@@ -33,7 +33,7 @@ def test_interpreted():
     save = IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode
     IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = True
     modules = sys.modules.copy()
-    perserve_syspath()
+    preserve_syspath()
     try:
         # Just try some important tests.
         # The full test suite should pass using -X:Interpret; this is just a lightweight check for "run 0".
@@ -43,8 +43,6 @@ def test_interpreted():
         import test_function
         restore_syspath()
         import test_closure
-        restore_syspath()
-        import test_namebinding
         restore_syspath()
         import test_generator
         restore_syspath()
@@ -68,6 +66,10 @@ def test_interpreted():
         import test_str
         restore_syspath()
         import test_math
+        restore_syspath()
+        #Due to http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22345,
+        #test_namebinding must be run after test_math.
+        import test_namebinding
         restore_syspath()
         import test_statics
         restore_syspath()

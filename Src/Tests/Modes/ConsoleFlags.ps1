@@ -22,6 +22,7 @@
 
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "stop"
+$CURRPATH = split-path -parent $MyInvocation.MyCommand.Definition
 
 #Emit the line needed to rerun this test
 echo "To re-run this test execute the following line from a PowerShell prompt:"
@@ -187,7 +188,8 @@ function test-pymodes($pyexe)
 	#Just a simple sanity check will suffice as there are differences in output
 	#between CPython and IronPython
 	
-	$stuff = pyexe -h 
+	$stuff = pyexe -h
+	$temp_content = $stuff
 	$stuff = [string]$stuff
 	
 	$expected_stuff = "-c cmd", "-V ", "-h "
@@ -203,6 +205,25 @@ function test-pymodes($pyexe)
 		{
 			show-failure "Failed: should not have found '-?'"; 
 		}
+	
+	#The following is a very strict mechanism to ensure that existing
+	#ipy.exe command-line flags are not accidentally ripped out and also that
+	#new -X:* flags added are indeed appropriate for public consumption.
+	#The justification for this is that we've had several regressions in 
+	#this area in the past (e.g., CodePlex 21691)
+	if ($pyexe.ToLower().EndsWith("ipy.exe")) {
+		$static_content = get-content $CURRPATH\ConsoleHelp.out
+		$help_compare = compare-object $static_content $temp_content
+		if ($help_compare -ne $null) {
+			show-failure "There are differences between the output of '$pyexe -h' and what was expected in $CURRPATH\ConsoleHelp.out:"
+			echo         "    $help_compare"
+			echo         "Please correct the output of '$pyexe -h' or update $CURRPATH\ConsoleHelp.out."
+		}
+	}
+	elseif (! $pyexe.ToLower().EndsWith("python.exe")) {
+		show-failure "$pyexe is an unknown Python interpreter!"
+		echo "Please adapt this test case to work with $pyexe."
+	}
 	
 	#------------------------------------------------------------------------------
 	## -?

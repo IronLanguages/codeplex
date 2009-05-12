@@ -979,16 +979,15 @@ class C(object):
 
 AssertError(NameError, C().test)
 
-if not is_interpreted():
-    try:
-        del __builtin__.pow
-        AssertError(NameError, lambda: pow)
-        AssertError(AttributeError, lambda: __builtin__.pow)
-    finally:
-        reload(__builtin__)
-        # make sure we still have access to __builtin__'s after reloading
-        # AreEqual(pow(2,2), 4) # bug 359890
-        dir('abc')
+try:
+    del __builtin__.pow
+    AssertError(NameError, lambda: pow)
+    AssertError(AttributeError, lambda: __builtin__.pow)
+finally:
+    reload(__builtin__)
+    # make sure we still have access to __builtin__'s after reloading
+    # AreEqual(pow(2,2), 4) # bug 359890
+    dir('abc')
 
 ## Overriding __builtin__ method inconsistent with -X:LightweightScopes flag
 import __builtin__

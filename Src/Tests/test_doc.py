@@ -210,4 +210,14 @@ def test_class_doc():
     AssertError(AttributeError, f, x())
     AssertError(AttributeError, f, object())
 
+def test_exception_doc_cp20251():
+    class KExcept(Exception):
+        pass
+        
+    for e in [Exception(), KExcept(), Exception, KExcept,
+              BaseException(), IOError(), BaseException, IOError]:
+        Assert(hasattr(e, "__doc__"))
+        e.__doc__
+
+
 run_test(__name__)
