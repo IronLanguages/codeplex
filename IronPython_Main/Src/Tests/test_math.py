@@ -429,8 +429,6 @@ def test_long_log():
     AssertError(ValueError, math.log, -1L)
     AreEqual(math.log(2L, 1e666), 0.0)
     AssertError(ValueError, math.log, 2L, -1e666)
-    AssertError(ValueError, math.log, 1L, 0.0)
-    AssertError(ValueError, math.log, 2L, 0.0)
     AssertError(ZeroDivisionError, math.log, 2L, 1.0)
 
     #Make sure that an object is converted to float before being passed into log funcs
@@ -442,6 +440,12 @@ def test_long_log():
 		    
     AreEqual(round(math.log10(N()), 5),1.0)
     AreEqual(round(math.log(N()), 5),2.30259)
+
+def test_log_neg():
+    for x in [[2,0], [0,2.0], [0], [0L], [0L, 3.14]]:
+        AssertErrorWithMessage(ValueError, "math domain error",
+                               math.log, *x)
+
 
 def test_math_subclass():
     """verify subtypes of float/long work w/ math functions"""
