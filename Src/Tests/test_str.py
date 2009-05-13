@@ -351,7 +351,10 @@ def test_subclass_ctor():
     class mylong(long): pass
     class myint(int): pass
     
-    for x in [1, 1.0, 1L, 1j, myfloat(1.0), mylong(1L), myint(1), True, False, None, object()]:
+    for x in [1, 1.0, 1L, 1j, 
+              myfloat(1.0), mylong(1L), myint(1), 
+              True, False, None, object(),
+              "", u""]:
         AreEqual(myunicode(x), unicode(x))
         AreEqual(myunicode2(x), unicode(x))
     AreEqual(myunicode('foo', 'ascii'), unicode('foo', 'ascii'))

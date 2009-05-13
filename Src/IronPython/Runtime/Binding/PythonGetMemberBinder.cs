@@ -468,7 +468,7 @@ namespace IronPython.Runtime.Binding {
 
             public object Target(CallSite site, object self, CodeContext context) {
                 if (self != null && self.GetType() == typeof(NamespaceTracker)) {
-                    object res = ReflectedPackageOps.GetCustomMember(context, (NamespaceTracker)self, _name);
+                    object res = NamespaceTrackerOps.GetCustomMember(context, (NamespaceTracker)self, _name);
                     if (res != OperationFailed.Value) {
                         return res;
                     }
@@ -481,7 +481,7 @@ namespace IronPython.Runtime.Binding {
 
             public object GetName(CallSite site, object self, CodeContext context) {
                 if (self != null && self.GetType() == typeof(NamespaceTracker)) {
-                    return ReflectedPackageOps.Get__name__(context, (NamespaceTracker)self);
+                    return NamespaceTrackerOps.Get__name__(context, (NamespaceTracker)self);
                 }
 
                 return Update(site, self, context);
@@ -489,7 +489,7 @@ namespace IronPython.Runtime.Binding {
 
             public object GetFile(CallSite site, object self, CodeContext context) {
                 if (self != null && self.GetType() == typeof(NamespaceTracker)) {
-                    return ReflectedPackageOps.Get__file__((NamespaceTracker)self);
+                    return NamespaceTrackerOps.Get__file__((NamespaceTracker)self);
                 }
 
                 return Update(site, self, context);
@@ -497,7 +497,7 @@ namespace IronPython.Runtime.Binding {
 
             public object GetDict(CallSite site, object self, CodeContext context) {
                 if (self != null && self.GetType() == typeof(NamespaceTracker)) {
-                    return ReflectedPackageOps.Get__dict__(context, (NamespaceTracker)self);
+                    return NamespaceTrackerOps.Get__dict__(context, (NamespaceTracker)self);
                 }
 
                 return Update(site, self, context);

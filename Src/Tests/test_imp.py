@@ -582,11 +582,7 @@ def test_relative_control():
 
 def test_import_relative_error():
     def f():  exec 'from . import *'
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21912
-    if is_cli or is_silverlight:
-        AssertError(SyntaxError, f)
-    else:
-        AssertError(ValueError, f)
+    AssertError(ValueError, f)
 
 def test_import_hooks_import_precence():
     """__import__ takes precedence over import hooks"""
@@ -1100,6 +1096,25 @@ def test_module_getattribute():
     for x in dir(type(sys)):
         AreEqual(mymod.__getattribute__(x), getattr(mymod, x))
     
+@skip("silverlight", "win32")
+def test_import_lookup_after():
+    import nt
+    try:
+        _x_mod = path_combine(testpath.public_testdir, "x.py")
+        _y_mod = path_combine(testpath.public_testdir, "y.py")
+    
+        write_to_file(_x_mod, """
+import sys
+oldmod = sys.modules['y']
+newmod = object()
+sys.modules['y'] = newmod
+""")
+        write_to_file(_y_mod, "import x")
+        import y
+        AreEqual(type(y), object)
+    finally:
+        nt.unlink(_x_mod)
+        nt.unlink(_y_mod)
     
 #------------------------------------------------------------------------------
 run_test(__name__)

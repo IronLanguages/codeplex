@@ -35,11 +35,7 @@ def test_sanity():
     Assert("__name__" in dir(_sha512))
     Assert("sha384" in dir (_sha512))
     Assert("sha512" in dir(_sha512))
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21920
-    if is_cli:
-        AreEqual(len(dir(_sha512)), 4)#, "There should only be four attributes in the _sha512 module!")
-    else:
-        AreEqual(len(dir(_sha512)), 5)#, "There should only be five attributes in the _sha512 module!")
+    AreEqual(len(dir(_sha512)), 5)#, "There should only be five attributes in the _sha512 module!")
 
 def test_sha512_sanity():
     x = _sha512.sha512()

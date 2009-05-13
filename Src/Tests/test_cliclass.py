@@ -25,8 +25,14 @@ if __name__  == '__main__' and sys.platform == 'cli' or sys.platform == 'silverl
     try:
         System.Action(f)
         raise Exception('action[t] test failed')
-    except TypeError:
-        pass
+    except TypeError, e:
+        if e.message!="cannot create instances of Action[T] because it is a generic type definition":
+            raise Exception(e.message)
+    
+    import clr
+    clr.AddReference("System.Core")
+    System.Action(f)
+
 
 from iptest.assert_util import *
 skiptest("win32")

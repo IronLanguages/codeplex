@@ -205,6 +205,7 @@ def test_re_paren_in_char_list_cp20191():
     
     AreEqual(format_re.match('a3').groups(), ('', '', '', 'a3'))
 
+@skip("silverlight")
 def test_struct_uint_bad_value_cp20039():
     import _struct
     AreEqual(_struct.Struct('L').pack(4294967296), '\x00\x00\x00\x00')
@@ -236,6 +237,7 @@ def test_reraise_backtrace_cp20051():
 		# CPython reports 2 frames, IroPython includes the re-raise and reports 3
         Assert(frameCount >= 2)
 
+@skip("silverlight")
 def test_winreg_error_cp17050():
     import _winreg
     AreEqual(_winreg.error, WindowsError)
@@ -272,6 +274,7 @@ def test_enumerate_index_increment_cp20016():
     AreEqual(filter( lambda (j, _): j in [0, 1], enumerate([10.0, 27.0])),
              [(0, 10.0), (1, 27.0)])
 
+@skip("silverlight")
 def test_invalid_args_cp20616():
     test_cases = {
         lambda: ''.join() : "join() takes exactly one argument (0 given)",
@@ -322,22 +325,30 @@ def test_exception_multiple_inheritance_cp20208():
     
     AreEqual(FTPOSError, type(FTPOSError()))
 
-def test_conversions_cp19508():
+def test_conversions_cp19675():
     class MyFloatType(float):
         def __int__(self):
             return 42    
         def __str__(self):
             return 'hello'
-    
+            
     MyFloat = MyFloatType()
     AreEqual(int(MyFloat), 42)
     AreEqual(str(MyFloat), 'hello')
 
     class MyFloatType(float): pass
-    
     MyFloat = MyFloatType()
     AreEqual(int(MyFloat), 0)
     AreEqual(str(MyFloat), '0.0')
+
+    class MyFloatType(float):
+        def __new__(cls):
+            return float.__new__(cls, 3.14)
+    
+    MyFloat = MyFloatType()
+    AreEqual(MyFloat, 3.14)
+    AreEqual(int(MyFloat), 3)
+    
 
 @skip("win32")
 def test_type_delegate_conversion():

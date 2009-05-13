@@ -144,6 +144,7 @@ fieldList = [
     ('absolute_import', 'AbsoluteImport'),
     ('print_function', 'PrintFunction'),
     ('unicode_literals', 'UnicodeLiterals'),
+    ('__package__', 'Package'),
     ]
 
 def generate_symbols(cw):

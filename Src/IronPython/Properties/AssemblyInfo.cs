@@ -56,9 +56,3 @@ using System; using Microsoft;
 #endif
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
-
-// hack in order to pass AssemblyInfoTask 
-// AssemblyVersion attribute has been decorated in AssemblyVersion.cs
-#if FALSE
-[assembly: AssemblyVersion("2.0.0.00")]
-#endif
