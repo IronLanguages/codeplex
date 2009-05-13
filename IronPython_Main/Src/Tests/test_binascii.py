@@ -24,9 +24,8 @@ import binascii
 # verify extra characters are ignored, and that we require padding.
 @skip('win32')
 def test_negative():
-    # the native implementation throws a binascii.Error---we throw a TypeError
     for x in ('A', 'AB', '%%%A', 'A%%%', '%A%%', '%AA%' ):
-            AssertError(TypeError, binascii.a2b_base64, x)     # Type Error , incorrect padding
+            AssertError(binascii.Error, binascii.a2b_base64, x) # binascii.Error, incorrect padding
 
 def test_positive():
     AreEqual(binascii.a2b_base64(''), '')

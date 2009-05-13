@@ -20,20 +20,28 @@
 from iptest.assert_util import *
 from iptest.type_util import myset, myfrozenset
 
-# Some of these tests only apply to Python 2.5 compatibility
-import sys
-isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
-
-Assert(isPython25 or not is_cli)
-
+#--GLOBALS---------------------------------------------------------------------
 s1 = [2, 4, 5]
 s2 = [4, 7, 9, 10]
 s3 = [2, 4, 5, 6]
 
+#--TEST CASES------------------------------------------------------------------
 def test_equality():
-    for x in (set, frozenset, myset, myfrozenset):
-        for y in (set, frozenset, myset, myfrozenset):
-            AreEqual(x(s1), y(s1))
+    ne_list = [1]
+    
+    for z in [s1, s2, s3, []]:
+        for x in (set, frozenset, myset, myfrozenset):
+            for y in (set, frozenset, myset, myfrozenset):
+                AreEqual(x(z), y(z))
+                AreEqual(list(x(z)), list(y(z)))
+                AreEqual([x(z)], [y(z)])
+                AreEqual(tuple(x(z)), tuple(y(z)))
+                AreEqual((x(z)), (y(z)))
+            Assert(x(z) != x(ne_list))
+            Assert(list(x(z)) != list(x(ne_list)))
+            Assert([x(z)] != [x(ne_list)])
+            Assert(tuple(x(z)) != tuple(x(ne_list)))
+            Assert((x(z)) != (x(ne_list)))
 
 def test_sanity():
     for x in (set, frozenset, myset, myfrozenset):
@@ -206,11 +214,11 @@ def test_deque():
     x.append(y())
     AreEqual(y() in x, True)
 
-if isPython25:
-    def test_singleton():
-        """Verify that an empty frozenset is a singleton"""
-        AreEqual(frozenset([]) is frozenset([]), True)
-        x = frozenset([1, 2, 3])
-        AreEqual(x is frozenset(x), True)
-    
+def test_singleton():
+    """Verify that an empty frozenset is a singleton"""
+    AreEqual(frozenset([]) is frozenset([]), True)
+    x = frozenset([1, 2, 3])
+    AreEqual(x is frozenset(x), True)
+
+#--MAIN------------------------------------------------------------------------    
 run_test(__name__)

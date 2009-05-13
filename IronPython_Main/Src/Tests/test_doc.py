@@ -17,22 +17,7 @@
 
 from iptest.assert_util import *
 
-@skip('interactive', "multiple_execute")
-def test_sanity():
-    ## module
-    global __doc__
-    
-    AreEqual(__doc__, "module doc")
-    __doc__ = "new module doc"
-    AreEqual(__doc__, "new module doc")
-
-    ## builtin
-    Assert(min.__doc__ <> None)
-    
-    AreEqual(abs.__doc__, "abs(number) -> number\n\nReturn the absolute value of the argument.")
-    AreEqual(int.__add__.__doc__, "x.__add__(y) <==> x+y")
-
-
+#--HELPERS---------------------------------------------------------------------
 def f_1():
     "f 1 doc"
     return __doc__
@@ -129,6 +114,21 @@ class d:
     AreEqual(__doc__, "d doc 5")
     AreEqual(m_4.__doc__, None)
 
+#--TEST CASES------------------------------------------------------------------
+@skip('interactive', "multiple_execute")
+def test_sanity():
+    ## module
+    global __doc__
+    
+    AreEqual(__doc__, "module doc")
+    __doc__ = "new module doc"
+    AreEqual(__doc__, "new module doc")
+
+    ## builtin
+    Assert(min.__doc__ <> None)
+    
+    AreEqual(abs.__doc__, "abs(number) -> number\n\nReturn the absolute value of the argument.")
+    AreEqual(int.__add__.__doc__, "x.__add__(y) <==> x+y")
 
 def test_func_meth_class():
     AreEqual(f_1.__doc__, "f 1 doc")
@@ -219,5 +219,25 @@ def test_exception_doc_cp20251():
         Assert(hasattr(e, "__doc__"))
         e.__doc__
 
+@skip("silverlight")
+def test_module_doc_cp21360():
+    from iptest.file_util import write_to_file, delete_files
+    
+    try:
+        temp_filename_empty = "cp21360_empty.py"
+        write_to_file(temp_filename_empty, "")
+        import cp21360_empty
+        AreEqual(cp21360_empty.__doc__, None)
+    
+        temp_filename = "cp21360.py"
+        write_to_file(temp_filename, "x = 3.14")
+        import cp21360
+        AreEqual(cp21360.__doc__, None)
+        AreEqual(cp21360.x, 3.14)
+    
+    finally:
+        delete_files(temp_filename, temp_filename_empty)
 
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

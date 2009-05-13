@@ -1401,7 +1401,10 @@ def test_explicit():
 
 @skip("silverlight")
 def test_security_crypto():
-    Assert(System.Security.Cryptography.MD5.Create("MD5") != None)
+    AreEqual(type(System.Security.Cryptography.MD5.Create("MD5")),
+             System.Security.Cryptography.MD5CryptoServiceProvider)
+    AreEqual(type(System.Security.Cryptography.MD5.Create()),
+             System.Security.Cryptography.MD5CryptoServiceProvider)
 
 @skip("silverlight") #no AssertErrorWithMessage
 def test_array_error_message():
