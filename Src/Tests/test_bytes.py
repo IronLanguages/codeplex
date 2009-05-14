@@ -1272,11 +1272,12 @@ def test_operators():
         AssertError(TypeError, lambda : None + testType(b'abc'))
         AreEqual(testType(b'abc') * 2, b'abcabc')
         
-        if is_cli or testType == bytearray:
-            # we match the 3.0 behavior for bytes.__getitem__
-            AreEqual(testType(b'abc')[0], ord('a'))
-        
+        if testType == bytearray:
+            AreEqual(testType(b'abc')[0], ord('a'))        
             AreEqual(testType(b'abc')[-1], ord('c'))
+        else:
+            AreEqual(testType(b'abc')[0], b'a')        
+            AreEqual(testType(b'abc')[-1], b'c')
         
         for otherType in types:
             

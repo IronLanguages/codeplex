@@ -38,6 +38,11 @@ def test_len():
     for x in testData:        
         b = buffer(x, 6)
         AreEqual(len(b), 5)
+        b = buffer(x, 6, 2)
+        AreEqual(len(b), 2)
+
+    if is_cpython: #CodePlex 22259
+        AreEqual(len(buffer("abc", 5)), 0)
 
 def test_pass_in_string():
     b = buffer("abc", 0, -1)

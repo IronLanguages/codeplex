@@ -46,7 +46,7 @@ namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
 
     public sealed class PythonContext : LanguageContext {
-        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.6 Beta";
+        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.6 Beta 1";
         internal const string/*!*/ IronPythonNames = "IronPython;Python;py";
         internal const string/*!*/ IronPythonFileExtensions = ".py";
 
@@ -206,6 +206,13 @@ namespace IronPython.Runtime {
 
             if (_options.WarningFilters.Count > 0) {
                 _systemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(_options.WarningFilters);
+            }
+
+            if (_options.Frames) {
+                _systemState.Dict[SymbolTable.StringToId("_getframe")] = BuiltinFunction.MakeMethod("_getframe", 
+                    ArrayUtils.ConvertAll(typeof(SysModule).GetMember("_getframeImpl"), (x) => (MethodBase)x), 
+                    typeof(SysModule), 
+                    FunctionType.Function);
             }
 
             List path = new List(_options.SearchPaths);
@@ -529,8 +536,8 @@ namespace IronPython.Runtime {
             SysModule.SysFlags flags = new SysModule.SysFlags();
             SetSystemStateValue("flags", flags);
             flags.debug = _options.Debug ? 1 : 0;
-            flags.py3k_warning = _options.WarnPy3k ? 1 : 0;
-            SetSystemStateValue("py3kwarning", _options.WarnPy3k);
+            flags.py3k_warning = _options.WarnPython30 ? 1 : 0;
+            SetSystemStateValue("py3kwarning", _options.WarnPython30);
             switch (_options.DivisionOptions) {
                 case PythonDivisionOptions.Old:
                     break;
@@ -1050,7 +1057,7 @@ namespace IronPython.Runtime {
         internal ModuleGlobalCache GetModuleGlobalCache(SymbolId name) {
             ModuleGlobalCache res;
             if (!TryGetModuleGlobalCache(name, out res)) {
-                res = base.GetModuleCache(name);
+                res = ModuleGlobalCache.NoCache;
             }
 
             return res;
@@ -1480,10 +1487,6 @@ namespace IronPython.Runtime {
 
             if (PythonOptions.DivisionOptions == PythonDivisionOptions.New) {
                 features |= PythonLanguageFeatures.TrueDivision;
-            }
-
-            if (PythonOptions.PythonVersion == new Version(2, 6)) {
-                features |= PythonLanguageFeatures.Python26;
             }
 
             return new PythonCompilerOptions(features);
@@ -3568,6 +3571,14 @@ namespace IronPython.Runtime {
                 Microsoft.Scripting.Ast.Utils.Constant(PythonContext.GetPythonContext(action)._defaultContext),
                 BindingRestrictions.Empty,
                 PythonContext.GetPythonContext(action)._defaultContext
+            );
+        }
+
+        public static DynamicMetaObject/*!*/ GetCodeContextMOCls(DynamicMetaObjectBinder/*!*/ action) {
+            return new DynamicMetaObject(
+                Microsoft.Scripting.Ast.Utils.Constant(PythonContext.GetPythonContext(action).SharedClsContext),
+                BindingRestrictions.Empty,
+                PythonContext.GetPythonContext(action).SharedClsContext
             );
         }
 
