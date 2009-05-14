@@ -42,6 +42,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public override BuiltinFunctionOverloadMapper Overloads {
+            [PythonHidden]
             get {
                 return new ConstructorOverloadMapper(this, null);
             }

@@ -34,6 +34,9 @@ def make_args1(nargs, prefix, start=0):
     args = ["arg%d" % i for i in range(start, nargs)]
     return ", ".join(list(prefix) + args)
 
+def make_calltarget_type_args(nargs):
+    return ', '.join(['PythonFunction'] + ['object'] * (nargs + 1))
+
 def gen_args_comma(nparams, comma):
     args = ""
     for i in xrange(nparams):
@@ -190,7 +193,7 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
     public object Call%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
         if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-            var callTarget = pyfunc.Target as CallTarget%(argCount)d;
+            var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
             if (callTarget != null) {
                 return callTarget(pyfunc, %(callArgs)s);
             }
@@ -203,7 +206,7 @@ defaults_template = """
     public object Default%(defaultCount)dCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
         if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-            var callTarget = pyfunc.Target as CallTarget%(totalParamCount)d;
+            var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
             if (callTarget != null) {            
                 int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
                 return callTarget(pyfunc, %(callArgs)s, %(defaultArgs)s);
@@ -217,7 +220,7 @@ defaults_template_0 = """
 public object Default%(argCount)dCall0(CallSite site, CodeContext context, object func) {
     PythonFunction pyfunc = func as PythonFunction;
     if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-        var callTarget = pyfunc.Target as CallTarget%(argCount)d;
+        var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
         if (callTarget != null) {
             int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
             return callTarget(pyfunc, %(defaultArgs)s);
@@ -234,6 +237,7 @@ def function_callers(cw):
                   'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
                   'argCount' : nparams,
                   'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
+                  'genFuncArgs' : make_calltarget_type_args(nparams),
                  })                    
                  
         for i in xrange(nparams + 1, MAX_ARGS - 2):
@@ -245,6 +249,7 @@ def function_callers(cw):
                       'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
                       'defaultCount' : i - nparams,
                       'defaultArgs' : ', '.join(('pyfunc.Defaults[defaultIndex + %d]' % curDefault for curDefault in xrange(i - nparams))),
+                      'genFuncArgs' : make_calltarget_type_args(i),
                      })                 
         cw.write('}')
 
@@ -253,6 +258,7 @@ def function_callers_0(cw):
         cw.write(defaults_template_0 % {
                   'argCount' : i,
                   'defaultArgs' : ', '.join(('pyfunc.Defaults[defaultIndex + %d]' % curDefault for curDefault in xrange(i))),
+                  'genFuncArgs' : make_calltarget_type_args(i),
                  })                 
 
 function_caller_switch_template = """case %(argCount)d:                        
@@ -273,17 +279,12 @@ def function_caller_switch(cw):
                  })   
 
 def gen_lazy_call_targets(cw):
-    for nparams in range(MAX_ARGS+1):
+    for nparams in range(MAX_ARGS):
         cw.enter_block("public static object OriginalCallTarget%d(%s)" % (nparams, make_params(nparams, "PythonFunction function")))
         cw.write("function.Target = function.func_code.GetCompiledCode();")
-        cw.write("return ((CallTarget%d)function.Target)(%s);" % (nparams, gen_args_call(nparams, 'function')))
+        cw.write("return ((Func<%s>)function.Target)(%s);" % (make_calltarget_type_args(nparams), gen_args_call(nparams, 'function')))
         cw.exit_block()
         cw.write('')
-
-def call_targets(cw):
-    for nparams in range(MAX_ARGS+1):
-        cw.write("public delegate object CallTarget%d(%s);" %
-                 (nparams, make_params(nparams, "PythonFunction function")))
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
@@ -397,10 +398,11 @@ public static object Call(%(params)s) {
 }"""
 
 def gen_python_switch(cw):
-    for nparams in range(MAX_ARGS+1):
+    for nparams in range(MAX_ARGS):
+        genArgs = make_calltarget_type_args(nparams)
         cw.write("""case %d: 
-    originalTarget = (CallTarget%d)OriginalCallTarget%d;
-    return typeof(CallTarget%d);""" % (nparams, nparams, nparams, nparams))
+    originalTarget = (Func<%s>)OriginalCallTarget%d;
+    return typeof(Func<%s>);""" % (nparams, genArgs, nparams, genArgs))
 
 def main():
     return generate(
@@ -410,7 +412,6 @@ def main():
         ("Python Zero Arg Function Callers", function_callers_0),
         ("Python Function Callers", function_callers),
         ("Python Function Caller Switch", function_caller_switch),
-        ("Python Call Targets", call_targets),
         ("Python Call Target Switch", gen_python_switch),
     )
 

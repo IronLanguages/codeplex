@@ -696,9 +696,14 @@ namespace IronPython.Runtime {
             return x._bytes.Compare(y._bytes) <= 0;
         }
 
-        public int this[int index] {
+        public object this[CodeContext/*!*/ context, int index] {
             get {
-                return (int)_bytes[PythonOps.FixIndex(index, _bytes.Length)];
+                byte res = _bytes[PythonOps.FixIndex(index, _bytes.Length)];
+                if (PythonContext.GetContext(context).PythonOptions.Python30) {
+                    return (int)res;
+                }
+
+                return new Bytes(new byte[] { res });
             }
             [PythonHidden]
             set {

@@ -747,34 +747,42 @@ def test_cp16623():
 
 
 def test_write_buffer():
-    for mode in ('b', ''):
-        foo = open('foo', 'w+' + mode)
-        b = buffer(b'hello world', 6)
+    from iptest.file_util import delete_files
+    
+    try:
+        for mode in ('b', ''):
+            foo = open('foo', 'w+' + mode)
+            b = buffer(b'hello world', 6)
+            foo.write(b)
+            foo.close()
+        
+            foo = open('foo', 'r')
+            AreEqual(foo.readlines(), ['world'])
+            foo.close()
+        
+        foo = open('foo', 'w+')
+        b = buffer(u'hello world', 6)
         foo.write(b)
         foo.close()
         
         foo = open('foo', 'r')
         AreEqual(foo.readlines(), ['world'])
         foo.close()
+        
+        foo = open('foo', 'w+b')
+        b = buffer(u'hello world', 6)
+        foo.write(b)
+        foo.close()
+        
+        foo = open('foo', 'r')
+        if is_cpython:
+            AreEqual(foo.readlines(), ['l\x00o\x00 \x00w\x00o\x00r\x00l\x00d\x00'])
+        else:
+            AreEqual(foo.readlines(), ['world'])
+        foo.close()
 
-
-    foo = open('foo', 'w+')
-    b = buffer(u'hello world', 6)
-    foo.write(b)
-    foo.close()
-    
-    foo = open('foo', 'r')
-    AreEqual(foo.readlines(), ['world'])
-    foo.close()
-
-    foo = open('foo', 'w+b')
-    b = buffer(u'hello world', 6)
-    foo.write(b)
-    foo.close()
-    
-    #foo = open('foo', 'r')
-    #AreEqual(foo.readlines(), ['l\x00o\x00 \x00w\x00o\x00r\x00l\x00d\x00'])
-    #foo.close()
+    finally:
+        delete_files("foo")
 
 def test_errors():
     try:

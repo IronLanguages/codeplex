@@ -142,12 +142,6 @@ def call_seek_tell(i):
     AssertError(ValueError, i.seek, 0)
     AssertError(ValueError, i.seek, 0, 2)
     
-    m = cStringIO.StringIO()
-    m.seek(2)
-    m.write("hello!")
-    AreEqual(m.getvalue(), '\x00\x00hello!')
-    
-
 # truncate
 def call_truncate(i):
     AreEqual(i.read(6), "Line 1")
@@ -322,5 +316,13 @@ def test_o():
                 call_softspace ]:
         o = init_StringO()
         t(o)
+
+def test_cp22017():
+    m = cStringIO.StringIO()
+    m.seek(2)
+    m.write("hello!")
+    AreEqual(m.getvalue(), '\x00\x00hello!')
+    m.seek(2)
+    AreEqual(m.getvalue(), '\x00\x00hello!')
 
 run_test(__name__)

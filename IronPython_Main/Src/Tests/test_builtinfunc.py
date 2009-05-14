@@ -289,6 +289,9 @@ def test_zip():
     AreEqual(zip(foo(), bar()), [(2,2)])
     
     # test passing the same object for multiple iterables
+    AreEqual(zip(*[iter([])]), [])
+    AreEqual(zip(*[iter([])] * 2), [])
+    AreEqual(zip(*[xrange(3)] * 2), [(0, 0), (1, 1), (2, 2)])
     AreEqual(zip(*[iter(["0", "1"])] * 2), [('0', '1')])
     AreEqual(zip(*[iter(["0", "1", "2"])] * 3), [('0', '1', '2')])
     AreEqual(zip(*'abc'), [('a', 'b', 'c')])

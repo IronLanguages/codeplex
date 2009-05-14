@@ -137,38 +137,21 @@ function testcase-runner ($cmd, $exe, $expected_exe_exitcode, $expected_exe_stdo
 #------------------------------------------------------------------------------
 #--Test cases
 
-#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21976
-foreach ($x in (dir $CURRPATH\*.py)) {
-	$temp_name = $x.Name
-	cp -force $x $TOOLSPATH\$temp_name
-}
-
-#--Console HelloWorld w/ args
-testcase-helper "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " @("pycpkgtest.exe", "pycpkgtest.dll") "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
-
-#--Console HelloWorld w/ args
-testcase-helper "/main:$CURRPATH\console_hw_args.py" @("console_hw_args.exe", "console_hw_args.dll") "console_hw_args.exe" 0 "(Compiled) Hello World ['foo']" "foo"
-
 #--Console HelloWorld
 testcase-helper "/main:$CURRPATH\console_hw.py" @("console_hw.exe", "console_hw.dll") "console_hw.exe" 0 "(Compiled) Hello World"
 
 #--Console HelloWorld with a single dependency
 testcase-helper "$CURRPATH\other_hw.py /main:$CURRPATH\console_hw.py" @("console_hw.exe", "console_hw.dll") "console_hw.exe" 0 "(Compiled) Hello World"
 
+#--Console HelloWorld w/ args
+testcase-helper "/main:$CURRPATH\console_hw_args.py" @("console_hw_args.exe", "console_hw_args.dll") "console_hw_args.exe" 0 "(Compiled) Hello World ['foo']" "foo"
+
 #--WinForms HelloWorld
 testcase-helper "/main:$CURRPATH\winforms_hw.py /target:winexe" @("winforms_hw.exe", "winforms_hw.dll") "winforms_hw.exe" 0 "(Compiled WinForms) Hello World"
 
-
-#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21976
+#--Console Package
 testcase-helper "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " @("pycpkgtest.exe", "pycpkgtest.dll") "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
 
-foreach ($x in (dir $CURRPATH\*.py)) {
-    echo $x.Name
-	$temp_name = $x.Name
-	rm -force $TOOLSPATH\$temp_name
-}
-
-testcase-runner "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
 
 #------------------------------------------------------------------------------
 #Cleanup and exit

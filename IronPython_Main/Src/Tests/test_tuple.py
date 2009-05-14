@@ -155,10 +155,24 @@ def test_mul_subclass():
 
 
 def test_compare_to_none():
+    Assert((None,) > None)
+    Assert(not None >= (None,))
+    Assert((None,)==(None,))
+
     AreEqual(tuple() > None, True)
     AreEqual(tuple() < None, False)
     AreEqual(tuple() >= None, True)
     AreEqual(tuple() <= None, False)
+    Assert(    tuple() != None)
+    Assert(not tuple() == None)
+
+    AreEqual(None < tuple(), True)
+    AreEqual(None > tuple(), False)
+    AreEqual(None <= tuple(), True)
+    AreEqual(None >= tuple(), False)
+    Assert(    None != tuple())
+    Assert(not None == tuple())
+    
 
 def test_wacky_contains():
     for retval in [None, 0, [], (), 0.0, 0L, {}]:

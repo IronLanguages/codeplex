@@ -223,7 +223,7 @@ namespace Microsoft.Linq.Expressions {
         /// </summary>
         /// <param name="writer">A <see cref="TextWriter"/> that will be used to build the string representation.</param>
         public void DumpExpression(TextWriter writer) {
-            ExpressionWriter.Dump(this, writer);
+            DebugViewWriter.WriteTo(this, writer);
         }
 
         /// <summary>
@@ -236,7 +236,7 @@ namespace Microsoft.Linq.Expressions {
 #endif
             get {
                 using (System.IO.StringWriter writer = new System.IO.StringWriter(CultureInfo.CurrentCulture)) {
-                    ExpressionWriter.Dump(this, writer);
+                    DebugViewWriter.WriteTo(this, writer);
                     return writer.ToString();
                 }
             }
