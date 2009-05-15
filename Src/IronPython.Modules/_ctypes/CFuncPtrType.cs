@@ -46,7 +46,7 @@ namespace IronPython.Modules {
         [PythonType, PythonHidden]
         public class CFuncPtrType : PythonType, INativeType {
             internal readonly int _flags;
-            internal readonly INativeType _restype;
+            internal readonly PythonType _restype;
             internal readonly INativeType[] _argtypes;
             private DynamicMethod _reverseDelegate;         // reverse delegates are lazily computed the 1st time a callable is turned into a func ptr
             private List<object> _reverseDelegateConstants;
@@ -64,8 +64,8 @@ namespace IronPython.Modules {
                 _flags = (int)flags;
 
                 object restype;
-                if (members.TryGetValue(SymbolTable.StringToId("_restype_"), out restype) && (restype is INativeType)) {
-                    _restype = (INativeType)restype;
+                if (members.TryGetValue(SymbolTable.StringToId("_restype_"), out restype) && (restype is PythonType)) {
+                    _restype = (PythonType)restype;
                 }
 
                 object argtypes;
@@ -115,10 +115,15 @@ namespace IronPython.Modules {
             }
 
             object INativeType.GetValue(MemoryHolder owner, int offset, bool raw) {
-                return ToPython(owner.ReadIntPtr(offset));
+                IntPtr funcAddr = owner.ReadIntPtr(offset);
+                if (raw) {
+                    return funcAddr.ToPython();
+                }
+
+                return CreateInstance(Context.SharedContext, funcAddr);
             }
 
-            void INativeType.SetValue(MemoryHolder address, int offset, object value) {
+            object INativeType.SetValue(MemoryHolder address, int offset, object value) {
                 if (value is int) {
                     address.WriteIntPtr(offset, new IntPtr((int)value));
                 } else if (value is BigInteger) {
@@ -128,6 +133,7 @@ namespace IronPython.Modules {
                 } else {
                     throw PythonOps.TypeErrorForTypeMismatch("func pointer", value);
                 }
+                return null;
             }
 
             Type INativeType.GetNativeType() {
@@ -256,7 +262,7 @@ namespace IronPython.Modules {
                     ilGen.Emit(OpCodes.Stloc, tmpRes);
                     finalRes = ilGen.DeclareLocal(retType);
 
-                    _restype.EmitMarshalling(ilGen, new Local(tmpRes), constantPool, 0);
+                    ((INativeType)_restype).EmitMarshalling(ilGen, new Local(tmpRes), constantPool, 0);
                     ilGen.Emit(OpCodes.Stloc, finalRes);
                 } else {
                     ilGen.Emit(OpCodes.Pop);
@@ -301,7 +307,7 @@ namespace IronPython.Modules {
                 }
 
                 if (_restype != null) {
-                    sigTypes[sigTypes.Length - 1] = retType = _restype.GetNativeType();
+                    sigTypes[sigTypes.Length - 1] = retType = ((INativeType)_restype).GetNativeType();
                 } else {
                     sigTypes[sigTypes.Length - 1] = retType = typeof(void);
                 }

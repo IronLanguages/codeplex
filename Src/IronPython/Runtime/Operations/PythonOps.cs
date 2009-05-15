@@ -3455,6 +3455,18 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
+        /// <summary>
+        /// Returns an IntPtr in the proper way to CPython - an int or a Python long
+        /// </summary>
+        public static object/*!*/ ToPython(this IntPtr handle) {
+            long value = handle.ToInt64();
+            if (value >= Int32.MinValue && value <= Int32.MaxValue) {
+                return ScriptingRuntimeHelpers.Int32ToObject((int)value);
+            }
+
+            return (BigInteger)value;
+        }
+
         #region Global Access
 
         public static CodeContext/*!*/ CreateLocalContext(CodeContext/*!*/ outerContext, MutableTuple boxes, SymbolId[] args, bool isVisible) {
