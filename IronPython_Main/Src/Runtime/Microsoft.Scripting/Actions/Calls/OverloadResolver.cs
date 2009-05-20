@@ -194,7 +194,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             if (!CompilerHelpers.IsStatic(mapping.Method)) {
                 var type = mapping.Method.DeclaringType;
                 mapping.AddParameter(new ParameterWrapper(null, type, null, true, false, false, false));
-                mapping.AddInstanceBuilder(new SimpleArgBuilder(type, mapping.ArgIndex, false, false));
+                mapping.AddInstanceBuilder(new InstanceBuilder(mapping.ArgIndex));
             }
 
             return null;
@@ -454,7 +454,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             if (!success) {
                 var conversionResults = new ConversionResult[_actualArguments.Count];
                 for (int i = 0; i < _actualArguments.Count; i++) {
-                    conversionResults[i] = new ConversionResult(_actualArguments[i].GetLimitType(), candidate.GetParameter(i, namesBinding).Type, !hasConversion[i]);
+                    conversionResults[i] = new ConversionResult(_actualArguments[i].Value, _actualArguments[i].GetLimitType(), candidate.GetParameter(i, namesBinding).Type, !hasConversion[i]);
                 }
                 failure = new CallFailure(candidate, conversionResults);
             } else {
@@ -472,10 +472,11 @@ namespace Microsoft.Scripting.Actions.Calls {
             Debug.Assert(parameter.ParameterInfo != null && CompilerHelpers.IsParamArray(parameter.ParameterInfo));
 
             for (int i = 0; i < _actualArguments.CollapsedCount; i++) {
-                Type argType = CompilerHelpers.GetType(GetCollapsedArgumentValue(i));
+                object value = GetCollapsedArgumentValue(i);
+                Type argType = CompilerHelpers.GetType(value);
 
                 if (!CanConvertFrom(argType, parameter, narrowingLevel)) {
-                    failure = new CallFailure(candidate, new[] { new ConversionResult(argType, parameter.Type, false) });
+                    failure = new CallFailure(candidate, new[] { new ConversionResult(value, argType, parameter.Type, false) });
                     return false;
                 }
             }
@@ -484,7 +485,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             return true;
         }
 
-        private RestrictionInfo GetRestrictedArgs(ApplicableCandidate selectedCandidate, IList<ApplicableCandidate> candidates, int targetSetSize) {
+        private RestrictedArguments GetRestrictedArgs(ApplicableCandidate selectedCandidate, IList<ApplicableCandidate> candidates, int targetSetSize) {
             Debug.Assert(selectedCandidate.Method.ParameterCount == _actualArguments.Count);
 
             int argCount = _actualArguments.Count;
@@ -504,7 +505,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
 
-            return new RestrictionInfo(restrictedArgs, types);
+            return new RestrictedArguments(restrictedArgs, types);
         }
 
         private DynamicMetaObject RestrictArgument(DynamicMetaObject arg, ParameterWrapper parameter) {
@@ -822,14 +823,14 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         // TODO: revisit
-        public virtual Expression ConvertExpression(Expression expr, ParameterInfo info, Type toType) {
-            Assert.NotNull(expr, toType);
+        public virtual Expression Convert(DynamicMetaObject metaObject, Type restrictedType, ParameterInfo info, Type toType) {
+            Assert.NotNull(metaObject, toType);
 
-            return _binder.ConvertExpression(expr, toType, ConversionResultKind.ExplicitCast, null);
+            return _binder.ConvertExpression(metaObject.Expression, toType, ConversionResultKind.ExplicitCast, null);
         }
 
         // TODO: revisit
-        public virtual Func<object[], object> ConvertObject(int index, DynamicMetaObject knownType, ParameterInfo info, Type toType) {
+        public virtual Func<object[], object> GetConvertor(int index, DynamicMetaObject metaObject, ParameterInfo info, Type toType) {
             throw new NotImplementedException();
         }
 
@@ -947,7 +948,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                                 return ErrorInfo.FromException(
                                     Ast.Call(
                                         typeof(BinderOps).GetMethod("SimpleTypeError"),
-                                        AstUtils.Constant(String.Format("expected {0}, got {1}", _binder.GetTypeName(cr.To), _binder.GetTypeName(cr.From)))
+                                        AstUtils.Constant(String.Format("expected {0}, got {1}", _binder.GetTypeName(cr.To), cr.GetArgumentTypeName(_binder)))
                                     )
                                 );
                             }
