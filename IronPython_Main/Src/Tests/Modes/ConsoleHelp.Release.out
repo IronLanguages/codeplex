@@ -1,0 +1,44 @@
+Usage: ipy.exe Usage: ipy [options] [file.py|- [arguments]]
+
+Options:
+ -3                       Warn about Python 3.x incompatibilities
+ -c cmd                   Program passed in as string (terminates option list)
+ -D                       Enable application debugging
+ -E                       Ignore environment variables
+ -h                       Display usage
+ -i                       Inspect interactively after running script
+ -m module                run library module as a script
+ -O                       generate optimized code
+ -OO                      remove doc strings and apply -O optimizations
+ -Q arg                   Division options: -Qold (default), -Qwarn, -Qwarnall, -Qnew
+ -s                       Don't add user site directory to sys.path
+ -S                       Don't imply 'import site' on initialization
+ -t                       Issue warnings about inconsistent tab usage
+ -tt                      Issue errors for inconsistent tab usage
+ -u                       Unbuffered stdout & stderr
+ -v                       Verbose (trace import statements) (also PYTHONVERBOSE=x)
+ -V                       Print the version number and exit
+ -W arg                   Warning control (arg is action:message:category:module:lineno)
+ -x                       Skip first line of the source
+ -X:AutoIndent            Enable auto-indenting in the REPL loop
+ -X:ColorfulConsole       Enable ColorfulConsole
+ -X:Debug                 Enable application debugging (preferred over -D)
+ -X:EnableProfiler        Enables profiling support in the compiler
+ -X:ExceptionDetail       Enable ExceptionDetail mode
+ -X:Frames                Enable basic sys._getframe support
+ -X:FullFrames            Enable sys._getframe with access to locals
+ -X:LightweightScopes     Generate optimized scopes that can be garbage collected
+ -X:MaxRecursion          Set the maximum recursion level
+ -X:MTA                   Run in multithreaded apartment
+ -X:NoAdaptiveCompilation Disable adaptive compilation
+ -X:PassExceptions        Do not catch exceptions that are unhandled by script code
+ -X:PrivateBinding        Enable binding to private members
+ -X:Python30              Enable available Python 3.0 features
+ -X:ShowClrExceptions     Display CLS Exception information
+ -X:TabCompletion         Enable TabCompletion mode
+
+Environment variables:
+ IRONPYTHONPATH    Path to search for module
+ IRONPYTHONSTARTUP Startup module
+
+

@@ -85,7 +85,7 @@ t_list = [
 
 expectedMem = 12000
 if is_cli64:
-    expectedMem = int(expectedMem*1.10)
+    expectedMem = int(expectedMem*1.25)
 
 for code in t_list:    
     baseMem = evalTest(10)
