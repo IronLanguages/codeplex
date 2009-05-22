@@ -3362,4 +3362,35 @@ def test_len():
         AreEqual(len(C()), 42)
 
 
+def test_descriptor_exception():
+    class desc(object):
+        def __get__(self, value, ctx):
+            raise AttributeError, 'foo'
+    
+    class x(object):
+        a = 42
+    
+    class y(x):
+        a = desc()    
+    
+    AssertErrorWithMessage(AttributeError, 'foo', lambda: y().a)
+
+    class y(object):
+        a = desc()    
+    
+    AssertErrorWithMessage(AttributeError, 'foo', lambda: y().a)
+
+def test_mutate_descriptor():
+    class desc(object):
+        def __get__(self, value, ctx):
+            return 42
+
+    class x(object):
+        a = desc()
+
+    AreEqual(x().a, 42)
+    desc.__get__ = lambda self, value, ctx: 23
+    AreEqual(x().a, 23)
+
+
 run_test(__name__)
