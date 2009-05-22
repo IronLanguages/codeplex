@@ -65,7 +65,8 @@ namespace Microsoft.Scripting.Actions {
                 name,
                 target,
                 codeContext,
-                false
+                false,
+                null
             );
         }
 
@@ -89,7 +90,10 @@ namespace Microsoft.Scripting.Actions {
         /// True if the operation should return Operation.Failed on failure, false if it
         /// should return the exception produced by MakeMissingMemberError.
         /// </param>
-        public DynamicMetaObject GetMember(string name, DynamicMetaObject target, Expression codeContext, bool isNoThrow) {
+        /// <param name="errorSuggestion">
+        /// The meta object to be used if the get results in an error.
+        /// </param>
+        public DynamicMetaObject GetMember(string name, DynamicMetaObject target, Expression codeContext, bool isNoThrow, DynamicMetaObject errorSuggestion) {
             ContractUtils.RequiresNotNull(name, "name");
             ContractUtils.RequiresNotNull(target, "target");
             ContractUtils.RequiresNotNull(codeContext, "codeContext");
@@ -98,7 +102,8 @@ namespace Microsoft.Scripting.Actions {
                 new GetMemberInfo(
                     name,
                     codeContext,
-                    isNoThrow
+                    isNoThrow,
+                    errorSuggestion
                 ),
                 target
             );
@@ -185,7 +190,7 @@ namespace Microsoft.Scripting.Actions {
             if (error == null) {
                 MakeSuccessfulMemberAccess(getMemInfo, self, propSelf, type, members, memberType);
             } else {
-                getMemInfo.Body.FinishCondition(error);
+                getMemInfo.Body.FinishCondition(getMemInfo.ErrorSuggestion != null ? getMemInfo.ErrorSuggestion.Expression : error);
             }
         }
 
@@ -300,7 +305,9 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeMissingMemberRuleForGet(GetMemberInfo getMemInfo, Type type) {
-            if (getMemInfo.IsNoThrow) {
+            if (getMemInfo.ErrorSuggestion != null) {
+                getMemInfo.Body.FinishCondition(getMemInfo.ErrorSuggestion.Expression);
+            } else if (getMemInfo.IsNoThrow) {
                 getMemInfo.Body.FinishCondition(MakeOperationFailed());
             } else {
                 getMemInfo.Body.FinishCondition(
@@ -322,11 +329,13 @@ namespace Microsoft.Scripting.Actions {
             public readonly Expression CodeContext;
             public readonly bool IsNoThrow;
             public readonly ConditionalBuilder Body = new ConditionalBuilder();
+            public readonly DynamicMetaObject ErrorSuggestion;
 
-            public GetMemberInfo(string name, Expression codeContext, bool noThrow) {
+            public GetMemberInfo(string name, Expression codeContext, bool noThrow, DynamicMetaObject errorSuggestion) {
                 Name = name;
                 CodeContext = codeContext;
                 IsNoThrow = noThrow;
+                ErrorSuggestion = errorSuggestion;
             }
         }
     }
