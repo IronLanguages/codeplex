@@ -39,8 +39,9 @@ $global:EXCEPTION = "$global:TEST_DIR\except_test.py"
 $global:DOCSTRING = "$global:TEST_DIR\docstring_test.py"
 $global:TRACEBACK = "$global:TEST_DIR\traceback_test.py"
 
-#There are tests which are specifically disabled or enabled for debug binaries
-$global:IS_DEBUG = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
+#There are tests which are specifically disabled or enabled for debug/release binaries
+$global:IS_DEBUG   = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
+$global:IS_RELEASE = "$env:ROWAN_BIN".ToLower().EndsWith("bin\release")
 
 #Some tests fail under x64
 $global:IS_64 = (test-path $env:SystemRoot\SYSWOW64) -or (test-path $env:systemroot\SYSWOW64)
@@ -212,7 +213,16 @@ function test-pymodes($pyexe)
 	#The justification for this is that we've had several regressions in 
 	#this area in the past (e.g., CodePlex 21691)
 	if ($pyexe.ToLower().EndsWith("ipy.exe")) {
-		$static_content = get-content $CURRPATH\ConsoleHelp.out
+		if ($IS_DEBUG -eq $true) {
+			$static_content = get-content $CURRPATH\ConsoleHelp.Debug.out
+		}
+		elseif ($IS_RELEASE -eq $true) {
+			$static_content = get-content $CURRPATH\ConsoleHelp.Release.out
+		}
+		else {
+			show-failure "Need Debug or Release binaries to test 'ipy -h' output!"
+		}
+		
 		$help_compare = compare-object $static_content $temp_content
 		if ($help_compare -ne $null) {
 			show-failure "There are differences between the output of '$pyexe -h' and what was expected in $CURRPATH\ConsoleHelp.out:"
