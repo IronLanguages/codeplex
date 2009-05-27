@@ -310,7 +310,6 @@ def test_getaddrinfo():
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
 
-@disabled("dev10 : 523981")      
 def test_getnameinfo():
     '''
     Tests socket.getnameinfo()

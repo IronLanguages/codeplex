@@ -58,12 +58,30 @@ def call_readline(i):
     AreEqual(i.readline(), "")
     i.close()
     AssertError(ValueError, i.readline)
-    
+
+def call_readline_n(i):
+    AreEqual(i.readline(50), "Line 1\n")
+    AreEqual(i.readline(0), "")
+    AreEqual(i.readline(1), "L")
+    AreEqual(i.readline(9), "ine 2\n")
+    AreEqual(i.readline(50), "Line 3\n")
+    AreEqual(i.readline(6), "Line 4")
+    AreEqual(i.readline(50), "\n")
+    AreEqual(i.readline(50), "Line 5")
+    i.close()
+    AssertError(ValueError, i.readline)    
 
 # readlines
 def call_readlines(i):
     AreEqual(i.readlines(), ["Line 1\n", "Line 2\n", "Line 3\n", "Line 4\n", "Line 5"])
     AreEqual(i.readlines(), [])
+    i.close()
+    AssertError(ValueError, i.readlines)
+
+def call_readlines_n(i):
+    AreEqual(i.readlines(10), ["Line 1\n", "Line 2\n"])
+    AreEqual(i.readlines(50), ["Line 3\n", "Line 4\n", "Line 5"])
+    AreEqual(i.readlines(50), [])
     i.close()
     AssertError(ValueError, i.readlines)
     
@@ -230,9 +248,17 @@ def test_empty():
     i.close()
     AssertError(ValueError, i.readline)
     
+    i = init_emptyStringI()
+    AreEqual(i.readline(0),"")
+    i.close()
+    AssertError(ValueError, i.readline)
+    
     #test readlines
     i = init_emptyStringI()
     AreEqual(i.readlines(),[])
+    
+    i = init_emptyStringI()
+    AreEqual(i.readlines(0),[])
     
     #test getvalue
     i = init_emptyStringI()
@@ -297,7 +323,9 @@ def test_i_o():
                 #call_isatty,
                 call_read,
                 call_readline,
+                call_readline_n,
                 call_readlines,
+                call_readlines_n,
                 call_getvalue,
                 call_next,
                 call_reset,

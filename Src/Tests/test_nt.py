@@ -628,15 +628,24 @@ def test_waitpid():
     '''
     '''
     #sanity check
-    #the usage of spawnle is a bug in this case that should be fixed in IP,
-    #but since this test is for waitpid it's basically OK
-    #ping_cmd = get_environ_variable("windir") + "\system32\ping"
-    #pid = nt.spawnle(nt.P_NOWAIT, ping_cmd ,  "-n", "5", "-w", "1000", "127.0.0.1", {})
-    #new_pid, exit_stat = nt.waitpid(pid, 0)
+    ping_cmd = get_environ_variable("windir") + "\system32\ping"
+    pid = nt.spawnv(nt.P_NOWAIT, ping_cmd ,  ["ping", "-n", "5", "-w", "1000", "127.0.0.1"])
+    
+    try:
+        new_pid, exit_stat = nt.waitpid(pid, 0)
+    except SystemError, e:
+        if not is_cpython:
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22733
+            pass
     
     #negative cases
-    #BUG - should be an OSError instead of a ValueError
-    #AssertError(OSError, nt.waitpid, -1234, 0)
+    if is_cpython:
+        AssertErrorWithMessage(OSError, "[Errno 10] No child processes",
+                               nt.waitpid, -1234, 0)
+    else:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22732
+        AssertError(ValueError, nt.waitpid, -1234, 0)
+        
     AssertError(TypeError, nt.waitpid, "", 0)
 
 
@@ -762,7 +771,16 @@ def test_open():
 def test_system_minimal():
     Assert(hasattr(nt, "system"))
     AreEqual(nt.system("ping localhost"), 0)
+    AreEqual(nt.system('"ping localhost"'), 0)
+    if is_cpython:
+        AreEqual(nt.system('"ping localhost'), 0)
+    else:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22734
+        AssertErrorWithMessage(ValueError, "mismatch quote in command",
+                               nt.system, '"ping localhost')
+        
     AreEqual(nt.system("ping"), 1)
+    
     
 
 # flags test

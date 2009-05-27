@@ -124,6 +124,19 @@ def test_exit():
     TestCommandLine(("-c", "import sys; sys.exit(200L)"),       "200\n",    1)
 
 ############################################################
+def test_nt__exit():
+    TestCommandLine(("-c", "import nt; nt._exit(0)"),          "",         0)
+    TestCommandLine(("-c", "import nt; nt._exit(200)"),        "",         200)
+    TestScript((), "import nt\nclass C(int): pass\nc = C(200)\nnt._exit(c)\n", "", 200)
+
+############################################################
+@disabled("TODO: this test spawns UI about ipy.exe failing abnormally")
+def test_nt_abort():
+    # Positive
+    TestCommandLine(("-c", "import nt; nt.abort()"),          "",         1)
+    TestScript((), "import nt\nnt.abort()", "", 1)
+
+############################################################
 # Test the -c (command as string) option.
 
 def test_c():

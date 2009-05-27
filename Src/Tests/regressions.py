@@ -359,6 +359,12 @@ def test_type_delegate_conversion():
     ctor = System.Func[object](x)
     AreEqual(type(ctor()), x)
 
+#------------------------------------------------------------------------------
+#--General coverage.  These need to be extended.
+def test_xxsubtype_bench():
+    import xxsubtype
+    AreEqual(type(xxsubtype.bench(xxsubtype, "bench")),
+             float)
     
 #------------------------------------------------------------------------------
 #--Main

@@ -1115,6 +1115,52 @@ sys.modules['y'] = newmod
     finally:
         nt.unlink(_x_mod)
         nt.unlink(_y_mod)
+
+@skip("silverlight", "win32")
+def test_imp_load_source():
+    import nt
+    try:
+        _x_mod = path_combine(testpath.public_testdir, "x.py")
+        write_to_file(_x_mod, """
+'''some pydoc'''
+X = 3.14
+""")
+        with open(_x_mod, "r") as f:
+            x = imp.load_source("test_imp_load_source_x",
+                                _x_mod,
+                                f)
+        AreEqual(x.__name__, "test_imp_load_source_x")
+        AreEqual(x.X, 3.14)
+        AreEqual(x.__doc__, '''some pydoc''')
+    finally:
+        nt.unlink(_x_mod)
+
+@skip("silverlight")        
+def test_imp_load_compiled():
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17459
+    if not is_cpython:
+        AreEqual(imp.load_compiled("", ""), None)
+        try:
+            _x_mod = path_combine(testpath.public_testdir, "x.py")
+            write_to_file(_x_mod, "")
+            with open(_x_mod, "r") as f:
+                AreEqual(imp.load_compiled("", "", f), None)
+        finally:
+            nt.unlink(_x_mod)
+
+@skip("silverlight") 
+def test_imp_load_dynamic():
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17459
+    if not is_cpython:
+        AreEqual(imp.load_dynamic("", ""), None)
+        try:
+            _x_mod = path_combine(testpath.public_testdir, "x.py")
+            write_to_file(_x_mod, "")
+            with open(_x_mod, "r") as f:
+                AreEqual(imp.load_dynamic("", "", f), None)
+        finally:
+            nt.unlink(_x_mod)        
+
     
 #------------------------------------------------------------------------------
 run_test(__name__)
