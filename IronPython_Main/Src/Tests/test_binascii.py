@@ -37,5 +37,21 @@ def test_zeros():
     """verify zeros don't show up as being only a single character"""
     AreEqual(binascii.b2a_hex('\x00\x00\x10\x00'), '00001000')
 
+@skip("win32")
+def test_not_implemented():
+    test_cases = [
+                    lambda: binascii.a2b_qp(None),
+                    lambda: binascii.a2b_qp(None, None),
+                    lambda: binascii.b2a_qp(None),
+                    lambda: binascii.b2a_qp(None, None),
+                    lambda: binascii.b2a_qp(None, None, None, None),
+                    lambda: binascii.a2b_hqx(None),
+                    lambda: binascii.rledecode_hqx(None),
+                    lambda: binascii.rlecode_hqx(None),
+                    lambda: binascii.b2a_hqx(None),
+                    lambda: binascii.crc_hqx(None, None),
+                    ]
+    for temp_func in test_cases:
+        AssertError(NotImplementedError, temp_func)
 
 run_test(__name__)

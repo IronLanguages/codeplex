@@ -152,7 +152,11 @@ def test_collect():
         for debug in debug_list:
             gc.set_debug(debug)
             gc.collect()
+    gc.collect(0)
     
+    #Negative
+    AssertError(ValueError, gc.collect, -1)
+    AssertError(ValueError, gc.collect, 2147483647)
     
 #set_dubug,get_debug
 def test_setdebug():

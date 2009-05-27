@@ -141,7 +141,14 @@ def test_formatexception_exceptiondetail():
     Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
     exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
     Assert(exc_string.endswith("Exception: first"))
-    
+
+@skip("silverlight")
+def test_engine_access_from_within():
+    import clr
+    from Microsoft.Scripting.Hosting import ScriptEngine
+    pc = clr.GetCurrentRuntime().GetLanguageByName('python')
+    engine = pc.GetModuleState(clr.GetClrType(ScriptEngine))
+    Assert(engine is not None)
 
 run_test(__name__)
 

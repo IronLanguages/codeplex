@@ -14,11 +14,13 @@
 #####################################################################################
 
 from iptest.assert_util import *
-skiptest("win32")
+import thread
+import time
+if not is_cpython:
+    from System import *
+    from System.Threading import *
 
-from System import *
-from System.Threading import *
-
+@skip("win32")
 def test_thread():
     
     class Sync:
@@ -98,6 +100,7 @@ def test_stack_size():
         temp = thread.stack_size(1024*1024)
         Assert(temp>=32768 or temp==0)
 
+@skip("win32")
 def test_new_thread_is_background():
     """verify new threads created during Python are background threads"""
     import thread
@@ -111,9 +114,12 @@ def test_new_thread_is_background():
         Thread.Sleep(1000)
     Assert(done)
 
+@skip("win32")
 def test_thread_local():
     import thread
     x = thread._local()
+    
+    #--Sanity
     x.foo = 42
     AreEqual(x.foo, 42)
     
@@ -129,5 +135,101 @@ def test_thread_local():
         Thread.Sleep(1000)
 
     Assert(not found)
+    
+    AreEqual(x.__dict__, {'foo': 42})
+    try:
+        x.__dict__ = None
+        Fail("Should not be able to set thread._local().__dict__!")
+    except AttributeError, e:
+        pass
+    
+    try:
+        print x.bar
+        Fail("There is no 'bar' member on thread._local()")
+    except AttributeError, e:
+        pass
+    
+    del x.foo
+    AreEqual(x.__dict__, {})
 
+def test_start_new():
+    #--Sanity
+    global CALLED
+    CALLED = False
+    
+    def tempFunc():
+        global CALLED
+        CALLED = 3.14
+    
+    thread.start_new(tempFunc, ())
+    while CALLED==False:
+        print ".",
+        time.sleep(1)
+    AreEqual(CALLED, 3.14)
+    CALLED = False
+
+def test_start_new_thread():
+    #--Sanity
+    global CALLED
+    CALLED = False
+    
+    lock = thread.allocate()    
+    def tempFunc(mykw_param=1):
+        global CALLED
+        lock.acquire()
+        CALLED = mykw_param
+        lock.release()
+        thread.exit_thread()
+        
+    id = thread.start_new_thread(tempFunc, (), {"mykw_param":7})
+    while CALLED==False:
+        print ".",
+        time.sleep(1)
+    AreEqual(CALLED, 7)
+    
+    id = thread.start_new_thread(tempFunc, (), {"mykw_param":8})
+    while CALLED!=8:  #Hang forever if this is broken
+        print ".",
+        time.sleep(1)
+    
+    #--Sanity Negative
+    global temp_stderr
+    temp_stderr = ""
+    
+    if is_cpython:
+        se = sys.stderr
+    else:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22746
+        se = sys.stdout
+        
+    class myStdOut:
+        def write(self, text): 
+            global temp_stderr
+            temp_stderr += text
+
+    try:
+        if is_cpython:
+            sys.stderr = myStdOut()
+        else:
+            sys.stdout = myStdOut()
+        
+        id = thread.start_new_thread(tempFunc, (), {"my_misspelled_kw_param":9})
+        time.sleep(5)
+        if not is_silverlight:
+            se.flush()
+    finally:
+        if is_cpython:
+            sys.stderr = se
+        else:
+            sys.stdout = se
+    
+    AreEqual(CALLED, 8)
+    Assert("tempFunc() got an unexpected keyword argument 'my_misspelled_kw_param" in temp_stderr)
+
+    
+@skip("win32")
+def test_thread_interrupt_main():
+    AssertError(NotImplementedError, thread.interrupt_main)
+
+#------------------------------------------------------------------------------
 run_test(__name__)
