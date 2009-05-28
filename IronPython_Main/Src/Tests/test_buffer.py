@@ -41,8 +41,8 @@ def test_len():
         b = buffer(x, 6, 2)
         AreEqual(len(b), 2)
 
-    if is_cpython: #CodePlex 22259
-        AreEqual(len(buffer("abc", 5)), 0)
+    AreEqual(len(buffer("abc", 5)), 0)
+    AreEqual(len(buffer("abc", 5, 50)), 0)
 
 def test_pass_in_string():
     b = buffer("abc", 0, -1)

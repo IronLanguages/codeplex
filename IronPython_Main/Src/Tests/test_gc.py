@@ -126,7 +126,12 @@ def test_enable():
 #disable
 def test_disable():
     if is_cli or is_silverlight:
-        AssertError(NotImplementedError, gc.disable)
+        from iptest.warning_util import warning_trapper
+        w = warning_trapper()
+        w.hook()
+        gc.disable()
+        m = w.finish()        
+        AreEqual(m[0].message, 'IronPython has no support for disabling the GC')
     else:
         gc.disable()
         result = gc.isenabled()

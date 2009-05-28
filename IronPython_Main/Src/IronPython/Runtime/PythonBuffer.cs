@@ -230,7 +230,7 @@ namespace IronPython.Runtime {
         }
 
         public int __len__() {
-            return _size;
+            return Math.Max(_size, 0);
         }
 
         internal int Size {

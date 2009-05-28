@@ -112,17 +112,10 @@ builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(t
 
     public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
         if (func == _func &&
-            _info.GetOptimizedDelegate(context) == null && 
+            !_info.ShouldOptimize && 
 %(typeCheck)s
            ) {
-            bool shouldOptimize;
-            object res = _info.Caller(new object[] { context, %(callArgs)s }, out shouldOptimize);
-
-            if (shouldOptimize) {
-                _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, %(callArgs)s }));
-            }
-
-            return res;
+            return _info.Caller(new object[] { context, %(callArgs)s }, out _info.ShouldOptimize);
         }
 
         return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
@@ -149,18 +142,11 @@ class BuiltinMethodCaller<TFuncType, %(typeParams)s> where TFuncType : class {
     public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
         BuiltinFunction bf = func as BuiltinFunction;
         if (bf != null && !bf.IsUnbound && bf._data == _data &&
-            _info.GetOptimizedDelegate(context) == null &&
+            !_info.ShouldOptimize &&
             (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
 %(typeCheck)s
             ) {
-            bool shouldOptimize;
-            object res = _info.Caller(new object[] { context, bf.__self__, %(callArgs)s }, out shouldOptimize);
-
-            if (shouldOptimize) {
-                _info.SetOptimizedDelegate(context, _info.GetInvokeBinder(context).Optimize(_site, new object[] { context, func, %(callArgs)s }));
-            }
-
-            return res;
+            return _info.Caller(new object[] { context, bf.__self__, %(callArgs)s }, out _info.ShouldOptimize);
         }
 
         return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);

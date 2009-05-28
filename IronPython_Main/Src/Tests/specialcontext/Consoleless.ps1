@@ -39,10 +39,10 @@ function setup
     #Total number of errors encountered
     $global:ERRORS = 0    
     
-    if($env:IPY_OPTIONS -eq $null)
+    if($env:TEST_OPTIONS -eq $null)
     {
-        echo "Setting the IPY_OPTIONS environment variable."
-        $env:IPY_OPTIONS=""
+        echo "Setting the TEST_OPTIONS environment variable."
+        $env:TEST_OPTIONS=""
     }
 
     push-location $env:MERLIN_ROOT\Languages\IronPython\Tests\specialcontext
@@ -136,7 +136,7 @@ function test-verify_ipyw
 
 
     #run the ipyw verification script
-    $stuff = ipyw $env:IPY_OPTIONS.Split(" ") verify_ipyw.py some_param 2>&1
+    $stuff = ipyw $env:TEST_OPTIONS.Split(" ") verify_ipyw.py some_param 2>&1
     if (! $?) 
     {
         write-error "Failed: ipyw.exe returned a non-zero exit code!"

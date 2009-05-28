@@ -182,7 +182,7 @@ def test_excelevents():
 
 def test_cp148579():
     AssertErrorWithMessage(TypeError, 
-                           "Cannot create instances of Range", 
+                           "Cannot create instances of Range because it is abstract", 
                            Excel.Range, 1,2)
 
 def test_cp14539():

@@ -1,4 +1,4 @@
-#####################################################################################
+ #####################################################################################
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
@@ -1493,6 +1493,13 @@ def test_inherited_interface_impl():
     BinderTest.InterfaceTestHelper.GetObject2().M()
     AreEqual(BinderTest.InterfaceTestHelper.Flag, True)
 
+def test_dir():
+    # make sure you can do dir on everything in System which 
+    # includes special types like ArgIterator and Func
+    import System
+    for attr in dir(System):
+        dir(getattr(System, attr))
+        
 
 run_test(__name__)
 

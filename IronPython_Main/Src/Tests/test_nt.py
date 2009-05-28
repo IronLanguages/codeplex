@@ -46,7 +46,11 @@ def test_mkdir_negative():
     nt.mkdir("dir_create_test")
     AssertError(WindowsError, nt.mkdir, "dir_create_test")
     nt.rmdir('dir_create_test')
-    
+
+def test_listdir():
+    AssertError(TypeError, nt.listdir, None)
+    AreEqual(nt.listdir(''), nt.listdir('.'))
+
 # stat,lstat
 def test_stat():
     # stat
