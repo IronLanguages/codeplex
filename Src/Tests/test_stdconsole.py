@@ -267,9 +267,10 @@ def test_u():
 
 # Test -X:MaxRecursion
 def test_X_MaxRecursion():
-    TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
-    TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
+    TestCommandLine(("-X:MaxRecursion", "10", "-c", "2+2"), "")
+    TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer >= 10.\n", -1)
     TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
+    TestCommandLine(("-X:MaxRecursion", "2"), "The argument for the -X:MaxRecursion option must be an integer >= 10.\n", -1)
 
 # Test -x (ignore first line)
 def test_x():

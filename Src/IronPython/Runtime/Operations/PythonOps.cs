@@ -142,10 +142,16 @@ namespace IronPython.Runtime.Operations {
 #endif
         
         internal static PythonTuple LookupEncoding(CodeContext/*!*/ context, string encoding) {
+            PythonContext.GetContext(context).EnsureEncodings();
+
             List<object> searchFunctions = PythonContext.GetContext(context).SearchFunctions;
+            string normalized = encoding.ToLower().Replace(' ', '-');
+            if (normalized.IndexOf(Char.MinValue) != -1) {
+                throw PythonOps.TypeError("lookup string cannot contain null character");
+            }
             lock (searchFunctions) {
                 for (int i = 0; i < searchFunctions.Count; i++) {
-                    object res = PythonCalls.Call(context, searchFunctions[i], encoding);
+                    object res = PythonCalls.Call(context, searchFunctions[i], normalized);
                     if (res != null) return (PythonTuple)res;
                 }
             }
@@ -319,7 +325,9 @@ namespace IronPython.Runtime.Operations {
 
                     if (baseType == null) {
                         OldClass ocType = ie.Current as OldClass;
-                        if (ocType == null) throw PythonOps.TypeError("expected type, got {0}", DynamicHelpers.GetPythonType(ie.Current));
+                        if (ocType == null) {
+                            continue;
+                        }
 
                         baseType = ocType.TypeObject;
                     }
@@ -2049,6 +2057,10 @@ namespace IronPython.Runtime.Operations {
             PythonTuple t = GetExceptionInfo(context);
             
             Exception e = MakeExceptionWorker(context, t[0], t[1], t[2], true);
+            return MakeRethrowExceptionWorker(e);
+        }
+
+        public static Exception MakeRethrowExceptionWorker(Exception e) {
             e.Data.Remove(typeof(TraceBack));
             ExceptionHelpers.UpdateForRethrow(e);
             return e;

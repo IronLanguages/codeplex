@@ -503,24 +503,24 @@ function maxrecursion-helper
 	#--Trivial cases w/ flag
 	
 	#non-recursive script
-	foreach ($i in 0..2)
+	foreach ($i in 10..12)
 	{
 		hello-helper $dlrexe "-X:MaxRecursion" $args[1..$args.Length] $i
 	}
 	
 	#simple recursive script
-	foreach($i in 3..5)
+	foreach($i in 13..15)
 	{
-		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 3
-		if ($stuff -ne 6) {show-failure "Failed."; }
+		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 13
+		if ($stuff -ne 6227020800) {show-failure "Failed."; }
 	}
 	
 	#simple recursive script where we miss the MaxRecursion depth by one
 	#which should trigger a RuntimeError exception
-	foreach ($i in 0..2)
+	foreach ($i in 10..12)
 	{
-		$x_param = $i + 2
-		$script_param = $i + 3
+		$x_param = $i + 12
+		$script_param = $i + 13
 		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = dlrexe "-X:MaxRecursion" $x_param $args[1..$args.Length] $global:RECURSION $script_param 2>&1
 		$ErrorActionPreference = "stop"
@@ -690,7 +690,7 @@ function test-relatedpy($pyexe)
 		$host.ui.write("-X:AssembliesDir unsupported with non-debug builds")
 	}
 	else {
-		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:LightweightScopes" "-X:MaxRecursion" 5 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
+		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:LightweightScopes" "-X:MaxRecursion" 10 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
 	}
 }
 	

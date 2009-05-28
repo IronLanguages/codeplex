@@ -150,32 +150,23 @@ def test_charmap_decode():
         #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22741
         AssertError(LookupError, codecs.charmap_decode, "a", "strict", {})
     
+@skip("silverlight") # no std lib
 def test_decode():
     '''
     '''
     #sanity
-    if is_cpython:
-        new_str = codecs.decode("abc")
-        AreEqual(new_str, u'abc')
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=4565
-        #BUG - LookupError: unknown encoding: us_ascii
-        AssertErrorWithMessage(LookupError, "unknown encoding: ascii", 
-                               codecs.decode, "abc")
+    new_str = codecs.decode("abc")
+    AreEqual(new_str, u'abc')
         
     
+@skip("silverlight") # no std lib
 def test_encode():
     '''
     '''
     #sanity
-    if is_cpython:
-        new_str = codecs.encode("abc")
-        AreEqual(new_str, 'abc')
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=4565 
-        #BUG - LookupError: unknown encoding: us_ascii
-        AssertErrorWithMessage(LookupError, "unknown encoding: ascii", 
-                               codecs.encode, "abc")
+    new_str = codecs.encode("abc")
+    AreEqual(new_str, 'abc')
+
 def test_raw_unicode_escape_decode():
     '''
     '''
@@ -545,5 +536,36 @@ def test_cp1214():
     AreEqual('7FF80000000000007FF0000000000000'.decode('hex'),
              '\x7f\xf8\x00\x00\x00\x00\x00\x00\x7f\xf0\x00\x00\x00\x00\x00\x00')
 
+
+def test_codecs_lookup():
+    l = []
+    def my_func(encoding, cache = l):
+        l.append(encoding)
     
+    codecs.register(my_func)
+    allchars = ''.join([chr(i) for i in xrange(1, 256)])
+    try:
+        codecs.lookup(allchars)
+        AssertUnreachable()
+    except LookupError:
+        pass
+        
+    lowerchars = allchars.lower().replace(' ', '-')
+    for i in xrange(1, 255):
+        if l[0][i] != lowerchars[i]:
+            Assert(False, 'bad chars at index %d: %r %r' % (i, l[0][i], lowerchars[i]))
+            
+    AssertError(TypeError, codecs.lookup, '\0')
+    AssertError(TypeError, codecs.lookup, 'abc\0')
+    AreEqual(len(l), 1)
+
+
+def test_lookup_encodings():
+    try:
+        AreEqual('07FF'.decode('hex')  , '\x07\xff')
+    except LookupError:
+        # if we don't have encodings then this will fail so
+        # make sure we're failing because we don't have encodings
+        AssertError(ImportError, __import__, 'encodings')
+        
 run_test(__name__)

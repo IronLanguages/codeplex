@@ -492,4 +492,30 @@ def test_with_traceback_ctor_throws():
         assert_traceback([(Line475+14, 30, 'test_traceback.py', 'test_with_traceback_ctor_throws'), 
                           (Line475+4, 3, 'test_traceback.py', '__init__')])
 
+
+Line496=496
+def test_with_mixed_stack():
+    """tests a stack which is mixed w/ interpreted and non-interpreted frames
+because f() has a loop in it"""
+    def a():
+        with xxx() as abc:
+            f()
+    
+    def f():
+        for z in ():
+            pass
+            
+        1/0
+    
+    class xxx(object):
+        def __enter__(*args): pass
+        def __exit__(*args): pass
+    
+    try:
+        a()
+    except:
+        assert_traceback([(Line496+19, 30, 'test_traceback.py', 'test_with_mixed_stack'), 
+                        (Line496+6, 3, 'test_traceback.py', 'a'),
+                        (Line496+12, 3, 'test_traceback.py', 'f')])
+                          
 run_test(__name__)
