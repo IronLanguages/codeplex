@@ -534,16 +534,7 @@ def test_help():
 
 
     if isinstance(com_obj, DlrUniversalObj):  #Pure Python version of universal obj
-        if is_cli: #IronPython
-            #Merlin 378013
-            expected = """Help on method m0 in module %s:
-
- |  m0(self) method of <class '%s.DlrUniversalObj'> instance
-
-""" % (__name__, __name__)
-        
-        else: #CPython
-            expected = """Help on method m0 in module %s:
+        expected = """Help on method m0 in module %s:
 
 m0(self) method of %s.DlrUniversalObj instance
 """ % (__name__, __name__)
@@ -558,8 +549,8 @@ m0(self) method of win32com.client.CDispatch instance
 """
         else:
             #Dev10 409942
-            expected = """Help on DispCallable in module __builtin__"""
-            Assert(expected in fake_stdout.text)
+            expected = """Help on DispCallable object"""
+            Assert(expected in fake_stdout.text, fake_stdout.text)
             return
             
     #verification

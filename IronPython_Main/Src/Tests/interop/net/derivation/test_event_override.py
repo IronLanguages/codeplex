@@ -12,10 +12,13 @@
 #
 #
 #####################################################################################
+'''
+How to re-define an event in Python.
 
+NOTES:
+- all bugs in this module are currently test blocking.
 '''
-All bugs in this module are currently test blocking.
-'''
+#------------------------------------------------------------------------------
 
 from iptest.assert_util import *
 skiptest("silverlight")

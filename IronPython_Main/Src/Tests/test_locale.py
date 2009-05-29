@@ -176,5 +176,9 @@ def test_Locale_category():
     AreEqual(4,_locale.LC_NUMERIC)
     AreEqual(5,_locale.LC_TIME)
     AreEqual(127,_locale.CHAR_MAX)
-        
+
+def test_bad_category():
+    AssertError(TypeError, _locale.setlocale, 'LC_NUMERIC', 'en_US.UTF8')
+    AssertError(TypeError, _locale.setlocale, 'LC_NUMERIC', None)
+
 run_test(__name__)

@@ -12,15 +12,18 @@
 #
 #
 #####################################################################################
-    
+'''
+'''
+#------------------------------------------------------------------------------
+from iptest import *
 from iptest.assert_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("fieldtests", "typesamples", "baseclasscs")
+if options.RUN_TESTS: #TODO - bug when generating Pydoc
+    from Merlin.Testing.FieldTest import *
+    from Merlin.Testing.TypeSample import *
 
-from Merlin.Testing.FieldTest import *
-from Merlin.Testing.TypeSample import *
-from Merlin.Testing.BaseClass import EmptyEnum
 
 def test_get_set():
     o = EnumInt32()
@@ -48,8 +51,9 @@ def test_get_set():
     def f(): desc.__set__(None, EnumInt32.B) 
     AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
 
+
 def test_enum_bool():
-    
+    from Merlin.Testing.BaseClass import EmptyEnum
     
     #An empty enumeration
     Assert(not bool(EmptyEnum())) 

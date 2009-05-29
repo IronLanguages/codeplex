@@ -12,10 +12,14 @@
 #
 #
 #####################################################################################
-    
+'''
+How to re-define operators methods, __hash__, etc.
 
-# the tests (could) expose some degree of implementation details, 
-# therefore, it may need update upon failures.
+NOTES:
+- the tests in this module (could) expose some degree of implementation details. 
+  Therefore it may be necessary to update the test cases upon failures.
+'''
+#------------------------------------------------------------------------------
 
 from iptest.assert_util import *
 skiptest("silverlight")

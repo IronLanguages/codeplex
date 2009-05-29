@@ -34,7 +34,8 @@ if ("$env:ROWAN_BIN" -eq "") {
 if (! (test-path $env:ROWAN_BIN\ipy.exe)) {
 	log-critical "$env:ROWAN_BIN\ipy.exe does not exist.  Cannot continue!"
 }
-set-alias rowipy $env:ROWAN_BIN\ipy.exe
+set-alias rowipy $env:MERLIN_ROOT\Languages\IronPython\Internal\ipy.bat
+
 
 
 # ------------------------------------------------------------------------------

@@ -12,14 +12,18 @@
 #
 #
 #####################################################################################
-    
+'''
+'''
+#------------------------------------------------------------------------------
+from iptest import *
 from iptest.assert_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("fieldtests", "typesamples")
 
-from Merlin.Testing.FieldTest.InitOnly import *
-from Merlin.Testing.TypeSample import *
+if options.RUN_TESTS: #TODO - bug when generating Pydoc
+    from Merlin.Testing.FieldTest.InitOnly import *
+    from Merlin.Testing.TypeSample import *
 
 def _test_get_by_instance(current_type):
     o = current_type()

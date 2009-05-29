@@ -12,8 +12,11 @@
 #
 #
 #####################################################################################
-    
-
+'''
+NOTES:
+- seems not a good test?
+'''
+#------------------------------------------------------------------------------
 from iptest.assert_util import *
 skiptest("silverlight")
 
@@ -23,7 +26,6 @@ from Merlin.Testing import *
 from Merlin.Testing.Call import *
 from Merlin.Testing.TypeSample import *
 
-# seems not a good test
 
 c = C()
 

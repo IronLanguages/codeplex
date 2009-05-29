@@ -12,8 +12,10 @@
 #
 #
 #####################################################################################
-    
-
+'''
+Named indexer
+'''
+#------------------------------------------------------------------------------
 from iptest.assert_util import *
 skiptest("silverlight")
 add_clr_assemblies("indexerdefinitionsvb", "typesamples")

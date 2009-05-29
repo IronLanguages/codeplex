@@ -433,7 +433,7 @@ def test_warnings():
     sys.stderr = stderr_new
     
     # generate test output
-    warn_types = [Warning, UserWarning, DeprecationWarning, PendingDeprecationWarning, SyntaxWarning, RuntimeWarning, FutureWarning, ImportWarning, UnicodeWarning, BytesWarning]
+    warn_types = [Warning, UserWarning, PendingDeprecationWarning, SyntaxWarning, RuntimeWarning, FutureWarning, ImportWarning, UnicodeWarning, BytesWarning]
     warn("Warning Message!")
     expect(UserWarning, "Warning Message!")
     for warn_type in warn_types:
@@ -467,7 +467,8 @@ def test_warnings():
     for line in stderr_file:
         if line.startswith("  "):
             continue
-        Assert(line.endswith(expected.pop(0)))
+        temp = expected.pop(0)
+        Assert(line.endswith(temp), str(line) + " does not end with " + temp)
     # clean up
     stderr_file.close()
     
