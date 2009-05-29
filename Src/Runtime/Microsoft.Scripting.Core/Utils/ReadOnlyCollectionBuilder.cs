@@ -26,6 +26,7 @@ namespace Microsoft.Runtime.CompilerServices {
     /// </summary>
     /// <typeparam name="T">The type of the collection element.</typeparam>
     [Serializable]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public sealed class ReadOnlyCollectionBuilder<T> : IList<T>, System.Collections.IList {
         private const int DefaultCapacity = 4;
 

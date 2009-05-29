@@ -15,13 +15,13 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Linq.Expressions;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -283,10 +283,24 @@ namespace IronPython.Runtime {
 
         internal Delegate GetCompiledCode() {
             if (_shouldInterpret) {
-                return Microsoft.Scripting.Generation.CompilerHelpers.LightCompile(Code);
+                Delegate result = Microsoft.Scripting.Generation.CompilerHelpers.LightCompile(Code);
+
+                // If the adaptive compiler decides to compile this function, we
+                // want to store the new compiled target. This saves us from going
+                // through the interpreter stub every call.
+                var lightLambda = result.Target as Microsoft.Scripting.Interpreter.LightLambda;
+                if (lightLambda != null) {
+                    lightLambda.Compile += SetCompiledTarget;
+                }
+
+                return result;
             }
 
             return Code.Compile();
+        }
+
+        private void SetCompiledTarget(object sender, Microsoft.Scripting.Interpreter.LightLambdaCompileEventArgs e) {
+            _func.Target = e.Compiled;
         }
     }
 }

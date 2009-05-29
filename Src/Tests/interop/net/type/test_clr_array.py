@@ -12,7 +12,19 @@
 #
 #
 #####################################################################################
-    
+'''
+Array Type
+* Creation (type, rank, ...)
+* initialize list
+  - Does conversion occur here?
+  - Assign something to array of interface/base type 
+* Operation (indexing/member access)
+  - Set, get: A[1][2] = 3, A[1,2] = 3
+  - (python) Slicing?
+* Passing the array object as argument to methods
+  - C#: Array covariance specifically does not extend to arrays of value-types
+'''
+#------------------------------------------------------------------------------ 
 from iptest.assert_util import *
 skiptest("silverlight")
 

@@ -358,6 +358,22 @@ def test_type_delegate_conversion():
     ctor = System.Func[object](x)
     AreEqual(type(ctor()), x)
 
+
+def test_module_alias_cp19656():
+    stuff_mod = path_combine(testpath.public_testdir, "stuff.py")
+    check_mod = path_combine(testpath.public_testdir, "check.py")
+    
+    try:
+        write_to_file(stuff_mod, "Keys = 3")
+        write_to_file(check_mod, "def check(module):\n    return module.Keys")
+        import stuff
+        from check import check
+        AreEqual(check(stuff), 3)
+    finally:
+        import nt
+        nt.unlink(stuff_mod)
+        nt.unlink(check_mod)
+
 #------------------------------------------------------------------------------
 #--General coverage.  These need to be extended.
 def test_xxsubtype_bench():

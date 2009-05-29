@@ -19,12 +19,16 @@ using System.Text;
 
 namespace IronPython {
     /// <summary>
-    /// Marks that the return value of a function might include NotImplemented.
-    /// 
-    /// This is added to an operator method to ensure that all necessary methods are called
-    /// if one cannot guarantee that it can perform the comparison.
+    /// Marks that the argument is typed to accept a bytes or bytearray object.  This
+    /// attribute disallows passing a Python list object and auto-applying our generic
+    /// conversion.  It also enables conversion of a string to a IList of byte in
+    /// IronPython 2.6.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter)]
-    public sealed class ProhibitGenericListConversionAttribute : Attribute {
+    public sealed class BytesConversionAttribute : Attribute {
+    }
+
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class BytesConversionNoStringAttribute : Attribute {
     }
 }

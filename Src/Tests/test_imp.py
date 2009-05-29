@@ -584,6 +584,7 @@ def test_import_relative_error():
     def f():  exec 'from . import *'
     AssertError(ValueError, f)
 
+@skip("silverlight") #No access to CPython stdlib
 def test_import_hooks_import_precence():
     """__import__ takes precedence over import hooks"""
     global myimpCalled
@@ -596,9 +597,8 @@ def test_import_hooks_import_precence():
     def myimport(*args):
         return 'myimport'
 
-    #TODO: use some other module for this instead of iptest
-    import iptest
-    import iptest.misc_util
+    import idlelib
+    import idlelib.idlever
     mi = myimp()
     sys.meta_path.append(mi)
     builtinimp = get_builtins_dict()['__import__']
@@ -610,12 +610,12 @@ def test_import_hooks_import_precence():
         AreEqual(myimpCalled, None)
                 
         # reload on a built-in hits the loader protocol
-        reload(iptest)
-        AreEqual(myimpCalled, ('iptest', None))
+        reload(idlelib)
+        AreEqual(myimpCalled, ('idlelib', None))
         
-        reload(iptest.misc_util)
-        AreEqual(myimpCalled[0], 'iptest.misc_util')
-        AreEqual(myimpCalled[1][0][-6:], 'iptest')
+        reload(idlelib.idlever)
+        AreEqual(myimpCalled[0], 'idlelib.idlever')
+        AreEqual(myimpCalled[1][0][-7:], 'idlelib')
     finally:
         get_builtins_dict()['__import__'] = builtinimp
         sys.meta_path.remove(mi)

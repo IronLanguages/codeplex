@@ -22,13 +22,9 @@ from iptest.misc_util import ip_supported_encodings
 import sys
  
 def test_none():
-    if is_cli or is_silverlight: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21919
-        AssertError(TypeError, "abc".translate, None)
-        AssertError(TypeError, "abc".translate, None, 'h')
-    else:
-        AreEqual("abc".translate(None), "abc")
-        AreEqual("abc".translate(None, 'h'), "abc")
-    
+    AreEqual("abc".translate(None), "abc")
+    AreEqual("abc".translate(None, 'h'), "abc")
+    AreEqual("abc".translate(None, 'c'), "ab")
 
     AssertError(TypeError, "abc".replace, "new")
     AssertError(TypeError, "abc".replace, "new", 2)
@@ -41,6 +37,9 @@ def test_none():
 
     AssertError(TypeError, 'abc'.replace, None, 'ef')
     AssertError(TypeError, 'abc'.replace, None, 'ef', 1)
+    
+    AssertError(TypeError, lambda: None + 'abc')
+    AssertError(TypeError, lambda: 'abc' + None)
 
 def test_add_mul():
     AssertError(TypeError, lambda: "a" + 3)

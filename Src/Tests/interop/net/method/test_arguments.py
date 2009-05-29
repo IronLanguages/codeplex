@@ -12,7 +12,10 @@
 #
 #
 #####################################################################################
-    
+'''
+Try different python calls to clr method with different signatures.
+'''
+#------------------------------------------------------------------------------
 from iptest.assert_util import *
 skiptest("silverlight")
 

@@ -12,14 +12,19 @@
 #
 #
 #####################################################################################
-    
+'''
+Operations on enum type and its' members
+'''
+#------------------------------------------------------------------------------
+from iptest import *    
 from iptest.assert_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("fieldtests", "typesamples")
 
-from Merlin.Testing.FieldTest import *
-from Merlin.Testing.TypeSample import *
+if options.RUN_TESTS: #TODO - bug when generating Pydoc
+    from Merlin.Testing.FieldTest import *
+    from Merlin.Testing.TypeSample import *
 
 def test_accessibility():
     o = Misc()

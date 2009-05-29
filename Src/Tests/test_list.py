@@ -425,4 +425,20 @@ def test_inheritance():
         AssertError(TypeError, subclass)
 
 
+def test_backwards_slicing_no_step():    
+    class mylist(object):
+        def __getitem__(self, index):
+            return 'stuff'[index]
+    
+    a = list('stuff')
+    for val in (a, 'stuff', tuple('stuff'), mylist()):
+        a[1:0] = val
+        AreEqual(a, list("stuff"[:1] + "stuff" + "stuff"[1:]))
+        a = list('stuff')
+
+    for val in (a, 'stuff', tuple('stuff'), mylist()):
+        a[1:0:1] = a
+        AreEqual(a, list("stuff"[:1] + "stuff" + "stuff"[1:]))
+        a = list('stuff')
+
 run_test(__name__)

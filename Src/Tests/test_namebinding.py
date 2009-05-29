@@ -1014,12 +1014,8 @@ class C:
     def foo(self):
         return codeplex_20956
 
-if is_cpython:
-    AssertErrorWithMessage(NameError, "global name 'codeplex_20956' is not defined",
-                           C().foo)
-else:
-    AssertErrorWithMessage(NameError, "name 'codeplex_20956' is not defined",
-                           C().foo)
+AssertErrorWithMessage(NameError, "global name 'codeplex_20956' is not defined",
+                       C().foo)
 
 class ImportAsInClass:
     import sys as sys_in_class

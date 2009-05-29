@@ -2736,7 +2736,6 @@ def test_getslice_missing_values():
     AreEqual(foo()[:], slice(0, 2147483647))
     test_slice(foo)
 
-@skip("multiple_execute") #http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=20845
 def test_setslice_missing_values():
     # missing values are different from passing None explicitly
     class myint(int): pass

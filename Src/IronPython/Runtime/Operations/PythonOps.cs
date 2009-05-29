@@ -3535,13 +3535,17 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object GetGlobal(Scope scope, SymbolId name) {
-            return GetLocal(scope.ModuleScope, name);
+            return GetVariable(scope.ModuleScope, name, true);
         }
 
         public static object GetLocal(Scope scope, SymbolId name) {
+            return GetVariable(scope, name, false);
+        }
+
+        private static object GetVariable(Scope scope, SymbolId name, bool isGlobal) {
             object res;
             if (scope.TryLookupName(name, out res)) {
-                return res;            
+                return res;
             }
 
             object builtins;
@@ -3557,8 +3561,10 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
+            if (isGlobal) {
+                throw GlobalNameError(name);
+            }
             throw NameError(name);
-            
         }
 
         public static object RawGetGlobal(Scope scope, SymbolId name) {
@@ -3588,7 +3594,6 @@ namespace IronPython.Runtime.Operations {
             }
 
             throw NameError(name);
-
         }
 
         public static void DeleteLocal(Scope scope, SymbolId name) {
@@ -3815,6 +3820,9 @@ namespace IronPython.Runtime.Operations {
             return new UnboundNameException(string.Format("name '{0}' is not defined", SymbolTable.IdToString(name)));
         }
 
+        public static Exception GlobalNameError(SymbolId name) {
+            return new UnboundNameException(string.Format("global name '{0}' is not defined", SymbolTable.IdToString(name)));
+        }
 
         // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
         public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {

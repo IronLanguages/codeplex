@@ -1060,9 +1060,8 @@ def test_comparison_operators():
         for data in (y, None, 1, 1.0, 1L, (), [], 1j, "abc"):
             AreEqual(getattr(x, oper)(data), NotImplemented)
 
-@skip("silverlight") #CodePlex 16519    
 def test_cp16519():
-    import __main__
+    __main__ = __import__(__name__)
     __main__.Dict = {"1": "a"}
     AreEqual(__main__.Dict["1"], "a")
     del __main__.Dict
