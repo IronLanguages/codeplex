@@ -51,7 +51,7 @@ using System; using Microsoft;
 // by using the '*' as shown below:
 
 #if !SILVERLIGHT
-[assembly: AssemblyFileVersion("2.6.0905.0")]
+[assembly: AssemblyFileVersion("2.6.0906.0")]
 [assembly: AssemblyInformationalVersion("2.6")]
 #endif
 [assembly: SecurityTransparent]
