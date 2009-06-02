@@ -20,6 +20,7 @@
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
     <BaseAddress>857735168</BaseAddress>
+    <SilverlightPath Condition="$(SilverlightPath) == ''">$(ProgramFiles)\Microsoft Silverlight\2.0.40115.0</SilverlightPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -68,7 +69,6 @@
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <NoWarn>1591,618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.40115.0</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
 <OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
@@ -81,18 +81,17 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.40115.0</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.Configuration" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
+      <HintPath>$(SilverlightPath)\mscorlib.dll</HintPath>
     </Reference>
     <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
+      <HintPath>$(SilverlightPath)\System.dll</HintPath>
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Remoting" Condition=" $(SilverlightBuild) != 'true' " />
