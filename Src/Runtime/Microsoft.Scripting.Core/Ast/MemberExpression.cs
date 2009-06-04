@@ -64,8 +64,8 @@ namespace Microsoft.Linq.Expressions {
         /// Returns the node type of this <see cref="Expression" />. (Inherited from <see cref="Expression" />.)
         /// </summary>
         /// <returns>The <see cref="ExpressionType"/> that represents this expression.</returns>
-        protected override ExpressionType NodeTypeImpl() {
-            return ExpressionType.MemberAccess;
+        public sealed override ExpressionType NodeType {
+            get { return ExpressionType.MemberAccess; }
         }
 
         internal virtual MemberInfo GetMember() {
@@ -89,8 +89,8 @@ namespace Microsoft.Linq.Expressions {
             return _field;
         }
 
-        protected override Type TypeImpl() {
-            return _field.FieldType;
+        public sealed override Type Type {
+            get { return _field.FieldType; }
         }
     }
 
@@ -105,8 +105,8 @@ namespace Microsoft.Linq.Expressions {
             return _property;
         }
 
-        protected override Type TypeImpl() {
-            return _property.PropertyType;
+        public sealed override Type Type {
+            get { return _property.PropertyType; }
         }
     }
 

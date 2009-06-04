@@ -50,16 +50,16 @@ namespace Microsoft.Linq.Expressions {
         /// ExpressionType.Extension when overriding this method.
         /// </summary>
         /// <returns>The <see cref="ExpressionType"/> of the expression.</returns>
-        protected override ExpressionType NodeTypeImpl() {
-            return ExpressionType.Conditional;
+        public sealed override ExpressionType NodeType {
+            get { return ExpressionType.Conditional; }
         }
 
         /// <summary>
         /// Gets the static type of the expression that this <see cref="Expression" /> represents.
         /// </summary>
         /// <returns>The <see cref="Type"/> that represents the static type of the expression.</returns>
-        protected override Type TypeImpl() {
-            return IfTrue.Type;
+        public override Type Type {
+            get { return IfTrue.Type; }
         }
 
         /// <summary>
@@ -111,8 +111,8 @@ namespace Microsoft.Linq.Expressions {
             _type = type;
         }
 
-        protected override Type TypeImpl() {
-            return _type;
+        public sealed override Type Type {
+            get { return _type; }
         }
     }
 
