@@ -43,8 +43,8 @@ namespace Microsoft.Linq.Expressions {
         /// Gets the static type of the expression that this <see cref="Expression" /> represents.
         /// </summary>
         /// <returns>The <see cref="Type"/> that represents the static type of the expression.</returns>
-        protected override Type TypeImpl() {
-            return _returnType;
+        public sealed override Type Type {
+            get { return _returnType; }
         }
 
         /// <summary>
@@ -52,8 +52,8 @@ namespace Microsoft.Linq.Expressions {
         /// ExpressionType.Extension when overriding this method.
         /// </summary>
         /// <returns>The <see cref="ExpressionType"/> of the expression.</returns>
-        protected override ExpressionType NodeTypeImpl() {
-            return ExpressionType.Invoke;
+        public sealed override ExpressionType NodeType {
+            get { return ExpressionType.Invoke; }
         }
 
         /// <summary>

@@ -44,6 +44,7 @@ def test_cp8678():
         AreEqual(expected[i], actual[i])
 
 @skip("multiple_execute")
+@retry_on_failure
 def test_cp10825():
     import urllib
     from time import sleep

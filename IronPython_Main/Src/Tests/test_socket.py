@@ -198,6 +198,7 @@ OTHER_GLOBALS = {"AI_ADDRCONFIG" : 32,
                  "TCP_SYNCNT" : 7,
                  "TCP_WINDOW_CLAMP" : 10}
 
+@retry_on_failure
 def test_getprotobyname():
     '''
     Tests socket.getprotobyname
@@ -236,6 +237,7 @@ def test_getprotobyname():
     for name in bad_list:
         AssertError(socket.error, socket.getprotobyname, name)
 
+@retry_on_failure
 def test_getaddrinfo():
     '''
     Tests socket.getaddrinfo
@@ -310,6 +312,7 @@ def test_getaddrinfo():
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
 
+@retry_on_failure
 def test_getnameinfo():
     '''
     Tests socket.getnameinfo()
@@ -329,7 +332,8 @@ def test_getnameinfo():
     AssertError(TypeError, socket.getnameinfo, ("127.0.0.1"), '0')
     AssertError(TypeError, socket.getnameinfo, ("127.0.0.1", 80, 0, 0, 0), 8)
     AssertError(socket.gaierror, socket.getnameinfo, ('no such host will ever exist', 80), 8)
-    
+
+@retry_on_failure    
 def test_gethostbyaddr():
     '''
     Tests socket.gethostbyaddr
@@ -339,6 +343,7 @@ def test_gethostbyaddr():
     if is_cli:
         socket.gethostbyaddr("<broadcast>")
     
+@retry_on_failure
 def test_gethostbyname():
     '''
     Tests socket.gethostbyname
@@ -351,7 +356,7 @@ def test_gethostbyname():
     #negative
     AssertError(socket.gaierror, socket.gethostbyname, "should never work")
     
-    
+@retry_on_failure    
 def test_gethostbyname_ex():
     '''
     Tests socket.gethostbyname_ex
@@ -366,14 +371,17 @@ def test_gethostbyname_ex():
     AssertError(socket.gaierror, socket.gethostbyname_ex, "should never work")
     
 
+@retry_on_failure
 def test_getservbyport():
     if is_cli:
         AssertError(NotImplementedError, socket.getservbyport, 80)
-        
+
+@retry_on_failure        
 def test_getservbyname():
     if is_cli:
         AssertError(NotImplementedError, socket.getservbyname, "http")
-        
+
+@retry_on_failure        
 def test_inet_ntop():
     '''
     Tests socket.inet_ntop
@@ -384,7 +392,7 @@ def test_inet_ntop():
     #negative
     AssertError(socket.error, socket.inet_ntop, socket.AF_INET, "garbage dkfjdkfjdkfj")
 
-
+@retry_on_failure
 def test_inet_pton():
     '''
     Tests socket.inet_pton
@@ -398,13 +406,15 @@ def test_inet_pton():
     #negative
     AssertError(socket.error, socket.inet_pton, socket.AF_INET, "garbage dkfjdkfjdkfj")
 
+@retry_on_failure
 def test_getfqdn():
     '''
     Tests socket.getfqdn
     '''
     #TODO
+    pass
 
-
+@retry_on_failure
 def test_cp12452():
     '''
     Fully test socket._fileobj compatibility
@@ -429,6 +439,7 @@ def test_cp12452():
     missing = [ x for x in expected_dir if x not in fileobject_dir ]
     AreEqual([], missing)
 
+@retry_on_failure
 def test_misc():
     f = socket.socket().makefile()
     f.bufsize = 4096
@@ -436,6 +447,7 @@ def test_misc():
 
 #Dev10 446426
 @skip("multiple_execute")
+@retry_on_failure
 def test_makefile_refcount():
     "Ensures that the socket stays open while there's still a file associated"
     
@@ -461,7 +473,7 @@ def test_makefile_refcount():
     str = f1.readline()
     Assert(str==test_msg)
 
-
+@retry_on_failure
 def test_fileobject_close():
     """verify we can construct fileobjects w/ the close kw arg"""
     fd = socket._fileobject(None, close=True)
@@ -471,6 +483,7 @@ def test_fileobject_close():
         AreEqual(fd.closed, True)
 
 @disabled("TODO: fails consistently on certain machines")
+@retry_on_failure
 def test_cp5814():
     global HAS_EXITED
     global EXIT_CODE
@@ -553,6 +566,7 @@ finally:
         AreEqual(addr[0], 0)
 
 @disabled("TODO: fails consistently on certain machines")
+@retry_on_failure
 def test_cp7451():
     global HAS_EXITED
     global EXIT_CODE
