@@ -7,6 +7,29 @@
 import "oaidl.idl";
 import "ocidl.idl";
 
+[uuid(706311AD-9F1A-4EC2-B429-55269510328E)]
+typedef enum tagNumbers
+{
+    None = 0,
+    One = 1,
+    Two = 2,
+    Three = 3
+} Numbers;
+
+[uuid(6A8B19A4-A48C-11DD-A62A-954F55D89593)]
+typedef struct tagPoint
+{
+    long x;
+    long y;
+} Point;
+
+[uuid(89404FAE-98C6-416F-9FFB-A443D7862395)]
+typedef struct tagLine
+{
+    Point point1;
+    Point point2;
+} Line;
+
 [
     object,
     uuid(F2CC97FB-0240-48AB-9706-C0327AC050C5),
@@ -504,6 +527,82 @@ interface IHiddenMembers : IDispatch{
 	[propput, id(6), helpstring("property RestrictedProperty"), restricted] HRESULT RestrictedProperty([in] LONG newVal);
 };
 [
+	object,
+	uuid(7E08E56F-9658-4E24-9A45-ED9CC64B1143),
+	dual,
+	nonextensible,
+	helpstring("IIndexedProp Interface"),
+	pointer_default(unique)
+]
+interface IIndexedProp : IDispatch{
+	
+[propget, id(1), helpstring("property CharZero")] HRESULT CharZero([optional,out, retval] CHAR* pVal);
+[propput, id(1), helpstring("property CharZero")] HRESULT CharZero([in] CHAR newVal);
+[propget, id(2), helpstring("property IntZero")] HRESULT IntZero([optional,out, retval] LONG* pVal);
+[propput, id(2), helpstring("property IntZero")] HRESULT IntZero([in] LONG newVal);
+[propget, id(3), helpstring("property IntOne")] HRESULT IntOne([optional]LONG one, [optional,out, retval] LONG* pVal);
+[propput, id(3), helpstring("property IntOne")] HRESULT IntOne([optional]LONG one, [in] LONG newVal);
+[propget, id(4), helpstring("property IntTwo")] HRESULT IntTwo([optional]LONG one,[optional,defaultvalue(2)]LONG two, [out, retval] LONG* pVal);
+[propput, id(4), helpstring("property IntTwo")] HRESULT IntTwo([optional]LONG one,[optional,defaultvalue(2)]LONG two, [in] LONG newVal);
+[propget, id(5), helpstring("property CharOne")] HRESULT CharOne([optional]CHAR one,[out, retval] CHAR* pVal);
+[propput, id(5), helpstring("property CharOne")] HRESULT CharOne([optional]CHAR one,[in] CHAR newVal);
+[propget, id(6), helpstring("property FloatOne")] HRESULT FloatOne([optional]FLOAT one,[out, retval] FLOAT* pVal);
+[propput, id(6), helpstring("property FloatOne")] HRESULT FloatOne([optional]FLOAT one,[in] FLOAT newVal);
+[propget, id(7), helpstring("property StringOne")] HRESULT StringOne([optional]BSTR one, [out, retval] BSTR* pVal);
+[propput, id(7), helpstring("property StringOne")] HRESULT StringOne([optional]BSTR one, [in] BSTR newVal);
+[propget, id(8), helpstring("property PointOne")] HRESULT PointOne([optional]Point one, [out, retval] Point* pVal);
+[propput, id(8), helpstring("property PointOne")] HRESULT PointOne([optional]Point one, [in] Point newVal);
+[propget, id(9), helpstring("property EnumOne")] HRESULT EnumOne([optional]Numbers one, [out, retval] Numbers* pVal);
+[propput, id(9), helpstring("property EnumOne")] HRESULT EnumOne([optional]Numbers one, [in] Numbers newVal);
+[propget, id(10), helpstring("property DecimalOne")] HRESULT DecimalOne([optional]DECIMAL one, [out, retval] DECIMAL* pVal);
+[propput, id(10), helpstring("property DecimalOne")] HRESULT DecimalOne([optional]DECIMAL one, [in] DECIMAL newVal);
+[propget, id(11), helpstring("property DoubleOne")] HRESULT DoubleOne([optional]DOUBLE one, [out, retval] DOUBLE* pVal);
+[propput, id(11), helpstring("property DoubleOne")] HRESULT DoubleOne([optional]DOUBLE one, [in] DOUBLE newVal);
+[propget, id(12), helpstring("property LongOne")] HRESULT LongOne([optional]LONGLONG one, [out, retval] LONGLONG* pVal);
+[propput, id(12), helpstring("property LongOne")] HRESULT LongOne([optional]LONGLONG one, [in] LONGLONG newVal);
+[propget, id(13), helpstring("property ObjectOne")] HRESULT ObjectOne([optional]VARIANT one, [out, retval] VARIANT* pVal);
+[propput, id(13), helpstring("property ObjectOne")] HRESULT ObjectOne([optional]VARIANT one, [in] VARIANT newVal);
+[propget, id(14), helpstring("property UIntOne")] HRESULT UIntOne([optional]ULONG one, [out, retval] ULONG* pVal);
+[propput, id(14), helpstring("property UIntOne")] HRESULT UIntOne([optional]ULONG one, [in] ULONG newVal);
+[propget, id(15), helpstring("property IntRefOne")] HRESULT IntRefOne([optional]LONG one, [out, retval] LONG* pVal);
+[propputref, id(15), helpstring("property IntRefOne")] HRESULT IntRefOne([optional]LONG one, [in] LONG newVal);
+[propget, id(16), helpstring("property IntOneGetter")] HRESULT IntOneGetter([optional]LONG one, [out, retval] LONG* pVal);
+[propput, id(17), helpstring("property IntOneSetter")] HRESULT IntOneSetter([optional]LONG one, [in] LONG newVal);
+[propget, id(18), helpstring("property IntRefTwo")] HRESULT IntRefTwo([in,out,optional] LONG* one, [in,out,optional] LONG* two, [out, retval] LONG* pVal);
+[propput, id(18), helpstring("property IntRefTwo")] HRESULT IntRefTwo([in,out,optional] LONG* one, [in,out,optional] LONG* two, [in] LONG newVal);
+[propget, id(19), helpstring("property BoolOne")] HRESULT BoolOne([optional]VARIANT_BOOL one, [out, retval] VARIANT_BOOL* pVal);
+[propput, id(19), helpstring("property BoolOne")] HRESULT BoolOne([optional]VARIANT_BOOL one, [in] VARIANT_BOOL newVal);
+
+[propget, id(20), helpstring("property IntSix")] HRESULT IntSix([optional]LONG one, [optional]LONG two, [optional]LONG three, [optional]LONG four, [optional]LONG five, [optional]LONG six, [out, retval] LONG* pVal);
+[propput, id(20), helpstring("property IntSix")] HRESULT IntSix([optional]LONG one, [optional]LONG two, [optional]LONG three, [optional]LONG four, [optional]LONG five, [optional]LONG six, [in] LONG newVal);
+[propget, id(21), helpstring("property intArrayOne")] HRESULT intArrayOne([optional]LONG one, [out, retval] SAFEARRAY(LONG)* pVal);
+[propput, id(21), helpstring("property intArrayOne")] HRESULT intArrayOne([optional]LONG one, [in] SAFEARRAY(LONG) newVal);
+[propget, id(22), helpstring("property stringArray")] HRESULT stringArray([optional] LONG one,[out, retval] SAFEARRAY(BSTR)* pVal);
+[propput, id(22), helpstring("property stringArray")] HRESULT stringArray([optional] LONG one,[in] SAFEARRAY(BSTR) newVal);
+[propget, id(24), helpstring("property intArrayOneNO")] HRESULT intArrayOneNO(LONG one, [out, retval] SAFEARRAY(LONG)* pVal);
+[propput, id(24), helpstring("property intArrayOneNO")] HRESULT intArrayOneNO(LONG one, [in] SAFEARRAY(LONG) newVal);
+[propget, id(23), helpstring("property IntReqOne")] HRESULT IntReqOne(LONG one, [out, retval] LONG* pVal);
+[propput, id(23), helpstring("property IntReqOne")] HRESULT IntReqOne(LONG one, [in] LONG newVal);
+[propget, id(25), helpstring("property IntOverload")] HRESULT IntOverload([optional]LONG one, [out, retval] LONG* pVal);
+[propput, id(25), helpstring("property IntOverload")] HRESULT IntOverload([optional]LONG one, [in] LONG newVal);
+//[propget, id(26), helpstring("property IntOverload")] HRESULT IntOverload([optional]LONG one,[optional]LONG two, [out, retval] LONG* pVal);
+//[propput, id(26), helpstring("property IntOverload")] HRESULT IntOverload([optional]LONG one,[optional]LONG two, [in] LONG newVal);
+//[propget, id(27), helpstring("property stringRef")] HRESULT stringRef([in,out,optional] BSTR* one, [out, retval] BSTR* pVal);
+//[propput, id(27), helpstring("property StringRef")] HRESULT stringRef([in,out,optional] BSTR* one, [in] BSTR newVal);
+//[propget, id(28), helpstring("property DecimalRef")] HRESULT DecimalRef([in,out,optional] DECIMAL* one, [out, retval] DECIMAL* pVal);
+//[propput, id(28), helpstring("property DecimalRef")] HRESULT DecimalRef([in,out,optional] DECIMAL* one, [in] DECIMAL newVal);
+//[propget, id(29), helpstring("property EnumRef")] HRESULT EnumRef([in,out,optional] Numbers* one, [out, retval] Numbers* pVal);
+//[propput, id(29), helpstring("property EnumRef")] HRESULT EnumRef([in,out,optional] Numbers* one, [in] Numbers newVal);
+//[propget, id(30), helpstring("property PointRef")] HRESULT PointRef([in,out,optional] Point* one, [out, retval] Point* pVal);
+//[propput, id(30), helpstring("property PointRef")] HRESULT PointRef([in,out,optional] Point* one, [in] Point newVal);
+[id(31), helpstring("method methTest")] HRESULT methTest([optional]LONG One, [optional]LONG Two, [optional]LONG Three);
+
+
+
+[propget, id(DISPID_VALUE), helpstring("property intDefault")] HRESULT intDefault([optional]LONG One, [optional]LONG Two, [out, retval] LONG* pVal);
+[propput, id(DISPID_VALUE), helpstring("property intDefault")] HRESULT intDefault([optional]LONG One, [optional]LONG Two, [in] LONG newVal);
+};
+[
     uuid(A50D2773-4B1B-428A-B5B4-9300E1B50484),
     version(1.0),
     helpstring("DlrComLibrary 1.0 Type Library")
@@ -664,5 +763,13 @@ library DlrComLibraryLib
 	coclass HiddenMembers
 	{
 		[default] interface IHiddenMembers;
+	};
+	[
+		uuid(71DBF89D-F74B-4444-9083-2CCA88DD7645),
+		helpstring("IndexedProp Class")
+	]
+	coclass IndexedProp
+	{
+		[default] interface IIndexedProp;
 	};
 };

@@ -114,6 +114,7 @@ IDR_NONDISPATCH         REGISTRY                "NonDispatch.rgs"
 IDR_NOTYPEINFO          REGISTRY                "NoTypeInfo.rgs"
 IDR_PROVIDESCLASSINFO   REGISTRY                "ProvidesClassInfo.rgs"
 IDR_HIDDENMEMBERS       REGISTRY                "HiddenMembers.rgs"
+IDR_INDEXEDPROP         REGISTRY                "IndexedProp.rgs"
 
 /////////////////////////////////////////////////////////////////////////////
 //
