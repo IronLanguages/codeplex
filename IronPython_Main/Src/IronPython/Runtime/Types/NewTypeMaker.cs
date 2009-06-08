@@ -338,7 +338,7 @@ namespace IronPython.Runtime.Types {
                                                     );
 
             foreach (ConstructorInfo ci in constructors) {
-                if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
+                if (ci.IsPublic || ci.IsProtected()) {
                     OverrideConstructor(ci);
                 }
             }
@@ -775,7 +775,7 @@ namespace IronPython.Runtime.Types {
 
             FieldInfo[] fields = _baseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             foreach (FieldInfo fi in fields) {
-                if (!fi.IsFamily && !fi.IsFamilyOrAssembly) {
+                if (!fi.IsProtected()) {
                     continue;
                 }
 
@@ -877,7 +877,7 @@ namespace IronPython.Runtime.Types {
             foreach (MethodInfo mi in added.Values) {
                 if (!CanOverrideMethod(mi)) continue;
 
-                if (mi.IsPublic || IsProtected(mi)) {
+                if (mi.IsPublic || mi.IsProtected()) {
                     if (mi.IsSpecialName) {
                         OverrideSpecialName(mi, specialNames, overriddenProperties);
                     } else {
@@ -892,7 +892,7 @@ namespace IronPython.Runtime.Types {
                 // TODO: A better check here would be mi.IsFamily && mi.IsSpecialName.  But we need to also check
                 // the other property method (getter if we're a setter, setter if we're a getter) because if one is protected
                 // and the other isn't we need to still override both (so our newslot property is also both a getter and a setter).
-                if ((IsProtected(mi) || mi.IsSpecialName) && (mi.Name.StartsWith("get_") || mi.Name.StartsWith("set_"))) {
+                if ((mi.IsProtected() || mi.IsSpecialName) && (mi.Name.StartsWith("get_") || mi.Name.StartsWith("set_"))) {
                     // need to be able to call into protected getter/setter methods from derived types,
                     // even if these methods aren't virtual and we are in partial trust.
                     specialNames[mi.Name] = new[] { mi.Name };
@@ -984,7 +984,7 @@ namespace IronPython.Runtime.Types {
         private void AddPublicProperty(MethodInfo mi, Dictionary<PropertyInfo, PropertyBuilder> overridden, MethodBuilder mb, PropertyInfo foundProperty) {
             MethodInfo getter = foundProperty.GetGetMethod(true);
             MethodInfo setter = foundProperty.GetSetMethod(true);
-            if (IsProtected(getter) || IsProtected(setter)) {
+            if (getter != null && getter.IsProtected() || setter != null && setter.IsProtected()) {
                 PropertyBuilder builder;
                 if (!overridden.TryGetValue(foundProperty, out builder)) {
                     ParameterInfo[] indexArgs = foundProperty.GetIndexParameters();
@@ -1002,13 +1002,6 @@ namespace IronPython.Runtime.Types {
                     builder.SetSetMethod(mb);
                 }
             }
-        }
-
-        private static bool IsProtected(MethodInfo mi) {
-            if (mi != null) {
-                return mi.IsFamilyOrAssembly || mi.IsFamily;
-            }
-            return false;
         }
 
         /// <summary>
@@ -1037,7 +1030,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private void OverrideBaseMethod(MethodInfo mi, Dictionary<string, string[]> specialNames) {
-            if ((!mi.IsVirtual || mi.IsFinal) && !IsProtected(mi)) {
+            if ((!mi.IsVirtual || mi.IsFinal) && !mi.IsProtected()) {
                 return;
             }
 
