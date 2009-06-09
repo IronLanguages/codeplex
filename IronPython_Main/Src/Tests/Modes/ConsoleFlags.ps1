@@ -20,6 +20,16 @@
 # * nonsense modes
 # * negative modes
 
+#HACK - see http://www.leeholmes.com/blog/WorkaroundTheOSHandlesPositionIsNotWhatFileStreamExpected.aspx
+$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetField" 
+$consoleHost = $host.GetType().GetField("externalHost", $bindingFlags).GetValue($host) 
+[void] $consoleHost.GetType().GetProperty("IsStandardOutputRedirected", $bindingFlags).GetValue($consoleHost, @()) 
+$field = $consoleHost.GetType().GetField("standardOutputWriter", $bindingFlags) 
+$field.SetValue($consoleHost, [Console]::Out)
+$field2 = $consoleHost.GetType().GetField("standardErrorWriter", $bindingFlags)
+$field2.SetValue($consoleHost, [Console]::Out)
+#ENDHACK
+
 $old_ErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "stop"
 $CURRPATH = split-path -parent $MyInvocation.MyCommand.Definition
@@ -539,6 +549,27 @@ function maxrecursion-helper
 	}
 }
 
+function noadaptivecompilation-helper 
+{
+	set-alias dlrexe $args[0]
+	$dlrexe = $args[0]
+
+	#--Sanity
+	hello-helper $dlrexe "-X:NoAdaptiveCompilation"
+	
+	#--Make sure the interpreter is NOT used with -X:NoAdaptiveCompilation
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	$stuff = dlrexe "-X:NoAdaptiveCompilation" "-X:ExceptionDetail" $args[1..$args.Length] -c "1/0" 2>&1
+	$ErrorActionPreference = "stop"
+	if("$stuff".Contains("Microsoft.Scripting.Interpreter")) {show-failure "Failed (1): $stuff"; }
+	
+	#--Make the sure the interpreter is used without -X:NoAdaptiveCompilation
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "1/0" 2>&1
+	$ErrorActionPreference = "stop"
+	if(! "$stuff".Contains("Microsoft.Scripting.Interpreter")) {show-failure "Failed (1): $stuff"; }
+}
+
 function showclrexceptions-helper
 {
 	set-alias dlrexe $args[0]
@@ -647,6 +678,13 @@ function test-dlrmodes($dlrexe)
 	echo ""
 	echo "Testing -X:ShowClrExceptions ..."
 	showclrexceptions-helper $dlrexe
+	
+	#------------------------------------------------------------------------------
+	## -X:NoAdaptiveCompilation
+	echo ""
+	echo "Testing -X:NoAdaptiveCompilation ..."
+	
+	noadaptivecompilation-helper $dlrexe
 }
 
 ###############################################################################
