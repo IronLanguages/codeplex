@@ -75,7 +75,7 @@ def test_no_errors():
 def test_empty():
     AreEqual([], compile_file(""))    
     expected = [
-        ("invalid syntax", (1,1), 16, FatalError),
+        ("unexpected EOF while parsing", (1,1), 17, FatalError),
     ]
     actual = compile_expression("")    
     AreEqual(expected, actual)    
@@ -107,7 +107,7 @@ pass"""
     
 def test_bad_indentation():
     expected = [
-        ("unindent does not match any outer indentation level", (3,2), 32, FatalError),
+        ("unindent does not match any outer indentation level", ' ', 32, FatalError),
     ]
     code = """\
 class Foo:
@@ -117,7 +117,7 @@ class Foo:
 
 def test_non_fatal_error():
     expected = [   
-        ("'break' outside loop", "break", -1, Error),     
+        ("'break' outside loop", "break", 16, FatalError),     
     ]
     code = """\
 1+1
@@ -126,15 +126,15 @@ break"""
     
 def test_assignment_to_none():
     expected = [   
-        ("assignment to None", "None", -1, Error),        
+        ("assignment to None", "None", 16, FatalError),        
     ]
     actual = compile_file("None = 42")        
     AreEqual(expected, actual)
 
 def test_multiple_erroneous_statements():
     expected = [
-        ("assignment to None", "None", -1, Error),
-        ("assignment to None", "None", -1, Error),
+        ("assignment to None", "None", 16, FatalError),
+        ("assignment to None", "None", 16, FatalError),
     ]
     code = """\
 None = 2
@@ -182,6 +182,7 @@ def foo():
     
 def test_all_together():        
     expected = [   
+        ('assignment to None', 'None', 16,FatalError),
         ("unexpected token '}'", "}", 16, FatalError),
         ("unexpected token '}'", "}", 16, FatalError),
     ]        
