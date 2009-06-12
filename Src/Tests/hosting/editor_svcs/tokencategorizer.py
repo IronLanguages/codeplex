@@ -67,7 +67,6 @@ def test_categorizer_print():
         t.Keyword(From(0,1,1), To(5,1,6)),
         t.StringLiteral(From(6,1,7), To(11,1,12)),
         t.Comment(From(12,1,13), To(20,1,21)),
-        t.WhiteSpace(From(20,1,21), To(20,1,21)),
     ]
     actual = list(get_tokens("print 'foo' #comment"))
     AreEqual(actual, expected)
@@ -107,7 +106,6 @@ def test_categorizer_string_literals():
         t.Identifier(From(19,3,1), To(20,3,2)),
         t.Operator(From(20,3,2), To(21,3,3)),
         t.StringLiteral(From(21,3,3), To(33,3,15)),
-        t.WhiteSpace(From(33,3,15), To(33,3,15)),
     ]
     actual = list(get_tokens("a=\"Hello\"\nb='iron'\nc=\"\"\"python\"\"\""))
     AreEqual(actual, expected)
@@ -127,7 +125,6 @@ def test_categorizer_list():
         t.StringLiteral(From(34,1,35), To(39,1,40)),
         t.Grouping(From(39,1,40), To(40,1,41), TokenTriggers.MatchBraces),
         t.Grouping(From(40,1,41), To(41,1,42), TokenTriggers.MatchBraces),
-        t.WhiteSpace(From(41,1,42), To(41,1,42)),
     ]
     actual = list(get_tokens("names = [\"Dave\", \"Mark\", [\"Jeff\", \"Ann\"]]"))
     AreEqual(actual, expected)
@@ -154,7 +151,6 @@ def test_categorizer_tuple():
                      TokenTriggers.ParameterNext),
         t.Grouping(From(18,2,8), To(19,2,9),
                     TokenTriggers.MatchBraces|TokenTriggers.ParameterEnd),
-        t.WhiteSpace(From(19,2,9), To(19,2,9)),
     ]
     actual = list(get_tokens("a = (1,-9)\nb = (7,)"))
     AreEqual(actual, expected)
@@ -168,7 +164,6 @@ def test_categorizer_dict():
         t.Delimiter(From(21,2,16), To(22,2,17)),
         t.StringLiteral(From(23,2,18), To(32,2,27)),
         t.Grouping(From(37,3,5), To(38,3,6), TokenTriggers.MatchBraces),
-        t.WhiteSpace(From(38,3,6), To(38,3,6)),
     ]
     actual = list(get_tokens("a = {\n    \"username\" : \"beazley\"\n    }"))
     AreEqual(actual, expected)
@@ -240,7 +235,6 @@ def test_categorizer_class():
         t.WhiteSpace(From(44,2,24), To(45,3,1)),
         t.Operator(From(44,2,24), To(45,3,1)),
         t.Keyword(From(45,3,1), To(49,3,5)),
-        t.WhiteSpace(From(49,3,5), To(49,3,5)),
     ]
     actual = list(get_tokens("class Stack(object):\n    def __init__(self):\npass"))
     AreEqual(actual, expected)
@@ -254,7 +248,6 @@ def test_tokenizer_restart_multistring():
         t.Identifier(From(0,1,1), To(1,1,2)),
         t.Operator(From(2, 1, 3), To(3, 1, 4)),
         t.StringLiteral(From(4, 1, 5), To(10, 1, 11)),
-        t.WhiteSpace(From(10, 1, 11), To(10, 1, 11)),
     ]
     expected2 = [
         t.StringLiteral(From(0, 1, 1), To(6, 1, 7)),

@@ -157,7 +157,9 @@ try:
 
 AssertError(SyntaxError, compile, "x=10\ny=x.", "Error", "exec")
 
-def run_compile_test(code, msg, lineno):
+def run_compile_test(code, msg, lineno, skipCpy):
+    if skipCpy and not is_cli:
+        return
     filename = "the file name"
     try:
         compile(code, filename, "exec")
@@ -169,62 +171,62 @@ def run_compile_test(code, msg, lineno):
         Assert(False, "Expected exception, got none")
 
 compile_tests = [
-    ("for x notin []:\n    pass", "unexpected token 'notin'", 1),
-    ("global 1", "unexpected token '1'", 1),
-    ("x=10\nyield x\n", "'yield' outside function", 2),
-    ("return\n", "'return' outside function", 1),
-    ("print >> 1 ,\n", "unexpected token '<eof>'", 1),
-    ("def f(x=10, y):\n    pass", "default value must be specified here", 1),
-    ("def f(for):\n    pass", "unexpected token 'for'", 1),
-    ("f(3 = )", "expected name", 1),
-    ("dict(a=1,a=2)", "duplicate keyword argument", 1),
-    ("def f(a,a): pass", "duplicate argument 'a' in function definition", 1),
-    ("def f((a,b),(c,b)): pass", "duplicate argument 'b' in function definition", 1),
-    ("x = 10\nx = x[]", "unexpected token ']'", 2),
-    ("None = 2", "assignment to None", 1),
-    ("break", "'break' outside loop", 1),
-    ("if 1:\n\tbreak", "'break' outside loop", 2),
-    ("if 1:\n\tx+y=22", "can't assign to BinaryExpression", 2),
-    ("if 1:\n\tdel f()", "can't delete function call", 2),
-    ("def a(x):\n    def b():\n        print x\n    del x", "can not delete variable 'x' referenced in nested scope", 2),
-    ("if 1:\nfoo()\n", "expected an indented block", 2),
-    ("'abc'.1", "invalid syntax", 1),
-    ("'abc'.1L", "invalid syntax", 1),
-    ("'abc'.1j", "invalid syntax", 1),
-    ("'abc'.0xFFFF", "invalid syntax", 1),
-    ("'abc' 1L", "invalid syntax", 1),
-    ("'abc' 1.0", "invalid syntax", 1),
-    ("'abc' 0j", "invalid syntax", 1),
-    ("x = 'abc'\nx.1", "invalid syntax", 2),
-    ("x = 'abc'\nx 1L", "invalid syntax", 2),
-    ("x = 'abc'\nx 1.0", "invalid syntax", 2),
-    ("x = 'abc'\nx 0j", "invalid syntax", 2),
-    ('def f():\n    del (yield 5)\n', "can't delete yield expression", 2),
-    ('a,b,c += 1,2,3', "illegal expression for augmented assignment", 1),
-    ('def f():\n    a = yield 3 = yield 4', "can't assign to yield expression", 2),
-    ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
-    ('(2,3) = (3,4)', "can't assign to literal", 1),
-    ("def e():\n    break", "'break' outside loop", 2),
-    ("def g():\n    for x in range(10):\n        print x\n    break\n", "'break' outside loop", 4),
-    ("def g():\n    for x in range(10):\n        print x\n    if True:\n        break\n", "'break' outside loop", 5),
-    ("def z():\n    if True:\n        break\n", "'break' outside loop", 3),
-    ('from import abc', "invalid syntax", 1),
+    ("for x notin []:\n    pass", "unexpected token 'notin'", 1, True),
+    ("global 1", "unexpected token '1'", 1, True),
+    ("x=10\nyield x\n", "'yield' outside function", 2, False),
+    ("return\n", "'return' outside function", 1, False),
+    #("print >> 1 ,\n", "unexpected token '<eof>'", 1, False),
+    ("def f(x=10, y):\n    pass", "default value must be specified here", 1, True),
+    ("def f(for):\n    pass", "unexpected token 'for'", 1, True),
+    ("f(3 = )", "expected name", 1, True),
+    ("dict(a=1,a=2)", "duplicate keyword argument", 1, True),
+    ("def f(a,a): pass", "duplicate argument 'a' in function definition", 1, False),
+    ("def f((a,b),(c,b)): pass", "duplicate argument 'b' in function definition", 1, False),
+    ("x = 10\nx = x[]", "unexpected token ']'", 2, True),
+    ("None = 2", "assignment to None", 1, False),
+    ("break", "'break' outside loop", 1, False),
+    ("if 1:\n\tbreak", "'break' outside loop", 2, False),
+    ("if 1:\n\tx+y=22", "can't assign to operator", 2, False),
+    ("if 1:\n\tdel f()", "can't delete function call", 2, False),
+    ("def a(x):\n    def b():\n        print x\n    del x", "can not delete variable 'x' referenced in nested scope", 2, True),
+    ("if 1:\nfoo()\n", "expected an indented block", 2, False),
+    ("'abc'.1", "invalid syntax", 1, True),
+    ("'abc'.1L", "invalid syntax", 1, False),
+    ("'abc'.1j", "invalid syntax", 1, True),
+    ("'abc'.0xFFFF", "invalid syntax", 1, False),
+    ("'abc' 1L", "invalid syntax", 1, True),
+    ("'abc' 1.0", "invalid syntax", 1, True),
+    ("'abc' 0j", "invalid syntax", 1, True),
+    ("x = 'abc'\nx.1", "invalid syntax", 2, False),
+    ("x = 'abc'\nx 1L", "invalid syntax", 2, False),
+    ("x = 'abc'\nx 1.0", "invalid syntax", 2, False),
+    ("x = 'abc'\nx 0j", "invalid syntax", 2, False),
+    ('def f():\n    del (yield 5)\n', "can't delete yield expression", 2, False),
+    ('a,b,c += 1,2,3', "illegal expression for augmented assignment", 1, False),
+    ('def f():\n    a = yield 3 = yield 4', "assignment to yield expression not possible", 2, False),
+    ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1, False),
+    ('(2,3) = (3,4)', "can't assign to literal", 1, False),
+    ("def e():\n    break", "'break' outside loop", 2, False),
+    ("def g():\n    for x in range(10):\n        print x\n    break\n", "'break' outside loop", 4, False),
+    ("def g():\n    for x in range(10):\n        print x\n    if True:\n        break\n", "'break' outside loop", 5, False),
+    ("def z():\n    if True:\n        break\n", "'break' outside loop", 3, False),
+    ('from import abc', "invalid syntax", 1, False),
+    ('() = 1', "can't assign to ()", 1, False),
     ("""for x in range(100):\n"""
      """    try:\n"""
      """        [1,2][3]\n"""
      """    except IndexError:\n"""
      """        pass\n"""
      """    finally:\n"""
-     """        continue\n""", "'continue' not supported inside 'finally' clause", 7)
+     """        continue\n""", "'continue' not supported inside 'finally' clause", 7, False)
 
     #CodePlex 15428
     #("'abc'.", "invalid syntax", 1),
 ]
 
-if is_cli:
-    # different error messages, ok
-    for test in compile_tests:
-        run_compile_test(*test)
+# different error messages, ok
+for test in compile_tests:
+    run_compile_test(*test)
         
 AreEqual(float(repr(2.5)), 2.5)
 
@@ -259,7 +261,6 @@ AssertError(SyntaxError, compile, " = 4", "Error", "single")
 AssertError(SyntaxError, compile, "x <= ", "Error", "exec")
 AssertError(SyntaxError, compile, "x <= ", "Error", "eval")
 AssertError(SyntaxError, compile, "x <= ", "Error", "single")
-
 #indentation errors - BUG 864
 AssertError(IndentationError, compile, "class C:\nx=2\n", "Error", "exec")
 AssertError(IndentationError, compile, "class C:\n\n", "Error", "single")
@@ -279,9 +280,7 @@ AreEqual(x, 7)
 """
 exec s
 
-if is_cli:
-    # CPython is complaining about the last \t; we think this is ok
-    x = compile("def f(a):\n\treturn a\n\t", "", "single")
+AssertError(SyntaxError, compile, "def f(a):\n\treturn a\n\t", "", "single")
 
 # Assignment to None and constant
 
@@ -594,6 +593,35 @@ class HasASyntaxException:
         except SyntaxError, e:
             AreEqual(e.text, expectedText)
 
+def test_error_parameters():
+    tests = [#("if 1:", 0x200, ('unexpected EOF while parsing', ('dummy', 1, 5, 'if 1:')) ),
+             ("if 1:\n", 0x200, ('unexpected EOF while parsing', ('dummy', 1, 6, 'if 1:\n')) ),
+             #("if 1:", 0x000, ('unexpected EOF while parsing', ('dummy', 1, 5, 'if 1:')) ),
+             ("if 1:\n", 0x000, ('unexpected EOF while parsing', ('dummy', 1, 6, 'if 1:\n')) ),
+             ("if 1:\n\n", 0x200, ('expected an indented block', ('dummy', 2, 1, '\n')) ),
+             ("if 1:\n\n", 0x000, ('expected an indented block', ('dummy', 2, 1, '\n')) ),
+             #("if 1:\n  if 1:", 0x200, ('expected an indented block', ('dummy', 2, 7, '  if 1:')) ),
+             ("if 1:\n  if 1:\n", 0x200, ('expected an indented block', ('dummy', 2, 8, '  if 1:\n')) ),
+             #("if 1:\n  if 1:", 0x000, ('expected an indented block', ('dummy', 2, 7, '  if 1:')) ),
+             ("if 1:\n  if 1:\n", 0x000, ('expected an indented block', ('dummy', 2, 8, '  if 1:\n')) ),
+             ("if 1:\n  if 1:\n\n", 0x200, ('expected an indented block', ('dummy', 3, 1, '\n')) ),
+             ("if 1:\n  if 1:\n\n", 0x000, ('expected an indented block', ('dummy', 3, 1, '\n')) ),
+             ("class MyClass(object):\n\tabc = 42\n\tdef __new__(cls):\n", 0x200, ('expected an indented block', ('dummy', 3, 19, '\tdef __new__(cls):\n')) ),
+             ("class MyClass(object):\n\tabc = 42\n\tdef __new__(cls):\n", 0x000, ('expected an indented block', ('dummy', 3, 19, '\tdef __new__(cls):\n')) ),
+             ("def  Foo():\n\n    # comment\n\n    Something = -1\n\n\n\n  ", 0x000, ('unindent does not match any outer indentation level', ('dummy', 9, 2, '  '))),
+             ("def  Foo():\n\n    # comment\n\n    Something = -1\n\n\n\n  ", 0x200, ('unindent does not match any outer indentation level', ('dummy', 9, 2, '  '))),
+             ("def  Foo():\n\n    # comment\n\n    Something = -1\n\n\n\n   ", 0x000, ('unindent does not match any outer indentation level', ('dummy', 9, 3, '   '))),
+             ("def  Foo():\n\n    # comment\n\n    Something = -1\n\n\n\n   ", 0x200, ('unindent does not match any outer indentation level', ('dummy', 9, 3, '   '))),
+             ]
+    
+    for input, flags, res in tests:
+        #print repr(input), flags
+        try:
+            code3 = compile(input, "dummy", "single", flags, 1)
+            AssertUnreachable()
+        except SyntaxError, err:
+            AreEqual(err.args, res)
+        
 
 try:
     exec("""
@@ -739,5 +767,6 @@ def x(self):
     
     def g(self): pass""", ["unexpected token 'def'"])
     
+    TestErrors("""f() += 1""", ["illegal expression for augmented assignment"])
 
 run_test(__name__)
