@@ -143,7 +143,7 @@ None = 3"""
     
 def test_warning():
     expected = [   
-        ("Variable a assigned before global declaration", "global a", -1, Warning),
+        ("name 'a' is assigned to before global declaration", "global a", -1, Warning),
     ]    
     code = """\
 def foo():

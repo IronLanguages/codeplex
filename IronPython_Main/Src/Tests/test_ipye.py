@@ -150,6 +150,22 @@ def test_engine_access_from_within():
     engine = pc.GetModuleState(clr.GetClrType(ScriptEngine))
     Assert(engine is not None)
 
+def test_symbolid_caseinsensitive():
+    import clr
+    clr.AddReference('Microsoft.Scripting')
+    from Microsoft.Scripting import SymbolTable, SymbolId
+    x = SymbolTable.StringToId('foo')
+    y = SymbolTable.StringToId('Foo')
+    z = SymbolTable.StringToId('FOO')
+    Assert(x != y)
+    Assert(y != z)
+    Assert(z != x)
+    for insen in (x, y, z):
+        for sens in (x.CaseInsensitiveIdentifier, y.CaseInsensitiveIdentifier, z.CaseInsensitiveIdentifier):
+            AreEqual(insen, sens)
+            AreEqual(insen.GetHashCode(), sens.GetHashCode())
+    
+    
 run_test(__name__)
 
 

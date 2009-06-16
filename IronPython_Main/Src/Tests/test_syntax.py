@@ -14,6 +14,7 @@
 #####################################################################################
 
 from iptest.assert_util import *
+from iptest.warning_util import warning_trapper
 import sys
 if not is_silverlight:
     from iptest.process_util import *
@@ -321,14 +322,6 @@ AssertError(NameError, eval, c)
 # global following definition test
 
 # affected by bug# 1145
-if is_cli:
-    AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n", "", "exec")
-    AssertError(SyntaxWarning, compile, "def f():\n    def a(): pass\n    global a\n", "", "exec")
-    AssertError(SyntaxWarning, compile, "def f():\n    for a in []: pass\n    global a\n", "", "exec")
-    AssertError(SyntaxWarning, compile, "def f():\n    global a\n    a = 1\n    global a\n", "", "exec")
-    AssertError(SyntaxWarning, compile, "def f():\n    print a\n    global a\n", "", "exec")
-    AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n    global a\n    a = 1", "", "exec")
-    AssertError(SyntaxWarning, compile, "x = 10\nglobal x\n", "", "exec")
 
 c = compile("def f():\n    global a\n    global a\n    a = 1\n", "", "exec")
 
@@ -768,5 +761,37 @@ def x(self):
     def g(self): pass""", ["unexpected token 'def'"])
     
     TestErrors("""f() += 1""", ["illegal expression for augmented assignment"])
+
+def test_syntax_warnings():
+    # syntax error warnings are outputted using warnings.showwarning.  our own warning trapper therefore
+    # doesn't see them.  So we trap stderr here instead.  We could use CPython's warning trapper if we
+    # checked for the presence of the stdlib.
+    with stderr_trapper() as trapper:
+        compile("def f():\n    a = 1\n    global a\n", "", "exec")
+        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+
+    with stderr_trapper() as trapper:
+        compile("def f():\n    def a(): pass\n    global a\n", "", "exec")
+        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+
+    with stderr_trapper() as trapper:   
+        compile("def f():\n    for a in []: pass\n    global a\n", "", "exec")
+        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+
+    with stderr_trapper() as trapper:   
+        compile("def f():\n    global a\n    a = 1\n    global a\n", "", "exec")
+        AreEqual(trapper.messages, [(":4: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+
+    with stderr_trapper() as trapper:   
+        compile("def f():\n    print a\n    global a\n", "", "exec")
+        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is used prior to global declaration\n",)])
+
+    with stderr_trapper() as trapper:   
+        compile("def f():\n    a = 1\n    global a\n    global a\n    a = 1", "", "exec")
+        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",), (":4: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+
+    with stderr_trapper() as trapper:   
+        compile("x = 10\nglobal x\n", "", "exec")
+        AreEqual(trapper.messages, [(":2: SyntaxWarning: name 'x' is assigned to before global declaration\n",)])
 
 run_test(__name__)
