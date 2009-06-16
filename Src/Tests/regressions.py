@@ -29,6 +29,7 @@ Work Item number.
 #--Imports
 from iptest.assert_util import *
 from iptest.process_util import launch
+import sys
 
 #------------------------------------------------------------------------------
 #--Globals
@@ -380,7 +381,23 @@ def test_xxsubtype_bench():
     import xxsubtype
     AreEqual(type(xxsubtype.bench(xxsubtype, "bench")),
              float)
-    
+
+def test_str_ljust_cp21483():
+    AreEqual('abc'.ljust(-2147483648), 'abc')
+
+
+@skip("win32")
+def test_help_dir_cp11833():
+    import System
+    Assert(dir(System).count('Action') == 1)
+    from cStringIO import StringIO
+    oldstdout, sys.stdout = sys.stdout, StringIO()
+    try:
+        help(System.Action)
+    finally:
+        sys.stdout = oldstdout
+    Assert(dir(System).count('Action') == 1)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

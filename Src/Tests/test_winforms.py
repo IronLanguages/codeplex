@@ -82,9 +82,9 @@ def test_databinding_auto():
         
         for i in xrange(len(SAMPLE_DATA)):
             row = form.grid.Rows[i]
-            AreEqual(row.Cells[0].FormattedValue, SAMPLE_DATA[i][0])
-            AreEqual(int(row.Cells[1].FormattedValue), SAMPLE_DATA[i][1])
-            AreEqual(row.Cells[2].FormattedValue, SAMPLE_DATA[i][2])
+            AreEqual(int(row.Cells[0].FormattedValue), SAMPLE_DATA[i][1])
+            AreEqual(row.Cells[1].FormattedValue, SAMPLE_DATA[i][0])
+            AreEqual(row.Cells[3].FormattedValue, SAMPLE_DATA[i][2])
 
         form.Close()
     th = System.Threading.Thread(System.Threading.ThreadStart(close_form))

@@ -1070,7 +1070,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 }
 
-                return _info.Action.FallbackSetMember(_target, value);
+                return _info.Action.FallbackSetMember(_target.Restrict(_target.GetLimitType()), value);
             }
 
         }
@@ -1460,7 +1460,7 @@ namespace IronPython.Runtime.Binding {
                 );
             }
 
-            return action.FallbackDeleteMember(this);
+            return action.FallbackDeleteMember(this.Restrict(this.GetLimitType()));
         }
 
         #endregion

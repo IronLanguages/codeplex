@@ -193,7 +193,7 @@ def test_t():
     
     TestCommandLine((tmpscript, ), "OK\n")
     msg = "inconsistent use of tabs and spaces in indentation"
-    TestCommandLine(("-t", tmpscript), ("lastline", "SyntaxWarning: %s (%s, line %d)"  % (msg, tmpscript, 3)), 1)
+    TestCommandLine(("-t", tmpscript), ("firstline", "%s:3: SyntaxWarning: %s\n"  % (tmpscript, msg, )), 0)
     TestCommandLine(("-tt", tmpscript), ("lastline", "TabError: " + msg + "\n"), 1)
 
     tmpscript = tmpdir + "\\funcdef.py"

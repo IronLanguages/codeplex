@@ -315,6 +315,36 @@ def test_dir():
         AreEqual(dir(*(), **{}), ['local_var'])
     f()
 
+    class A(object):
+        def __dir__(self):
+                return ['foo']
+        def __init__(self):
+                self.abc = 3
+    
+    AreEqual(dir(A()), ['foo'])
+
+    class C:
+        a = 1
+    
+    class D(object, C):
+        b = 2
+    
+    Assert('a' in dir(D()))
+    Assert('b' in dir(D()))
+    Assert('__hash__' in dir(D()))
+    
+    if is_cli:
+        import clr
+        if System.Environment.Version.Major >=4:
+            clr.AddReference("System.Core")
+        else:
+            clr.AddReference("Microsoft.Scripting.Core")
+        from Microsoft.Scripting import ExpandoObject
+        eo = ExpandoObject()
+        eo.bill = 5
+        Assert('bill' in dir(eo))
+
+    
 def test_ord():
     # ord of extensible string
     class foo(str): pass
