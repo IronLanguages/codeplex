@@ -21,13 +21,15 @@
 # * negative modes
 
 #HACK - see http://www.leeholmes.com/blog/WorkaroundTheOSHandlesPositionIsNotWhatFileStreamExpected.aspx
-$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetField" 
-$consoleHost = $host.GetType().GetField("externalHost", $bindingFlags).GetValue($host) 
-[void] $consoleHost.GetType().GetProperty("IsStandardOutputRedirected", $bindingFlags).GetValue($consoleHost, @()) 
-$field = $consoleHost.GetType().GetField("standardOutputWriter", $bindingFlags) 
-$field.SetValue($consoleHost, [Console]::Out)
-$field2 = $consoleHost.GetType().GetField("standardErrorWriter", $bindingFlags)
-$field2.SetValue($consoleHost, [Console]::Out)
+if ($Host.Version.Major -eq 1) {
+	$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetField" 
+	$consoleHost = $host.GetType().GetField("externalHost", $bindingFlags).GetValue($host) 
+	[void] $consoleHost.GetType().GetProperty("IsStandardOutputRedirected", $bindingFlags).GetValue($consoleHost, @()) 
+	$field = $consoleHost.GetType().GetField("standardOutputWriter", $bindingFlags) 
+	$field.SetValue($consoleHost, [Console]::Out)
+	$field2 = $consoleHost.GetType().GetField("standardErrorWriter", $bindingFlags)
+	$field2.SetValue($consoleHost, [Console]::Out)
+}
 #ENDHACK
 
 $old_ErrorActionPreference = $ErrorActionPreference
