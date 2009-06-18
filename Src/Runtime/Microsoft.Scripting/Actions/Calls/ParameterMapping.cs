@@ -14,16 +14,15 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using Microsoft.Scripting.Generation;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using System.Collections;
 
 namespace Microsoft.Scripting.Actions.Calls {
     public sealed class ParameterMapping {
@@ -214,7 +213,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         internal MethodCandidate CreateCandidate() {
-            return new MethodCandidate(_resolver, _method, _parameters, _paramsDict, _returnBuilder, _instanceBuilder, _arguments);
+            return new MethodCandidate(_resolver, _method, _parameters, _paramsDict, _returnBuilder, _instanceBuilder, _arguments, null);
         }
 
         internal MethodCandidate CreateByRefReducedCandidate() {
@@ -270,7 +269,7 @@ namespace Microsoft.Scripting.Actions.Calls {
                 }
             }
 
-            return new MethodCandidate(_resolver, _method, necessaryParams, _paramsDict, _returnBuilder, _instanceBuilder, defaultArgBuilders);
+            return new MethodCandidate(_resolver, _method, necessaryParams, _paramsDict, _returnBuilder, _instanceBuilder, defaultArgBuilders, null);
         }
 
         #endregion

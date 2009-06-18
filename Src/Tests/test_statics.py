@@ -297,7 +297,7 @@ def test_extra_generics():
     #AreEqual(GD.M2('s'), 'GB.M2')
     AreEqual(GD.M2[str]('s'), 'GD.M2')
     AreEqual(GD.M2[int](2), 'GD.M2')
-    AssertError(TypeError, GD.M2, 1)
+    AreEqual(GD.M2(1), 'GD.M2')
     
     AreEqual(GD.M3('s'), 'GD.M3')
     AssertError(TypeError, GD.M3, 1)
