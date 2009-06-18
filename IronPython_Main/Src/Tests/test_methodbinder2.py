@@ -162,11 +162,14 @@ def test_other_concerns():
     AreEqual(Flag.Value, 220); Flag.Value = 99
     
     # generic
-    for x in [100, 100.1234]:
-        target.M130(x)
-        AreEqual(Flag.Value, 130); Flag.Value = 99
+    target.M130(100)
+    AreEqual(Flag.Value, 130); Flag.Value = 99
 
-    AssertError(TypeError, target.M130, C1())
+    target.M130(100.1234)
+    AreEqual(Flag.Value, 230); Flag.Value = 99
+
+    target.M130(C1())
+    AreEqual(Flag.Value, 230); Flag.Value = 99
 
     for x in [100, 100.1234]:
         target.M130[int](x)

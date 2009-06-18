@@ -301,7 +301,7 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         private static bool IsUnsupported(MethodBase method) {
-            return (method.CallingConvention & CallingConventions.VarArgs) != 0 || method.ContainsGenericParameters;
+            return (method.CallingConvention & CallingConventions.VarArgs) != 0;
         }
 
         #endregion
@@ -405,6 +405,10 @@ namespace Microsoft.Scripting.Actions.Calls {
 
             var result = new List<ApplicableCandidate>();
             foreach (ApplicableCandidate candidate in candidates) {
+                if (candidate.Method.Method.ContainsGenericParameters) {
+                    continue;
+                }
+
                 CallFailure callFailure;
                 if (TryConvertArguments(candidate.Method, candidate.ArgumentBinding, level, out callFailure)) {
                     result.Add(candidate);
@@ -412,6 +416,28 @@ namespace Microsoft.Scripting.Actions.Calls {
                     AddFailure(ref failures, callFailure);
                 }
             }
+
+            if (result.Count == 0) {
+                // attempt generic method type inference
+                foreach (ApplicableCandidate candidate in candidates) {
+                    if (!candidate.Method.Method.ContainsGenericParameters) {
+                        continue;
+                    }
+
+                    MethodCandidate newCandidate = TypeInferer.InferGenericMethod(candidate, _actualArguments);
+                    if (newCandidate != null) {
+                        CallFailure callFailure;
+                        if (TryConvertArguments(newCandidate, candidate.ArgumentBinding, level, out callFailure)) {
+                            result.Add(new ApplicableCandidate(newCandidate, candidate.ArgumentBinding));
+                        } else {
+                            AddFailure(ref failures, callFailure);
+                        }
+                    } else {
+                        AddFailure(ref failures, new CallFailure(candidate.Method, CallFailureReason.TypeInference));
+                    }
+                }
+            }
+
             return result;
         }
 
@@ -491,7 +517,7 @@ namespace Microsoft.Scripting.Actions.Calls {
             int argCount = _actualArguments.Count;
             var restrictedArgs = new DynamicMetaObject[argCount];
             var types = new Type[argCount];
-
+            bool hasAdditionalRestrictions = false;
             for (int i = 0; i < argCount; i++) {
                 var arg = _actualArguments[i];
 
@@ -503,9 +529,15 @@ namespace Microsoft.Scripting.Actions.Calls {
                 } else {
                     restrictedArgs[i] = arg;
                 }
+
+                BindingRestrictions additionalRestrictions;
+                if (selectedCandidate.Method.Restrictions != null && selectedCandidate.Method.Restrictions.TryGetValue(arg, out additionalRestrictions)) {
+                    hasAdditionalRestrictions = true;
+                    restrictedArgs[i] = new DynamicMetaObject(restrictedArgs[i].Expression, restrictedArgs[i].Restrictions.Merge(additionalRestrictions));
+                }
             }
 
-            return new RestrictedArguments(restrictedArgs, types);
+            return new RestrictedArguments(restrictedArgs, types, hasAdditionalRestrictions);
         }
 
         private DynamicMetaObject RestrictArgument(DynamicMetaObject arg, ParameterWrapper parameter) {
@@ -548,6 +580,8 @@ namespace Microsoft.Scripting.Actions.Calls {
                             return true;
                         }
                         parameterType = lastParameter.Type.GetElementType();
+                    } else if (parameter.Type.ContainsGenericParameters) {
+                        return true;
                     } else {
                         parameterType = parameter.Type;
                     }
@@ -980,6 +1014,13 @@ namespace Microsoft.Scripting.Actions.Calls {
                                     AstUtils.Constant(cf.KeywordArguments[0], typeof(string))    // TODO: Report all bad arguments?
                             )
                         );
+                    case CallFailureReason.TypeInference:
+                        return ErrorInfo.FromException(
+                                Ast.Call(
+                                    typeof(BinderOps).GetMethod("TypeErrorForNonInferrableMethod"),
+                                    AstUtils.Constant(target.Name, typeof(string))
+                            )
+                        );
                     default: throw new InvalidOperationException();
                 }
             }
@@ -1071,6 +1112,10 @@ namespace Microsoft.Scripting.Actions.Calls {
         }
 
         #endregion
+
+        public virtual Type GetGenericInferenceType(DynamicMetaObject dynamicObject) {
+            return dynamicObject.LimitType;
+        }
 
         [Confined]
         public override string ToString() {

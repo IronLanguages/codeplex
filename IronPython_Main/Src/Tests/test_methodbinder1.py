@@ -869,6 +869,264 @@ def test_struct_prop_assign():
     a.P100 = 42
     AreEqual(a.P100, 42)
     
+def test_generic_type_inference():
+    from IronPythonTest import GenericTypeInference, GenericTypeInferenceInstance, SelfEnumerable    
+    from System import Array, Exception, ArgumentException
+    from System.Collections.Generic import IEnumerable, List
+    from System.Collections.Generic import Dictionary as Dict
+
+    class UserGenericType(GenericTypeInferenceInstance): pass
+
+    # public PythonType MInst<T>(T x) -> pytype(T)
+    AreEqual(UserGenericType().MInst(42), int)
+
+    class UserObject(object): pass
+        
+    userInst = UserObject()
+    userInt, userLong, userFloat, userComplex, userStr = myint(), mylong(), myfloat(), mycomplex(), mystr()
+    userTuple, userList, userDict = mytuple(), mylist(), mydict()
+    objArray = System.Array[object]( (1,2,3) )
+    doubleArray = System.Array[float]( (1.0,2.0,3.0) )
+    
+
+    for target in [GenericTypeInference, GenericTypeInferenceInstance(), UserGenericType()]:    
+        tests = [     
+         # simple single type tests, no constraints
+         # public static PythonType M0<T>(T x) -> pytypeof(T)
+         # target method,   args,                            Result,     KeywordCall,      Exception
+         (target.M0,        (1, ),                          int,        True,             None),
+         (target.M0,        (userInst, ),                   object,     True,             None),
+         (target.M0,        (userInt, ),                    object,     True,             None),
+         (target.M0,        (userStr, ),                    object,     True,             None),
+         (target.M0,        (userLong, ),                   object,     True,             None),
+         (target.M0,        (userFloat, ),                  object,     True,             None),
+         (target.M0,        (userComplex, ),                object,     True,             None),
+         (target.M0,        (userTuple, ),                  tuple,      True,             None),
+         (target.M0,        (userList, ),                   list,       True,             None),
+         (target.M0,        (userDict, ),                   dict,       True,             None),
+         (target.M0,        ((), ),                         tuple,      True,             None),
+         (target.M0,        ([], ),                         list,       True,             None),
+         (target.M0,        ({}, ),                         dict,       True,             None),
+         
+         # multiple arguments
+         # public static PythonType M1<T>(T x, T y) -> pytypeof(T)
+         # public static PythonType M2<T>(T x, T y, T z) -> pytypeof(T)
+         (target.M1,        (1, 2),                         int,        True,             None),
+         (target.M2,        (1, 2, 3),                      int,        True,             None),
+         (target.M1,        (userInst, userInst),           object,     True,             None),
+         (target.M2,        (userInst, userInst, userInst), object,     True,             None),
+         (target.M1,        (1, 2.0),                       None,       True,             TypeError),
+         (target.M1,        (1, 'abc'),                     None,       True,             TypeError),
+         (target.M1,        (object(), userInst),           object,     True,             None),
+         (target.M1,        ([], userList),                 list,       True,             None),
+    
+         # params arguments
+         # public static PythonType M3<T>(params T[] args) -> pytypeof(T)
+         (target.M3,        (),                             None,       False,           TypeError),
+         (target.M3,        (1, ),                          int,        False,            None),
+         (target.M3,        (1, 2),                         int,        False,            None),
+         (target.M3,        (1, 2, 3),                      int,        False,            None),
+         (target.M3,        (1, 2.0),                       object,     False,            TypeError),
+         (target.M3,        (1, 'abc'),                     object,     False,            TypeError),
+         (target.M3,        (object(), userInst),           object,     False,            None),
+         (target.M3,        ([], userList),                 list,       False,            None),
+         
+         # public static PythonType M4<T>(T x, params T[] args) -> pytypeof(T)
+         (target.M4,        (1, 2),                         int,        False,            None),
+         (target.M4,        (1, 2.0),                       object,     False,            TypeError),
+         (target.M4,        (1, 'abc'),                     object,     False,            TypeError),
+         (target.M4,        (object(), userInst),           object,     False,            None),
+         (target.M4,        ([], userList),                 list,       False,            None),
+         
+         # simple constraints
+         # public static PythonType M5<T>(T x) where T : class -> pytype(T)
+         # public static PythonType M6<T>(T x) where T : struct -> pytype(T)
+         # public static PythonType M7<T>(T x) where T : IList -> pytype(T)
+         (target.M5,        (1, ),                           None,      False,           TypeError),
+         (target.M6,        ('abc', ),                       None,      False,           TypeError),
+         (target.M7,        (object(), ),                    None,      False,           TypeError),
+         (target.M7,        (2, ),                           None,      False,           TypeError),
+         (target.M5,        ('abc', ),                       str,        False,           None),
+         (target.M5,        (object(), ),                    object,     False,           None),
+         (target.M6,        (1, ),                           int,        False,           None),
+         (target.M7,        ([], ),                          list,       False,           None),
+         (target.M7,        (objArray, ),                    type(objArray),False,        None),
+    
+         # simple dependent constraints
+         # public static PythonTuple M8<T0, T1>(T0 x, T1 y) where T0 : T1 -> (pytype(T0), pytype(T1))     
+         (target.M8,        (1, 2),                         (int, int),   False,           None),
+         (target.M8,        ('abc', object()),              (str, object),False,           None),
+         (target.M8,        (object(), 'abc'),              None,         False,           TypeError),
+         (target.M8,        (1, object()),                  (int, object),False,           None),
+         (target.M8,        (object(), 1),                  None,         False,           TypeError),
+    
+         # no types can be inferred, error
+         # public static PythonTuple M9<T0, T1>(object x, T1 y) where T0 : T1
+         # public static PythonTuple M9b<T0, T1>(T0 x, object y) where T0 : T1
+         # public static PythonType M11<T>(object x)
+         # public static PythonType M12<T0, T1>(T0 x, object y)     
+         (target.M9,        (1, 2),                         None,         False,           TypeError),
+         (target.M9b,       (1, 2),                         None,         False,           TypeError),
+         (target.M9,        (object(), object()),           None,        True,             TypeError),
+         (target.M9b,       (object(), object()),           None,        True,             TypeError),
+         (target.M11,       (1, ),                          None,         False,           TypeError),
+         (target.M12,       (1, 2),                         None,         False,           TypeError),
+         
+         # multiple dependent constraints
+         # public static PythonTuple M10<T0, T1, T2>(T0 x, T1 y, T2 z) where T0 : T1 where T1 : T2 -> (pytype(T0), pytype(T1), pytype(T2))
+         (target.M10,        (ArgumentException(), Exception(), object()), (ArgumentException, Exception, object),False,           None),
+         (target.M10,        (Exception(), ArgumentException(), object()), None,False,           TypeError),
+         (target.M10,        (ArgumentException(), object(), Exception()), None,False,           TypeError),
+         (target.M10,        (object(), ArgumentException(), Exception()), None,False,           TypeError),
+         (target.M10,        (object(), Exception(), ArgumentException()), None,False,           TypeError),     
+         
+         # public static PythonType M11<T>(object x) -> pytypeof(T)
+         # public static PythonType M12<T0, T1>(T0 x, object y) -> pytypeof(T0)
+         (target.M11,       (object(), ),                   None,       True,             TypeError),
+         (target.M12,       (3, object()),                  None,       True,             TypeError),     
+         
+         # public static PythonType M13<T>(T x, Func<T> y) -> pytype(T), func()
+         # public static PythonType M14<T>(T x, Action<T> y) -> pytype(T)
+         # public static PythonTuple M15<T>(T x, IList<T> y) -> pytype, list...
+         # public static PythonType M16<T>(T x, Dictionary<T, IList<T>> list) -> pytype, listKeys...
+         (target.M13,       (1, lambda: 42),               (object, 42),    False,           None),
+         (target.M14,       (1, lambda x: None),           object,          False,           None),
+         (target.M15,       (1, [2, ]),                     (object, 2),     True,           None),
+         (target.M15,       (1, (2, )),                     (object, 2),     True,           None),
+         (target.M15,       (1, objArray),                  (object, 1,2,3), True,           None),
+         (target.M15,       (1, doubleArray),               None,            True,           TypeError),
+         (target.M16,       (1, {1: [1,2]}),               None,             False,         TypeError),
+    
+         # public static PythonType M17<T>(T x, IEnumerable<T> y) -> pytype(T)
+         (target.M17,       (SelfEnumerable(), SelfEnumerable()), SelfEnumerable,    True,  None),
+         (target.M17,       (1, [1,2,3]),                  object,           True,         None),
+         (target.M17,       (1.0, [1,2,3]),                object,           True,         None),
+         (target.M17,       (object(), [1,2,3]),           object,           True,         None),
+         
+         # public static PythonType M18<T>(T x) where T : IEnumerable<T> -> pytype(T)
+         (target.M18,       (SelfEnumerable(), ),          SelfEnumerable,    True,         None),
+         
+         # public static PythonType M19<T0, T1>(T0 x, T1 y) where T0 : IList<T1> -> pytype(T0), pytype(T1)
+         (target.M19,       ([], 1),                       None,             True,         TypeError),
+         (target.M19,       (List[int](), 1),              (List[int], int), True,         None),
+         
+         # public static PythonType M20<T0, T1>(T0 x, T1 y) -> pytype(T0), pytype(T1)
+         (target.M20,       ([], 1),                       (list, int),      True,         None),
+         (target.M20,       (List[int](), 1),              (List[int], int), True,         None),
+         
+         # constructed types
+         # public static PythonType M21<T>(IEnumerable<T> enumerable)
+         (target.M21,       ([1,2,3], ),                   object,   False,         None),
+         
+         # overloaded by function
+         # public static PythonTuple M22<T>(IEnumerable<T> enumerable, Func<T, bool> predicate) -> pytype(T), True
+         # public static PythonTuple M22<T>(IEnumerable<T> enumerable, Func<T, int, bool> predicate) -> pytype(T), False
+         (target.M22,       ([1,2,3], lambda x:True),     (object, True),   True,         None),
+         (target.M22,       ([1,2,3], lambda x,y:True),   (object, False),  True,         None),
+         
+         # public static PythonType M23<T>(List<T> x) -> pytype(T)
+         # public static PythonType M24<T>(List<List<T>> x) -> pytype(T)
+         # public static PythonType M25<T>(Dictionary<T, T> x) -> pytype(T)
+         (target.M23,       (List[int](), ),               int,              True,         None),
+         (target.M24,       (List[List[int]](), ),         int,              True,         None),     
+         (target.M25,       (Dict[int, int](), ),          int,              True,         None),
+         (target.M25,       (Dict[int, str](), ),          None,              True,         TypeError),
+         
+         # constructed types and constraints
+         # public static PythonType M26<T>(List<T> x) where T : class -> pytype(T)
+         # public static PythonType M27<T>(List<T> x) where T : struct -> pytype(T)
+         # public static PythonType M28<T>(List<T> x) where T : new() -> pytype(T)
+         (target.M26,       (List[int](), ),                None,      False,           TypeError),
+         (target.M27,       (List[str](), ),                None,      False,           TypeError),
+         (target.M28,       (List[str](), ),                None,      False,           TypeError),
+         (target.M26,       (List[str](), ),                str,       False,           None),
+         (target.M27,       (List[int](), ),                int,       False,           None),
+         (target.M28,       (List[List[str]](), ),          List[str], False,           None),
+         
+         # public static PythonType M29<T>(Dictionary<Dictionary<T, T>, Dictionary<T, T>> x)
+         (target.M29,       (Dict[Dict[int, int], Dict[int, int]](), ),          int,              True,         None),
+         
+         # constraints and constructed types
+         # public static PythonType M30<T>(Func<T, bool> y) where T : struct -> pytype(T)
+         # public static PythonType M31<T>(Func<T, bool> y) where T : IList -> pytype(T)
+         # public static PythonType M32<T>(List<T> y) where T : new() -> pytype(T)
+         # public static PythonType M33<T>(List<T> y) where T : class -> pytype(T)
+         (target.M30,       (lambda x: False, ),            int,              True,         TypeError),
+         (target.M31,       (lambda x: False, ),            int,              True,         TypeError),
+         (target.M32,       (List[str](), ),                 int,              True,         TypeError),
+         (target.M33,       (List[int](), ),                 int,              True,         TypeError),
+         
+         # public static PythonType M34<T>(IList<T> x, IList<T> y) -> pytype(T)
+         (target.M34,       ((), [], ),                     object,            True,         None),
+        ]
+    
+        
+        for method, args, res, kwArgs, excep in tests:
+            generic_method_tester(method, args, res, kwArgs, excep)
+
+def generic_method_tester(method, args, res, kwArgs, excep):
+    #print method, args, res, excep
+    if excep is None:
+        # test method w/ multiple calling conventions
+        if len(args) == 1:
+            AreEqual(method(args[0]), res)
+            if kwArgs:
+                AreEqual(method(x = args[0]), res)
+                AreEqual(method(**{'x' : args[0]}), res)
+        elif len(args) == 2:
+            AreEqual(method(args[0], args[1]), res)
+            if kwArgs:
+                AreEqual(method(x = args[0], y = args[1]), res)
+                AreEqual(method(args[0], y = args[1]), res)
+                AreEqual(method(y = args[1], x = args[0]), res)
+                AreEqual(method(*(args[0], ), **{'y' : args[1]}), res)
+                AreEqual(method(**{'x' : args[0], 'y' : args[1]}), res)
+        elif len(args) == 3:
+            AreEqual(method(args[0], args[1], args[2]), res)
+            if kwArgs:
+                AreEqual(method(x = args[0], y = args[1], z = args[2]), res)
+                AreEqual(method(args[0], y = args[1], z = args[2]), res)
+                AreEqual(method(args[0], args[1], z = args[2]), res)
+                AreEqual(method(z = args[2], y = args[1], x = args[0]), res)
+                AreEqual(method(*(args[0], args[1]), **{'z' : args[2]}), res)
+                AreEqual(method(*(args[0], ), **{'y': args[1], 'z' : args[2]}), res)
+                AreEqual(method(**{'x' : args[0], 'y' : args[1], 'z' : args[2]}), res)
+        else:
+            raise Exception, "need to add new case for len %d " % len(args)
+            
+        AreEqual(method(*args), res)
+        AreEqual(method(args[0], *args[1:]), res)
+    else:            
+        # test error method w/ multiple calling conventions
+        if len(args) == 0:
+            f = lambda : method()
+            fkw, fkw2 = None, None
+        elif len(args) == 1:
+            f = lambda : method(args[0])
+            fkw = lambda : method(x = args[0])
+            fkw2 = lambda : method(**{'x' : args[0]})
+        elif len(args) == 2:
+            f = lambda : method(args[0], args[1])
+            fkw = lambda : method(x = args[0], y = args[1])
+            fkw2 = lambda : method(**{'x' : args[0], 'y' : args[1]})
+        elif len(args) == 3:
+            f = lambda : method(args[0], args[1], args[2])
+            fkw = lambda : method(x = args[0], y = args[1], z = args[2])
+            fkw2 = lambda : method(**{'x' : args[0], 'y' : args[1], 'z' : args[2]})
+        else:
+            raise Exception, "need to add new case for len %d " % len(args)
+    
+        if not kwArgs:
+            fkw = None
+            fkw2 = None
+        
+        # test w/o splatting
+        AssertError(excep, f)    
+        if fkw: AssertError(excep, fkw)
+        if fkw2: AssertError(excep, fkw2)
+        # test with splatting
+        AssertError(excep, method, *args)    
+    
 print '>>>> methods in reference type'
 target = CNoOverloads()
 run_test(__name__)
