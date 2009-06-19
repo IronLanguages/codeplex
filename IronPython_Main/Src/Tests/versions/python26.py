@@ -725,4 +725,363 @@ def test_struct_bool():
         AreEqual(len(unpacked), 1)
         AssertFalse(unpacked[0])
 
+
+###############################################################################
+##PEP 3110
+orig_ValueError = ValueError
+
+#--Make sure the undesired CPython 2.6 behavior still works
+try:
+    raise TypeError("abc")
+except TypeError, ValueError:
+    AreEqual(ValueError.message, "abc")
+    Assert(isinstance(ValueError, TypeError))
+ValueError = orig_ValueError
+    
+try:
+    raise TypeError("abc")
+except TypeError, ValueError:
+    AreEqual(ValueError.message, "abc")
+finally:
+    ValueError = orig_ValueError
+AreEqual(ValueError, orig_ValueError)
+
+#negative
+try:
+    try:
+        raise IOError("abc")
+    except TypeError, ValueError:
+        Fail("IOError is not the same as TypeError")
+except IOError:
+    pass
+AreEqual(ValueError, orig_ValueError)
+
+try:
+    try:
+        raise IOError("abc")
+    except TypeError, ValueError:
+        Fail("IOError is not the same as TypeError")
+    finally:
+        pass
+except IOError:
+    pass
+AreEqual(ValueError, orig_ValueError)
+
+#--Make sure the desired CPython 2.5 behavior still works
+try:
+    raise TypeError("xyz")
+except (TypeError, ValueError), e:
+    AreEqual(e.message, "xyz")
+e = None
+
+try:
+    raise TypeError("xyz")
+except (TypeError, ValueError), e:
+    AreEqual(e.message, "xyz")
+finally:
+    pass
+e = None
+
+try:
+    raise TypeError("xyz")
+except (TypeError, ValueError):
+    pass
+
+try:
+    raise TypeError("xyz")
+except (TypeError, ValueError):
+    pass
+finally:
+    pass
+
+#negative
+try:
+    try:
+        raise IOError("xyz")
+    except (TypeError, ValueError), e:
+        Fail("IOError is not the same as TypeError or ValueError")
+except IOError:
+    pass
+AreEqual(e, None)
+
+try:
+    try:
+        raise IOError("xyz")
+    except (TypeError, ValueError), e:
+        Fail("IOError is not the same as TypeError or ValueError")
+    finally:
+        pass
+except IOError:
+    pass
+AreEqual(e, None)
+
+#--Now test 'except ... as ...:'
+try:
+    raise TypeError("abc")
+except TypeError as ValueError:
+    AreEqual(ValueError.message, "abc")
+    Assert(isinstance(ValueError, TypeError))
+ValueError = orig_ValueError
+
+try:
+    raise TypeError("abc")
+except TypeError as e:
+    AreEqual(e.message, "abc")
+    Assert(isinstance(e, TypeError))
+e = None
+
+try:
+    raise TypeError("abc")
+except TypeError as ValueError:
+    AreEqual(ValueError.message, "abc")
+    Assert(isinstance(ValueError, TypeError))
+finally:
+    ValueError = orig_ValueError
+AreEqual(ValueError, orig_ValueError)
+
+try:
+    raise TypeError("abc")
+except TypeError as e:
+    AreEqual(e.message, "abc")
+    Assert(isinstance(e, TypeError))
+finally:
+    e = None
+AreEqual(e, None)
+
+try:
+    raise IOError("abc")
+except TypeError, e:
+    Fail("IOError is not the same as TypeError")
+except TypeError as e:
+    Fail("IOError is not the same as TypeError")
+except IOError, e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    raise IOError("abc")
+except TypeError, e:
+    Fail("IOError is not the same as TypeError")
+except TypeError as e:
+    Fail("IOError is not the same as TypeError")
+except IOError as e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    raise IOError("abc")
+except TypeError, e:
+    Fail("IOError is not the same as TypeError")
+except TypeError as e:
+    Fail("IOError is not the same as TypeError")
+except Exception as e:
+    AreEqual(e.message, "abc")
+e = None
+    
+try:
+    raise IOError("abc")
+except TypeError, e:
+    Fail("IOError is not the same as TypeError")
+except TypeError as e:
+    Fail("IOError is not the same as TypeError")
+except:
+    pass
+
+#neg    
+try:
+    try:
+        raise IOError("abc")
+    except TypeError, e:
+        Fail("IOError is not the same as TypeError")
+    except TypeError as e:
+        Fail("IOError is not the same as TypeError")
+except IOError as e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    try:
+        raise IOError("abc")
+    except TypeError as ValueError:
+        Fail("IOError is not the same as TypeError")
+except IOError, e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    try:
+        raise IOError("abc")
+    except TypeError as e:
+        Fail("IOError is not the same as TypeError")
+except IOError as e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    try:
+        raise IOError("abc")
+    except TypeError as ValueError:
+        Fail("IOError is not the same as TypeError")
+    finally:
+        pass
+except Exception, e:
+    AreEqual(e.message, "abc")
+e = None
+
+try:
+    try:
+        raise IOError("abc")
+    except TypeError as e:
+        Fail("IOError is not the same as TypeError")
+    finally:
+        pass
+except IOError:
+    pass
+
+##PEP 3112#####################################################################
+def test_pep3112():
+    AreEqual(len("abc"), 3)
+    
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=19521
+    if is_cpython:
+        AreEqual(len("\u751f"), 1)
+    else:
+        AreEqual(len("\u751f"), 6)
+
+##PEP##########################################################################
+def test_pep19546():
+    '''
+    Just a small sanity test.  CPython's test_int.py covers this PEP quite 
+    well.
+    '''
+    #Octal
+    AreEqual(0O21, 17)
+    AreEqual(021, 0o21)
+    AreEqual(0O21, 0o21)
+    AreEqual(0o0, 0)
+    AreEqual(-0o1, -1)
+    AreEqual(0o17777777776, 2147483646)
+    AreEqual(0o17777777777, 2147483647)
+    AreEqual(0o20000000000, 2147483648)
+    AreEqual(-0o17777777777, -2147483647)
+    AreEqual(-0o20000000000, -2147483648)
+    AreEqual(-0o20000000001, -2147483649)
+    
+    #Binary
+    AreEqual(0B11, 3)
+    AreEqual(0B11, 0b11)
+    AreEqual(0b0, 0)
+    AreEqual(-0b1, -1)
+    AreEqual(0b1111111111111111111111111111110, 2147483646)
+    AreEqual(0b1111111111111111111111111111111, 2147483647)
+    AreEqual(0b10000000000000000000000000000000, 2147483648)
+    AreEqual(-0b1111111111111111111111111111111, -2147483647)
+    AreEqual(-0b10000000000000000000000000000000, -2147483648)
+    AreEqual(-0b10000000000000000000000000000001, -2147483649)
+    
+    #bin and future_builtins.oct
+    from future_builtins import oct as fb_oct
+    test_cases = [  (0B11, "0b11", "0o3"),
+                    (2147483648, "0b10000000000000000000000000000000", "0o20000000000"),
+                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
+                    #(-2147483649L, "-0b10000000000000000000000000000001", "-0o20000000001"),
+                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
+                    #(-0b10000000000000000000000000000000, "-0b10000000000000000000000000000000", "-0o20000000000"),
+                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
+                    #(-0o17777777777, "-0b1111111111111111111111111111111", "-0o17777777777"),
+                    (0o17777777777, "0b1111111111111111111111111111111", "0o17777777777"),
+                    ]
+    for val, bin_exp, oct_exp in test_cases:
+        AreEqual(bin(val), bin_exp)
+        AreEqual(fb_oct(val), oct_exp)
+        
+@skip("win32")
+def test_pep3141():
+    '''
+    This is already well covered by CPython's test_abstract_numbers.py. Just 
+    check a few .NET interop cases as well to see what happens.
+    '''
+    import System
+    from numbers import Complex, Real, Rational, Integral, Number
+    
+    #--Complex
+    for x in [
+                System.Double(9), System.Int32(4), System.Boolean(1), 
+                ]:
+        Assert(isinstance(x, Complex))
+    
+    for x in [
+                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23147
+                System.Char.MaxValue, 
+                System.Single(8), System.Decimal(10),
+                System.SByte(0), System.Byte(1),
+                System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
+                ]:
+        Assert(not isinstance(x, Complex), x)
+        
+    #--Real
+    for x in [
+                System.Double(9), System.Int32(4), System.Boolean(1), 
+                ]:
+        Assert(isinstance(x, Real))
+    
+    for x in [
+                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23147
+                System.Char.MaxValue, 
+                System.Single(8), System.Decimal(10),
+                System.SByte(0), System.Byte(1),
+                System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
+                ]:
+        Assert(not isinstance(x, Real))
+    
+    
+    #--Rational
+    for x in [
+                System.Int32(4), System.Boolean(1), 
+                ]:
+        Assert(isinstance(x, Rational))
+    
+    for x in [
+                System.Double(9), 
+                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23147
+                System.Char.MaxValue, 
+                System.Single(8), System.Decimal(10),
+                System.SByte(0), System.Byte(1),
+                System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
+                ]:
+        Assert(not isinstance(x, Rational))
+    
+    #--Integral
+    for x in [
+                System.Int32(4), System.Boolean(1), 
+                ]:
+        Assert(isinstance(x, Integral))
+    
+    for x in [
+                System.Double(9), 
+                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23147
+                System.Char.MaxValue, 
+                System.Single(8), System.Decimal(10),
+                System.SByte(0), System.Byte(1),
+                System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
+                ]:
+        Assert(not isinstance(x, Integral))
+
+    #--Number
+    for x in [ 
+                System.Double(9), System.Int32(4), System.Boolean(1), 
+                ]:
+        Assert(isinstance(x, Number))
+    
+    for x in [  
+                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23147
+                System.Char.MaxValue, 
+                System.Single(8), System.Decimal(10),
+                System.SByte(0), System.Byte(1),
+                System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
+                ]:
+        Assert(not isinstance(x, Number))
+    
+        
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

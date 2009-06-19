@@ -16,7 +16,7 @@
 
 from iptest.assert_util import *
 skiptest("silverlight")
-skiptest("stdlib") #Too slow
+skiptest("win32")
 from iptest.console_util import IronPythonInstance
 
 remove_ironpython_dlls(testpath.public_testdir)
@@ -35,9 +35,10 @@ def test_strings():
     
     # String exception
     response = ipi.ExecuteLine("raise 'foo'", True)
-    Assert(response.find("Traceback (most recent call last):") > -1)
-    Assert(response.find("foo") > -1)
-    
+    AreEqual(response.replace("\r\r\n", "\n").replace("\r", ""), 
+            """Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: exceptions must be classes or instances, not str""")
     
     # Multi-line string literal
     ipi.ExecutePartialLine("\"\"\"Hello")
@@ -216,9 +217,10 @@ def test_try_except():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
     AreEqual(ipi.Start(), True)
     ipi.ExecutePartialLine("try:")
-    ipi.ExecutePartialLine("    raise 'foo'")
-    ipi.ExecutePartialLine("except 'foo':")
-    ipi.ExecutePartialLine("    print 'okay'")
+    ipi.ExecutePartialLine("    raise Exception('foo')")
+    ipi.ExecutePartialLine("except Exception, e:")
+    ipi.ExecutePartialLine("    if e.message=='foo':")
+    ipi.ExecutePartialLine("        print 'okay'")
     response = ipi.ExecuteLine("")
     Assert(response.find('okay') > -1)
     ipi.End()
@@ -721,7 +723,6 @@ def test_future_division():
 def test_future_with():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
     AreEqual(ipi.Start(), True)
-    ipi.ExecuteLine("from __future__ import with_statement")
     ipi.ExecutePartialLine("class K(object):")
     ipi.ExecutePartialLine("    def __enter__(self): return 3.14")
     ipi.ExecutePartialLine("    def __exit__(self, type, value, tb): return False")

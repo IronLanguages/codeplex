@@ -15,9 +15,6 @@
 
 # Test that sys.exc_info() is properly set.
 
-# includes tests for with statement.
-from __future__ import with_statement
-
 from iptest.assert_util import *
 
 
