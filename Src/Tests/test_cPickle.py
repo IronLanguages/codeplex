@@ -17,7 +17,6 @@
 # test cPickle low-level bytecode output
 #
 
-from __future__ import with_statement
 from iptest.assert_util import *
 
 from cStringIO import StringIO

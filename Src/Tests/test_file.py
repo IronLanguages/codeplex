@@ -13,8 +13,6 @@
 #
 #####################################################################################
 
-from __future__ import with_statement
-
 from iptest.assert_util import *
 skiptest("silverlight")
 import sys

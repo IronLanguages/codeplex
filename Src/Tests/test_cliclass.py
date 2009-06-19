@@ -14,8 +14,6 @@
 #####################################################################################
 
 """Test cases for class-related features specific to CLI"""
-from __future__ import with_statement
-
 # this needs to run before we add ref to Microsoft.Scripting where we'll get the
 # non-generic version of Action[T].  Therefore it also can't run in test_interpret_sanity.
 import sys

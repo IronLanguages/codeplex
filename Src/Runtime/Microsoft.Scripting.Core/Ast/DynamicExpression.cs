@@ -20,6 +20,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions.Compiler;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
@@ -563,13 +564,13 @@ namespace Microsoft.Linq.Expressions {
             ValidateOneArgument(method, ExpressionType.Dynamic, arg1, parameters[2]);
             ValidateDynamicArgument(arg2);
             ValidateOneArgument(method, ExpressionType.Dynamic, arg2, parameters[3]);
-            ValidateDynamicArgument(arg2);
+            ValidateDynamicArgument(arg3);
             ValidateOneArgument(method, ExpressionType.Dynamic, arg3, parameters[4]);
 
             return DynamicExpression.Make(method.GetReturnType(), delegateType, binder, arg0, arg1, arg2, arg3);
         }
 
-        private static System.Reflection.MethodInfo GetValidMethodForDynamic(Type delegateType) {
+        private static MethodInfo GetValidMethodForDynamic(Type delegateType) {
             var method = delegateType.GetMethod("Invoke");
             var pi = method.GetParametersCached();
             ContractUtils.Requires(pi.Length > 0 && pi[0].ParameterType == typeof(CallSite), "delegateType", Strings.FirstArgumentMustBeCallSite);
