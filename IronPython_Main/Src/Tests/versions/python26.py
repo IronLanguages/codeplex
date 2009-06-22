@@ -134,7 +134,7 @@ def test_user_mappings():
             #print('gi', key, type(key))
             return str('abc')
         def keys(self): 
-            return [str('a'), str('b'), str('c'), ms('foo')]
+            return [str('a'), str('b'), str('c'), ms('foo')] 
     
     def f(**args): return args
     f(**x())
@@ -1081,7 +1081,42 @@ def test_pep3141():
                 System.Int16(2), System.UInt16(3), System.UInt32(5), System.Int64(6), System.UInt64(7),
                 ]:
         Assert(not isinstance(x, Number))
+
+
+##PEP352#######################################################################
+import sys
+import cStringIO
+
+class OutputCatcher(object):
+    def __enter__(self):
+        self.sys_stdout_bak = sys.stdout
+        self.sys_stderr_bak = sys.stderr
+        
+        sys.stdout = cStringIO.StringIO()
+        sys.stderr = cStringIO.StringIO()
+        
+        return self
     
+    def __exit__(self, type, value, traceback):
+        sys.stdout.flush()
+        sys.stderr.flush()
+        
+        self.stdout = sys.stdout.getvalue()
+        self.stderr = sys.stderr.getvalue()
+        
+        sys.stdout = self.sys_stdout_bak
+        sys.stderr = self.sys_stderr_bak
+
+@skip("cli", "silverlight") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=19555
+def test_exception_message_deprecated():
+    import exceptions
+    x = exceptions.AssertionError()
+    
+    with OutputCatcher() as output:
+        x.message
+
+    expected = "DeprecationWarning: BaseException.message has been deprecated as of Python 2.6"
+    Assert(expected in output.stderr)
         
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

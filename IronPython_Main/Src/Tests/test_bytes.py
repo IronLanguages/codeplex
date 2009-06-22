@@ -1290,8 +1290,8 @@ def test_operators():
                 
         AreEqual(b'ab' in testType(b'abcd'), True)
         
-        # CPython 2.6 doesn't allow this...
-        if testType != str:
+        # 2.6 doesn't allow this for testType=bytes, so test for 3.0 in this case
+        if testType is not bytes or hasattr(bytes, '__iter__'):
             AreEqual(ord(b'a') in testType(b'abcd'), True)
         
             AssertError(ValueError, lambda : 256 in testType(b'abcd'))

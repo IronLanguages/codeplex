@@ -417,7 +417,7 @@ namespace IronPython.Modules {
                     throw MakeException(_context, e);
                 }
 
-                buffer.FromStream(0, new MemoryStream(byteBuffer));
+                buffer.FromStream(new MemoryStream(byteBuffer), 0);
                 return bytesRead;
             }
 
@@ -478,7 +478,7 @@ namespace IronPython.Modules {
                     throw MakeException(_context, e);
                 }
 
-                buffer.FromStream(0, new MemoryStream(byteBuffer));
+                buffer.FromStream(new MemoryStream(byteBuffer), 0);
                 PythonTuple remoteAddress = EndPointToTuple((IPEndPoint)remoteEP);
                 return PythonTuple.MakeTuple(bytesRead, remoteAddress);
             }

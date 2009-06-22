@@ -199,8 +199,19 @@ namespace IronPython.Runtime.Operations {
                 (cls != TypeCache.PythonType || argCnt > 1);
         }
 
+        // note: returns "instance" rather than type name if o is an OldInstance
         internal static string GetName(object o) {
             return DynamicHelpers.GetPythonType(o).Name;
+        }
+
+        // a version of GetName that also works on old-style classes
+        internal static string GetOldName(object o) {
+            return o is OldInstance ? GetOldName((OldInstance)o) : GetName(o);
+        }
+
+        // a version of GetName that also works on old-style classes
+        internal static string GetOldName(OldInstance instance) {
+            return instance._class.__name__;
         }
 
         internal static PythonType[] ObjectTypes(object[] args) {

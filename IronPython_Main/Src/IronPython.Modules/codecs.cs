@@ -429,42 +429,48 @@ namespace IronPython.Modules {
         private static PythonTuple DoDecode(Encoding encoding, object input, string errors, bool fAlwaysThrow) {
             // input should be character buffer of some form...
             string res;
-            if (Converter.TryConvertToString(input, out res)) {
-                int preOffset = CheckPreamble(encoding, res);
 
-                byte[] bytes = new byte[res.Length - preOffset];
-                for (int i = 0; i < bytes.Length; i++) {
-                    bytes[i] = (byte)res[i + preOffset];
-                }
-
-#if !SILVERLIGHT    // DecoderFallback
-                encoding = (Encoding)encoding.Clone();
-
-                ExceptionFallBack fallback = null;
-                if (fAlwaysThrow) {
-                    encoding.DecoderFallback = DecoderFallback.ExceptionFallback;
+            if (!Converter.TryConvertToString(input, out res)) {
+                Bytes bs = input as Bytes;
+                if (bs == null) {
+                    throw PythonOps.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
                 } else {
-                    fallback = new ExceptionFallBack(bytes);
-                    encoding.DecoderFallback = fallback;
+                    res = bs.ToString();
                 }
-#endif
-                string decoded = encoding.GetString(bytes, 0, bytes.Length);
-                int badByteCount = 0;
+            }
+
+            int preOffset = CheckPreamble(encoding, res);
+
+            byte[] bytes = new byte[res.Length - preOffset];
+            for (int i = 0; i < bytes.Length; i++) {
+                bytes[i] = (byte)res[i + preOffset];
+            }
 
 #if !SILVERLIGHT    // DecoderFallback
-                if (!fAlwaysThrow) {
-                    byte[] badBytes = fallback.buffer.badBytes;
-                    if (badBytes != null) {
-                        badByteCount = badBytes.Length;
-                    }
+            encoding = (Encoding)encoding.Clone();
+
+            ExceptionFallBack fallback = null;
+            if (fAlwaysThrow) {
+                encoding.DecoderFallback = DecoderFallback.ExceptionFallback;
+            } else {
+                fallback = new ExceptionFallBack(bytes);
+                encoding.DecoderFallback = fallback;
+            }
+#endif
+            string decoded = encoding.GetString(bytes, 0, bytes.Length);
+            int badByteCount = 0;
+
+#if !SILVERLIGHT    // DecoderFallback
+            if (!fAlwaysThrow) {
+                byte[] badBytes = fallback.buffer.badBytes;
+                if (badBytes != null) {
+                    badByteCount = badBytes.Length;
                 }
+            }
 #endif
 
-                PythonTuple tuple = PythonTuple.MakeTuple(decoded, bytes.Length - badByteCount);
-                return tuple;
-            } else {
-                throw PythonOps.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
-            }
+            PythonTuple tuple = PythonTuple.MakeTuple(decoded, bytes.Length - badByteCount);
+            return tuple;
         }
 
         private static int CheckPreamble(Encoding enc, string buffer) {

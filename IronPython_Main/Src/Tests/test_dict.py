@@ -978,7 +978,7 @@ def test_keys_not_as_property():
         for k in mapping.keys: pass
 
     AssertErrorWithMessages(TypeError,
-            "iteration over non-sequence of type <type 'builtin_function_or_method'>",
+            "iteration over non-sequence of type builtin_function_or_method",
             "'builtin_function_or_method' object is not iterable",
             f)
 
