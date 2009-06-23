@@ -61,6 +61,11 @@ namespace IronPython.Runtime.Operations {
 
                     curType = curType.DeclaringType;
                 }
+
+                FieldInfo modField = type.GetField("__module__");
+                if (modField != null && modField.IsLiteral && modField.FieldType == typeof(string)) {
+                    return (string)modField.GetRawConstantValue();
+                }
                 return "__builtin__";
             }
 

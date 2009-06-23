@@ -365,16 +365,11 @@ namespace IronPython.Modules {
                         case 'u': return new string((char)val, 1);
                         case 'h': return (int)(short)val;
                         case 'H': return (int)(ushort)val;
-                        case 'l': return BigInteger.Create((int)val);
+                        case 'l': return val;
                         case 'i': return val;
                         case 'L': return BigInteger.Create((uint)val);
                         case 'I':
-                            uint tmp = (uint)val;
-                            if (tmp <= Int32.MaxValue) {
-                                return (int)(uint)val;
-                            }
-
-                            return (BigInteger)tmp;
+                            return (BigInteger)(uint)val;
                         case 'f': return (double)(float)val;
                         case 'd': return val;
                         default:
@@ -982,8 +977,12 @@ namespace IronPython.Modules {
                 }
 
                 StringBuilder sb = new StringBuilder(res);
-                if (_typeCode == 'c') {
-                    sb.Append(", '");
+                if (_typeCode == 'c' || _typeCode == 'u') {
+                    if (_typeCode == 'u') {
+                        sb.Append(", u'");
+                    } else {
+                        sb.Append(", '");
+                    }
                     for (int i = 0; i < _data.Length; i++) {
                         sb.Append((char)_data.GetData(i));
                     }

@@ -52,26 +52,20 @@ def test_escape_decode():
     
     
     value, length = codecs.escape_decode("ab\a\b\t\n\r\f\vbaab\\a\\b\\t\\n\\r\\f\\vbaab\\\a\\\b\\\t\\\n\\\r\\\f\\\vba")
-    if is_cpython:
-        AreEqual(value, 'ab\x07\x08\t\n\r\x0c\x0bbaab\x07\x08\t\n\r\x0c\x0bbaab\\\x07\\\x08\\\t\\\r\\\x0c\\\x0bba')
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22743
-        AreEqual(value, 'ab\x07\x08\t\n\r\x0c\x0bbaab\x07\x08\t\n\r\x0c\x0bbaab\\\\\\\\\\\\\\\\\\\\\\\\\\\\ba')
+    AreEqual(value, 'ab\x07\x08\t\n\r\x0c\x0bbaab\x07\x08\t\n\r\x0c\x0bbaab\\\x07\\\x08\\\t\\\r\\\x0c\\\x0bba')
     AreEqual(length, 47)
     
     value, length = codecs.escape_decode("\\\a")
-    if is_cpython:
-        AreEqual(value, '\\\x07')
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22743
-        AreEqual(value, '\\\\')
+    AreEqual(value, '\\\x07')
     AreEqual(length, 2)
 
-    if is_cpython:
-        AreEqual("abc", codecs.escape_decode("abc", None)[0])
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22742
-        AssertError(TypeError, codecs.escape_decode, "abc", None)
+    AreEqual("abc", codecs.escape_decode("abc", None)[0])
+    AreEqual("?\\", codecs.escape_decode("\\x", 'replace')[0])
+    AreEqual("?\\x", codecs.escape_decode("\\x2", 'replace')[0])
+    AreEqual("?\\x", codecs.escape_decode("\\xI", 'replace')[0])
+    AreEqual("?\\xI", codecs.escape_decode("\\xII", 'replace')[0])
+    AreEqual("?\\x1", codecs.escape_decode("\\x1I", 'replace')[0])
+    AreEqual("?\\xI", codecs.escape_decode("\\xI1", 'replace')[0])
     
 def test_escape_encode():
     '''
@@ -130,20 +124,12 @@ def test_charmap_decode():
     AreEqual(new_str, u'abc')
     AreEqual(size, 3)
     
-    if is_cpython:
-        AreEqual(codecs.charmap_decode(""),
-                 (u'', 0))
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22744
-        AreEqual(codecs.charmap_decode(""),
-                 '')
-    
-    #Negative
-    if is_cpython:
+    AreEqual(codecs.charmap_decode(""),
+             (u'', 0))
+
+    if not is_silverlight:
+        #Negative
         AssertError(UnicodeDecodeError, codecs.charmap_decode, "a", "strict", {})
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22741
-        AssertError(LookupError, codecs.charmap_decode, "a", "strict", {})
     
 @skip("silverlight") # no std lib
 def test_decode():
@@ -359,27 +345,18 @@ def test_charbuffer_encode():
 
 def test_charmap_encode():
     #Sanity
-    if is_cpython:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22738
-        AreEqual(codecs.charmap_encode("abc"), 
-                 ('abc', 3))
-        AreEqual(codecs.charmap_encode("abc", "strict"), 
-                 ('abc', 3))
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22738
+    AreEqual(codecs.charmap_encode("abc"), 
+             ('abc', 3))
+    AreEqual(codecs.charmap_encode("abc", "strict"), 
+             ('abc', 3))
     
-    if is_cpython:
-        AreEqual(codecs.charmap_encode("", "strict", {}),
-                 ('', 0))
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22740
-        AreEqual(codecs.charmap_encode("", "strict", {}),
-                 '')
+    AreEqual(codecs.charmap_encode("", "strict", {}),
+             ('', 0))
                  
-    #Sanity Negative
-    if is_cpython:
+    if not is_silverlight:
+        #Sanity Negative
         AssertError(UnicodeEncodeError, codecs.charmap_encode, "abc", "strict", {})
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22741
-        AssertError(LookupError, codecs.charmap_encode, "abc", "strict", {})
 
 
 def test_mbcs_decode():

@@ -506,5 +506,8 @@ def test_generator_attrs():
     got = list(got)
     got.sort()
     AreEqual(got, expectedAttributes)
+    
+    temp_gen = f()
+    AreEqual(f.func_code, temp_gen.gi_code)
 
 run_test(__name__)

@@ -23,6 +23,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Extensi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Dynamic", "Runtime\Microsoft.Dynamic\Microsoft.Dynamic.csproj", "{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonConsoleAny", "IronPythonConsoleAny\IronPythonConsoleAny.csproj", "{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindowAny", "IronPythonWindowAny\IronPythonWindowAny.csproj", "{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Debugging", "Runtime\Microsoft.Scripting.Debugging\Microsoft.Scripting.Debugging.csproj", "{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}"
 EndProject
 Global
@@ -130,6 +134,18 @@ Global
 		{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}.Silverlight Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D4AE44AD-07B9-41DC-BB3B-1FDCDE3C987D}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.FxCop|Any CPU.ActiveCfg = Release|Any CPU

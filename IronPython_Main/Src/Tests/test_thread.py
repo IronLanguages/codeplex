@@ -208,20 +208,14 @@ def test_start_new_thread():
             temp_stderr += text
 
     try:
-        if is_cpython:
-            sys.stderr = myStdOut()
-        else:
-            sys.stdout = myStdOut()
+        sys.stderr = myStdOut()
         
         id = thread.start_new_thread(tempFunc, (), {"my_misspelled_kw_param":9})
         time.sleep(5)
         if not is_silverlight:
             se.flush()
     finally:
-        if is_cpython:
-            sys.stderr = se
-        else:
-            sys.stdout = se
+        sys.stderr = se
     
     AreEqual(CALLED, 8)
     Assert("tempFunc() got an unexpected keyword argument 'my_misspelled_kw_param" in temp_stderr)

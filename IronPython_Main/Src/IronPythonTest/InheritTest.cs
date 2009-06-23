@@ -1113,4 +1113,21 @@ namespace IronPythonTest {
             return result;
         }
     }
+
+    public class FamilyOrAssembly {
+        private object _value;
+        
+        protected internal int Method() {
+            return 42;
+        }
+
+        protected internal object Property {
+            get {
+                return _value;
+            }
+            set {
+                _value = value;
+            }
+        }
+    }
 }

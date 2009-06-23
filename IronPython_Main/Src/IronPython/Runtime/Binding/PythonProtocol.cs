@@ -170,6 +170,16 @@ namespace IronPython.Runtime.Binding {
                     callArgs
                 );
 
+                if (PythonFunction._MaximumDepth != Int32.MaxValue) {
+                    body = Ast.TryFinally(
+                        Ast.Block(
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
+                            body
+                        ),
+                        Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
+                    );
+                }
+
                 return BindingHelpers.AddDynamicTestAndDefer(
                     call,
                     new DynamicMetaObject(body, self.Restrictions.Merge(BindingRestrictions.Combine(args))),

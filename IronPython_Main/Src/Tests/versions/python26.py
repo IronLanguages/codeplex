@@ -1117,6 +1117,27 @@ def test_exception_message_deprecated():
 
     expected = "DeprecationWarning: BaseException.message has been deprecated as of Python 2.6"
     Assert(expected in output.stderr)
+
+def test_generatorexit():
+    try:
+        raise GeneratorExit()
+    except Exception:
+        Fail("Should not have caught this GeneratorExit")
+    except GeneratorExit:
+        pass
+        
+    try:
+        raise GeneratorExit()
+    except Exception:
+        Fail("Should not have caught this GeneratorExit")
+    except GeneratorExit:
+        pass
+    finally:
+        pass
+    
+    Assert(not isinstance(GeneratorExit(), Exception))
+    Assert(isinstance(GeneratorExit(), BaseException))
+    
         
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

@@ -88,7 +88,7 @@
     <Compile Include="array.cs" />
     <Compile Include="binascii.cs" />
     <Compile Include="cmath.cs" />
-    <Compile Include="codecs.cs" />
+    <Compile Include="_codecs.cs" />
     <Compile Include="ModuleOps.cs" />
     <Compile Include="_bytesio.cs" />
     <Compile Include="_codecs_cn.cs" />
