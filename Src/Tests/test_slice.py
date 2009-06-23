@@ -3143,5 +3143,15 @@ def test_cp8297():
         x = range(3)
         x[:i] = x
         AreEqual(x, [0, 1, 2, 0, 1, 2])
+
+def test_pickle():
+    from cPickle import dumps, loads
+    vals = [None, 1]
+    for start in vals:
+        for stop in vals:
+            for step in vals:
+                inp = slice(start, stop, step)
+                AreEqual(inp, loads(dumps(inp)))
         
+    
 run_test(__name__)

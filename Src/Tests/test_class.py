@@ -514,6 +514,13 @@ def test_module_name():
         AssertError(AttributeError, f, thing)
         AssertError(AttributeError, g, thing)
     
+    AssertErrorWithMessage(TypeError, "can't set function.__module__", type(type(f)).__dict__['__module__'].__set__, type(f), 42)
+    
+    class x(object): pass
+    type(type(x())).__dict__['__module__'].__set__(x, 'fooz')
+    AreEqual(x.__module__, 'fooz')
+    
+    AssertErrorWithMessage(TypeError, "can't delete x.__module__", type(type(x())).__dict__['__module__'].__delete__, x)
 
 ############################################################
 def test_check_dictionary():
@@ -3123,6 +3130,17 @@ def test_isinstance_recursion():
 
     sys.setrecursionlimit(reclimit)
 
+def test_call_recursion():
+    reclimit = sys.getrecursionlimit()
+    if reclimit == sys.maxint:
+        sys.setrecursionlimit(1001)
+    
+    class A(object): pass
+
+    A.__call__ = A()
+    AssertError(RuntimeError, A())
+    sys.setrecursionlimit(reclimit)
+    
 def test_metaclass_base_search():
     class MetaClass(type):
         def __init__(cls, clsname, bases, dict):

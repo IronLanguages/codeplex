@@ -6,12 +6,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}</ProjectGuid>
+    <ProjectGuid>{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>IronPythonConsole</RootNamespace>
-    <AssemblyName>ipy</AssemblyName>
-    <ApplicationIcon>ipy.ico</ApplicationIcon>
+    <AssemblyName>ipy64</AssemblyName>
+    <ApplicationIcon>..\IronPythonConsole\ipy.ico</ApplicationIcon>
     <OldToolsVersion>2.0</OldToolsVersion>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
 <AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
@@ -20,7 +20,6 @@
     <SignedDir Condition="'$(SignAssembly)' == 'true'">Signed</SignedDir>
     <SignedDir Condition="$(SignAssembly) != true">Unsigned</SignedDir>
     <DelaySign>true</DelaySign>
-    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -44,8 +43,8 @@
     <DelaySigned>true</DelaySigned>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Console.cs" />
+    <Compile Include="..\IronPythonConsole\AssemblyInfo.cs" />
+    <Compile Include="..\IronPythonConsole\Console.cs" />
     <Compile Include="..\AssemblyVersion.cs" />
   </ItemGroup>
   <ItemGroup>

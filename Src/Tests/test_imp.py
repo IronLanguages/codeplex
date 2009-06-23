@@ -956,13 +956,25 @@ def test_meta_path_before_builtins():
 
 @skip("silverlight") # no nt module on silverlight
 def test_file_coding():
-    import nt
-    f = file('test_coding_mod.py', 'wb+')
-    f.write("# coding: utf-8\nx = '\xe6ble'\n")
-    f.close()
-    import test_coding_mod
-    AreEqual(test_coding_mod.x[0], '\xe6')
-    nt.unlink('test_coding_mod.py')
+    try:
+        import nt
+        f = file('test_coding_mod.py', 'wb+')
+        f.write("# coding: utf-8\nx = '\xe6ble'\n")
+        f.close()
+        import test_coding_mod
+        AreEqual(test_coding_mod.x[0], '\xe6')
+    finally:
+        nt.unlink('test_coding_mod.py')
+    
+    try:
+        f = file('test_coding_2.py', 'wb+')
+        f.write("\xef\xbb\xbf# -*- coding: utf-8 -*-\n")
+        f.write("x = u'ABCDE'\n")
+        f.close()
+        import test_coding_2
+        AreEqual(test_coding_2.x, 'ABCDE')
+    finally:
+        nt.unlink('test_coding_2.py')
 
 def test_module_subtype():
     class x(type(sys)):

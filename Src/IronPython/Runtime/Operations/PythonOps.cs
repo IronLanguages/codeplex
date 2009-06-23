@@ -3428,7 +3428,7 @@ namespace IronPython.Runtime.Operations {
             byte[] ret = new byte[s.Length];
             for (int i = 0; i < s.Length; i++) {
                 if (s[i] < 0x100) ret[i] = (byte)s[i];
-                else throw PythonOps.UnicodeDecodeError("'ascii' codec can't decode byte {0:X} in position {1}: ordinal not in range", (int)ret[i], i);
+                else throw PythonOps.UnicodeEncodeError("'ascii' codec can't decode byte {0:X} in position {1}: ordinal not in range", (int)ret[i], i);
             }
             return ret;
         }
@@ -3683,7 +3683,7 @@ namespace IronPython.Runtime.Operations {
             return new KeyNotFoundException(string.Format(format, args));
         }
 
-        public static Exception UnicodeEncodeError(string format, params object[] args) {
+        public static Exception UnicodeDecodeError(string format, params object[] args) {
 #if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
             throw new NotImplementedException();
 #else
@@ -3691,7 +3691,7 @@ namespace IronPython.Runtime.Operations {
 #endif
         }
 
-        public static Exception UnicodeDecodeError(string format, params object[] args) {
+        public static Exception UnicodeEncodeError(string format, params object[] args) {
 #if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
             throw new NotImplementedException();
 #else

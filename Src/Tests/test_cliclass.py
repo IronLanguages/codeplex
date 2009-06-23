@@ -1499,5 +1499,23 @@ def test_dir():
         dir(getattr(System, attr))
         
 
+def test_family_or_assembly():
+    class my(FamilyOrAssembly): pass
+        
+    obj = my()
+    AreEqual(obj.Method(), 42)
+    obj.Property = 'abc'
+    AreEqual(obj.Property, 'abc')
+
+def test_valuetype_iter():
+    from System.Collections.Generic import Dictionary
+    d = Dictionary[str, str]()
+    d["a"] = "foo"
+    d["b"] = "bar"
+    it = iter(d)
+    AreEqual(it.next().Key, 'a')
+    AreEqual(it.next().Key, 'b')
+
+    
 run_test(__name__)
 

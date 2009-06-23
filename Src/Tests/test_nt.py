@@ -635,20 +635,10 @@ def test_waitpid():
     ping_cmd = get_environ_variable("windir") + "\system32\ping"
     pid = nt.spawnv(nt.P_NOWAIT, ping_cmd ,  ["ping", "-n", "5", "-w", "1000", "127.0.0.1"])
     
-    try:
-        new_pid, exit_stat = nt.waitpid(pid, 0)
-    except SystemError, e:
-        if not is_cpython:
-            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22733
-            pass
+    new_pid, exit_stat = nt.waitpid(pid, 0)
     
     #negative cases
-    if is_cpython:
-        AssertErrorWithMessage(OSError, "[Errno 10] No child processes",
-                               nt.waitpid, -1234, 0)
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22732
-        AssertError(ValueError, nt.waitpid, -1234, 0)
+    AssertErrorWithMessage(OSError, "[Errno 10] No child processes", nt.waitpid, -1234, 0)
         
     AssertError(TypeError, nt.waitpid, "", 0)
 

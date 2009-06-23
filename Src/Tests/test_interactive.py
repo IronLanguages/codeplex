@@ -550,8 +550,8 @@ time.sleep(2)
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " " + inputScript)
     (result, output, output2, exitCode) = ipi.StartAndRunToCompletion()
     AreEqual(exitCode, 0)
-    Assert("AssertionError: hello" in output)
-    Assert("IronPython." not in output)     # '.' is necessary here
+    Assert("AssertionError: hello" in output2)
+    Assert("IronPython." not in output2)     # '.' is necessary here
     ipi.End()
 
 def test_aform_feeds():

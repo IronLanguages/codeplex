@@ -239,6 +239,7 @@ namespace IronPython.Modules {
             public void remove(object value) {
                 lock (_lockObj) {
                     int found = -1;
+                    int startVersion = _version;
                     WalkDeque(delegate(int index) {
                         if (PythonOps.EqualRetBool(_data[index], value)) {
                             found = index;
@@ -246,6 +247,9 @@ namespace IronPython.Modules {
                         }
                         return true;
                     });
+                    if (_version != startVersion) {
+                        throw PythonOps.IndexError("deque mutated during remove().");
+                    }
 
                     if (found == _head) {
                         popleft();

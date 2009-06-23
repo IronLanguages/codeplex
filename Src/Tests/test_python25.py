@@ -710,12 +710,11 @@ def test_string_startswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.startswith, (m1,None),4,3)
-        AssertError(TypeError, s.startswith, (m1,None),4,2)
-        AssertError(TypeError, s.startswith, (n1,None),4, 3)
-        AssertError(TypeError, s.startswith, (None, n1),4 , 3)
-        AssertError(TypeError, s.startswith, (A, None, m1),4, 0)
+    AssertError(TypeError, s.startswith, (m1,None),4,3)
+    AssertError(TypeError, s.startswith, (m1,None),4,2)
+    AssertError(TypeError, s.startswith, (n1,None),4, 3)
+    AssertError(TypeError, s.startswith, (None, n1),4 , 3)
+    AssertError(TypeError, s.startswith, (A, None, m1),4, 0)
     
         # end == start
     AreEqual(s.startswith(("",None),4,4), True)
@@ -743,11 +742,10 @@ def test_string_startswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.startswith, ("string",None),-6, 10)
-        AssertError(TypeError, s.startswith, ("string000",None),-6,10)
-        AssertError(TypeError, s.startswith, (None, "string"),-6, 10)
-        AssertError(TypeError, s.startswith, (A, None, "string"),-6,10)
+    AssertError(TypeError, s.startswith, ("string",None),-6, 10)
+    AssertError(TypeError, s.startswith, ("string000",None),-6,10)
+    AssertError(TypeError, s.startswith, (None, "string"),-6, 10)
+    AssertError(TypeError, s.startswith, (A, None, "string"),-6,10)
     AreEqual(s.startswith(("stro","nomatch"),-6, 10), False)
     AreEqual(s.startswith(("strong","nomatch"),-6,10), False)
     
@@ -767,11 +765,10 @@ def test_string_startswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.startswith, (m1,None),4,-len(s) + 1)
-        AssertError(TypeError, s.startswith, (n1,None),4, -len(s))
-        AssertError(TypeError, s.startswith, (None, n1),4 , -len(s))
-        AssertError(TypeError, s.startswith, (A, None, m1),4, -len(s))
+    AssertError(TypeError, s.startswith, (m1,None),4,-len(s) + 1)
+    AssertError(TypeError, s.startswith, (n1,None),4, -len(s))
+    AssertError(TypeError, s.startswith, (None, n1),4 , -len(s))
+    AssertError(TypeError, s.startswith, (A, None, m1),4, -len(s))
     
     AreEqual(s.startswith((m1,),4,-len(s) + 1), False)
     AreEqual(s.startswith((m1,),4,-500), False)
@@ -805,11 +802,10 @@ def test_string_startswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.startswith, ("string",None),-6, -7)
-        AssertError(TypeError, s.startswith, ("string000",None),-6,-8)
-        AssertError(TypeError, s.startswith, (None, "string"),-6, -8)
-        AssertError(TypeError, s.startswith, (A, None, "string"),-6,-8)
+    AssertError(TypeError, s.startswith, ("string",None),-6, -7)
+    AssertError(TypeError, s.startswith, ("string000",None),-6,-8)
+    AssertError(TypeError, s.startswith, (None, "string"),-6, -8)
+    AssertError(TypeError, s.startswith, (A, None, "string"),-6,-8)
   
     AreEqual(s.startswith(("stro","nomatch"),-6, -8), False)
     AreEqual(s.startswith(("strong","nomatch"),-6,-8), False)
@@ -903,11 +899,10 @@ def test_string_endswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.endswith, (m1,None),4,3)
-        AssertError(TypeError, s.endswith, (n1,None),4, 3)
-        AssertError(TypeError, s.endswith, (None, n1),4 , 3)
-        AssertError(TypeError, s.endswith, (A, None, m1),4, 0)
+    AssertError(TypeError, s.endswith, (m1,None),4,3)
+    AssertError(TypeError, s.endswith, (n1,None),4, 3)
+    AssertError(TypeError, s.endswith, (None, n1),4 , 3)
+    AssertError(TypeError, s.endswith, (A, None, m1),4, 0)
     
         # end == start
     AreEqual(s.endswith(("",None),4,4), True)
@@ -937,11 +932,10 @@ def test_string_endswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.endswith, ("here",None),-len(s) + 4, 2)
-        AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 4, 2)
-        AssertError(TypeError, s.endswith, (None, "he"),-len(s) + 4, 2)
-        AssertError(TypeError, s.endswith, (A, None, "string"),-len(s) + 4, 2)
+    AssertError(TypeError, s.endswith, ("here",None),-len(s) + 4, 2)
+    AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 4, 2)
+    AssertError(TypeError, s.endswith, (None, "he"),-len(s) + 4, 2)
+    AssertError(TypeError, s.endswith, (A, None, "string"),-len(s) + 4, 2)
   
     AreEqual(s.endswith(("hera","nomatch"),-len(s) + 4, 2), False)
 
@@ -960,11 +954,10 @@ def test_string_endswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.endswith, (m1,None),4,-len(s) + 1)
-        AssertError(TypeError, s.endswith, (n1,None),4, -len(s))
-        AssertError(TypeError, s.endswith, (None, n1),4 , -len(s))
-        AssertError(TypeError, s.endswith, (A, None, m1),4, -len(s))
+    AssertError(TypeError, s.endswith, (m1,None),4,-len(s) + 1)
+    AssertError(TypeError, s.endswith, (n1,None),4, -len(s))
+    AssertError(TypeError, s.endswith, (None, n1),4 , -len(s))
+    AssertError(TypeError, s.endswith, (A, None, m1),4, -len(s))
     
     AreEqual(s.endswith((m1,),4,-len(s) + 1), False)
     AreEqual(s.endswith((m1,),4,-500), False)
@@ -997,11 +990,10 @@ def test_string_endswith():
 
         # end < start
     #CodePlex Work Item #10646
-    if sys.platform=="win32":
-        AssertError(TypeError, s.endswith, ("here",None),-len(s) + 5, -len(s) + 4)
-        AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 5, -len(s) + 4)
-        AssertError(TypeError, s.endswith, (None, "here"),-len(s) + 5, -len(s) + 4)
-        AssertError(TypeError, s.endswith, (A, None, "here"),-len(s) + 5, -len(s) + 4)
+    AssertError(TypeError, s.endswith, ("here",None),-len(s) + 5, -len(s) + 4)
+    AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 5, -len(s) + 4)
+    AssertError(TypeError, s.endswith, (None, "here"),-len(s) + 5, -len(s) + 4)
+    AssertError(TypeError, s.endswith, (A, None, "here"),-len(s) + 5, -len(s) + 4)
     
     AreEqual(s.endswith(("hera","nomatch"),-len(s) + 5, -len(s) + 4), False)
 

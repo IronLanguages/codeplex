@@ -1835,6 +1835,16 @@ namespace IronPython.Runtime.Operations {
             public override byte[] GetPreamble() {
                 return _preamble;
             }
+            
+            public override Encoder GetEncoder() {
+                SetEncoderFallback();
+                return _encoding.GetEncoder();
+            }
+
+            public override Decoder GetDecoder() {
+                SetDecoderFallback();
+                return _encoding.GetDecoder();
+            }
 
             public override object Clone() {
                 // need to call base.Clone to be marked as read/write
