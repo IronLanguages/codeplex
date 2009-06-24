@@ -97,6 +97,7 @@ namespace Microsoft.Scripting.Generation {
                 return Expression.Lambda<T>(
                     body,
                     node.Name + "$" + Interlocked.Increment(ref _uniqueNameId),
+                    node.TailCall,
                     node.Parameters
                 );
 

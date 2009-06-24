@@ -926,6 +926,21 @@ def test_remote_abort_command():
             continue
     Assert(False, "KeyboardInterrupt not thrown. Only KeyboardInterrupt was thrown")
 
+def test_exception_slicing_warning():
+    ipi = IronPythonInstance(executable, exec_prefix, '-c "print Exception(*range(2))[1]"')
+    res = ipi.StartAndRunToCompletion()
+    AreEqual(res[0], True)  # should have started
+    AreEqual(res[1], '1\r\n')   # some std out
+    AreEqual(res[2], '')    # no std err
+    AreEqual(res[3], 0)     # should return 0
+    
+    ipi = IronPythonInstance(executable, exec_prefix, '-3 -c "print Exception(*range(2))[1]"')
+    res = ipi.StartAndRunToCompletion()
+    AreEqual(res[0], True)  # should have started
+    AreEqual(res[1], '1\r\n')   # std out
+    Assert(res[2].endswith('DeprecationWarning: __getitem__ not supported for exception classes in 3.x; use args attribute\r\n')) #std err
+    AreEqual(res[3], 0)     # should return 0
+
 #------------------------------------------------------------------------------
 
 run_test(__name__)

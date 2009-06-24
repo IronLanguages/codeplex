@@ -1138,6 +1138,33 @@ def test_generatorexit():
     Assert(not isinstance(GeneratorExit(), Exception))
     Assert(isinstance(GeneratorExit(), BaseException))
     
+
+def test_nt_environ_clear_unsetenv():
+    import os
+    bak = eval(str(os.environ))
+    os.environ["BLAH"] = "BLAH"
+    magic_command = "echo %BLAH%"
+    
+    try:
+        ec = os.system(magic_command)
+        AreEqual(ec, 0)
+        
+        os.environ.clear()
+        
+        if is_cpython:
+            ec = os.system(magic_command)
+            Assert(ec != 0, str(ec))
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23205
+        else:
+            AssertError(WindowsError, os.system, magic_command)
+            
+    finally:
+        os.environ.update(bak)
+
+def test_socket_error_inheritance():
+    import socket
+    e = socket.error()
+    Assert(isinstance(e, IOError))
         
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
