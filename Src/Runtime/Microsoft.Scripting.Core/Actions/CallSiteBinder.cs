@@ -22,6 +22,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using System.Threading;
+using System.Reflection;
 
 namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
@@ -49,6 +50,34 @@ namespace Microsoft.Runtime.CompilerServices {
         /// </summary>
         public static LabelTarget UpdateLabel {
             get { return _updateLabel; }
+        }
+
+        private sealed class LambdaSignature<T> where T : class {
+            internal static readonly LambdaSignature<T> Instance = new LambdaSignature<T>();
+
+            internal readonly ReadOnlyCollection<ParameterExpression> Parameters;
+            internal readonly LabelTarget ReturnLabel;
+
+            private LambdaSignature() {
+                Type target = typeof(T);
+                if (!typeof(Delegate).IsAssignableFrom(target)) {
+                    throw Error.TypeParameterIsNotDelegate(target);
+                }
+
+                MethodInfo invoke = target.GetMethod("Invoke");
+                ParameterInfo[] pis = invoke.GetParametersCached();
+                if (pis[0].ParameterType != typeof(CallSite)) {
+                    throw Error.FirstArgumentMustBeCallSite();
+                }
+
+                var @params = new ParameterExpression[pis.Length - 1];
+                for (int i = 0; i < @params.Length; i++) {
+                    @params[i] = Expression.Parameter(pis[i + 1].ParameterType, "$arg" + i);
+                }
+
+                Parameters = new TrueReadOnlyCollection<ParameterExpression>(@params);
+                ReturnLabel = Expression.Label(invoke.GetReturnType());
+            }
         }
 
         /// <summary>
@@ -91,7 +120,8 @@ namespace Microsoft.Runtime.CompilerServices {
             //
             // Get the Expression for the binding
             //
-            Expression binding = Bind(args, CallSiteRule<T>.Parameters, CallSiteRule<T>.ReturnLabel);
+            var signature = LambdaSignature<T>.Instance;
+            Expression binding = Bind(args, signature.Parameters, signature.ReturnLabel);
 
             //
             // Check the produced rule
@@ -101,37 +131,21 @@ namespace Microsoft.Runtime.CompilerServices {
             }
             
             //
-            // see if we have an old rule to template off
-            //
-            T oldTarget = site.Target;
-
-            RuleCache<T> cache = GetRuleCache<T>();
-            CallSiteRule<T> newRule = null;
-            foreach (CallSiteRule<T> cachedRule in cache.GetRules()) {
-                if ((object)cachedRule.Target == (object)oldTarget) {
-                    newRule = AutoRuleTemplate.CopyOrCreateTemplatedRule(cachedRule, binding);
-                    break;
-                }
-            }
-
-            //
             // finally produce the new rule if we need to
             //
-            if (newRule == null) {
 #if !MICROSOFT_SCRIPTING_CORE
-                // We cannot compile rules in the heterogeneous app domains since they
-                // may come from less trusted sources
-                if (!AppDomain.CurrentDomain.IsHomogenous) {
-                    throw Error.HomogenousAppDomainRequired();
-                }
-#endif
-                Expression<T> e = Stitch<T>(binding);
-                newRule = new CallSiteRule<T>(binding, e.Compile());
+            // We cannot compile rules in the heterogeneous app domains since they
+            // may come from less trusted sources
+            if (!AppDomain.CurrentDomain.IsHomogenous) {
+                throw Error.HomogenousAppDomainRequired();
             }
+#endif
+            Expression<T> e = Stitch(binding, signature);
+            T newRule = e.Compile();
 
-            cache.AddRule(newRule);
+            CacheTarget(newRule);
 
-            return newRule.Target;
+            return newRule;
         }
 
         /// <summary>
@@ -141,10 +155,10 @@ namespace Microsoft.Runtime.CompilerServices {
         /// <typeparam name="T">The type of target being added.</typeparam>
         /// <param name="target">The target delegate to be added to the cache.</param>
         protected void CacheTarget<T>(T target) where T : class {
-            GetRuleCache<T>().AddRule(new CallSiteRule<T>(null, target));
+            GetRuleCache<T>().AddRule(target);
         }
 
-        internal static Expression<T> Stitch<T>(Expression binding) where T : class {
+        private static Expression<T> Stitch<T>(Expression binding, LambdaSignature<T> signature) where T : class {
             Type targetType = typeof(T);
             Type siteType = typeof(CallSite<T>);
 
@@ -152,7 +166,7 @@ namespace Microsoft.Runtime.CompilerServices {
             body.Add(binding);
 
             var site = Expression.Parameter(typeof(CallSite), "$site");
-            var @params = CallSiteRule<T>.Parameters.AddFirst(site);
+            var @params = signature.Parameters.AddFirst(site);
 
             Expression updLabel = Expression.Label(CallSiteBinder.UpdateLabel);
 
@@ -167,13 +181,13 @@ namespace Microsoft.Runtime.CompilerServices {
             body.Add(updLabel);
             body.Add(
                 Expression.Label(
-                    CallSiteRule<T>.ReturnLabel,
+                    signature.ReturnLabel,
                     Expression.Condition(
                         Expression.Call(
                             typeof(CallSiteOps).GetMethod("SetNotMatched"),
                             @params.First()
                         ),
-                        Expression.Default(CallSiteRule<T>.ReturnLabel.Type),
+                        Expression.Default(signature.ReturnLabel.Type),
                         Expression.Invoke(
                             Expression.Property(
                                 Expression.Convert(site, siteType),
