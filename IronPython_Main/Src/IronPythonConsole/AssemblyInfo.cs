@@ -61,7 +61,7 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.6.0906.0")]
+[assembly: AssemblyFileVersion("2.6.0907.0")]
 
 
 // hack in order to pass AssemblyInfoTask 
