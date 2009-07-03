@@ -1131,5 +1131,14 @@ def test_name_mangled_params():
     AreEqual(f2("hello"), "hello")
     AreEqual(f3("a","b"), "b")
     AreEqual(f4("a","b"), "ab")
-              
+
+def test_splat_none():
+    def f(*args): pass
+    def g(**kwargs): pass
+    def h(*args, **kwargs): pass
+    
+    AssertError(TypeError, lambda : f(*None))
+    AssertError(TypeError, lambda : g(**None))
+    AssertError(TypeError, lambda : h(*None, **None))
+
 run_test(__name__)

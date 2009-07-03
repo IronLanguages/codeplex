@@ -673,10 +673,10 @@ namespace IronPython.Runtime.Operations {
                     }
                     break;
                 case 'X':
-                    digits = ToHex(val, false);
+                    digits = AbsToHex(val, false);
                     break;
                 case 'x':
-                    digits = ToHex(val, true);
+                    digits = AbsToHex(val, true);
                     break;
                 case 'o': // octal
                     digits = ToOctal(val, true);
@@ -705,23 +705,25 @@ namespace IronPython.Runtime.Operations {
             return spec.AlignNumericText(digits, self.IsZero(), self.IsPositive());
         }
 
-        internal static string ToHex(BigInteger val) {
-            return ToHex(val, true);
-        }
-
-        internal static string ToHex(BigInteger val, bool lowercase) {
+        internal static string AbsToHex(BigInteger val, bool lowercase) {
             return ToDigits(val, 16, lowercase);
         }
 
-        internal static string ToOctal(BigInteger val, bool lowercase) {
+        private static string ToOctal(BigInteger val, bool lowercase) {
             return ToDigits(val, 8, lowercase);
         }
 
-        internal static string ToBinary(BigInteger val, bool includeType) {
-            return ToBinary(val, includeType, true);
+        internal static string ToBinary(BigInteger val) {            
+            string res = ToBinary(val.Abs(), true, true);
+            if (val.IsNegative()) {
+                res = "-" + res;
+            }
+            return res;
         }
 
-        internal static string ToBinary(BigInteger val, bool includeType, bool lowercase) {
+        private static string ToBinary(BigInteger val, bool includeType, bool lowercase) {
+            Debug.Assert(!val.IsNegative());
+
             string digits;
             digits = ToDigits(val, 2, lowercase);
             

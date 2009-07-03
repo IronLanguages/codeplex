@@ -249,6 +249,18 @@ def test_member_completion():
     #verification
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
+    
+def test_member_completion_com():
+    superConsole.SendKeys('import clr{ENTER}')
+    superConsole.SendKeys('import System{ENTER}')
+    superConsole.SendKeys('clr.AddReference{(}"Microsoft.Office.Interop.Word"{)}{ENTER}')
+    superConsole.SendKeys('import Microsoft.Office.Interop.Word{ENTER}')
+    superConsole.SendKeys('wordapp = Microsoft.Office.Interop.Word.ApplicationClass{(}{)}{ENTER}')
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    superConsole.SendKeys('wordapp.Activ{TAB}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    sleep(2)
+    Assert('<System.Dynamic.DispCallable object at ' in getTestOutput()[0][1])
 
 def test_cp17797():
     #setup

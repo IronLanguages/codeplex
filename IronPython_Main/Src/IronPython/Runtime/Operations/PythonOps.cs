@@ -2233,7 +2233,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static PythonTuple GetOrCopyParamsTuple(object input) {
-            if (input.GetType() == typeof(PythonTuple)) {
+            if (input == null) {
+                throw PythonOps.TypeError("argument after * must be a sequence, not NoneType");
+            } else if (input.GetType() == typeof(PythonTuple)) {
                 return (PythonTuple)input;
             }
 
@@ -3642,7 +3644,21 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
-            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
+            if (isAssignment) {
+                if (DynamicHelpers.GetPythonTypeFromType(tracker.DeclaringType).IsPythonType) {
+                    return PythonOps.TypeError(
+                        "can't set attributes of built-in/extension type '{0}'",
+                        NameConverter.GetTypeName(tracker.DeclaringType));
+                }
+
+                return new MissingMemberException(string.Format(
+                    Resources.StaticAssignmentFromInstanceError,
+                    tracker.Name,
+                    NameConverter.GetTypeName(tracker.DeclaringType)));
+            }
+            return new MissingMemberException(string.Format(Resources.StaticAccessFromInstanceError,
+                tracker.Name,
+                NameConverter.GetTypeName(tracker.DeclaringType)));
         }
 
         public static Exception FunctionBadArgumentError(PythonFunction func, int count) {

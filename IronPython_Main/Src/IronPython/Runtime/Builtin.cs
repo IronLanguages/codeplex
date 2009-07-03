@@ -173,15 +173,15 @@ namespace IronPython.Runtime {
         }
 
         public static string bin(int number) {
-            return Int32Ops.ToBinary(number, true);
+            return Int32Ops.ToBinary(number);
         }
 
         public static string bin(Index number) {
-            return Int32Ops.ToBinary(Converter.ConvertToIndex(number), true);
+            return Int32Ops.ToBinary(Converter.ConvertToIndex(number));
         }
 
         public static string bin(BigInteger number) {
-            return BigIntegerOps.ToBinary(number, true);
+            return BigIntegerOps.ToBinary(number);
         }
 
         public static string bin(double number) {

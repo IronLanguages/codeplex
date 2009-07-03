@@ -1291,8 +1291,11 @@ namespace IronPython.Modules {
                         break;
                     }
                 }
-                if (pos == command.Length)
-                    throw PythonOps.ValueError("mismatch quote in command");
+
+                if (pos == command.Length) {
+                    baseCommand = command.Substring(1).Trim();
+                    command = command + "\"";
+                }
             } else {
                 pos = command.IndexOf(' ');
                 if (pos != -1) {

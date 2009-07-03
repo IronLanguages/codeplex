@@ -224,11 +224,8 @@ namespace IronPython.Runtime {
                     string lib = Path.Combine(entry, "Lib");
                     path.append(lib);
 
-                    // add DLLs directory if it exists
-                    string dlls = Path.Combine(entry, "DLLs");
-                    if (Directory.Exists(dlls)) {
-                        path.append(dlls);
-                    }
+                    // add DLLs directory for user-defined extention modules
+                    path.append(Path.Combine(entry, "DLLs"));
                 }
             } catch (SecurityException) {
             }

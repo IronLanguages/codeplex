@@ -797,6 +797,17 @@ def test_errors():
     else:
         AssertUnreachable()
 
+def test_write_bytes():
+    f = open("temp_ip", "w+")
+    try:
+        f.write(b"Hello\n")
+        f.close()
+        f = file('temp_ip')
+        AreEqual(f.readlines(), ['Hello\n'])
+        f.close()
+    finally:
+        nt.unlink('temp_ip')
+
 
 #------------------------------------------------------------------------------    
 run_test(__name__)

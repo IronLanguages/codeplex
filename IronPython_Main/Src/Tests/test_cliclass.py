@@ -710,6 +710,96 @@ End Class
               
         nt.unlink('vbproptest1.vb')
 
+@skip("silverlight")
+def test_nondefault_indexers_overloaded():
+    from iptest.process_util import *
+
+    if not has_vbc(): return
+    import nt
+    import _random
+    
+    r = _random.Random()
+    r.seed()
+    f = file('vbproptest1.vb', 'w')
+    try:
+        f.write("""
+Public Class VbPropertyTest
+private Indexes(23) as Integer
+private IndexesTwo(23,23) as Integer
+private shared SharedIndexes(5,5) as Integer
+
+Public Property IndexOne(ByVal index as Integer) As Integer
+    Get
+        return Indexes(index)
+    End Get
+    Set
+        Indexes(index) = Value
+    End Set
+End Property
+
+Public Property IndexTwo(ByVal index as Integer, ByVal index2 as Integer) As Integer
+    Get
+        return IndexesTwo(index, index2)
+    End Get
+    Set
+        IndexesTwo(index, index2) = Value
+    End Set
+End Property
+
+Public Shared Property SharedIndex(ByVal index as Integer, ByVal index2 as Integer) As Integer
+    Get
+        return SharedIndexes(index, index2)
+    End Get
+    Set
+        SharedIndexes(index, index2) = Value
+    End Set
+End Property
+End Class
+
+Public Class VbPropertyTest2
+Public ReadOnly Property Prop() As string
+    get 
+        return "test"
+    end get
+end property
+
+Public ReadOnly Property Prop(ByVal name As String) As string
+    get
+        return name
+    end get
+end property
+
+End Class
+    """)
+        f.close()
+        
+        name = 'vbproptest%f.dll' % (r.random())
+        x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
+        AreEqual(x, 0)
+        import clr
+        clr.AddReferenceToFileAndPath(name)
+        import VbPropertyTest, VbPropertyTest2
+        
+        x = VbPropertyTest()
+        AreEqual(x.IndexOne[0], 0)
+        x.IndexOne[1] = 23
+        AreEqual(x.IndexOne[1], 23)
+        
+        AreEqual(x.IndexTwo[0,0], 0)
+        x.IndexTwo[1,2] = 5
+        AreEqual(x.IndexTwo[1,2], 5)
+        
+        AreEqual(VbPropertyTest.SharedIndex[0,0], 0)
+        VbPropertyTest.SharedIndex[3,4] = 42
+        AreEqual(VbPropertyTest.SharedIndex[3,4], 42)
+        
+        AreEqual(VbPropertyTest2().Prop, 'test')
+        AreEqual(VbPropertyTest2().get_Prop('foo'), 'foo')
+    finally:
+        if not f.closed: f.close()
+              
+        nt.unlink('vbproptest1.vb')
+        
 def test_interface_abstract_events():
     # inherit from an interface or abstract event, and define the event
     for baseType in [IEventInterface, AbstractEvent]:
@@ -1006,6 +1096,14 @@ def test_enum_truth():
     AreEqual(System.StringSplitOptions.None.__nonzero__(), False)
     AreEqual(System.StringSplitOptions.RemoveEmptyEntries.__nonzero__(), True)
 
+def test_enum_repr():
+    import clr
+    clr.AddReference('IronPython')
+    from IronPython.Compiler import PythonLanguageFeatures
+    AreEqual(repr(PythonLanguageFeatures.AllowWithStatement), 'IronPython.Compiler.PythonLanguageFeatures.AllowWithStatement')
+    AreEqual(repr(PythonLanguageFeatures.AllowWithStatement | PythonLanguageFeatures.TrueDivision), 
+             '<enum IronPython.Compiler.PythonLanguageFeatures: AllowWithStatement, TrueDivision>')
+    
 def test_bad_inheritance():
     """verify a bad inheritance reports the type name you're inheriting from"""
     import System
@@ -1404,6 +1502,102 @@ def test_valuetype_iter():
     AreEqual(it.next().Key, 'a')
     AreEqual(it.next().Key, 'b')
 
-    
+@skip("silverlight")
+def test_abstract_class_no_interface_impl():
+    # this can't be defined in C# or VB, it's a class which is 
+    # abstract and therefore doesn't implement the interface method
+    ilcode = """
+
+//  Microsoft (R) .NET Framework IL Disassembler.  Version 3.5.30729.1
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+
+
+
+// Metadata version: v2.0.50727
+.assembly extern mscorlib
+{
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 2:0:0:0
+}
+.assembly test
+{
+  .custom instance void [mscorlib]System.Runtime.CompilerServices.CompilationRelaxationsAttribute::.ctor(int32) = ( 01 00 08 00 00 00 00 00 ) 
+  .custom instance void [mscorlib]System.Runtime.CompilerServices.RuntimeCompatibilityAttribute::.ctor() = ( 01 00 01 00 54 02 16 57 72 61 70 4E 6F 6E 45 78   // ....T..WrapNonEx
+                                                                                                             63 65 70 74 69 6F 6E 54 68 72 6F 77 73 01 )       // ceptionThrows.
+  .hash algorithm 0x00008004
+  .ver 0:0:0:0
+}
+.module test.dll
+// MVID: {EFFA8498-8C81-4168-A911-C25D4A2C633A}
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+// Image base: 0x00500000
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class interface public abstract auto ansi IFoo
+{
+  .method public hidebysig newslot abstract virtual 
+          instance string  Baz() cil managed
+  {
+  } // end of method IFoo::Baz
+
+} // end of class IFoo
+
+.class public abstract auto ansi beforefieldinit AbstractILTest
+       extends [mscorlib]System.Object
+       implements IFoo
+{
+  .method public hidebysig static string 
+          Helper(class IFoo x) cil managed
+  {
+    // Code size       12 (0xc)
+    .maxstack  1
+    .locals init (string V_0)
+    IL_0000:  nop
+    IL_0001:  ldarg.0
+    IL_0002:  callvirt   instance string IFoo::Baz()
+    IL_0007:  stloc.0
+    IL_0008:  br.s       IL_000a
+
+    IL_000a:  ldloc.0
+    IL_000b:  ret
+  } // end of method foo::Helper
+
+  .method family hidebysig specialname rtspecialname 
+          instance void  .ctor() cil managed
+  {
+    // Code size       7 (0x7)
+    .maxstack  8
+    IL_0000:  ldarg.0
+    IL_0001:  call       instance void [mscorlib]System.Object::.ctor()
+    IL_0006:  ret
+  } // end of method foo::.ctor
+
+} // end of class foo
+"""
+    from iptest.process_util import run_ilasm
+    f = file('testilcode.il', 'w+')
+    f.write(ilcode)
+    f.close()
+    try:
+        run_ilasm("/dll testilcode.il")
+        
+        clr.AddReference('testilcode')
+        import AbstractILTest
+        
+        class x(AbstractILTest):
+            def Baz(self): return "42"
+            
+        a = x()
+        AreEqual(AbstractILTest.Helper(a), "42")
+    finally:
+        import nt
+        nt.unlink('testilcode.il')
+
 run_test(__name__)
 

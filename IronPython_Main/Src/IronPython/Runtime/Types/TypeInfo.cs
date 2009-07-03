@@ -55,7 +55,7 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Gets the statically known member from the type with the specific name.  Searches the entire type hierarchy to find the specified member.
         /// </summary>
-        public static MemberGroup/*!*/ GetMemberAll(PythonBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+        public static MemberGroup/*!*/ GetMemberAll(PythonBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
             Assert.NotNull(binder, action, type, name);
 
             PerfTrack.NoteEvent(PerfTrack.Categories.ReflectedTypes, String.Format("ResolveMember: {0} {1}", type.Name, name));
@@ -67,7 +67,7 @@ namespace IronPython.Runtime.Types {
         /// 
         /// The result may include multiple resolution.  It is the callers responsibility to only treat the 1st one by name as existing.
         /// </summary>
-        public static IList<ResolvedMember/*!*/>/*!*/ GetMembersAll(PythonBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+        public static IList<ResolvedMember/*!*/>/*!*/ GetMembersAll(PythonBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
             Assert.NotNull(binder, action, type);
 
             return GetResolvedMembers(new ResolveBinder(binder), action, type);
@@ -76,7 +76,7 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Gets the statically known member from the type with the specific name.  Searches only the specified type to find the member.
         /// </summary>
-        public static MemberGroup/*!*/ GetMember(PythonBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+        public static MemberGroup/*!*/ GetMember(PythonBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
             Assert.NotNull(binder, action, type, name);
 
             PerfTrack.NoteEvent(PerfTrack.Categories.ReflectedTypes, String.Format("LookupMember: {0} {1}", type.Name, name));
@@ -88,7 +88,7 @@ namespace IronPython.Runtime.Types {
         /// 
         /// The result may include multiple resolution.  It is the callers responsibility to only treat the 1st one by name as existing.
         /// </summary>
-        public static IList<ResolvedMember/*!*/>/*!*/ GetMembers(PythonBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+        public static IList<ResolvedMember/*!*/>/*!*/ GetMembers(PythonBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
             Assert.NotNull(binder, action, type);
 
             return GetResolvedMembers(new LookupBinder(binder), action, type);
@@ -144,13 +144,13 @@ namespace IronPython.Runtime.Types {
             /// <summary>
             /// Looks up an individual member and returns a MemberGroup with the given members.
             /// </summary>
-            public abstract MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name);
+            public abstract MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name);
 
             /// <summary>
             /// Returns a list of members that exist on the type.  The ResolvedMember structure indicates both
             /// the name and provides the MemberGroup.
             /// </summary>
-            public IList<ResolvedMember/*!*/>/*!*/ ResolveMembers(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            public IList<ResolvedMember/*!*/>/*!*/ ResolveMembers(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 Dictionary<string, ResolvedMember> members = new Dictionary<string, ResolvedMember>();
 
                 foreach (string name in GetCandidateNames(binder, action, type)) {
@@ -173,7 +173,7 @@ namespace IronPython.Runtime.Types {
             /// Returns a list of possible members which could exist.  ResolveMember needs to be called to verify their existance. Duplicate
             /// names can also be returned.
             /// </summary>
-            protected abstract IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type);
+            protected abstract IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type);
         }
 
         /// <summary>
@@ -191,7 +191,7 @@ namespace IronPython.Runtime.Types {
                 _resolver = resolver;
             }
 
-            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
                 Assert.NotNull(binder, action, type, name);
 
                 if (name == _name) {
@@ -201,7 +201,7 @@ namespace IronPython.Runtime.Types {
                 return MemberGroup.EmptyGroup;
             }
 
-            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 yield return _name;
             }
         }
@@ -210,7 +210,7 @@ namespace IronPython.Runtime.Types {
         /// Standard resolver for looking up .NET members.  Uses reflection to get the members by name.
         /// </summary>
         class StandardResolver : MemberResolver {
-            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
                 if (name == ".ctor" || name == ".cctor") return MemberGroup.EmptyGroup;
 
                 // normal binding
@@ -235,7 +235,7 @@ namespace IronPython.Runtime.Types {
                 return MemberGroup.EmptyGroup;
             }
 
-            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 foreach (Type curType in binder.GetContributingTypes(type)) {
                     foreach (MemberInfo mi in curType.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
                         if (mi.MemberType == MemberTypes.Method) {
@@ -265,7 +265,7 @@ namespace IronPython.Runtime.Types {
         /// Resolves methods mapped to __*__ methods automatically from the .NET operator.
         /// </summary>
         class OperatorResolver : MemberResolver {
-            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
                 if (type.IsSealed && type.IsAbstract) {
                     // static types don't have PythonOperationKind
                     return MemberGroup.EmptyGroup;
@@ -370,7 +370,7 @@ namespace IronPython.Runtime.Types {
                 return group;
             }
 
-            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 EnsureOperatorTable();
 
                 foreach (SymbolId si in _pythonOperatorTable.Keys) {
@@ -387,7 +387,7 @@ namespace IronPython.Runtime.Types {
         class PrivateBindingResolver : MemberResolver {
             private const BindingFlags _privateFlags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
                 if (binder.DomainManager.Configuration.PrivateBinding) {
                     // in private binding mode Python exposes private members under a mangled name.
                     string header = "_" + type.Name + "__";
@@ -409,7 +409,7 @@ namespace IronPython.Runtime.Types {
                 return MemberGroup.EmptyGroup;
             }
 
-            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 if (!binder.DomainManager.Configuration.PrivateBinding) {
                     yield break;
                 }
@@ -425,7 +425,7 @@ namespace IronPython.Runtime.Types {
         /// subclassed by NewTypeMaker.
         /// </summary>
         class ProtectedMemberResolver : MemberResolver {
-            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+            public override MemberGroup/*!*/ ResolveMember(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
                 foreach (Type t in binder.GetContributingTypes(type)) {
                     MemberGroup res = new MemberGroup(ArrayUtils.FindAll(t.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy), ProtectedOnly));
 
@@ -459,7 +459,7 @@ namespace IronPython.Runtime.Types {
                 return MemberGroup.EmptyGroup;
             }
 
-            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+            protected override IEnumerable<string/*!*/>/*!*/ GetCandidateNames(MemberBinder/*!*/ binder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
                 // these members are visible but only accept derived types.
                 foreach (Type t in binder.GetContributingTypes(type)) {
                     MemberInfo[] mems = ArrayUtils.FindAll(t.GetMembers(BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
@@ -1317,7 +1317,7 @@ namespace IronPython.Runtime.Types {
                     try {
                         InterfaceMapping imap = t.GetInterfaceMap(intf);
                         foreach (MethodInfo mi in imap.TargetMethods) {
-                            if (mi.DeclaringType == t) {
+                            if (mi != null && mi.DeclaringType == t) {
                                 res.Add(intf);
                                 break;
                             }
@@ -1369,7 +1369,7 @@ namespace IronPython.Runtime.Types {
         /// Primary worker for getting the member(s) associated with a single name.  Can be called with different MemberBinder's to alter the
         /// scope of the search.
         /// </summary>
-        private static MemberGroup/*!*/ GetMemberGroup(MemberBinder/*!*/ memberBinder, OldDynamicAction/*!*/ action, Type/*!*/ type, string/*!*/ name) {
+        private static MemberGroup/*!*/ GetMemberGroup(MemberBinder/*!*/ memberBinder, MemberRequestKind/*!*/ action, Type/*!*/ type, string/*!*/ name) {
             foreach (MemberResolver resolver in _resolvers) {
                 MemberGroup/*!*/ group = resolver.ResolveMember(memberBinder, action, type, name);
                 if (group.Count > 0) {
@@ -1384,7 +1384,7 @@ namespace IronPython.Runtime.Types {
         /// Primary worker for returning a list of all members in a type.  Can be called with different MemberBinder's to alter the scope
         /// of the search.
         /// </summary>
-        private static IList<ResolvedMember/*!*/>/*!*/ GetResolvedMembers(MemberBinder/*!*/ memberBinder, OldDynamicAction/*!*/ action, Type/*!*/ type) {
+        private static IList<ResolvedMember/*!*/>/*!*/ GetResolvedMembers(MemberBinder/*!*/ memberBinder, MemberRequestKind/*!*/ action, Type/*!*/ type) {
             List<ResolvedMember> res = new List<ResolvedMember>();
 
             foreach (MemberResolver resolver in _resolvers) {
@@ -1696,13 +1696,13 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static MemberGroup/*!*/ FilterSpecialNames(MemberGroup/*!*/ group, string/*!*/ name, OldDynamicAction/*!*/ action) {
+        private static MemberGroup/*!*/ FilterSpecialNames(MemberGroup/*!*/ group, string/*!*/ name, MemberRequestKind/*!*/ action) {
             Assert.NotNull(group, name, action);
 
             bool filter = true;
-            if (action.Kind == DynamicActionKind.Call ||
-                action.Kind == DynamicActionKind.ConvertTo ||
-                action.Kind == DynamicActionKind.DoOperation) {
+            if (action == MemberRequestKind.Invoke ||
+                action == MemberRequestKind.Convert ||
+                action == MemberRequestKind.Operation) {
                 filter = false;
             }
 

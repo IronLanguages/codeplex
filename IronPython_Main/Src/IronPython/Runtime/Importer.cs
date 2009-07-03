@@ -205,7 +205,7 @@ namespace IronPython.Runtime {
                     finalName = name;
                     // import relative
                     if (!TryGetExistingOrMetaPathModule(context, name, path, out newmod)) {
-                        newmod = ImportTopRelative(context, parts[0], name, path);
+                        newmod = ImportFromPath(context, parts[0], name, path);
                         if (newmod != null && parentScope != null) {
                             parentScope.SetName(SymbolTable.StringToId(modName), newmod);
                         }
@@ -273,11 +273,7 @@ namespace IronPython.Runtime {
         }
 
         private static object ImportTopRelative(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ full, List/*!*/ path) {
-            object importedScope = ImportFromPath(context, name, full, path);
-            if (importedScope != null) {
-                context.Scope.SetName(SymbolTable.StringToId(name), importedScope);
-            }
-            return importedScope;
+            return ImportFromPath(context, name, full, path);
         }
         
         /// <summary>

@@ -43,6 +43,15 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
         
     sys.stdout = sys.__stdout__
     Assert(x.find('str Format(str format, object arg0)') != -1)
+    
+    sys.stdout = stdout_reader()
+    help('u.u'.Split('u'))
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    if not is_silverlight:
+        # requires std lib
+        Assert('Help on Array[str] object' in x)
+        Assert('Clear(...)' in x)
         
 def test_module():
     import time

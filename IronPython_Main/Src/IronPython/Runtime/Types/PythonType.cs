@@ -1645,6 +1645,9 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             // then let the user intercept and rewrite the type - the user can't create
             // instances of this type yet.
             _underlyingSystemType = __clrtype__();
+            if (_underlyingSystemType == null) {
+                throw PythonOps.ValueError("__clrtype__ must return a type, not None");
+            }
             
             // finally assign the ctors from the real type the user provided
             _ctor = BuiltinFunction.MakeMethod(Name, _underlyingSystemType.GetConstructors(), _underlyingSystemType, FunctionType.Function);
@@ -1785,6 +1788,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             return hasSlot;
         }
 
+        [PythonHidden]
         public virtual Type __clrtype__() {
             return _underlyingSystemType;
         }
@@ -1902,6 +1906,11 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
         private void AddSystemInterfaces(List<PythonType> mro) {
             if (_underlyingSystemType.IsArray) {
+                // include the standard array interfaces in the array MRO.  We pick the
+                // non-strongly typed versions which are also in Array.__mro__
+                mro.Add(DynamicHelpers.GetPythonTypeFromType(typeof(IList)));
+                mro.Add(DynamicHelpers.GetPythonTypeFromType(typeof(ICollection)));
+                mro.Add(DynamicHelpers.GetPythonTypeFromType(typeof(IEnumerable)));
                 return;
             } 
 
@@ -1916,6 +1925,10 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                 // grab all the interface methods which would hide other members
                 for (int i = 0; i < mapping.TargetMethods.Length; i++) {
                     MethodInfo target = mapping.TargetMethods[i];
+                    
+                    if (target == null) {
+                        continue;
+                    }
 
                     if (!target.IsPrivate) {
                         methodMap[target.Name] = null;
@@ -1931,7 +1944,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
                         // any methods which aren't explicit are picked up at the appropriate
                         // time earlier in the MRO so they can be ignored
-                        if (target.IsPrivate) {
+                        if (target != null && target.IsPrivate) {
                             hasExplicitIface = true;
 
                             Type existing;

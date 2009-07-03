@@ -3410,5 +3410,14 @@ def test_mutate_descriptor():
     desc.__get__ = lambda self, value, ctx: 23
     AreEqual(x().a, 23)
 
+def test_mutate_class():
+    def f(): object.foo = 42
+    def g(): type.foo = 42
+    def h(): del type.foo
+    def i(): del object.foo
+    AssertError(TypeError, f)
+    AssertError(TypeError, g)
+    AssertError(TypeError, h)
+    AssertError(TypeError, i)
 
 run_test(__name__)

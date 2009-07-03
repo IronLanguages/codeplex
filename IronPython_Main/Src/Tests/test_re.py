@@ -783,5 +783,14 @@ def test_n_m_quantifier():
     AreEqual(re.search('ab{2,}a', 'abba').span(), (0,4))
     AreEqual(re.search('ab{2,}a', 'abbba').span(), (0,5))
     AreEqual(re.search('ab{2,}a', 'aba'), None)
+
+def test_mixed_named_and_unnamed_groups():
+    example1=r"(?P<one>Blah)"
+    example2=r"(?P<one>(Blah))"
+    RegExsToTest=[example1,example2]
+    
+    for regString in RegExsToTest:
+        g=re.compile(regString)
+        AreEqual(g.groupindex, {'one' : 1})
         
 run_test(__name__)

@@ -65,11 +65,11 @@ def test_readonly():
     
     AreEqual(x.InstanceProperty, 9)
     def f(): x.InstanceProperty = 10
-    AssertErrorWithMessage(AttributeError, "'ClassWithReadOnly' object has no attribute 'InstanceProperty'", f)
+    AssertErrorWithMessage(AttributeError, "can't assign to read-only property InstanceProperty of type 'ClassWithReadOnly'", f)
     
     AreEqual(ClassWithReadOnly.StaticProperty, "dlr")
     def f(): ClassWithReadOnly.StaticProperty = 'abc'
-    AssertErrorWithMessage(AttributeError, "'ClassWithReadOnly' object has no attribute 'StaticProperty'", f)
+    AssertErrorWithMessage(AttributeError, "can't assign to read-only property StaticProperty of type 'ClassWithReadOnly'", f)
     
 
 def test_writeonly():

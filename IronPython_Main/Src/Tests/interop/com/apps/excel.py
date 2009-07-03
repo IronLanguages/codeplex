@@ -52,6 +52,10 @@ def test_excel():
         ex = CreateExcelApplication() 
         ex.DisplayAlerts = False
         AreEqual(ex.DisplayAlerts, False)
+        
+        for x in dir(ex):
+            AreEqual(dir(ex).count(x), 1)
+        
         #ex.Visible = True
         nb = ex.Workbooks.Add()
         ws = nb.Worksheets[1]
