@@ -217,6 +217,10 @@ def test_property_doc():
     AreEqual(property(None).__doc__, None)
     AreEqual(property(None, getter, getter).__doc__, None)
     Assert(type(property.__doc__) is str)
+    
+    def assignerror(): 
+        property.__doc__ = None
+    AssertErrorWithMessage(TypeError, "can't set attributes of built-in/extension type 'property'", assignerror)
 
 def test_class_assign():
     """assigning to a property through the class should replace the

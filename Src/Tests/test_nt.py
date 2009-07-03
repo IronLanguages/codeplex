@@ -766,16 +766,9 @@ def test_system_minimal():
     Assert(hasattr(nt, "system"))
     AreEqual(nt.system("ping localhost"), 0)
     AreEqual(nt.system('"ping localhost"'), 0)
-    if is_cpython:
-        AreEqual(nt.system('"ping localhost'), 0)
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22734
-        AssertErrorWithMessage(ValueError, "mismatch quote in command",
-                               nt.system, '"ping localhost')
+    AreEqual(nt.system('"ping localhost'), 0)
         
     AreEqual(nt.system("ping"), 1)
-    
-    
 
 # flags test
 def test_flags():

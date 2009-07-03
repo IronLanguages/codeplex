@@ -123,6 +123,9 @@ def test_charmap_decode():
     new_str, size = codecs.charmap_decode("abc")
     AreEqual(new_str, u'abc')
     AreEqual(size, 3)
+    AreEqual(codecs.charmap_decode("a", 'strict', {ord('a') : u'a'})[0], u'a')
+    AreEqual(codecs.charmap_decode("a", "replace", {})[0], u'\ufffd')
+    AreEqual(codecs.charmap_decode("a", "replace", {ord('a'): None})[0], u'\ufffd')
     
     AreEqual(codecs.charmap_decode(""),
              (u'', 0))
@@ -130,6 +133,11 @@ def test_charmap_decode():
     if not is_silverlight:
         #Negative
         AssertError(UnicodeDecodeError, codecs.charmap_decode, "a", "strict", {})
+        AssertError(UnicodeDecodeError, codecs.charmap_decode, "a", "strict", {'a': None})
+        AssertError(UnicodeEncodeError, codecs.charmap_encode, "a", "strict", {'a': None})
+        AssertError(UnicodeEncodeError, codecs.charmap_encode, "a", "replace", {'a': None})
+    
+    AssertError(TypeError, codecs.charmap_decode, "a", "strict", {ord('a'): 2.0})
     
 @skip("silverlight") # no std lib
 def test_decode():

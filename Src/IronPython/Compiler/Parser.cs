@@ -853,7 +853,8 @@ namespace IronPython.Compiler {
                         _languageFeatures |= PythonLanguageFeatures.PrintFunction;
                         _tokenizer.PrintFunction = true;
                     } else if (name == Symbols.UnicodeLiterals) {
-                        // nop for us, just ignore it...
+                        _tokenizer.UnicodeLiterals = true;
+                        _languageFeatures |= PythonLanguageFeatures.UnicodeLiterals;
                     } else if (name == Symbols.NestedScopes) {
                     } else if (name == Symbols.Generators) {
                     } else {

@@ -384,5 +384,29 @@ def test_all():
     for test in testCases:
         doOneTest(test)
     
+def test_random():    
+    import _random
+    random = _random.Random()
+    from System.Threading import Thread, ParameterizedThreadStart    
+    global zeroCount
+    zeroCount = 0
+    
+    def foo((ntimes,nbits)):
+        for i in xrange(ntimes):
+            x = random.getrandbits(nbits)
+            if x == 0:
+                zeroCount += 1
+    
+    def run_many(nthreads,ntimes,nbits):
+        lst_threads = []
+        for i in xrange(nthreads):
+            t = Thread(ParameterizedThreadStart(foo))
+            t.Start((ntimes,nbits))
+            lst_threads.append(t)
+        for t in lst_threads:
+            t.Join()
+    
+    run_many(10,10**6,63)
+    Assert(zeroCount < 3)
     
 run_test(__name__)

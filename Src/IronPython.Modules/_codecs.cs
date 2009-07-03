@@ -71,17 +71,30 @@ namespace IronPython.Modules {
                     continue;
                 }
 
-                if (!map.TryGetValue((int)input[i], out val)) {
-                    if (errors == "strict") {
-                        if (isDecode) {
-                            throw PythonOps.UnicodeDecodeError("failed to find key in mapping");
-                        }
+                object charObj = ScriptingRuntimeHelpers.Int32ToObject((int)input[i]);
+
+                if (!map.TryGetValue(charObj, out val)) {
+                    if (errors == "strict" && isDecode) {
+                        throw PythonOps.UnicodeDecodeError("failed to find key in mapping");
+                    } else if (!isDecode) {
                         throw PythonOps.UnicodeEncodeError("failed to find key in mapping");
                     }
-                    continue;
+                    res.Append("\ufffd");
+                } else if (val == null) {
+                    if (errors == "strict" && isDecode) {
+                        throw PythonOps.UnicodeDecodeError("'charmap' codec can't decode characters at index {0} because charmap maps to None", i);
+                    } else if (!isDecode) {
+                        throw PythonOps.UnicodeEncodeError("'charmap' codec can't encode characters at index {0} because charmap maps to None", i);
+                    }
+                    res.Append("\ufffd");
+                } else if (val is string) {
+                    res.Append((string)val);
+                } else if (val is int) {
+                    res.Append((char)(int)val);
+                } else {
+                    throw PythonOps.TypeError("charmap must be an int, str, or None");
                 }
-
-                res.Append((char)(int)val);
+                
             }
             return PythonTuple.MakeTuple(res.ToString(), res.Length);
         }

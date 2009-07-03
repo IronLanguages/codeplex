@@ -38,9 +38,7 @@ if hasattr(type, "__clrtype__"):
     exc_msg = "type.__clrtype__ should not exist until the 'clr/System' module has been imported"
     print exc_msg
     #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23251
-    #raise Exception(exc_msg)
-else:
-    raise Exception("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23251 has been fixed. Please update test")
+    raise Exception(exc_msg)
 
 
 #--IMPORTS---------------------------------------------------------------------
@@ -48,6 +46,7 @@ from iptest.assert_util import *
 skiptest("win32")
 
 import System
+import clr
 import nt, os
 
 #--GLOBALS---------------------------------------------------------------------
@@ -222,15 +221,38 @@ Type __clrtype__(self)''')
 
 def test_clrtype_returns_existing_python_types():
     '''
-    TODO.
-    Our implementation of __clrtype__ returns existing pure-Python types
-    instead of subclassing from type or System.Type.
+    Our implementation of __clrtype__ returns pure-Python types
+    instead of subclassing from type or System.Type and implementing
+    __clrtype__.
     '''
     global called
     
+    class PySubType1(type): pass
+    class PySubType2(PySubType1): pass
+    class PySubType3(PySubType2, PySubType1): pass
+    
     for x in [
+                bool,
+                buffer,
+                type(range),
+                type("".index),
+                type(BaseException),
+                dict,
+                type(Ellipsis),
+                file,
                 float,
-                #TODO
+                type(sys._getframe(0)),
+                xrange,
+                int,
+                long,
+                unicode,
+                tuple,
+                type(lambda: 3),
+                type(None),
+                type(object.__str__),
+                PySubType1,
+                PySubType2,
+                PySubType3,
                 ]:
         called = False
         
@@ -248,14 +270,29 @@ def test_clrtype_returns_existing_python_types():
 
 def test_clrtype_returns_existing_clr_types():
     '''
-    TODO.
     Our implementation of __clrtype__ returns existing .NET types
     instead of subclassing from type or System.Type.
     '''
     global called
+    clr.AddReference("System.Data")
     
     for x in [
-                #TODO
+                System.Byte,
+                System.Int16,
+                System.UInt32,
+                System.Int32,
+                System.Int64,
+                System.Double,
+                System.Data.CommandType,
+                System.Boolean,
+                System.Char,
+                System.Decimal,
+                System.IntPtr,
+                System.Object,
+                System.String,
+                System.Collections.BitArray,
+                System.Collections.Generic.List[System.Char],
+                System.Data.Common.DataAdapter,
                 ]:
         called = False
         
@@ -269,7 +306,7 @@ def test_clrtype_returns_existing_clr_types():
             __metaclass__ = MyType
         
         AreEqual(called, True)
-
+        
 
 ###TYPE IMPLEMENTATIONS################
 def test_type_constructor_args():
@@ -300,28 +337,179 @@ def test_type_inheritance():
 ###CRITICAL SCENARIOS##################
 def test_critical_custom_attributes():
     '''
-    TODO.
-    Add custom attributes to a Python class:
-    - parameterless
-    - positional attribute parameters
+    Ensure adding custom attributes to a Python class remains supported.
     '''
-    pass
+    global called
+    
+    import clr
+    from System.Reflection.Emit import CustomAttributeBuilder, OpCodes
+    
+    clr.AddReference("Microsoft.Scripting")
+    from Microsoft.Scripting.Generation import Snippets
+    
+    clr.AddReference("System.Xml")
+    from System.Xml.Serialization import XmlRootAttribute
+    
+    xmlroot_clrtype = clr.GetClrType(XmlRootAttribute)
+    xmlroot_ci      = xmlroot_clrtype.GetConstructor((clr.GetClrType(str),))
+    XmlRootInstance = CustomAttributeBuilder(xmlroot_ci, 
+                                            ("product",),
+                                            (xmlroot_clrtype.GetProperty("Namespace"),),
+                                            ("http://ironpython.codeplex.com",),
+                                            (),
+                                            ()
+                                         )
+    
+    called = False
+
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            
+            baseType = super(MyType, self).__clrtype__()
+            typegen = Snippets.Shared.DefineType("faux type", baseType, True, False)
+            typebld = typegen.TypeBuilder
+            
+            for ctor in baseType.GetConstructors(): 
+                ctorparams = ctor.GetParameters()
+                ctorbld = typebld.DefineConstructor(ctor.Attributes,
+                                                    ctor.CallingConvention,
+                                                    tuple([p.ParameterType for p in ctorparams]))
+                ilgen = ctorbld.GetILGenerator()
+                ilgen.Emit(OpCodes.Ldarg, 0)
+                for index in range(len(ctorparams)):
+                    ilgen.Emit(OpCodes.Ldarg, index + 1)
+                ilgen.Emit(OpCodes.Call, ctor)
+                ilgen.Emit(OpCodes.Ret)
+            
+            typebld.SetCustomAttribute(XmlRootInstance)
+            called = True
+            return typebld.CreateType()
+
+    class X(object):
+        __metaclass__ = MyType
 
 
-def test_critical_wpf_databinding():
-    '''
-    TODO.
-    Can WPF APIs (e.g., ListBox.ItemTemplate) automatically detect Python properties?
-    '''
-    pass
+    #Verification
+    AreEqual(called, True)
+    
+    x = X()
+    x_clrtype = clr.GetClrType(X)
+    AreEqual(x_clrtype.GetCustomAttributes(XmlRootAttribute, True)[0].ElementName,
+             "product")
+    AreEqual(x_clrtype.GetCustomAttributes(XmlRootAttribute, True)[0].Namespace,
+             "http://ironpython.codeplex.com")
     
     
 def test_critical_clr_reflection():
     '''
-    TODO.
     Can we use CLR reflection over a Python type?
+    Can WPF APIs (e.g., ListBox.ItemTemplate) automatically detect Python properties?
     '''
-    pass
+    global called
+    
+    import clr
+    
+    import System
+    from System.Reflection import FieldAttributes, MethodAttributes, PropertyAttributes
+    from System.Reflection.Emit import CustomAttributeBuilder, OpCodes
+    
+    clr.AddReference("Microsoft.Scripting")
+    from Microsoft.Scripting.Generation import Snippets
+    
+    clr.AddReference("IronPython")
+    from IronPython.Runtime.Types import ReflectedField
+    
+    called = False
+
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            
+            baseType = super(MyType, self).__clrtype__()
+            typegen = Snippets.Shared.DefineType("faux type property", baseType, True, False)
+            typebld = typegen.TypeBuilder
+            
+            for ctor in baseType.GetConstructors(): 
+                ctorparams = ctor.GetParameters()
+                ctorbld = typebld.DefineConstructor(ctor.Attributes,
+                                                    ctor.CallingConvention,
+                                                    tuple([p.ParameterType for p in ctorparams]))
+                ilgen = ctorbld.GetILGenerator()
+                ilgen.Emit(OpCodes.Ldarg, 0)
+                for index in range(len(ctorparams)):
+                    ilgen.Emit(OpCodes.Ldarg, index + 1)
+                ilgen.Emit(OpCodes.Call, ctor)
+                ilgen.Emit(OpCodes.Ret)
+            
+            #Add the property
+            prop_type = clr.GetClrType(System.UInt64)
+            field_builder = typebld.DefineField("NOT_SO_DYNAMIC", prop_type, FieldAttributes.Public)
+            prop_method_attribs = (MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig)
+            #Property getter
+            prop_getter_builder = typebld.DefineMethod("get_NOT_SO_DYNAMIC", prop_method_attribs, prop_type, None)
+            getilgen = prop_getter_builder.GetILGenerator()
+            getilgen.Emit(OpCodes.Ldarg_0)
+            getilgen.Emit(OpCodes.Ldfld, field_builder)
+            getilgen.Emit(OpCodes.Ret)
+            #Propery setter
+            prop_setter_builder = typebld.DefineMethod("set_NOT_SO_DYNAMIC", prop_method_attribs, None, (prop_type,))
+            setilgen = prop_setter_builder.GetILGenerator()
+            setilgen.Emit(OpCodes.Ldarg_0)
+            setilgen.Emit(OpCodes.Ldarg_1)
+            setilgen.Emit(OpCodes.Stfld, field_builder)
+            setilgen.Emit(OpCodes.Ret)
+            #Actual property
+            prop_builder = typebld.DefineProperty("NOT_SO_DYNAMIC", PropertyAttributes.None, prop_type, None)
+            prop_builder.SetGetMethod(prop_getter_builder)
+            prop_builder.SetSetMethod(prop_setter_builder)
+            
+            #Hook the C# property up to the Python version
+            new_type = typebld.CreateType()
+            fldinfo = new_type.GetField("NOT_SO_DYNAMIC")
+            setattr(self, "NOT_SO_DYNAMIC", ReflectedField(fldinfo))
+            
+            called = True
+            return new_type
+
+    class X(object):
+        __metaclass__ = MyType
+
+
+    #Verification
+    AreEqual(called, True)
+    Assert(hasattr(X, "NOT_SO_DYNAMIC"))
+    AreEqual(str(X.NOT_SO_DYNAMIC),
+             "<field# NOT_SO_DYNAMIC on faux type property>")
+    AreEqual(X.NOT_SO_DYNAMIC.FieldType,
+             System.UInt64)
+    #Simple checks
+    x = X()
+    AreEqual(x.NOT_SO_DYNAMIC, 0)
+    x.NOT_SO_DYNAMIC = 3
+    AreEqual(x.NOT_SO_DYNAMIC, 3)
+    #Shouldn't be able to use non-UInt64s
+    try:
+        x.NOT_SO_DYNAMIC = "0"
+        Fail("TypeError should have been thrown!")
+    except TypeError, e:
+        AreEqual(e.message,
+                 "expected UInt64, got str")
+    finally:
+        AreEqual(x.NOT_SO_DYNAMIC, 3)
+    #Make sure it's not a static property
+    y = X()
+    AreEqual(y.NOT_SO_DYNAMIC, 0)
+    AreEqual(x.NOT_SO_DYNAMIC, 3)
+    #As a .NET property
+    AreEqual(x.GetType().GetProperty("NOT_SO_DYNAMIC").GetValue(x, None),
+             3)
+    x.GetType().GetProperty("NOT_SO_DYNAMIC").SetValue(x, System.UInt64(4), None)
+    AreEqual(x.NOT_SO_DYNAMIC, 4)
+    AreEqual(x.GetType().GetProperty("NOT_SO_DYNAMIC").GetValue(x, None),
+             4)
+    #WPF interop
+    #TODO!
     
     
 def test_critical_parameterless_constructor():
@@ -334,10 +522,29 @@ def test_critical_parameterless_constructor():
 ###PYTHON OBJECT CHARACTERISTIC########
 def test_clrtype_metaclass_characteristics():
     '''
-    TODO.
     Make sure clrtype is a properly behaved Python metaclass
     '''
-    pass
+    class T(type):
+        '''This is our own type'''
+        def __clrtype__(self):
+            return type.__clrtype__(self)
+
+    class X(object):
+        __metaclass__ = T
+        
+    AreEqual(X.__class__, T)
+    AreEqual(X.__metaclass__, X.__class__)
+    AreEqual(X.__class__.__base__, type)
+    AreEqual(X.__class__.__bases__, (type,))
+    AreEqual(X.__class__.__doc__, '''This is our own type''')
+    
+    x = X()
+    Assert(isinstance(x, X))
+    Assert(not isinstance(x, T))
+    Assert(not issubclass(X, T))
+    AreEqual(x.__class__, X)
+    AreEqual(x.__metaclass__, T)
+
 
 ###NEGATIVE TEST CASES#################
 def test_neg_type___clrtype__():
@@ -387,6 +594,70 @@ def test_neg_clrtype_wrong_case():
     AreEqual(called, False)
 
 
+def test_neg_clrtype_wrong_params():
+    '''
+    Define the __clrtype__ function which has a bad method signature and see 
+    what happens.
+    '''
+    global called
+    
+    #__clrtype__()
+    called = False
+    
+    class MyType(type):
+        def __clrtype__():
+            global called
+            called = True
+            return super(MyType, self).__clrtype__()
+    
+    try:
+        class X(object):
+            __metaclass__ = MyType 
+        Fail("Bad __clrtype__ signature!")
+       
+    except TypeError, e:
+        AreEqual(e.message,
+                 "__clrtype__() takes no arguments (1 given)")
+                 
+    finally:
+        AreEqual(called, False)
+
+    #__clrtype__(not_self)
+    called = False
+    
+    class MyType(type):
+        def __clrtype__(not_self):  #Make this a function...not a method
+            global called
+            called = True
+            return super(MyType, not_self).__clrtype__()
+    
+    class X(object):
+        __metaclass__ = MyType 
+       
+    AreEqual(called, True)
+
+    #__clrtype__(self, stuff)
+    called = False
+    
+    class MyType(type):
+        def __clrtype__(self, stuff):
+            global called
+            called = True
+            return super(MyType, self).__clrtype__()
+    
+    try:
+        class X(object):
+            __metaclass__ = MyType 
+        Fail("Bad __clrtype__ signature!")
+       
+    except TypeError, e:
+        AreEqual(e.message,
+                 "__clrtype__() takes exactly 2 arguments (1 given)")
+                 
+    finally:
+        AreEqual(called, False)
+
+
 def test_neg_clrtype_returns_nonsense_values():
     '''
     The __clrtype__ implementation returns invalid values.
@@ -434,22 +705,47 @@ def test_neg_clrtype_returns_nonsense_values():
         class X(object):
             __metaclass__ = MyType
         Fail("Arbitrary return values of __clrtype__ are not allowed: ", + str(x))
-    except SystemError, e:
-        AreEqual(e.message,
-                 "Object reference not set to an instance of an object.")
+    except ValueError, e:
+        AreEqual(e.message, "__clrtype__ must return a type, not None")
     finally:
         AreEqual(called, True)
     
 
 def test_neg_clrtype_raises_exceptions():
     '''
-    TODO.
     What happens when the __clrtype__ implementation raises exceptions?
-    - IOError
-    - BaseException, Exception
-    - KeyboardInterrupt
     '''
-    pass
+    global called
+    expected_msg = "my msg"
+
+    for x in [
+                IOError(expected_msg),
+                BaseException(expected_msg),
+                Exception(expected_msg),
+                KeyboardInterrupt(expected_msg),
+                System.NotSupportedException(expected_msg),
+                ]:
+        called = False
+    
+        class MyType(type):
+            def __clrtype__(self):
+                global called
+                raise x
+                called = True
+
+        try:
+            class X(object):
+                __metaclass__ = MyType
+            Fail("Exception was never thrown from __clrtype__: " + str(x))
+        except type(x), e:
+            if (hasattr(e, "message")):
+                AreEqual(e.message,
+                         expected_msg)
+            else: #Must be a CLR exception
+                AreEqual(e.Message,
+                         expected_msg)
+        finally:    
+            AreEqual(called, False)
     
     
 def test_neg_type_constructor_args():
@@ -458,6 +754,36 @@ def test_neg_type_constructor_args():
     - all cases where the first parameter of the System.Type subclass is not a PythonType
     '''
     pass
+    
+    
+def test_neg_type___init___args():
+    '''
+    Make a type that cannot be constructed and see if __clrtype__ still gets 
+    called.
+    '''
+    global called
+    
+    #def __init__(self)
+    called = False
+    
+    class MyType(type):
+        def __init__(self):
+            pass
+        def __clrtype__(self):
+            global called
+            called = True
+            return super(MyType, self).__clrtype__()
+    
+    try:
+        class X(object):
+            __metaclass__ = MyType
+        Fail("type.__init__ signature is wrong")
+    except TypeError, e:
+        AreEqual(e.message,
+                 "__init__() takes exactly 1 argument (4 given)")
+    finally:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23346
+        AreEqual(called, True)
     
 
 def test_neg_type_inheritance():
@@ -487,7 +813,8 @@ def test_misc():
 def test_stress():
     '''
     TODO.
-    - __clrtype__ implementation takes a long time to return?
+    - __clrtype__ implementation takes a long time to return? This seems pretty
+      lame.
     '''
     pass
     

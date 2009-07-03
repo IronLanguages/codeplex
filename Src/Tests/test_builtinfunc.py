@@ -250,6 +250,9 @@ def test_max_min():
     Assert(min([1,2,3]) == 1)
     Assert(min((1,2,3)) == 1)
     Assert(min(1,2,3) == 1)
+    
+    AreEqual(max((1,2), None), (1, 2))
+    AreEqual(min((1,2), None), None)
 
 def test_abs():
     AssertError(TypeError,abs,None)
