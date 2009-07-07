@@ -33,7 +33,7 @@ using IronPython.Runtime.Operations;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler {
-    public delegate void PythonGeneratorNext(MutableTuple state);
+    public delegate object PythonGeneratorNext(MutableTuple state);
 
     /// <summary>
     /// When finding a yield return or yield break, this rewriter flattens out
@@ -77,7 +77,7 @@ namespace IronPython.Compiler {
             _gotoRouter = Expression.Variable(typeof(int), "$gotoRouter");
         }
 
-        internal Expression Reduce(bool shouldInterpret, bool emitDebugSymbols, IList<ParameterExpression> parameters, LabelTarget generatorLabel) {
+        internal Expression Reduce(IList<ParameterExpression> parameters, Func<LambdaExpression, LambdaExpression> bodyConverter) {
             _state = LiftVariable(Expression.Parameter(typeof(int), "state"));
             _current = LiftVariable(Expression.Parameter(typeof(object), "current"));
 
@@ -134,12 +134,13 @@ namespace IronPython.Compiler {
                     Expression.Switch(Expression.Assign(_gotoRouter, _state), cases),
                     body,
                     MakeAssign(_state, AstUtils.Constant(Finished)),
-                    Expression.Label(_returnLabels.Peek())
+                    Expression.Label(_returnLabels.Peek()),
+                    _current
                 ),
                 _name,
                 new ParameterExpression[] { tupleArg }
             );
-
+            
             // Generate a call to PythonOps.MakeGeneratorClosure(Tuple data, object generatorCode)
             return Expression.Block(
                 new[] { tupleTmp, ret },
@@ -149,15 +150,7 @@ namespace IronPython.Compiler {
                         typeof(PythonOps).GetMethod("MakeGenerator"),
                         parameters[0],
                         Expression.Assign(tupleTmp, newTuple),
-                        emitDebugSymbols ?
-                            (Expression)innerLambda :
-                            (Expression)Expression.Constant(
-                                new LazyCode<PythonGeneratorNext>(
-                                    innerLambda,
-                                    shouldInterpret
-                                ),
-                                typeof(object)
-                            )
+                        bodyConverter(innerLambda)
                     )
                 ),
                 new DelayedTupleAssign(
@@ -564,7 +557,7 @@ namespace IronPython.Compiler {
                 return node;
             }
             if (yields == _yields.Count) {
-                return Expression.Block(node.Variables, b);
+                return Expression.Block(node.Type, node.Variables, b);
             }
 
 
@@ -978,29 +971,14 @@ namespace IronPython.Compiler {
     }
 
     sealed class PythonGeneratorExpression : Expression {
-        private readonly string _name;
-        private readonly Expression _body;
-        private readonly bool _shouldInterpret, _emitDebugSymbols;
-        private readonly IList<ParameterExpression> _args;
-        private readonly LabelTarget _generatorLabel;
-        private Expression _reduced;
+        private LambdaExpression _lambda;
 
-        public PythonGeneratorExpression(string name, Expression body, bool shouldInterpret, bool emitDebugSymbols, IList<ParameterExpression> args, LabelTarget generatorLabel) {
-            _name = name;
-            _body = body;
-            _shouldInterpret = shouldInterpret;
-            _emitDebugSymbols = emitDebugSymbols;
-            _args = args;
-            _generatorLabel = generatorLabel;
+        public PythonGeneratorExpression(LambdaExpression lambda) {
+            _lambda = lambda;
         }
 
         public override Expression Reduce() {
-            // Reduce only once so only 1 LazyCode is created
-            if (_reduced == null) {
-                _reduced = new GeneratorRewriter(_name, _body).Reduce(_shouldInterpret, _emitDebugSymbols, _args, _generatorLabel);
-            }
-
-            return _reduced;
+            return _lambda.ToGenerator();
         }
 
         public sealed override ExpressionType NodeType {
@@ -1008,7 +986,7 @@ namespace IronPython.Compiler {
         }
 
         public sealed override Type/*!*/ Type {
-            get { return typeof(PythonGenerator); }
+            get { return _lambda.Type; }
         }
 
         public override bool CanReduce {

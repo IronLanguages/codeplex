@@ -192,7 +192,7 @@ namespace IronPython.Runtime.Binding {
                         ),
                         Ast.Block(
                             Utils.Try(
-                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
+                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrameCodeContext"), codeContext),
                                 Ast.Assign(
                                     tmp,
                                     Ast.Dynamic(

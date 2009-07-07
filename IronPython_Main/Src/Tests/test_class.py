@@ -3410,6 +3410,16 @@ def test_mutate_descriptor():
     desc.__get__ = lambda self, value, ctx: 23
     AreEqual(x().a, 23)
 
+def test_method_tuple_type():
+    """creates a method who's type is declared to be a tuple"""
+    class x(object):
+        def f(self): pass
+    
+    def f(self): return self
+    
+    AreEqual(type(x.f)(f, None, (int, str))(42), 42)
+    AreEqual(type(x.f)(f, None, (int, str))('abc'), 'abc')
+    AssertError(TypeError, type(x.f)(f, None, (int, str)), 1L)
 def test_mutate_class():
     def f(): object.foo = 42
     def g(): type.foo = 42

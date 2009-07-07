@@ -672,7 +672,7 @@ namespace IronPython.Runtime.Exceptions {
         internal static System.Exception CreateThrowableForRaise(CodeContext/*!*/ context, OldClass type, object value) {
             object pyEx;
 
-            if (PythonOps.IsInstance(value, type)) {
+            if (PythonOps.IsInstance(context, value, type)) {
                 pyEx = value;
             } else if (value is PythonTuple) {
                 pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);

@@ -21,15 +21,16 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Security;
+using System.Text;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
-using System.Text;
+
 using IronPython.Runtime;
-using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using System.Security;
 using IronPython.Runtime.Types;
 
 [assembly: PythonModule("sys", typeof(IronPython.Runtime.SysModule))]
@@ -138,15 +139,19 @@ namespace IronPython.Runtime {
                 for (int i = 0; i < stack.Count - depth; i++) {
                     var elem = stack[i];
 
-                    cur = new TraceBackFrame(
-                        context,
-                        Builtin.globals(elem.Context),
-                        Builtin.locals(elem.Context),
-                        elem.Function != null ?
-                            elem.Function.func_code :
-                            null,
-                        cur
-                    );
+                    if (elem.Frame != null) {
+                        cur = elem.Frame;
+                    } else {
+                        cur = elem.Frame = new TraceBackFrame(
+                            context,
+                            Builtin.globals(elem.Context),
+                            Builtin.locals(elem.Context),
+                            elem.Function != null ?
+                                elem.Function.func_code :
+                                null,
+                            cur
+                        );
+                    }
                 }
                 return cur; 
             }
@@ -187,17 +192,70 @@ namespace IronPython.Runtime {
             pc.DefaultEncoding = enc;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
-        public static void settrace(object o) {
-            throw PythonOps.NotImplementedError("sys.settrace is not yet supported by IronPython");
+#if PROFILE_SUPPORT
+        // not enabled because we don't yet support tracing built-in functions.  Doing so is a little
+        // difficult because it's hard to flip tracing on/off for them w/o a perf overhead in the 
+        // non-profiling case.
+        public static void setprofile(CodeContext/*!*/ context, TracebackDelegate o) {
+            PythonContext pyContext = PythonContext.GetContext(context);
+            pyContext.EnsureDebugContext();
+
+            if (o == null) {
+                pyContext.UnregisterTracebackHandler();
+            } else {
+                pyContext.RegisterTracebackHandler();
+            }
+
+            // Register the trace func with the listener
+            pyContext.TracebackListener.SetProfile(o);
+        }
+#endif
+
+        public static void settrace(CodeContext/*!*/ context, object o) {
+            PythonContext pyContext = PythonContext.GetContext(context);
+            pyContext.EnsureDebugContext();
+
+            if (o == null) {
+                pyContext.UnregisterTracebackHandler();
+                pyContext.TracebackListener.SetTrace(null, null);
+            } else {
+                // We're following CPython behavior here.
+                // If CurrentPythonFrame is not null then we're currently inside a traceback, and
+                // enabling trace while inside a traceback is only allowed through sys.call_tracing()
+                var pyThread = pyContext.TracebackListener.GetCurrentThread();
+                if (pyThread == null || !pyThread.InTraceback) {
+                    pyContext.PushTracebackHandler(new PythonTracebackListener((PythonContext)context.LanguageContext));
+                    pyContext.RegisterTracebackHandler();
+                    pyContext.TracebackListener.SetTrace(o, (TracebackDelegate)Converter.ConvertToDelegate(o, typeof(TracebackDelegate)));
+                }
+            }
         }
 
-        public static void setrecursionlimit(int limit) {
-            PythonFunction.SetRecursionLimit(limit);
+        public static void call_tracing(CodeContext/*!*/ context, object func, PythonTuple args) {
+            PythonContext pyContext = (PythonContext)context.LanguageContext;
+            pyContext.EnsureDebugContext();
+
+            pyContext.UnregisterTracebackHandler();
+            pyContext.PushTracebackHandler(new PythonTracebackListener((PythonContext)context.LanguageContext));
+            pyContext.RegisterTracebackHandler();
+            try {
+                PythonCalls.Call(func, args.ToArray());
+            } finally {
+                pyContext.PopTracebackHandler();
+                pyContext.UnregisterTracebackHandler();
+            }
         }
 
-        public static int getrecursionlimit() {
-            return PythonFunction._MaximumDepth;
+        public static object gettrace(CodeContext/*!*/ context) {
+            return PythonContext.GetContext(context).TracebackListener.GetTraceObject();
+        }
+
+        public static void setrecursionlimit(CodeContext/*!*/ context, int limit) {
+            PythonContext.GetContext(context).RecursionLimit = limit;
+        }
+
+        public static int getrecursionlimit(CodeContext/*!*/ context) {
+            return PythonContext.GetContext(context).RecursionLimit;
         }
 
         // stdin, stdout, stderr, __stdin__, __stdout__, and __stderr__ added by PythonContext

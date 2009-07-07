@@ -105,6 +105,12 @@ namespace IronPython.Compiler.Ast {
                 return null;
             }
 
+            if (_handlers != null) {
+                foreach (var handler in _handlers) {
+                    ag.HandlerLocations.Add(handler.Span.Start.Line, false);
+                }
+            }
+
             MSAst.ParameterExpression exception;
 
             MSAst.Expression @catch = TransformHandlers(ag, out exception);
@@ -184,6 +190,8 @@ namespace IronPython.Compiler.Ast {
             if (_finally != null) {
                 bool isEmitting = ag._isEmittingFinally;
                 ag._isEmittingFinally = true;
+                int loopId = ++ag._loopOrFinallyId;
+                ag.LoopOrFinallyIds.Add(loopId, true);
                 try {
                     Debug.Assert(nestedException != null);
 
@@ -251,6 +259,7 @@ namespace IronPython.Compiler.Ast {
                     ag.FreeTemp(nestedException);
                 } finally {
                     ag._isEmittingFinally = isEmitting;
+                    ag.LoopOrFinallyIds.Remove(loopId);
                 }
             }
             return body;
@@ -295,6 +304,7 @@ namespace IronPython.Compiler.Ast {
                         MSAst.Expression test =
                             Ast.Call(
                                 AstGenerator.GetHelperMethod("CheckException"),
+                                ag.LocalContext,
                                 extracted,
                                 ag.TransformAsObject(tsh.Test)
                             );

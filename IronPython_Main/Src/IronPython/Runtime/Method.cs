@@ -121,8 +121,10 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Validates that the current self object is usable for this method.  
         /// </summary>
-        internal object CheckSelf(object self) {
-            if (!PythonOps.IsInstance(self, im_class)) throw BadSelf(self);
+        internal object CheckSelf(CodeContext context, object self) {
+            if (!PythonOps.IsInstance(context, self, im_class)) {
+                throw BadSelf(self);
+            }
             return self;
         }
         
@@ -226,7 +228,7 @@ namespace IronPython.Runtime {
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             if (this.im_self == null) {
-                if (owner == null || owner == im_class || PythonOps.IsSubClass(owner, im_class)) {
+                if (owner == null || owner == im_class || PythonOps.IsSubClass(context, owner, im_class)) {
                     value = new Method(_func, instance, owner);
                     return true;
                 }

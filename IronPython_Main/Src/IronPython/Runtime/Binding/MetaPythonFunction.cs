@@ -138,7 +138,7 @@ namespace IronPython.Runtime.Binding {
 
                 if (invokeArgs != null) {
                     // successful call
-                    Expression target = BindingHelpers.AddRecursionCheck(AddInitialization(MakeFunctionInvoke(invokeArgs)));
+                    Expression target = AddInitialization(MakeFunctionInvoke(invokeArgs));
 
                     if (_temps.Count > 0) {
                         target = Ast.Block(
@@ -216,14 +216,6 @@ namespace IronPython.Runtime.Binding {
 
                 return BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
                     _func.Expression, typeof(PythonFunction)
-                ).Merge(
-                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("FunctionGetTarget"),
-                            Ast.Convert(_func.Expression, typeof(PythonFunction))
-                        ),
-                        _func.Value.Target.GetType()
-                    )
                 );
             }
 
@@ -645,7 +637,7 @@ namespace IronPython.Runtime.Binding {
             /// Fixes up the argument list for the appropriate target delegate type.
             /// </summary>
             private Expression/*!*/[]/*!*/ GetArgumentsForTargetType(Expression[] exprArgs) {
-                Type target = _func.Value.Target.GetType();
+                Type target = _func.Value.func_code.Target.GetType();
                 if (target == typeof(Func<PythonFunction, object[], object>)) {
                     exprArgs = new Expression[] {
                         AstUtils.NewArrayHelper(typeof(object), exprArgs) 
@@ -790,7 +782,7 @@ namespace IronPython.Runtime.Binding {
             /// Creates the code to invoke the target delegate function w/ the specified arguments.
             /// </summary>
             private Expression/*!*/ MakeFunctionInvoke(Expression[] invokeArgs) {
-                Type targetType = _func.Value.Target.GetType();
+                Type targetType = _func.Value.func_code.Target.GetType();
                 MethodInfo method = targetType.GetMethod("Invoke");
 
                 // If calling generator, create the instance of PythonGenerator first

@@ -332,7 +332,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public object Call(CodeContext context, object args) {
             try {
-                PythonOps.FunctionPushFrame();
+                PythonOps.FunctionPushFrame(PythonContext.GetContext(context));
 
                 object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
@@ -355,7 +355,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             try {
-                PythonOps.FunctionPushFrame();
+                PythonOps.FunctionPushFrame(PythonContext.GetContext(context));
 
                 object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
@@ -371,7 +371,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
             try {
-                PythonOps.FunctionPushFrame();
+                PythonOps.FunctionPushFrame(PythonContext.GetContext(context));
 
                 object value;
                 if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
