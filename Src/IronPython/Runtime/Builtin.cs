@@ -293,9 +293,7 @@ namespace IronPython.Runtime {
 
             ScriptCode compiledCode = sourceUnit.Compile(opts, ThrowingErrorSink.Default);
 
-            FunctionCode res = new FunctionCode(compiledCode, cflags);
-            res.SetFilename(filename);
-            return res;
+            return new FunctionCode(compiledCode, cflags, filename);
         }
 
         private static string RemoveBom(string source) {
@@ -424,7 +422,7 @@ namespace IronPython.Runtime {
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
             Scope localScope = GetExecEvalScopeOptional(context, globals, locals, false);
-            return code.Call(localScope);
+            return code.Call(context, localScope);
         }
 
         internal static IAttributesCollection GetAttrLocals(CodeContext/*!*/ context, object locals) {
@@ -921,23 +919,23 @@ namespace IronPython.Runtime {
             return PythonOps.IsInstance(o, typeinfo);
         }
 
-        public static bool isinstance(object o, [NotNull]PythonTuple typeinfo) {
-            return PythonOps.IsInstance(o, typeinfo);
+        public static bool isinstance(CodeContext context, object o, [NotNull]PythonTuple typeinfo) {
+            return PythonOps.IsInstance(context, o, typeinfo);
         }
 
-        public static bool isinstance(object o, object typeinfo) {
-            return PythonOps.IsInstance(o, typeinfo);
+        public static bool isinstance(CodeContext context, object o, object typeinfo) {
+            return PythonOps.IsInstance(context, o, typeinfo);
         }
 
-        public static bool issubclass([NotNull]OldClass c, object typeinfo) {
-            return PythonOps.IsSubClass(c.TypeObject, typeinfo);
+        public static bool issubclass(CodeContext context, [NotNull]OldClass c, object typeinfo) {
+            return PythonOps.IsSubClass(context, c.TypeObject, typeinfo);
         }
 
-        public static bool issubclass([NotNull]PythonType c, object typeinfo) {
-            return PythonOps.IsSubClass(c, typeinfo);
+        public static bool issubclass(CodeContext context, [NotNull]PythonType c, object typeinfo) {
+            return PythonOps.IsSubClass(context, c, typeinfo);
         }
 
-        public static bool issubclass([NotNull]PythonType c, [NotNull]PythonType typeinfo) {
+        public static bool issubclass(CodeContext context, [NotNull]PythonType c, [NotNull]PythonType typeinfo) {
             return PythonOps.IsSubClass(c, typeinfo);
         }
 
@@ -947,7 +945,7 @@ namespace IronPython.Runtime {
                 // Recursively inspect nested tuple(s)
                 foreach (object subTypeInfo in pt) {
                     try {
-                        PythonOps.FunctionPushFrame();
+                        PythonOps.FunctionPushFrame(PythonContext.GetContext(context));
                         if (issubclass(context, o, subTypeInfo)) {
                             return true;
                         }
@@ -972,11 +970,11 @@ namespace IronPython.Runtime {
                 if (baseCls == typeinfo) {
                     return true;
                 } else if ((pyType = baseCls as PythonType) != null) {
-                    if (issubclass(pyType, typeinfo)) {
+                    if (issubclass(context, pyType, typeinfo)) {
                         return true;
                     }
                 } else if ((oc = baseCls as OldClass) != null) {
-                    if (issubclass(oc, typeinfo)) {
+                    if (issubclass(context, oc, typeinfo)) {
                         return true;
                     }
                 } else if (hasattr(context, baseCls, "__bases__")) {

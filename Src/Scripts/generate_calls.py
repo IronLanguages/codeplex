@@ -178,11 +178,8 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
     
     public object Call%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-            var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
-            if (callTarget != null) {
-                return callTarget(pyfunc, %(callArgs)s);
-            }
+        if (pyfunc != null && pyfunc._compat == _compat) {
+            return ((Func<%(genFuncArgs)s>)pyfunc.func_code.Target)(pyfunc, %(callArgs)s);
         }
 
         return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
@@ -191,12 +188,9 @@ class FunctionCaller<%(typeParams)s> : FunctionCaller {
 defaults_template = """
     public object Default%(defaultCount)dCall%(argCount)d(CallSite site, CodeContext context, object func, %(callParams)s) {
         PythonFunction pyfunc = func as PythonFunction;
-        if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-            var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
-            if (callTarget != null) {            
-                int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
-                return callTarget(pyfunc, %(callArgs)s, %(defaultArgs)s);
-            }
+        if (pyfunc != null && pyfunc._compat == _compat) {
+            int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount + %(argCount)d;
+            return ((Func<%(genFuncArgs)s>)pyfunc.func_code.Target)(pyfunc, %(callArgs)s, %(defaultArgs)s);
         }
 
         return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
@@ -205,12 +199,9 @@ defaults_template = """
 defaults_template_0 = """
 public object Default%(argCount)dCall0(CallSite site, CodeContext context, object func) {
     PythonFunction pyfunc = func as PythonFunction;
-    if (pyfunc != null && !EnforceRecursion && pyfunc._compat == _compat) {
-        var callTarget = pyfunc.Target as Func<%(genFuncArgs)s>;
-        if (callTarget != null) {
-            int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
-            return callTarget(pyfunc, %(defaultArgs)s);
-        }
+    if (pyfunc != null && pyfunc._compat == _compat) {
+        int defaultIndex = pyfunc.Defaults.Length - pyfunc.NormalArgumentCount;
+        return ((Func<%(genFuncArgs)s>)pyfunc.func_code.Target)(pyfunc, %(defaultArgs)s);
     }
 
     return ((CallSite<Func<CallSite, CodeContext, object, object>>)site).Update(site, context, func);
@@ -267,11 +258,39 @@ def function_caller_switch(cw):
 def gen_lazy_call_targets(cw):
     for nparams in range(MAX_ARGS):
         cw.enter_block("public static object OriginalCallTarget%d(%s)" % (nparams, make_params(nparams, "PythonFunction function")))
-        cw.write("function.Target = function.func_code.GetCompiledCode();")
-        cw.write("return ((Func<%s>)function.Target)(%s);" % (make_calltarget_type_args(nparams), gen_args_call(nparams, 'function')))
+        cw.write("function.func_code.LazyCompileFirstTarget(function);")
+        cw.write("return ((Func<%s>)function.func_code.Target)(%s);" % (make_calltarget_type_args(nparams), gen_args_call(nparams, 'function')))
         cw.exit_block()
         cw.write('')
 
+def gen_recursion_checks(cw):
+    for nparams in range(MAX_ARGS):
+        cw.enter_block("internal class PythonFunctionRecursionCheck%d" % (nparams, ))
+        cw.write("private readonly Func<%s> _target;" % (make_calltarget_type_args(nparams), ))
+        cw.write('')
+        cw.enter_block('public PythonFunctionRecursionCheck%d(Func<%s> target)' % (nparams, make_calltarget_type_args(nparams)))
+        cw.write('_target = target;')
+        cw.exit_block()
+        cw.write('')
+        
+        cw.enter_block('public object CallTarget(%s)' % (make_params(nparams, "PythonFunction/*!*/ function"), ))
+        cw.write('PythonOps.FunctionPushFrame((PythonContext)function.Context.LanguageContext);')
+        cw.enter_block('try')
+        cw.write('return _target(%s);' % (gen_args_call(nparams, 'function'), ))
+        cw.finally_block()
+        cw.write('PythonOps.FunctionPopFrame();')
+        cw.exit_block()        
+        cw.exit_block()
+        cw.exit_block()
+        cw.write('')
+
+def gen_recursion_delegate_switch(cw):
+    for nparams in range(MAX_ARGS):
+        cw.case_label('case %d:' % nparams)
+        cw.write('finalTarget = new Func<%s>(new PythonFunctionRecursionCheck%d((Func<%s>)finalTarget).CallTarget);' % (make_calltarget_type_args(nparams), nparams, make_calltarget_type_args(nparams)))
+        cw.write('break;')
+        cw.dedent()
+    
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
     else: return "CallType.ImplicitInstance"
@@ -392,6 +411,8 @@ def gen_python_switch(cw):
 
 def main():
     return generate(
+        ("Python Recursion Enforcement", gen_recursion_checks),
+        ("Python Recursion Delegate Switch", gen_recursion_delegate_switch),
         ("Python Lazy Call Targets", gen_lazy_call_targets),
         ("Python Builtin Function Optimizable Callers", builtin_function_callers),
         ("Python Builtin Function Optimizable Switch", builtin_function_callers_switch),

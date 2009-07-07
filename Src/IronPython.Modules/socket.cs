@@ -915,7 +915,7 @@ namespace IronPython.Modules {
                     socket.connect(sockaddress);
                     return socket;
                 } catch (Exception ex) {
-                    if (PythonOps.CheckException(ex, error(context)) == null) {
+                    if (PythonOps.CheckException(context, ex, error(context)) == null) {
                         continue;
                     }
                     if (socket != null) {

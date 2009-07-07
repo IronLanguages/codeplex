@@ -55,25 +55,12 @@ namespace IronPython.Modules {
             return ScriptingRuntimeHelpers.True;
         }
 
-        public static int collect(int generation) {
-            if (generation > GC.MaxGeneration || generation < 0) throw PythonOps.ValueError("invalid generation {0}", generation);
-
-            long start = GC.GetTotalMemory(false);
-#if !SILVERLIGHT // GC.Collect
-            GC.Collect(generation);
-#else
-            GC.Collect();
-#endif
-            GC.WaitForPendingFinalizers();
-            
-            return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
+        public static int collect(CodeContext context, int generation) {
+            return PythonContext.GetContext(context).Collect(generation);
         }
 
-        public static int collect() {
-            long start = GC.GetTotalMemory(false);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
+        public static int collect(CodeContext context) {
+            return collect(context, GC.MaxGeneration);
         }
 
         public static void set_debug(object o) {

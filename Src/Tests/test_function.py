@@ -1141,4 +1141,34 @@ def test_splat_none():
     AssertError(TypeError, lambda : g(**None))
     AssertError(TypeError, lambda : h(*None, **None))
 
+
+def test_exec_funccode():
+    # can't exec a func code w/ parameters
+    def f(a, b, c): print a, b, c
+    
+    AssertError(TypeError, lambda : eval(f.func_code))
+    
+    # can exec *args/**args
+    def f(*args): pass
+    exec f.func_code in {}, {}
+    
+    def f(*args, **kwargs): pass
+    exec f.func_code in {}, {}
+
+    # can't exec function which closes over vars
+    def f():
+        x = 2
+        def g():
+                print x
+        return g.func_code
+    
+    AssertError(TypeError, lambda : eval(f()))
+    
+def test_exec_funccode_filename():
+    import sys
+    mod = type(sys)('fake_mod_name')
+    mod.__file__ = 'some file'
+    exec "def x(): pass" in mod.__dict__
+    AreEqual(mod.x.func_code.co_filename, '<string>')
+
 run_test(__name__)

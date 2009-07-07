@@ -35,8 +35,9 @@ def evalTest(N):
     startTime = clock()
     evalLoop(N)
     endTime = clock()
+    gc.collect(2)
     endMem = GetTotalMemory()
-    return endMem-startMem
+    return max(endMem-startMem, 0)
     
 t_list = [
         "if not 1 + 2 == 3: raise AssertionError('Assertion Failed')",

@@ -131,8 +131,9 @@ def test_api_version():
 
 @skip("win32")
 def test_settrace():
+    """TODO: now that sys.settrace has been implemented this test case needs to be fully revisited"""
     # settrace
-    AssertError(NotImplementedError, sys.settrace, None)
+    Assert(hasattr(sys, 'settrace'))
 
 @skip("win32")
 def test_getrefcount():

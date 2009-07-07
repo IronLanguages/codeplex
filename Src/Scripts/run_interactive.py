@@ -105,7 +105,7 @@ class FileConsole(object):
             suiteStatement = ast.Body
             for statement in suiteStatement.Statements:                
                 code = self.GetCodeForStatement(codeText, statement)
-                codeUnit = self.engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode)                
+                codeUnit = self.engine.CreateScriptSourceFromString(code + '\n\n', SourceCodeKind.InteractiveCode)                
                 codeProps = codeUnit.GetCodeProperties()
                 codeUnit.Execute(self.mainScope)                
                 
