@@ -61,7 +61,7 @@ namespace Microsoft.Scripting {
 
         #region IDisposable Members
 
-#if MICROSOFT_DYNAMIC
+#if CLR2
         [SecurityCritical, SecurityTreatAsSafe]
 #else
         [SecuritySafeCritical]
@@ -80,7 +80,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-#if MICROSOFT_DYNAMIC
+#if CLR2
         [SecurityCritical, SecurityTreatAsSafe]
 #else
         [SecuritySafeCritical]

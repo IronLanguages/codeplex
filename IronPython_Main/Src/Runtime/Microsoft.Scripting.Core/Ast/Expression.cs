@@ -93,7 +93,7 @@ namespace Microsoft.Linq.Expressions {
             get {
 #if !MICROSOFT_SCRIPTING_CORE
                 ExtensionInfo extInfo;
-                if (_legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
+                if (_legacyCtorSupportTable != null && _legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
                     return extInfo.NodeType;
                 }
 #endif
@@ -111,7 +111,7 @@ namespace Microsoft.Linq.Expressions {
             get {
 #if !MICROSOFT_SCRIPTING_CORE
                 ExtensionInfo extInfo;
-                if (_legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
+                if (_legacyCtorSupportTable != null && _legacyCtorSupportTable.TryGetValue(this, out extInfo)) {
                     return extInfo.Type;
                 }
 #endif
