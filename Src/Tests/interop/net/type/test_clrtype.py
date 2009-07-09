@@ -134,67 +134,63 @@ def test_sanity_static_dot_net_type():
     import clr
     AddReferenceToDlrCore()
     
+    clr.AddReference("IronPythonTest")
+    import IronPythonTest.interop.net.type.clrtype as IPT
+    
     from System import Reflection
     from Microsoft.Scripting.Generation import AssemblyGen
     from System.Reflection import Emit, FieldAttributes
     from System.Reflection.Emit import OpCodes      
     gen = AssemblyGen(Reflection.AssemblyName('test'), None, '.dll', False)
     
-    try:
-        class MyType(type):
-            def __clrtype__(self):
-                baseType = super(MyType, self).__clrtype__()
-                t = gen.DefinePublicType(self.__name__, baseType, True)
-                
-                ctors = baseType.GetConstructors()
-                for ctor in ctors:            
-                    baseParams = ctor.GetParameters()
-                    newParams = baseParams[1:]
-                    
-                    builder = t.DefineConstructor(
-                        Reflection.MethodAttributes.Public, 
-                        Reflection.CallingConventions.Standard, 
-                        tuple([p.ParameterType for p in newParams])
-                    )
-                    fldAttrs = FieldAttributes.Static | FieldAttributes.Public
-                    fld = t.DefineField('$$type', type, fldAttrs)
-                    
-                    ilgen = builder.GetILGenerator()
-                    ilgen.Emit(OpCodes.Ldarg, 0)
-                    ilgen.Emit(OpCodes.Ldsfld, fld)
-                    for index in range(len(ctor.GetParameters())):
-                        ilgen.Emit(OpCodes.Ldarg, index + 1)
-                    ilgen.Emit(OpCodes.Call, ctor)
-                    ilgen.Emit(OpCodes.Ret)
+    class MyType(type):
+        def __clrtype__(self):
+            baseType = super(MyType, self).__clrtype__()
+            t = gen.DefinePublicType(self.__name__, baseType, True)
+            ctors = baseType.GetConstructors()
+            for ctor in ctors:            
+                baseParams = ctor.GetParameters()
+                newParams = baseParams[1:]
+                builder = t.DefineConstructor(Reflection.MethodAttributes.Public, 
+                                              Reflection.CallingConventions.Standard, 
+                                              tuple([p.ParameterType for p in newParams])
+                                              )
+                fldAttrs = FieldAttributes.Static | FieldAttributes.Public
+                fld = t.DefineField('$$type', type, fldAttrs)
+                ilgen = builder.GetILGenerator()
+                ilgen.Emit(OpCodes.Ldarg, 0)
+                ilgen.Emit(OpCodes.Ldsfld, fld)
+                for index in range(len(ctor.GetParameters())):
+                    ilgen.Emit(OpCodes.Ldarg, index + 1)
+                ilgen.Emit(OpCodes.Call, ctor)
+                ilgen.Emit(OpCodes.Ret)
+                # keep a ctor which takes Python types as well so we 
+                # can be called from Python still.
+                builder = t.DefineConstructor(Reflection.MethodAttributes.Public, 
+                                              Reflection.CallingConventions.Standard, 
+                                              tuple([p.ParameterType for p in ctor.GetParameters()])
+                                              )
+                ilgen = builder.GetILGenerator()
+                ilgen.Emit(OpCodes.Ldarg, 0)
+                for index in range(len(ctor.GetParameters())):
+                    ilgen.Emit(OpCodes.Ldarg, index + 1)
+                ilgen.Emit(OpCodes.Call, ctor)
+                ilgen.Emit(OpCodes.Ret)
+            newType = t.CreateType()
+            newType.GetField('$$type').SetValue(None, self)
+            return newType
+    
+    class MyCreatableDotNetType(object):
+        __metaclass__ = MyType
+        def __init__(self):
+            self.abc = 3
 
-                    # keep a ctor which takes Python types as well so we 
-                    # can be called from Python still.
-                    builder = t.DefineConstructor(
-                        Reflection.MethodAttributes.Public, 
-                        Reflection.CallingConventions.Standard, 
-                        tuple([p.ParameterType for p in ctor.GetParameters()])
-                    )
-                    ilgen = builder.GetILGenerator()
-                    ilgen.Emit(OpCodes.Ldarg, 0)
-                    for index in range(len(ctor.GetParameters())):
-                        ilgen.Emit(OpCodes.Ldarg, index + 1)
-                    ilgen.Emit(OpCodes.Call, ctor)
-                    ilgen.Emit(OpCodes.Ret)
-
-                newType = t.CreateType()
-                newType.GetField('$$type').SetValue(None, self)
-                return newType
-        
-        class MyCreatableDotNetType(object):
-            __metaclass__ = MyType
-            def __init__(self):
-                self.abc = 3
-
-        # TODO: Test Type.GetType (requires the base class to be non-transient)
-    finally:
-        #gen.SaveAssembly()
-        pass    
-
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23426
+    # TODO: Test Type.GetType (requires the base class to be non-transient)
+    #py_temp = MyCreatableDotNetType()
+    #cs_temp = IPT.Factory.Get[MyCreatableDotNetType]()
+    #AreEqual(type(py_temp), type(cs_temp))
+    
 
 ###__CLRTYPE__#########################
 def test_type___clrtype__():
@@ -309,29 +305,77 @@ def test_clrtype_returns_existing_clr_types():
         
 
 ###TYPE IMPLEMENTATIONS################
-def test_type_constructor_args():
+def test_interesting_type_implementations():
     '''
-    TODO:
-    - only stipulation is the first parameter must be PythonType
-    - subclass of PythonType?
-    - overloads
-    - generics?
+    Test types that have been fully implemented in CSharp.
     '''
-    pass
-
-
-def test_type_inheritance():
+    global called
+    
+    clr.AddReference("IronPythonTest")
+    import IronPythonTest.interop.net.type.clrtype as IPT
+    
+    from IronPython.Runtime.Types import PythonType
+    
+    for x in [  IPT.Sanity,
+                IPT.SanityGeneric[int],
+                IPT.SanityGenericConstructor[PythonType],
+                IPT.SanityDerived,
+                IPT.SanityUniqueConstructor,
+                IPT.SanityNoIPythonObject,
+                ]:
+        called = False
+        
+        class MyType(type):
+            def __clrtype__(self):
+                global called
+                called = True
+                return x
+        
+        class X(object):
+            __metaclass__ = MyType
+        
+        AreEqual(called, True)
+        
+        if x!=IPT.SanityUniqueConstructor: #Related to http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23419
+            temp = X()
+            if x==IPT.SanityNoIPythonObject:
+                AreEqual(type(temp), x)
+            else:
+                AreEqual(type(temp), X)
+                
+                
+def test_type_constructor_overloads():
     '''
-    TODO:
-    - type must implement IPythonObject
-    - type implements IPythonObject in Csharp
-    - type implements IPythonObject in IronPython
-    - type implements IPO, but members are private?
-    - type implements IPO and other interfaces
-    - type is a subclass of a class implementing IPO: subclass of "type", "float", etc
-    - type is a generic and implements IPO
+    A type containing multiple constructors with a PythonType as the first parameter
+    should work.
     '''
-    pass
+    global called
+    
+    import clr
+    clr.AddReference("IronPythonTest")
+    import IronPythonTest.interop.net.type.clrtype as IPT
+    
+    called = False
+    
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            called = True
+            return IPT.SanityConstructorOverloads
+    
+    class X(object):
+        __metaclass__ = MyType
+        #def __new__(self, *args, **kwargs):
+        #    return object.__new__(self, *args, **kwargs)
+        def __init__(self, *args, **kwargs):
+            pass #print "(__init__):", args, kwargs
+    
+    AreEqual(called, True)
+    temp = X()
+    Assert(str(temp).startswith("<first"), str(temp))
+    
+    #Once http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23419 gets
+    #fixed, we need to check that str(X(1234)).startswith("<second")
 
 
 ###CRITICAL SCENARIOS##################
@@ -514,9 +558,35 @@ def test_critical_clr_reflection():
     
 def test_critical_parameterless_constructor():
     '''
-    TODO.
+    Ensure that CSharp can new up a Python type that has a 
+    parameterless constructor.
     '''
-    pass    
+    global called
+    
+    clr.AddReference("IronPythonTest")
+    import IronPythonTest.interop.net.type.clrtype as IPT
+    
+    called = False
+    
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            called = True
+            return IPT.SanityParameterlessConstructor
+    
+    class X(object):
+        __metaclass__ = MyType
+    
+    AreEqual(called, True)
+    AreEqual(IPT.SanityParameterlessConstructor.WhichConstructor, 0)
+    
+    py_x = X()
+    AreEqual(IPT.SanityParameterlessConstructor.WhichConstructor, 1)
+    
+    cs_x = IPT.Factory.Get[X]()
+    AreEqual(IPT.SanityParameterlessConstructor.WhichConstructor, 2)
+    
+    AreEqual(type(py_x), type(cs_x))
 
 
 ###PYTHON OBJECT CHARACTERISTIC########
@@ -748,14 +818,6 @@ def test_neg_clrtype_raises_exceptions():
             AreEqual(called, False)
     
     
-def test_neg_type_constructor_args():
-    '''
-    TODO:
-    - all cases where the first parameter of the System.Type subclass is not a PythonType
-    '''
-    pass
-    
-    
 def test_neg_type___init___args():
     '''
     Make a type that cannot be constructed and see if __clrtype__ still gets 
@@ -786,38 +848,40 @@ def test_neg_type___init___args():
         AreEqual(called, True)
     
 
-def test_neg_type_inheritance():
+def test_neg_type_misc():
     '''
-    TODO:
-    - type implements IPO, but members are private
-    - type implements IPO, but IPO methods return bogus values
-    - type implements IPO, but IPO methods throw
+    Various scenarios in which the type returned by __clrtype__ is implemented
+    purely in Csharp or VB, and is broken in some form or another.
     '''
-    pass
-
-        
-###RANDOM STUFF########################
-def test_misc():
-    '''
-    TODO:
-    - gen.DefinePublicType(type.__clrtype__())
-    - gen.DefinePublicType(subclass of type.__clrtype__())
-    - methods defined in the type that are not also in the dictproxy instance
-    - clr.getClrType(...) returns the right value
-    - do instances of the type work in 'normal' methods (e.g., str())
-    - change __class__ of instances
-    '''
-    pass
-
-
-def test_stress():
-    '''
-    TODO.
-    - __clrtype__ implementation takes a long time to return? This seems pretty
-      lame.
-    '''
-    pass
+    global called
     
+    clr.AddReference("IronPythonTest")
+    import IronPythonTest.interop.net.type.clrtype as IPT
+    
+    from IronPython.Runtime.Types import PythonType
+    
+    for x in [  IPT.NegativeEmpty,
+                IPT.NegativeNoConstructor,
+                ]:
+        called = False
+        
+        class MyType(type):
+            def __clrtype__(self):
+                global called
+                called = True
+                return x
+        
+        try:
+            class X(object):
+                __metaclass__ = MyType
+            #Fail("Should not be able to define classes with a bogus __clrtype__ implementation!")
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23418
+        except TypeError, e:
+            err_msg = "Need an assertion for this particular error message!"
+            raise Exception(err_msg)
+        finally:
+            AreEqual(called, True)
+
 
 #--MAIN------------------------------------------------------------------------    
 run_test(__name__)

@@ -132,7 +132,7 @@ class VariantType:
             cw.write('')
 
 def gen_exposed_code_security(cw):
-    cw.write("#if MICROSOFT_DYNAMIC")
+    cw.write("#if CLR2")
     cw.write("[PermissionSet(SecurityAction.LinkDemand, Unrestricted = true)]")
     cw.write("#endif")
     cw.write("[SecurityCritical]")

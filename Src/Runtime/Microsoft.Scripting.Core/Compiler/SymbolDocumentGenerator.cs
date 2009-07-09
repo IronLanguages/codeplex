@@ -15,6 +15,10 @@
 using System; using Microsoft;
 
 
+#if MICROSOFT_SCRIPTING_CORE
+using ILGenerator = Microsoft.Linq.Expressions.Compiler.OffsetTrackingILGenerator;
+#endif
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
@@ -22,7 +26,6 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 using System.Reflection.Emit;
-using ILGenerator = Microsoft.Linq.Expressions.Compiler.OffsetTrackingILGenerator;
 
 namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
@@ -53,7 +56,7 @@ namespace Microsoft.Runtime.CompilerServices {
         }
 
         public override void MarkSequencePoint(LambdaExpression method, int ilOffset, DebugInfoExpression sequencePoint) {
-            Debug.Assert(false);
+            throw Error.PdbGeneratorNeedsExpressionCompiler();
         }
 
         internal override void SetLocalName(LocalBuilder localBuilder, string name) {
