@@ -50,7 +50,7 @@ import clr
 import nt, os
 
 #--GLOBALS---------------------------------------------------------------------
-
+TYPE_COUNTER = 0
 
 #--HELPERS---------------------------------------------------------------------
 
@@ -384,6 +384,8 @@ def test_critical_custom_attributes():
     Ensure adding custom attributes to a Python class remains supported.
     '''
     global called
+    global TYPE_COUNTER
+    TYPE_COUNTER += 1
     
     import clr
     from System.Reflection.Emit import CustomAttributeBuilder, OpCodes
@@ -411,7 +413,7 @@ def test_critical_custom_attributes():
             global called
             
             baseType = super(MyType, self).__clrtype__()
-            typegen = Snippets.Shared.DefineType("faux type", baseType, True, False)
+            typegen = Snippets.Shared.DefineType("faux type" + str(TYPE_COUNTER), baseType, True, False)
             typebld = typegen.TypeBuilder
             
             for ctor in baseType.GetConstructors(): 
@@ -451,6 +453,9 @@ def test_critical_clr_reflection():
     Can WPF APIs (e.g., ListBox.ItemTemplate) automatically detect Python properties?
     '''
     global called
+    global TYPE_COUNTER
+    
+    TYPE_COUNTER += 1
     
     import clr
     
@@ -471,7 +476,7 @@ def test_critical_clr_reflection():
             global called
             
             baseType = super(MyType, self).__clrtype__()
-            typegen = Snippets.Shared.DefineType("faux type property", baseType, True, False)
+            typegen = Snippets.Shared.DefineType("faux type property" + str(TYPE_COUNTER), baseType, True, False)
             typebld = typegen.TypeBuilder
             
             for ctor in baseType.GetConstructors(): 
@@ -524,7 +529,7 @@ def test_critical_clr_reflection():
     AreEqual(called, True)
     Assert(hasattr(X, "NOT_SO_DYNAMIC"))
     AreEqual(str(X.NOT_SO_DYNAMIC),
-             "<field# NOT_SO_DYNAMIC on faux type property>")
+             "<field# NOT_SO_DYNAMIC on faux type property%s>" % (str(TYPE_COUNTER),))
     AreEqual(X.NOT_SO_DYNAMIC.FieldType,
              System.UInt64)
     #Simple checks
@@ -555,7 +560,8 @@ def test_critical_clr_reflection():
     #WPF interop
     #TODO!
     
-    
+
+@skip("multiple_execute")    
 def test_critical_parameterless_constructor():
     '''
     Ensure that CSharp can new up a Python type that has a 

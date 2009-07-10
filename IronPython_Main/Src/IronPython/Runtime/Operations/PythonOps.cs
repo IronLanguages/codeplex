@@ -25,6 +25,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -38,10 +39,14 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
 using IronPython.Hosting;
+using IronPython.Modules;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
-using System.Runtime.InteropServices;
+
+#if !SILVERLIGHT
+using System.ComponentModel;
+#endif
 
 namespace IronPython.Runtime.Operations {
 
@@ -618,9 +623,9 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 if (x.GetType() == typeof(OldInstance)) {
-                    name1 = ((OldInstance)x)._class.__name__;
+                    name1 = ((OldInstance)x)._class.Name;
                     if (y.GetType() == typeof(OldInstance)) {
-                        name2 = ((OldInstance)y)._class.__name__;
+                        name2 = ((OldInstance)y)._class.Name;
                     } else {
                         // old instances are always less than new-style classes
                         return -1;
@@ -967,7 +972,7 @@ namespace IronPython.Runtime.Operations {
             if (!DynamicHelpers.GetPythonType(o).TryGetBoundAttr(context, o, name, out ret)) {
                 if (o is OldClass) {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((OldClass)o).__name__, SymbolTable.IdToString(name));
+                        ((OldClass)o).Name, SymbolTable.IdToString(name));
                 } else {
                     throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", PythonTypeOps.GetName(o), SymbolTable.IdToString(name));
                 }
@@ -1932,6 +1937,12 @@ namespace IronPython.Runtime.Operations {
             RestoreCurrentException(null);
         }
 
+        public static void ExceptionHandled(CodeContext context) {
+            PythonContext.GetContext(context).DelSystemStateValue("exc_traceback");
+            PythonContext.GetContext(context).DelSystemStateValue("exc_value");
+            PythonContext.GetContext(context).DelSystemStateValue("exc_type");
+        }
+
         // Called by code-gen to save it. Codegen just needs to pass this back to RestoreCurrentException.
         public static Exception SaveCurrentException() {
             return RawException;
@@ -2408,7 +2419,7 @@ namespace IronPython.Runtime.Operations {
                 if (t.IsOldClass) {
                     OldClass oc = (OldClass)ToPythonType(t);
                     object ret;
-                    if (oc.__dict__._storage.TryGetValue(name, out ret)) {
+                    if (oc._dict._storage.TryGetValue(name, out ret)) {
                         if (instance != null) return oc.GetOldStyleDescriptor(context, ret, instance, oc);
                         return ret;
                     }
@@ -2850,9 +2861,9 @@ namespace IronPython.Runtime.Operations {
         #region Function helpers
 
         public static PythonGenerator MakeGenerator(PythonFunction function, MutableTuple data, object generatorCode) {
-            PythonGeneratorNext next = generatorCode as PythonGeneratorNext;
+            Func<MutableTuple, object> next = generatorCode as Func<MutableTuple, object>;
             if (next == null) {
-                next = ((LazyCode<PythonGeneratorNext>)generatorCode).EnsureDelegate();
+                next = ((LazyCode<Func<MutableTuple, object>>)generatorCode).EnsureDelegate();
             }
 
             return new PythonGenerator(function, next, data);
@@ -3002,7 +3013,17 @@ namespace IronPython.Runtime.Operations {
             return PythonEnumerator.Create(baseObject);
         }
 
-        public static bool ContainsFromEnumerable(CodeContext/*!*/ context, IEnumerator ie, object value) {
+        public static bool ContainsFromEnumerable(CodeContext/*!*/ context, object enumerable, object value) {
+            IEnumerator ie = enumerable as IEnumerator;
+            if (ie == null) {
+                IEnumerable ienum = enumerable as IEnumerable;
+                if (ienum != null) {
+                    ie = ienum.GetEnumerator();
+                } else {
+                    ie = Converter.ConvertToIEnumerator(enumerable);
+                }
+            }
+            
             while (ie.MoveNext()) {
                 if (PythonOps.EqualRetBool(context, ie.Current, value)) {
                     return true;
@@ -3024,6 +3045,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region OldClass/OldInstance public helpers
+
+        public static PythonDictionary OldClassGetDictionary(OldClass klass) {
+            return klass._dict;
+        }
+
+        public static string OldClassGetName(OldClass klass) {
+            return klass.Name;
+        }
 
         public static bool OldInstanceIsCallable(CodeContext/*!*/ context, OldInstance/*!*/ self) {
             object dummy;
@@ -3943,7 +3972,7 @@ namespace IronPython.Runtime.Operations {
         public static Exception MissingInvokeMethodException(object o, string name) {
             if (o is OldClass) {
                 throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                    ((OldClass)o).__name__, name);
+                    ((OldClass)o).Name, name);
             } else {
                 throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", GetPythonTypeName(o), name);
             }
@@ -4007,6 +4036,10 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.AttributeError("undeletable attribute");
         }
 
+        public static Exception Warning(string format, params object[] args) {
+            return new WarningException(string.Format(format, args));
+        }
+
         #endregion
 
         private static readonly Microsoft.Scripting.Utils.ThreadLocal<List<FunctionStack>> _funcStack = new Microsoft.Scripting.Utils.ThreadLocal<List<FunctionStack>>(true);
@@ -4022,10 +4055,10 @@ namespace IronPython.Runtime.Operations {
             return stack;
         }
 
-        internal static LambdaExpression ToGenerator(this LambdaExpression code) {
+        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable) {
             return Expression.Lambda(
                 code.Type,
-                new GeneratorRewriter(code.Name, code.Body).Reduce(code.Parameters, x => x),
+                new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, code.Parameters, x => x),
                 code.Name,
                 code.Parameters
             );

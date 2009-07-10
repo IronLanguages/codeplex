@@ -32,9 +32,11 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 [assembly: PythonModule("_collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {
-    [Documentation("High performance data structures\n")]
     public class PythonCollections {
+        public const string __doc__ = "High performance data structures\n";
+
         [PythonType]
+        [DontMapIEnumerableToContains]
         public class deque : IEnumerable, IComparable, ICodeFormattable, IValueEquality, ICollection {
             private object[] _data;
             private object _lockObj = new object();
@@ -387,21 +389,6 @@ namespace IronPython.Modules {
 
                         _itemCnt--;
                     }
-                }
-            }
-
-            public object __contains__(CodeContext/*!*/ context, object o) {
-                lock (_lockObj) {
-                    object res = ScriptingRuntimeHelpers.False;
-                    WalkDeque(delegate(int index) {
-                        if (PythonOps.EqualRetBool(context, _data[index], o)) {
-                            res = ScriptingRuntimeHelpers.True;
-                            return false;
-                        }
-                        return true;
-                    });
-
-                    return res;
                 }
             }
 

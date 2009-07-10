@@ -262,6 +262,12 @@ def AssertErrorWithPartialMessage(exc, expectedMessage, func, *args, **kwargs):
                "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
     else:  Assert(False, "Expected %r but got no exception" % exc)
 
+def AssertErrorWithNumber(exc, expectedErrorNo, func, *args, **kwargs):
+    try:        func(*args, **kwargs)
+    except exc, e: 
+        AreEqual(e.errno, expectedErrorNo)
+    else :      Fail("Expected %r but got no exception" % exc)
+    
 # Check that the exception is raised with the provided message, where the message
 # differs on IronPython and CPython
 

@@ -32,7 +32,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 namespace IronPython.Runtime {
 
     [PythonType("list"), Serializable, System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    public class List : IMutableSequence, IList, ICodeFormattable, IValueEquality, IList<object> {
+    public class List : IList, ICodeFormattable, IValueEquality, IList<object> {
         internal int _size;
         internal volatile object[] _data;
 

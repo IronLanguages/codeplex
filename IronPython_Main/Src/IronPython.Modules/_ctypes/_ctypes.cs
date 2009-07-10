@@ -664,7 +664,7 @@ namespace IronPython.Modules {
             return intPtrHandle;
         }
 
-        private static void ValidateArraySizes(ArrayModule.PythonArray array, int offset, int size) {
+        private static void ValidateArraySizes(ArrayModule.array array, int offset, int size) {
             ValidateArraySizes(array.__len__() * array.itemsize, offset, size);
         }
 

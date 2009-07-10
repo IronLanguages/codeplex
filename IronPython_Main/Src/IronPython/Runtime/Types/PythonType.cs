@@ -151,7 +151,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             EnsureDict();
 
             _underlyingSystemType = typeof(OldInstance);
-            Name = oc.__name__;
+            Name = oc.Name;
             OldClass = oc;
 
             List<PythonType> ocs = new List<PythonType>(oc.BaseClasses.Count);
@@ -907,6 +907,10 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             get {
                 return (_attrs & PythonTypeAttributes.WeakReferencable) != 0;
             }
+            set {
+                if (value) _attrs |= PythonTypeAttributes.WeakReferencable;
+                else _attrs &= (~PythonTypeAttributes.WeakReferencable);
+            }
         }
 
         internal bool HasDictionary {
@@ -1510,7 +1514,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         /// </summary>
         private void AddUserTypeMembers(CodeContext context, Dictionary<string, string> keys, PythonType dt, List res) {
             if (dt.OldClass != null) {
-                foreach (KeyValuePair<object, object> kvp in dt.OldClass.__dict__) {
+                foreach (KeyValuePair<object, object> kvp in dt.OldClass._dict) {
                     AddOneMember(keys, res, kvp.Key);
                 }
             } else {
@@ -1665,10 +1669,10 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
         internal static List<string> SlotsToList(object slots) {
             List<string> res = new List<string>();
-            ISequence seq = slots as ISequence;
-            if (seq != null && !(seq is ExtensibleString)) {
-                res = new List<string>(seq.__len__());
-                for (int i = 0; i < seq.__len__(); i++) {
+            IList<object> seq = slots as IList<object>;
+            if (seq != null) {
+                res = new List<string>(seq.Count);
+                for (int i = 0; i < seq.Count; i++) {
                     res.Add(GetSlotName(seq[i]));
                 }
 
@@ -1818,7 +1822,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     if (i != j && newBases[i] == newBases[j]) {
                         OldClass oc = newBases[i] as OldClass;
                         if (oc != null) {
-                            throw PythonOps.TypeError("duplicate base class {0}", oc.__name__);
+                            throw PythonOps.TypeError("duplicate base class {0}", oc.Name);
                         } else {
                             throw PythonOps.TypeError("duplicate base class {0}", ((PythonType)newBases[i]).Name);
                         }

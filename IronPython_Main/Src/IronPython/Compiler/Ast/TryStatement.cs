@@ -167,6 +167,7 @@ namespace IronPython.Compiler.Ast {
                         @catch,
                         // restore existing line updated after exception handler completes
                         ag.PopLineUpdated(lineUpdated),
+                        Ast.Call(AstGenerator.GetHelperMethod("ExceptionHandled"), ag.LocalContext),
                         AstUtils.Default(body.Type)
                     );
             } else {

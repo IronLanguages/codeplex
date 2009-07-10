@@ -185,7 +185,9 @@ def call_truncate(i):
 # write
 def call_write(o):
     AreEqual(o.getvalue(), text)
-    o.write("Data 1")
+    o.write("Data")
+    o.write(buffer(' 1'))
+    AssertError(TypeError, o.write, None)
     AreEqual(o.read(7), "\nLine 2")
     AreEqual(o.getvalue(), "Data 1\nLine 2\nLine 3\nLine 4\nLine 5")
     o.close()
@@ -197,8 +199,12 @@ def call_writelines(o):
     o.writelines(["Data 1", "Data 2"])
     AreEqual(o.read(8), "2\nLine 3")
     AreEqual(o.getvalue(), "Data 1Data 22\nLine 3\nLine 4\nLine 5")
+    AssertError(TypeError, o.writelines, [buffer('foo')])
+    AssertError(TypeError, o.writelines, [None])
     o.close()
     AssertError(ValueError, o.writelines, "Hello")
+    AssertError(ValueError, o.writelines, ['foo', buffer('foo')])
+    AssertError(TypeError, o.writelines, [buffer('foo')])
 
 # softspace
 def call_softspace(o):

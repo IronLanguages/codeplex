@@ -151,16 +151,26 @@ namespace Microsoft.Linq.Expressions {
         /// children, and if any of them change, should return a new copy of
         /// itself with the modified children.
         /// </remarks>
-        protected internal virtual Expression VisitChildren(Func<Expression, Expression> visitor) {
+        protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) {
             ContractUtils.Requires(CanReduce, "this", Strings.MustBeReducible);
-            return visitor(ReduceExtensions());
+            return visitor.Visit(ReduceExtensions());
         }
 
-        // Visitor pattern: this is the method that dispatches back to the visitor
-        // NOTE: this is unlike the Visit method, which provides a hook for
-        // derived classes to extend the visitor framework to be able to walk
-        // themselves
-        internal virtual Expression Accept(ExpressionVisitor visitor) {
+        /// <summary>
+        /// Dispatches to the specific visit method for this node type. For
+        /// example, <see cref="MethodCallExpression" /> will call into
+        /// <see cref="ExpressionVisitor.VisitMethodCall" />.
+        /// </summary>
+        /// <param name="visitor">The visitor to visit this node with.</param>
+        /// <returns>The result of visiting this node.</returns>
+        /// <remarks>
+        /// This default implementation for <see cref="ExpressionType.Extension" />
+        /// nodes will call <see cref="ExpressionVisitor.VisitExtension" />.
+        /// Override this method to call into a more specific method on a derived
+        /// visitor class of ExprressionVisitor. However, it should still
+        /// support unknown visitors by calling VisitExtension.
+        /// </remarks>
+        protected internal virtual Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitExtension(this);
         }
 

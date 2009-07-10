@@ -28,7 +28,8 @@ using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
     public static class PythonGC {
-        public static PythonType gc = DynamicHelpers.GetPythonTypeFromType(typeof(PythonGC));
+        public const string __doc__ = "Provides functions for inspecting, configuring, and forcing garbage collection.";
+
         public const int DEBUG_STATS = 1;
         public const int DEBUG_COLLECTABLE = 2;
         public const int DEBUG_UNCOLLECTABLE = 4;

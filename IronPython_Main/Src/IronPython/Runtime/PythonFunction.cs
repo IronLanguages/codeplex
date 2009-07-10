@@ -39,7 +39,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Created for a user-defined function.  
     /// </summary>
-    [PythonType("function")]
+    [PythonType("function"), DontMapGetMemberNamesToDir]
     public sealed partial class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicMetaObjectProvider, ICodeFormattable, Binding.IFastInvokable {
         private readonly CodeContext/*!*/ _context;     // the creating code context of the function
         [PythonHidden]
@@ -89,9 +89,24 @@ namespace IronPython.Runtime {
 
         #region Public APIs
 
+        public object __globals__ {
+            get {
+                return func_globals;
+            }
+        }
+
         public object func_globals {
             get {
                 return new PythonDictionary(new GlobalScopeDictionaryStorage(_context.Scope));
+            }
+        }
+
+        public PythonTuple __defaults__ {
+            get {
+                return func_defaults;
+            }
+            set {
+                func_defaults = value;
             }
         }
 
@@ -108,6 +123,15 @@ namespace IronPython.Runtime {
                     _defaults = value.ToArray();
                 }
                 _compat = CalculatedCachedCompat();
+            }
+        }
+
+        public PythonTuple __closure__ {
+            get {
+                return func_closure;
+            }
+            set {
+                func_closure = value;
             }
         }
 
@@ -173,6 +197,15 @@ namespace IronPython.Runtime {
             set { _module = value; }
         }
 
+        public FunctionCode __code__ {
+            get {
+                return func_code;
+            }
+            set {
+                func_code = value;
+            }
+        }
+
         public FunctionCode func_code {
             get {
                 return _code; 
@@ -180,15 +213,6 @@ namespace IronPython.Runtime {
             set {
                 if (value == null) throw PythonOps.TypeError("func_code must be set to a code object");
                 _code = value;
-            }
-        }
-
-        public FunctionCode __code__ {
-            get {
-                return func_code;
-            }
-            set {
-                func_code = value;
             }
         }
 

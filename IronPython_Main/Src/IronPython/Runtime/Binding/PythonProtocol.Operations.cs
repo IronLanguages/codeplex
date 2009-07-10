@@ -253,14 +253,7 @@ namespace IronPython.Runtime.Binding {
                         Ast.Call(
                             typeof(PythonOps).GetMethod("ContainsFromEnumerable"),
                             AstUtils.Constant(state.SharedContext),
-                            Ast.Dynamic(
-                                state.Convert(
-                                    typeof(IEnumerator),
-                                    ConversionResultKind.ExplicitCast
-                                ),
-                                typeof(IEnumerator),
-                                sf.Target.Expression
-                            ),
+                            sf.Target.Expression,
                             AstUtils.Convert(types[1].Expression, typeof(object))
                         ),
                         BindingRestrictions.Combine(types)

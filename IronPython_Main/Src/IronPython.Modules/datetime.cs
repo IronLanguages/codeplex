@@ -35,6 +35,7 @@ namespace IronPython.Modules {
     public class PythonDateTime {
         public static readonly int MAXYEAR = DateTime.MaxValue.Year;
         public static readonly int MINYEAR = DateTime.MinValue.Year;
+        public const string __doc__ = "Provides functions and types for working with dates and times.";
 
         [PythonType]
         public class timedelta : ICodeFormattable {
@@ -440,8 +441,6 @@ namespace IronPython.Modules {
                 return new timedelta(0, ts.TotalSeconds, ts.Milliseconds * 1000);
             }
 
-            public bool __nonzero__() { return true; }
-
             public virtual PythonTuple __reduce__() {
                 return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
             }
@@ -566,7 +565,7 @@ namespace IronPython.Modules {
 
             #region Rich Comparison Members
 
-            protected virtual int CompareTo(object other) {
+            internal virtual int CompareTo(object other) {
                 date date = other as date;
                 return this._dateTime.CompareTo(date._dateTime);
             }
@@ -1027,7 +1026,7 @@ namespace IronPython.Modules {
 
             #region IRichComparable Members
 
-            protected override int CompareTo(object other) {
+            internal override int CompareTo(object other) {
                 if (other == null)
                     throw PythonOps.TypeError("can't compare datetime.datetime to NoneType");
 
@@ -1173,7 +1172,7 @@ namespace IronPython.Modules {
 
                         timedelta delta = this.utcoffset();
                         if (delta != null) {
-                            time utced = this - delta;
+                            time utced = Add(this, -delta);
                             _utcTime.TimeSpan = utced._timeSpan;
                             _utcTime.LostMicroseconds = utced._lostMicroseconds;
                         }
@@ -1183,12 +1182,8 @@ namespace IronPython.Modules {
             }
 
             // supported operations
-            public static time operator +(time date, timedelta delta) {
+            private static time Add(time date, timedelta delta) {
                 return new time(date._timeSpan.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
-            }
-
-            public static time operator -(time date, timedelta delta) {
-                return new time(date._timeSpan.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
             }
 
             public bool __nonzero__() {

@@ -654,42 +654,44 @@ def test_truncate():
 
 def test_modes():
     """test various strange mode combinations and error reporting"""
-    x = file('test_file', 'w')
-    AreEqual(x.mode, 'w')
-    x.close()
-    # don't allow empty modes
-    AssertErrorWithMessage(ValueError, 'empty mode string', file, 'abc', '')
-    
-    # mode must start with valid value
-    AssertErrorWithMessage(ValueError, "mode string must begin with one of 'r', 'w', 'a' or 'U', not 'p'", file, 'abc', 'p')
-    
-    # allow anything w/ U but r and w
-    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw')
-    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua')
-    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw+')
-    AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua+')
-
-    if is_cli:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
-        x = file('test_file', 'pU')
-        AreEqual(x.mode, 'pU')
+    try:
+        x = file('test_file', 'w')
+        AreEqual(x.mode, 'w')
         x.close()
+        # don't allow empty modes
+        AssertErrorWithMessage(ValueError, 'empty mode string', file, 'abc', '')
         
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
-        x = file('test_file', 'pU+')
-        AreEqual(x.mode, 'pU+')
-        x.close()
+        # mode must start with valid value
+        AssertErrorWithMessage(ValueError, "mode string must begin with one of 'r', 'w', 'a' or 'U', not 'p'", file, 'abc', 'p')
         
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21911
-        # extra info can be passed and is retained
-        x = file('test_file', 'rFOOBAR')
-        AreEqual(x.mode, 'rFOOBAR')
-        
-    else:
-        AssertError(IOError, file, 'test_file', 'pU')
-        AssertError(IOError, file, 'test_file', 'pU+')
-        AssertError(IOError, file, 'test_file', 'rFOOBAR')
-
+        # allow anything w/ U but r and w
+        AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw')
+        AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua')
+        AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Uw+')
+        AssertErrorWithMessage(ValueError, "universal newline mode can only be used with modes starting with 'r'", file, 'abc', 'Ua+')
+    
+        if is_cli:
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
+            x = file('test_file', 'pU')
+            AreEqual(x.mode, 'pU')
+            x.close()
+            
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21910
+            x = file('test_file', 'pU+')
+            AreEqual(x.mode, 'pU+')
+            x.close()
+            
+            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21911
+            # extra info can be passed and is retained
+            x = file('test_file', 'rFOOBAR')
+            AreEqual(x.mode, 'rFOOBAR')
+            x.close()
+        else:
+            AssertError(IOError, file, 'test_file', 'pU')
+            AssertError(IOError, file, 'test_file', 'pU+')
+            AssertError(IOError, file, 'test_file', 'rFOOBAR')
+    finally:
+        nt.unlink('test_file')
 
 import thread
 CP16623_LOCK = thread.allocate_lock()
@@ -808,6 +810,10 @@ def test_write_bytes():
     finally:
         nt.unlink('temp_ip')
 
+def test_kw_args():
+    file(name = 'some_test_file.txt', mode = 'w').close()
+    file(name = 'some_test_file.txt', mode = 'w', buffering=1024).close()
+    nt.unlink('some_test_file.txt')
 
 #------------------------------------------------------------------------------    
 run_test(__name__)

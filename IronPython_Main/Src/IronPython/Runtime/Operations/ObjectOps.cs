@@ -15,12 +15,15 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Reflection;
 using System.Threading;
-using IronPython.Runtime.Types;
+
+using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -152,6 +155,46 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static void __setattr__(CodeContext/*!*/ context, object self, string name, object value) {
             PythonOps.ObjectSetAttribute(context, self, SymbolTable.StringToId(name), value);
+        }
+
+        private static int AdjustPointerSize(int size) {
+            if (IntPtr.Size == 4) {
+                return size;
+            }
+
+            return size * 2;
+        }
+
+        /// <summary>
+        /// Returns the number of bytes of memory required to allocate the object.
+        /// </summary>
+        public static int __sizeof__(object self) {
+            IPythonObject ipo = self as IPythonObject;
+            int res = AdjustPointerSize(8); // vtable, sync blk
+            if (ipo != null) {
+                res += AdjustPointerSize(12); // class, dict, slots 
+            }
+
+            Type t = PythonTypeOps.GetFinalSystemType(DynamicHelpers.GetPythonType(self));
+            res += GetTypeSize(t);
+
+            return res;
+        }
+
+        private static int GetTypeSize(Type t) {
+            FieldInfo[] fields = t.GetFields(System.Reflection.BindingFlags.FlattenHierarchy | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            int res = 0;
+            foreach (FieldInfo fi in fields) {
+                if (fi.FieldType.IsClass || fi.FieldType.IsInterface) {
+                    res += AdjustPointerSize(4);
+                } else if (fi.FieldType.IsPrimitive) {
+                    return System.Runtime.InteropServices.Marshal.SizeOf(fi.FieldType);
+                } else {
+                    res += GetTypeSize(fi.FieldType);
+                }
+            }
+
+            return res;
         }
 
         /// <summary>

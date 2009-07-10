@@ -17,6 +17,7 @@ using System; using Microsoft;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
@@ -26,7 +27,6 @@ using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -38,10 +38,14 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-[assembly: PythonModule("__builtin__", typeof(Builtin))]
-namespace IronPython.Runtime {
+[assembly: PythonModule("__builtin__", typeof(IronPython.Modules.Builtin))]
+namespace IronPython.Modules {
     [Documentation("")]  // Documentation suppresses XML Doc on startup.
     public static partial class Builtin {
+        public const string __doc__ = "Provides access to commonly used built-in functions, exception objects, etc...";
+        public const object __package__ = null;
+        public const string __name__ = "__builtin__";
+
         public static object True {
             get {
                 return ScriptingRuntimeHelpers.True;
@@ -89,10 +93,10 @@ namespace IronPython.Runtime {
         [Documentation("__import__(name, globals, locals, fromlist, level) -> module\n\nImport a module.")]
         public static object __import__(CodeContext/*!*/ context, string name, [DefaultParameterValue(null)]object globals, [DefaultParameterValue(null)]object locals, [DefaultParameterValue(null)]object fromlist, [DefaultParameterValue(-1)]int level) {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
-            ISequence from = fromlist as ISequence;
+            IList from = fromlist as IList;
             PythonContext pc = PythonContext.GetContext(context);
 
-            object ret = Importer.ImportModule(context, globals, name, from != null && from.__len__() > 0, level);
+            object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level);
             if (ret == null) {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
@@ -100,7 +104,7 @@ namespace IronPython.Runtime {
             Scope mod = ret as Scope;
             if (mod != null && from != null) {
                 string strAttrName;
-                for (int i = 0; i < from.__len__(); i++) {
+                for (int i = 0; i < from.Count; i++) {
                     object attrName = from[i];
 
                     if (pc.TryConvertToString(attrName, out strAttrName) &&
@@ -839,7 +843,7 @@ namespace IronPython.Runtime {
                 }
             } else if ((oldClass = obj as OldClass) != null) {
                 if (indent == 0) {
-                    doc.AppendFormat("Help on {0} in module {1}\n\n", oldClass.__name__, PythonOps.GetBoundAttr(context, oldClass, Symbols.Module));
+                    doc.AppendFormat("Help on {0} in module {1}\n\n", oldClass.Name, PythonOps.GetBoundAttr(context, oldClass, Symbols.Module));
                 }
 
                 object docText;
@@ -1441,10 +1445,28 @@ namespace IronPython.Runtime {
             return PythonOps.Oct(o);
         }
 
-        public static PythonType open {
-            get {
-                return DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
-            }
+        /// <summary>
+        /// Opens a file and returns a new file object.
+        /// 
+        /// name -> the name of the file to open.
+        /// mode -> the mode to open the file (r for reading, w for writing, a for appending, default is r).
+        /// bufsize -> the size of the buffer to be used (&lt;= 0 indicates to use the default size)
+        /// </summary>
+        public static PythonFile open(CodeContext context, string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int buffering) {
+            PythonFile res = new PythonFile(context);
+            res.__init__(context, name, mode, buffering);
+            return res;            
+        }
+
+        /// <summary>
+        /// Creates a new Python file object from a .NET stream object.
+        /// 
+        /// stream -> the stream to wrap in a file object.
+        /// </summary>
+        public static PythonFile open(CodeContext context, [NotNull]Stream stream) {
+            PythonFile res = new PythonFile(context);
+            res.__init__(context, stream);
+            return res;            
         }
 
         public static int ord(object value) {

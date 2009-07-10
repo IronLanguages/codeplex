@@ -26,6 +26,7 @@ using System.Text;
 
 using Microsoft.Scripting.Actions;
 
+using IronPython.Modules;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -860,7 +861,7 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT    // DirectoryExists isn't implemented on Silverlight
             if (!context.LanguageContext.DomainManager.Platform.DirectoryExists(dirname)) {
-                return new NullImporter(dirname);
+                return new PythonImport.NullImporter(dirname);
             }
 #endif
 
