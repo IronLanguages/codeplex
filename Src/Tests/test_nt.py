@@ -20,6 +20,7 @@ import _random
 from exceptions import IOError
 
 import nt
+import errno
 
 
 AreEqual(nt.environ.has_key('COMPUTERNAME') or nt.environ.has_key('computername'), True)
@@ -58,13 +59,9 @@ def test_stat():
         
     #lstat
     AssertError(nt.error, nt.lstat, 'doesnotexist.txt')
-    
-    try:
-        nt.stat('doesnotexist.txt')
-        AssertUnreachable("nt.stat on a file which doesn't exist should throw")
-    except Exception, e:
-        if sys.platform=="win32": #CodePlex 16453
-            AreEqual(e.errno, 2)
+
+    AssertErrorWithNumber(WindowsError, 2, nt.stat, 'doesnotexist.txt')
+    AssertErrorWithNumber(WindowsError, 22, nt.stat, 'bad?path.txt')
  
     
 # getcwdu test
@@ -139,9 +136,8 @@ def test_chdir():
     nt.rmdir('tsd')
     
     # the directory is empty or does not exist
-    AssertError(OSError, lambda:nt.chdir(''))
-    AssertError(OSError, lambda:nt.chdir('tsd'))
-    
+    AssertErrorWithNumber(WindowsError, 22, lambda:nt.chdir(''))
+    AssertErrorWithNumber(WindowsError, 2, lambda:nt.chdir('tsd'))
 
 # fdopen tests
 def test_fdopen():
@@ -500,14 +496,34 @@ def test_remove():
     nt.remove(path1+'\\create_test_file.txt')
     AreEqual(nt.listdir(nt.getcwd()).count('create_test_file.txt'), 0)
     
-    AssertError(OSError, nt.remove, path1+'\\create_test_file2.txt')
-    AssertError(OSError, nt.unlink, path1+'\\create_test_file2.txt')
+    AssertErrorWithNumber(OSError, 2, nt.remove, path1+'\\create_test_file2.txt')
+    AssertErrorWithNumber(OSError, 2, nt.unlink, path1+'\\create_test_file2.txt')
+    AssertErrorWithNumber(OSError, 22, nt.remove, path1+'\\create_test_file?.txt')
+    AssertErrorWithNumber(OSError, 22, nt.unlink, path1+'\\create_test_file?.txt')
     
     # the path is a type other than string
     AssertError(TypeError, nt.remove, 1)
     AssertError(TypeError, nt.remove, True)
     AssertError(TypeError, nt.remove, None)
   
+def test_remove_negative():
+    import stat
+    AssertErrorWithNumber(WindowsError, errno.ENOENT, lambda : nt.remove('some_file_that_does_not_exist'))
+    try:
+        file('some_test_file.txt', 'w').close()
+        nt.chmod('some_test_file.txt', stat.S_IREAD)
+        AssertErrorWithNumber(WindowsError, errno.EACCES, lambda : nt.remove('some_test_file.txt'))
+        nt.chmod('some_test_file.txt', stat.S_IWRITE)
+        
+        f = file('some_test_file.txt', 'w+')
+        AssertErrorWithNumber(WindowsError, errno.EACCES, lambda : nt.remove('some_test_file.txt'))
+        f.close()
+    finally:
+        nt.chmod('some_test_file.txt', stat.S_IWRITE)
+        nt.unlink('some_test_file.txt')
+        
+        
+
 # rename tests
 def test_rename():
     # normal test
@@ -756,11 +772,31 @@ def test_write():
 
 # open test
 def test_open():
-    # BUG 8784
-    # sanity test
-    #tempfilename = "temp.txt"
-    #fd = nt.open(tempfilename,256,1)
-    pass
+    # bug 19310 
+    file('temp.txt', 'w+').close()
+    try:
+        fd = nt.open('temp.txt', nt.O_WRONLY | nt.O_CREAT)
+        nt.close(fd)
+
+        AssertErrorWithNumber(OSError, 17, nt.open, 'temp.txt', nt.O_CREAT | nt.O_EXCL)
+        for flag in [nt.O_EXCL, nt.O_APPEND]:
+            fd = nt.open('temp.txt', nt.O_RDONLY | flag)
+            nt.close(fd)
+            
+            fd = nt.open('temp.txt', nt.O_WRONLY | flag)
+            nt.close(fd)
+            
+            fd = nt.open('temp.txt', nt.O_RDWR | flag)
+            nt.close(fd)
+
+        # BUG 8784
+        # sanity test
+        tempfilename = "temp.txt"
+        fd = nt.open(tempfilename,256,1)
+        nt.close(fd)
+    finally:
+        nt.unlink('temp.txt')
+    
 
 def test_system_minimal():
     Assert(hasattr(nt, "system"))

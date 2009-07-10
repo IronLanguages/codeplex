@@ -26,6 +26,7 @@ using System.Text;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
+using IronPython.Modules;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
@@ -105,8 +106,7 @@ namespace IronPython.Runtime.Operations {
                     result is Extensible<int> || result is Extensible<BigInteger>) {
                     return ReturnObject(context, cls, result);
                 } else {
-                    throw PythonOps.TypeError("__long__ returned non-long (type {0})",
-                        result is OldInstance ? ((OldInstance)result)._class.__name__ : DynamicHelpers.GetPythonType(result).Name);
+                    throw PythonOps.TypeError("__long__ returned non-long (type {0})", PythonTypeOps.GetOldName(result));
                 }
             } else if (PythonOps.TryGetBoundAttr(context, x, Symbols.Truncate, out result)) {
                 result = PythonOps.CallWithContext(context, result);
@@ -115,14 +115,13 @@ namespace IronPython.Runtime.Operations {
                 } else if (Converter.TryConvertToBigInteger(result, out bigintRes)) {
                     return ReturnObject(context, cls, bigintRes);
                 } else {
-                    throw PythonOps.TypeError("__trunc__ returned non-Integral (type {0})",
-                        result is OldInstance ? ((OldInstance)result)._class.__name__ : DynamicHelpers.GetPythonType(result).Name);
+                    throw PythonOps.TypeError("__trunc__ returned non-Integral (type {0})", PythonTypeOps.GetOldName(result));
                 }
             }
 
             if (x is OldInstance) {
                 throw PythonOps.AttributeError("{0} instance has no attribute '__trunc__'",
-                    ((OldInstance)x)._class.__name__);
+                    ((OldInstance)x)._class.Name);
             } else {
                 throw PythonOps.TypeError("long() argument must be a string or a number, not '{0}'",
                     DynamicHelpers.GetPythonType(x).Name);

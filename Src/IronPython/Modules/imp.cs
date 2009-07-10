@@ -31,6 +31,8 @@ using IronPython.Runtime.Types;
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
     public static class PythonImport {
+        public const string __doc__ = "Provides functions for programmatically creating and importing modules and packages.";
+
         internal const int PythonSource = 1;
         internal const int PythonCompiled = 2;
         internal const int CExtension = 3;
@@ -244,12 +246,6 @@ namespace IronPython.Modules {
             return Builtin.reload(context, scope);
         }
 
-        public static PythonType NullImporter {
-            get {
-                return DynamicHelpers.GetPythonTypeFromType(typeof(NullImporter));
-            }
-        }
-
         #region Implementation
 
         private static PythonTuple FindBuiltinOrSysPath(CodeContext/*!*/ context, string/*!*/ name) {
@@ -332,6 +328,16 @@ namespace IronPython.Modules {
 
         private static void SetLockCount(CodeContext/*!*/ context, long lockCount) {
             PythonContext.GetContext(context).SetModuleState(_lockCountKey, lockCount);
+        }
+
+        [PythonType]
+        public sealed class NullImporter {
+            public NullImporter(string path_string) {
+            }
+
+            public object find_module(params object[] args) {
+                return null;
+            }
         }
     }
 }

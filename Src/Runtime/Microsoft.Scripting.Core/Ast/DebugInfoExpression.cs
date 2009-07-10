@@ -94,7 +94,10 @@ namespace Microsoft.Linq.Expressions {
             get { throw ContractUtils.Unreachable; }
         }
 
-        internal override Expression Accept(ExpressionVisitor visitor) {
+        /// <summary>
+        /// Dispatches to the specific visit method for this node type.
+        /// </summary>
+        protected internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitDebugInfo(this);
         }
     }
@@ -142,7 +145,7 @@ namespace Microsoft.Linq.Expressions {
             }
         }
 
-        internal override Expression Accept(ExpressionVisitor visitor) {
+        protected internal override Expression Accept(ExpressionVisitor visitor) {
             return visitor.VisitDebugInfo(this);
         }
     }

@@ -44,6 +44,7 @@ namespace IronPython.Modules {
         #region Public API
 
         public const string __doc__ = null;
+        public const string __version__ = "0.2";
 
         public const int _PY_STRUCT_FLOAT_COERCE = 0;
         public const int _PY_STRUCT_OVERFLOW_MASKING = 0;
@@ -217,7 +218,7 @@ namespace IronPython.Modules {
             }
 
             [Documentation("Stores the deserialized data into the provided array")]
-            public void pack_into(CodeContext/*!*/ context, [NotNull]ArrayModule.PythonArray/*!*/ buffer, int offset, params object[] args) {
+            public void pack_into(CodeContext/*!*/ context, [NotNull]ArrayModule.array/*!*/ buffer, int offset, params object[] args) {
                 byte[] existing = buffer.ToByteArray();
 
                 if (offset + size > existing.Length) {
@@ -341,7 +342,7 @@ namespace IronPython.Modules {
                 return new PythonTuple(res);
             }
 
-            public PythonTuple/*!*/ unpack(CodeContext/*!*/ context, [NotNull]ArrayModule.PythonArray/*!*/ buffer) {
+            public PythonTuple/*!*/ unpack(CodeContext/*!*/ context, [NotNull]ArrayModule.array/*!*/ buffer) {
                 return unpack_from(context, buffer, 0);
             }
 
@@ -350,7 +351,7 @@ namespace IronPython.Modules {
             }
 
             [Documentation("reads the current format from the specified array")]
-            public PythonTuple/*!*/ unpack_from(CodeContext/*!*/ context, [NotNull]ArrayModule.PythonArray/*!*/ buffer, [DefaultParameterValue(0)] int offset) {
+            public PythonTuple/*!*/ unpack_from(CodeContext/*!*/ context, [NotNull]ArrayModule.array/*!*/ buffer, [DefaultParameterValue(0)] int offset) {
                 return unpack_from(context, buffer.ToByteArray().MakeString(), offset);
             }
 
@@ -380,15 +381,15 @@ namespace IronPython.Modules {
 
             #region IWeakReferenceable Members
 
-            public WeakRefTracker GetWeakRef() {
+            WeakRefTracker IWeakReferenceable.GetWeakRef() {
                 return _tracker;
             }
 
-            public bool SetWeakRef(WeakRefTracker value) {
+            bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
                 return Interlocked.CompareExchange(ref _tracker, value, null) == null;
             }
 
-            public void SetFinalizer(WeakRefTracker value) {
+            void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
                 _tracker = value;
             }
 
@@ -660,7 +661,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("Pack the values v1, v2, ... according to fmt.\nWrite the packed bytes into the writable buffer buf starting at offset.")]
-        public static void pack_into(CodeContext/*!*/ context, [NotNull]string/*!*/ fmt, [NotNull]ArrayModule.PythonArray/*!*/ buffer, int offset, params object[] args) {
+        public static void pack_into(CodeContext/*!*/ context, [NotNull]string/*!*/ fmt, [NotNull]ArrayModule.array/*!*/ buffer, int offset, params object[] args) {
             Struct s;
             if (!_cache.TryGetValue(fmt, out s)) {
                 s = new Struct(context, fmt);
@@ -678,7 +679,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("Unpack the string containing packed C structure data, according to fmt.\nRequires len(string) == calcsize(fmt).")]
-        public static PythonTuple/*!*/ unpack(CodeContext/*!*/ context, [NotNull]string/*!*/ fmt, [NotNull]ArrayModule.PythonArray/*!*/ buffer) {
+        public static PythonTuple/*!*/ unpack(CodeContext/*!*/ context, [NotNull]string/*!*/ fmt, [NotNull]ArrayModule.array/*!*/ buffer) {
             Struct s;
             if (!_cache.TryGetValue(fmt, out s)) {
                 s = new Struct(context, fmt);
@@ -696,7 +697,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("Unpack the buffer, containing packed C structure data, according to\nfmt, starting at offset. Requires len(buffer[offset:]) >= calcsize(fmt).")]
-        public static PythonTuple/*!*/ unpack_from(CodeContext/*!*/ context, [NotNull]string fmt/*!*/, [NotNull]ArrayModule.PythonArray/*!*/ buffer, [DefaultParameterValue(0)] int offset) {
+        public static PythonTuple/*!*/ unpack_from(CodeContext/*!*/ context, [NotNull]string fmt/*!*/, [NotNull]ArrayModule.array/*!*/ buffer, [DefaultParameterValue(0)] int offset) {
             Struct s;
             if (!_cache.TryGetValue(fmt, out s)) {
                 s = new Struct(context, fmt);

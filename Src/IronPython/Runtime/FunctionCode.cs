@@ -644,8 +644,10 @@ namespace IronPython.Runtime {
                     _name,
                     Code.Body
                 ).Reduce(
+                    _shouldInterpret,
+                    _debuggable,
                     Code.Parameters,
-                    x => context.DebugContext.TransformLambda(x, debugInfo)
+                    x => (Expression<Func<MutableTuple, object>>)context.DebugContext.TransformLambda(x, debugInfo)
                 ),
                 Code.Name,
                 Code.Parameters
@@ -662,7 +664,7 @@ namespace IronPython.Runtime {
             if ((_flags & FunctionAttributes.Generator) == 0) {
                 finalCode = Code;
             } else {
-                finalCode = Code.ToGenerator();
+                finalCode = Code.ToGenerator(_shouldInterpret, _debuggable);
             }
             return finalCode;
         }

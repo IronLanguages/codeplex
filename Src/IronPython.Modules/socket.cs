@@ -36,7 +36,7 @@ using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 
 using BaseException = IronPython.Runtime.Exceptions.PythonExceptions.BaseException;
-using PythonArray = IronPython.Modules.ArrayModule.PythonArray;
+using PythonArray = IronPython.Modules.ArrayModule.array;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]

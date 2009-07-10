@@ -38,11 +38,6 @@ namespace IronPython.Runtime.Types {
 
         #region Python Public API Surface
 
-        [SpecialName]
-        public bool DeleteItem(object key) {
-            throw PythonOps.TypeError("cannot delete from dictproxy");
-        }
-
         public int __len__(CodeContext context) {
             return _dt.GetMemberDictionary(context, false).Count;
         }
@@ -145,6 +140,7 @@ namespace IronPython.Runtime.Types {
             get {
                 return GetIndex(DefaultContext.Default, key);
             }
+            [PythonHidden]
             set {
                 throw PythonOps.TypeError("cannot assign to dictproxy");
             }

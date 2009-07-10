@@ -767,16 +767,18 @@ namespace IronPython.Runtime.Types {
         /// Provides a resolution for __len__
         /// </summary>
         private static MemberGroup/*!*/ LengthResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (binder.GetInterfaces(type).Contains(typeof(ICollection))) {
-                return GetInstanceOpsMethod(type, "LengthMethod");
-            }
+            if (!type.IsDefined(typeof(DontMapICollectionToLenAttribute), true)) {
+                if (binder.GetInterfaces(type).Contains(typeof(ICollection))) {
+                    return GetInstanceOpsMethod(type, "LengthMethod");
+                }
 
-            foreach (Type t in binder.GetInterfaces(type)) {
-                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ICollection<>)) {
-                    MethodInfo genMeth = typeof(InstanceOps).GetMethod("GenericLengthMethod");
-                    return new MemberGroup(
-                        MethodTracker.FromMemberInfo(genMeth.MakeGenericMethod(t.GetGenericArguments()), type)
-                    );
+                foreach (Type t in binder.GetInterfaces(type)) {
+                    if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ICollection<>)) {
+                        MethodInfo genMeth = typeof(InstanceOps).GetMethod("GenericLengthMethod");
+                        return new MemberGroup(
+                            MethodTracker.FromMemberInfo(genMeth.MakeGenericMethod(t.GetGenericArguments()), type)
+                        );
+                    }
                 }
             }
 
@@ -811,15 +813,17 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            // no special __iter__, use the default.
-            if (typeof(System.Collections.Generic.IEnumerable<>).IsAssignableFrom(type)) {
-                return GetInstanceOpsMethod(type, "IterMethodForGenericEnumerable");
-            } else if (typeof(System.Collections.IEnumerable).IsAssignableFrom(type)) {
-                return GetInstanceOpsMethod(type, "IterMethodForEnumerable");
-            } else if (typeof(System.Collections.Generic.IEnumerator<>).IsAssignableFrom(type)) {
-                return GetInstanceOpsMethod(type, "IterMethodForGenericEnumerator");
-            } else if (typeof(System.Collections.IEnumerator).IsAssignableFrom(type)) {
-                return GetInstanceOpsMethod(type, "IterMethodForEnumerator");
+            if (!type.IsDefined(typeof(DontMapIEnumerableToIterAttribute), true)) {
+                // no special __iter__, use the default.
+                if (typeof(System.Collections.Generic.IEnumerable<>).IsAssignableFrom(type)) {
+                    return GetInstanceOpsMethod(type, "IterMethodForGenericEnumerable");
+                } else if (typeof(System.Collections.IEnumerable).IsAssignableFrom(type)) {
+                    return GetInstanceOpsMethod(type, "IterMethodForEnumerable");
+                } else if (typeof(System.Collections.Generic.IEnumerator<>).IsAssignableFrom(type)) {
+                    return GetInstanceOpsMethod(type, "IterMethodForGenericEnumerator");
+                } else if (typeof(System.Collections.IEnumerator).IsAssignableFrom(type)) {
+                    return GetInstanceOpsMethod(type, "IterMethodForEnumerator");
+                }
             }
             
             return MemberGroup.EmptyGroup;
@@ -864,7 +868,8 @@ namespace IronPython.Runtime.Types {
                         }
 
                         MethodTracker method = (MethodTracker)mt;
-                        if ((method.Method.Attributes & MethodAttributes.NewSlot) != 0) {
+                        if ((method.Method.Attributes & MethodAttributes.NewSlot) != 0 ||
+                            method.Method.IsDefined(typeof(PythonHiddenAttribute), false)) {
                             continue;
                         }
 
@@ -891,6 +896,10 @@ namespace IronPython.Runtime.Types {
         }
 
         private static MemberGroup/*!*/ DirResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            if (type.IsDefined(typeof(DontMapGetMemberNamesToDirAttribute), true)) {
+                return MemberGroup.EmptyGroup;
+            }
+
             MemberGroup res = binder.GetMember(type, "GetMemberNames");
             if (res == MemberGroup.EmptyGroup && 
                 !typeof(IPythonObject).IsAssignableFrom(type) &&
@@ -947,7 +956,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static MemberGroup/*!*/ EnterResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (type != typeof(PythonGenerator) && typeof(IDisposable).IsAssignableFrom(type)) {
+            if (!type.IsDefined(typeof(DontMapIDisposableToContextManagerAttribute), true) && typeof(IDisposable).IsAssignableFrom(type)) {
                 return GetInstanceOpsMethod(type, "EnterMethod");
             }
 
@@ -955,7 +964,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static MemberGroup/*!*/ ExitResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (type != typeof(PythonGenerator) && typeof(IDisposable).IsAssignableFrom(type)) {
+            if (!type.IsDefined(typeof(DontMapIDisposableToContextManagerAttribute), true) && typeof(IDisposable).IsAssignableFrom(type)) {
                 return GetInstanceOpsMethod(type, "ExitMethod");
             }
 
@@ -986,7 +995,7 @@ namespace IronPython.Runtime.Types {
         /// The lookup is well ordered and not dependent upon the order of values returned by reflection.
         /// </summary>
         private static MemberGroup/*!*/ ContainsResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            if (type == typeof(PythonGenerator)) {
+            if (type.IsDefined(typeof(DontMapIEnumerableToContainsAttribute), true)) {
                 // it's enumerable but doesn't have __contains__
                 return MemberGroup.EmptyGroup;
             }

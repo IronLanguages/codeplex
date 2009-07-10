@@ -18,7 +18,7 @@ using System; using Microsoft;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Modules {
     public static partial class Builtin {
         #region Generated builtin exceptions
 
@@ -73,15 +73,8 @@ namespace IronPython.Runtime {
         public static PythonType OSError {
             get { return PythonExceptions.OSError; }
         }
-
-#if !SILVERLIGHT
         public static PythonType WindowsError {
             get { return PythonExceptions.WindowsError; }
-        }
-#endif // !SILVERLIGHT
-
-        public static PythonType VMSError {
-            get { return PythonExceptions.VMSError; }
         }
         public static PythonType EOFError {
             get { return PythonExceptions.EOFError; }

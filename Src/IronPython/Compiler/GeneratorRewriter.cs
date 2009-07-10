@@ -33,8 +33,6 @@ using IronPython.Runtime.Operations;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler {
-    public delegate object PythonGeneratorNext(MutableTuple state);
-
     /// <summary>
     /// When finding a yield return or yield break, this rewriter flattens out
     /// containing blocks, scopes, and expressions with stack state. All
@@ -77,7 +75,7 @@ namespace IronPython.Compiler {
             _gotoRouter = Expression.Variable(typeof(int), "$gotoRouter");
         }
 
-        internal Expression Reduce(IList<ParameterExpression> parameters, Func<LambdaExpression, LambdaExpression> bodyConverter) {
+        internal Expression Reduce(bool shouldInterpret, bool emitDebugSymbols, IList<ParameterExpression> parameters, Func<Expression<Func<MutableTuple, object>>, Expression<Func<MutableTuple, object>>> bodyConverter) {
             _state = LiftVariable(Expression.Parameter(typeof(int), "state"));
             _current = LiftVariable(Expression.Parameter(typeof(object), "current"));
 
@@ -121,7 +119,7 @@ namespace IronPython.Compiler {
             ParameterExpression tupleTmp = Expression.Parameter(tupleType, "tuple");
             ParameterExpression ret = Expression.Parameter(typeof(PythonGenerator), "ret");
 
-            var innerLambda = Expression.Lambda<PythonGeneratorNext>(
+            var innerLambda = Expression.Lambda<Func<MutableTuple, object>>(
                 Expression.Block(
                     _temps.ToArray(),
                     Expression.Assign(
@@ -150,7 +148,15 @@ namespace IronPython.Compiler {
                         typeof(PythonOps).GetMethod("MakeGenerator"),
                         parameters[0],
                         Expression.Assign(tupleTmp, newTuple),
-                        bodyConverter(innerLambda)
+                        emitDebugSymbols ?
+                            (Expression)bodyConverter(innerLambda) :
+                            (Expression)Expression.Constant(
+                                new LazyCode<Func<MutableTuple, object>>(
+                                    bodyConverter(innerLambda),
+                                    shouldInterpret
+                                ),
+                                typeof(object)
+                            )
                     )
                 ),
                 new DelayedTupleAssign(
@@ -929,7 +935,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        protected override Expression VisitChildren(Func<Expression, Expression> visitor) {
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
             return this;
         }
     }
@@ -960,8 +966,8 @@ namespace IronPython.Compiler {
             }
         }
 
-        protected override Expression VisitChildren(Func<Expression, Expression> visitor) {
-            Expression rhs = visitor(_rhs);
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
+            Expression rhs = visitor.Visit(_rhs);
             if (rhs != _rhs) {
                 return new DelayedTupleAssign(_lhs, rhs);
             }
@@ -978,7 +984,7 @@ namespace IronPython.Compiler {
         }
 
         public override Expression Reduce() {
-            return _lambda.ToGenerator();
+            return _lambda.ToGenerator(false, true);
         }
 
         public sealed override ExpressionType NodeType {

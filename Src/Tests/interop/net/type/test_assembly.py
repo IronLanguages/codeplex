@@ -25,7 +25,7 @@ def test_assembly_instance():
     mscorlib = clr.LoadAssemblyByName("mscorlib")
         
     #GetMemberNames
-    Assert(len(dir(mscorlib)), 64)
+    Assert(len(dir(mscorlib)), 65)
     for x in ["System", "Microsoft"]:
         Assert( x in dir(mscorlib), "dir(mscorlib) does not have %s" % x)
     
@@ -39,7 +39,7 @@ def test_assemblybuilder_instance():
     assemblyBuilder = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, System.Reflection.Emit.AssemblyBuilderAccess.Run)    
     
     asm_builder_dir = dir(assemblyBuilder)
-    AreEqual(len(asm_builder_dir), 77)
+    AreEqual(len(asm_builder_dir), 78)
     Assert("AddResourceFile" in asm_builder_dir)
     Assert("CreateInstance" in asm_builder_dir)
     
@@ -47,8 +47,8 @@ def test_type():
     mscorlib = Assembly.Load("mscorlib")
     Assert("Assembly" in repr(mscorlib))  
 
-    AreEqual(len(dir(Assembly)), 64)
-    AreEqual(len(dir(AssemblyBuilder)), 77)   
+    AreEqual(len(dir(Assembly)), 65)
+    AreEqual(len(dir(AssemblyBuilder)), 78)   
     
 #####################################################################################
 run_test(__name__)

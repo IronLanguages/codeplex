@@ -29,6 +29,8 @@ using Microsoft.Scripting.Utils;
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
     public static class PythonLocale {
+        public const string __doc__ = "Provides access for querying and manipulating the current locale settings";
+
         private static readonly object _localeKey = new object();
 
         [SpecialName]

@@ -35,7 +35,7 @@ namespace IronPython.Modules {
         /// introspection of the structure.
         /// </summary>
         [PythonType, PythonHidden]
-        public sealed class Field : PythonTypeSlot, ICodeFormattable {
+        public sealed class Field : PythonTypeDataSlot, ICodeFormattable {
             private readonly INativeType _fieldType;
             private readonly int _offset, _index, _bits = -1, _bitsOffset;
             private readonly string _fieldName;
@@ -114,10 +114,6 @@ namespace IronPython.Modules {
                 } else {
                     SetBitsValue(address, baseOffset, value);
                 }
-            }
-
-            internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
-                return true;
             }
 
             internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {

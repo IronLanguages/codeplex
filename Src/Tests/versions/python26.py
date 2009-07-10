@@ -563,7 +563,7 @@ def test_sys_flags():
     structseq_attrs = set(["n_fields", "n_sequence_fields", "n_unnamed_fields"])
     flag_attrs = set(['bytes_warning', 'debug', 'division_new', 'division_warning', 'dont_write_bytecode', 'ignore_environment', 'inspect', 'interactive', 'no_site', 'no_user_site', 'optimize', 'py3k_warning', 'tabcheck', 'unicode', 'verbose'])
     expected_attrs = structseq_attrs.union(flag_attrs, dir(object), dir(tuple))
-    expected_attrs -= set(["index", "count", "__iter__", "__getnewargs__"]) # tuple fields that don't appear in sys.flags
+    expected_attrs -= set(["index", "count", "__iter__", "__getnewargs__", "__radd__"]) # tuple fields that don't appear in sys.flags
     
     AreEqual(attrs, set(dir(type(sys.flags))))
     attrs -= set(['__iter__']) # ignore '__iter__', which appears in IPy but not CPy

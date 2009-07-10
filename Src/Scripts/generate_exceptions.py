@@ -39,7 +39,7 @@ excs = collect_excs()
 pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDeprecationWarning', 'EnvironmentError',
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
               'FutureWarning', 'AssertionError', 'RuntimeWarning', 'ImportWarning', 'UserWarning', 'SyntaxWarning', 
-	          'UnicodeWarning', 'StopIteration', 'Warning', 'BytesWarning', 'BufferError']
+	          'UnicodeWarning', 'StopIteration', 'BytesWarning', 'BufferError']
 
 
 class ExceptionInfo(object):
@@ -77,6 +77,10 @@ class ExceptionInfo(object):
             return '_' + self.name
         else:
             return self.name
+    
+    @property
+    def DotNetExceptionName(self):
+        return self.clrException[self.clrException.rfind('.')+1:]
     
     @property
     def InternalPythonType(self):
@@ -117,8 +121,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                             ExceptionInfo('EnvironmentError', 'System.Runtime.InteropServices.ExternalException', None, ('errno', 'strerror', 'filename'), (
                                     ExceptionInfo('IOError', 'System.IO.IOException', None, (), ()),
                                     ExceptionInfo('OSError', 'IronPython.Runtime.Exceptions.OSException', None, (), (
-                                            ExceptionInfo('WindowsError', 'System.ComponentModel.Win32Exception', None, ('winerror',), (), False),
-                                            ExceptionInfo('VMSError', 'System.Exception', None, (), ()),
+                                            ExceptionInfo('WindowsError', 'System.ComponentModel.Win32Exception', None, ('winerror',), ()),
                                         ),
                                     ),
                                 ),
@@ -240,9 +243,9 @@ def gen_topython_helper(cw):
     for x in allExceps[:-1]:    # skip System.Exception which is last...
         if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
         if x.fields or x.name == 'BaseException':        
-            cw.writeline('if (clrException is %s) return new _%s();' % (x.clrException, x.name))
+            cw.writeline('if (clrException is %s) return new _%s();' % (x.DotNetExceptionName, x.name))
         else:
-            cw.writeline('if (clrException is %s) return new %s(%s);' % (x.clrException, x.ConcreteParent.ClrType, x.name))
+            cw.writeline('if (clrException is %s) return new %s(%s);' % (x.DotNetExceptionName, x.ConcreteParent.ClrType, x.name))
         if not x.silverlightSupported: cw.writeline('#endif')
         
     cw.writeline('return new BaseException(Exception);')    
@@ -252,7 +255,7 @@ def gen_topython_helper(cw):
     for x in allExceps:
         if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
         #if not x.fields:
-        cw.writeline('if (type == %s) return new %s(message);' % (x.name, x.clrException))
+        cw.writeline('if (type == %s) return new %s(message);' % (x.name, x.DotNetExceptionName))
         #else:
         #    cw.writeline('if (type == DynamicHelpers.GetPythonTypeFromType(typeof(%s))) return new %s(message);' % (x.name, x.clrException))  
         if not x.silverlightSupported: cw.writeline('#endif')  
@@ -288,10 +291,8 @@ public class %(name)s : %(supername)s {
 
 def gen_one_exception(cw, e):    
     supername = getattr(exceptions, e).__bases__[0].__name__
-    if not supername in pythonExcs:
+    if not supername in pythonExcs and supername != 'Warning':
         supername = ''
-    else:
-        supername = supername 
     cw.write(CLASS1, name=get_clr_name(e), supername=get_clr_name(supername))
 
 def gen_one_exception_maker(e):

@@ -28,7 +28,7 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
-    [PythonType("instancemethod")]
+    [PythonType("instancemethod"), DontMapGetMemberNamesToDir]
     public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicMetaObjectProvider, ICodeFormattable {
         private readonly object _func;
         private readonly object _inst;
@@ -50,7 +50,7 @@ namespace IronPython.Runtime {
             _inst = instance;
         }
 
-        public string __name__ {
+        internal string Name {
             get { return (string)PythonOps.GetBoundAttr(DefaultContext.Default, _func, Symbols.Name); }
         }
 
@@ -113,8 +113,8 @@ namespace IronPython.Runtime {
             PythonType pt = im_class as PythonType;
 
             return PythonOps.TypeError("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
-                __name__,
-                (dt != null) ? dt.__name__ : (pt != null) ? pt.Name : im_class,
+                Name,
+                (dt != null) ? dt.Name : (pt != null) ? pt.Name : im_class,
                 firstArg);
         }
 
@@ -134,7 +134,7 @@ namespace IronPython.Runtime {
             PythonType dt = im_class as PythonType;
             if (dt != null) return dt.Name;
             OldClass oc = im_class as OldClass;
-            if (oc != null) return oc.__name__;
+            if (oc != null) return oc.Name;
             return im_class.ToString();
         }
 
@@ -176,22 +176,23 @@ namespace IronPython.Runtime {
 
         [SpecialName]
         public object GetCustomMember(CodeContext context, string name) {
-            if (name == "__module__") {
+            switch (name) {
                 // Get the module name from the function and pass that out.  Note that CPython's method has
                 // no __module__ attribute and this value can be gotten via a call to method.__getattribute__ 
                 // there as well.
-                return PythonOps.GetBoundAttr(context, _func, Symbols.Module);                
+                case "__module__":
+                    return PythonOps.GetBoundAttr(context, _func, Symbols.Module);
+                case "__name__":
+                    return PythonOps.GetBoundAttr(DefaultContext.Default, _func, Symbols.Name);
+                default:
+                    object value;
+                    SymbolId symbol = SymbolTable.StringToId(name);
+                    if (TypeCache.Method.TryGetBoundMember(context, this, symbol, out value) ||       // look on method
+                        PythonOps.TryGetBoundAttr(context, _func, symbol, out value)) {               // Forward to the func
+                        return value;
+                    }
+                    return OperationFailed.Value;
             }
-            
-            object value;
-            SymbolId symbol = SymbolTable.StringToId(name);
-            if (TypeCache.Method.TryGetBoundMember(context, this, symbol, out value) ||       // look on method
-                PythonOps.TryGetBoundAttr(context, _func, symbol, out value)) {               // Forward to the func
-                return value;
-            }
-
-            
-            return OperationFailed.Value;
         }
 
         [SpecialName]

@@ -953,4 +953,30 @@ def test_repr_not_called():
     except SystemExit:
         pass
 
+def test_windows_error():
+    # int is required for 2/3 params
+    AssertError(TypeError, WindowsError, 'foo', 'bar')
+    AssertError(TypeError, WindowsError, 'foo', 'bar', 'baz')
+    
+    err = WindowsError('foo', 'bar', 'baz', 'quox')
+    AreEqual(err.errno, None)
+    AreEqual(err.winerror, None)
+    AreEqual(err.filename, None)
+    AreEqual(err.strerror, None)
+    AreEqual(err.args, ('foo', 'bar', 'baz', 'quox'))
+    
+    err = WindowsError(42, 'bar', 'baz')
+    AreEqual(err.filename, 'baz')
+    AreEqual(err.winerror, 42)
+    AreEqual(err.strerror, 'bar')
+    AreEqual(err.args, (42, 'bar'))
+
+    # winerror code is passed through unmodified
+    for i in xrange(256):
+        x = WindowsError(i, 'foo')
+        AreEqual(x.winerror, i)
+    
+    # winerror code is mapped to Python error code
+    AreEqual(WindowsError(10, 'foo').errno, 7)
+
 run_test(__name__)

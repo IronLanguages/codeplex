@@ -182,8 +182,7 @@ def test_garbage():
     
 #gc
 def test_gc():
-    if is_cli or is_silverlight:
-        Assert(gc.gc != None,"gc.gc should not be None")
+    Assert(not hasattr(gc, 'gc'))
     
 #test DEBUG_STATS,DEBUG_COLLECTABLE,DEBUG_UNCOLLECTABLE,DEBUG_INSTANCES,DEBUG_OBJECTS,DEBUG_SAVEALL and DEBUG_LEAK
 def test_debug_stats():

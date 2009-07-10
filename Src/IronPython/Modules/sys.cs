@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 
@@ -33,9 +34,11 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-[assembly: PythonModule("sys", typeof(IronPython.Runtime.SysModule))]
-namespace IronPython.Runtime {
+[assembly: PythonModule("sys", typeof(IronPython.Modules.SysModule))]
+namespace IronPython.Modules {
     public static class SysModule {
+        public const string __doc__ = "Provides access to functions which query or manipulate the Python runtime.";
+
         public const int api_version = 0;
         // argv is set by PythonContext and only on the initial load
         public static readonly string byteorder = BitConverter.IsLittleEndian ? "little" : "big";
@@ -52,6 +55,13 @@ namespace IronPython.Runtime {
                 prefix = String.Empty;
             }
 #endif
+        }
+
+        /// <summary>
+        /// Returns detailed call statistics.  Not implemented in IronPython and always returns None.
+        /// </summary>
+        public static object callstats() {
+            return null;
         }
 
         /// <summary>
@@ -159,6 +169,23 @@ namespace IronPython.Runtime {
             throw PythonOps.ValueError("call stack is not deep enough");
         }
 
+        public static int getsizeof(object o) {
+            return ObjectOps.__sizeof__(o);
+        }
+
+#if !SILVERLIGHT
+        public static PythonTuple getwindowsversion() {
+            var osVer = Environment.OSVersion;
+            return PythonTuple.MakeTuple(
+                osVer.Version.Major,
+                osVer.Version.Minor,
+                osVer.Version.Build,
+                (int)osVer.Platform,
+                osVer.ServicePack
+            );
+        }
+#endif
+
         // hex_version is set by PythonContext
         public const int maxint = Int32.MaxValue;
         public const int maxsize = Int32.MaxValue;
@@ -261,13 +288,14 @@ namespace IronPython.Runtime {
         // stdin, stdout, stderr, __stdin__, __stdout__, and __stderr__ added by PythonContext
 
         // version and version_info are set by PythonContext
+        public static PythonTuple subversion = PythonTuple.MakeTuple("IronPython", "", "");
 
         public const string winver = "2.6";
 
         #region Special types
 
-        [PythonHidden, PythonType("flags")]
-        public sealed class SysFlags : ISequence, IList<object> {
+        [PythonHidden, PythonType("flags"), DontMapIEnumerableToIter]
+        public sealed class SysFlags : IList<object> {
             private const string _className = "sys.flags"; 
             
             internal SysFlags() { }
@@ -479,10 +507,6 @@ namespace IronPython.Runtime {
                 return f._tuple + t;
             }
 
-            public static PythonTuple operator +([NotNull]PythonTuple t, [NotNull]SysFlags f) {
-                return t + f._tuple;
-            }
-
             public static PythonTuple operator *([NotNull]SysFlags f, int n) {
                 return f._tuple * n;
             }
@@ -621,6 +645,381 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        public static floatinfo float_info = new floatinfo(PythonTuple.MakeTuple(Double.MaxValue, 1024, 308, Double.MinValue, -1021, -307, 15, 53, Double.Epsilon, 2, 1), null);
+
+        [PythonType, PythonHidden, DontMapIEnumerableToIter]
+        public class floatinfo : IList, IList<object> {
+            private readonly object _max, _dig, _mant_dig, _epsilon, _rounds, _max_exp, _max_10_exp, _min, _min_exp, _min_10_exp, _radix;
+
+            public const int n_fields = 11;
+            public const int n_sequence_fields = 11;
+            public const int n_unnamed_fields = 0;
+
+            public floatinfo(IList statResult, [DefaultParameterValue(null)]PythonDictionary dict) {
+                // dict is allowed by CPython's float_info, but doesn't seem to do anything, so we ignore it here.
+
+                if (statResult.Count < 10) {
+                    throw PythonOps.TypeError("float_info() takes an at least 11-sequence ({0}-sequence given)", statResult.Count);
+                }
+
+                _max = statResult[0];
+                _max_exp = statResult[1];
+                _max_10_exp = statResult[2];
+                _min = statResult[3];
+                _min_exp = statResult[4];
+                _min_10_exp = statResult[5];
+                _dig = statResult[6];
+                _mant_dig = statResult[7];
+                _epsilon = statResult[8];
+                _radix = statResult[9];
+                _rounds = statResult[10];
+            }
+
+            private static object TryShrinkToInt(object value) {
+                BigInteger bi = value as BigInteger;
+
+                if (Object.ReferenceEquals(bi, null)) {
+                    return value;
+                }
+
+                return BigIntegerOps.__int__(bi);
+            }
+
+            public object epsilon {
+                get {
+                    return _epsilon;
+                }
+            }
+
+            public object mant_dig {
+                get {
+                    return _mant_dig;
+                }
+            }
+
+            public object radix {
+                get {
+                    return _radix;
+                }
+            }
+
+            public object rounds {
+                get {
+                    return _rounds;
+                }
+            }
+
+            public object max_10_exp {
+                get {
+                    return _max_10_exp;
+                }
+            }
+
+            public object min_10_exp {
+                get {
+                    return _min_10_exp;
+                }
+            }
+
+            public object max_exp {
+                get {
+                    return _max_exp;
+                }
+            }
+
+            public object max {
+                get {
+                    return _max;
+                }
+            }
+
+            public object min {
+                get {
+                    return _min;
+                }
+            }
+
+            public object dig {
+                get {
+                    return _dig;
+                }
+            }
+
+            public object min_exp {
+                get {
+                    return _min_exp;
+                }
+            }
+
+            public static PythonTuple operator +(floatinfo stat, PythonTuple tuple) {
+                return stat.MakeTuple() + tuple;
+            }
+
+            public static bool operator >(floatinfo stat, IList o) {
+                return stat.MakeTuple() > PythonTuple.Make(o);
+            }
+
+            public static bool operator <(floatinfo stat, IList o) {
+                return stat.MakeTuple() > PythonTuple.Make(o);
+            }
+
+            public static bool operator >=(floatinfo stat, IList o) {
+                return stat.MakeTuple() >= PythonTuple.Make(o);
+            }
+
+            public static bool operator <=(floatinfo stat, IList o) {
+                return stat.MakeTuple() >= PythonTuple.Make(o);
+            }
+
+            public static bool operator >(floatinfo stat, object o) {
+                return true;
+            }
+
+            public static bool operator <(floatinfo stat, object o) {
+                return false;
+            }
+
+            public static bool operator >=(floatinfo stat, object o) {
+                return true;
+            }
+
+            public static bool operator <=(floatinfo stat, object o) {
+                return false;
+            }
+
+            public static PythonTuple operator *(floatinfo stat, int size) {
+                return stat.MakeTuple() * size;
+            }
+
+            public static PythonTuple operator *(int size, floatinfo stat) {
+                return stat.MakeTuple() * size;
+            }
+
+            public override string ToString() {
+                return MakeTuple().ToString();
+            }
+
+            public string/*!*/ __repr__() {
+                return ToString();
+            }
+
+            public PythonTuple __reduce__() {
+                PythonDictionary emptyDict = new PythonDictionary(0);
+
+                return PythonTuple.MakeTuple(
+                    DynamicHelpers.GetPythonTypeFromType(typeof(floatinfo)),
+                    PythonTuple.MakeTuple(MakeTuple(), emptyDict)
+                );
+            }
+
+            #region ISequence Members
+
+            public object this[int index] {
+                get {
+                    return MakeTuple()[index];
+                }
+            }
+
+            public object this[Slice slice] {
+                get {
+                    return MakeTuple()[slice];
+                }
+            }
+
+            public object __getslice__(int start, int stop) {
+                return MakeTuple().__getslice__(start, stop);
+            }
+
+            public int __len__() {
+                return MakeTuple().__len__();
+            }
+
+            public bool __contains__(object item) {
+                return ((ICollection<object>)MakeTuple()).Contains(item);
+            }
+
+            #endregion
+
+            private PythonTuple MakeTuple() {
+                return PythonTuple.MakeTuple(
+                    max,
+                    max_exp,
+                    max_10_exp,
+                    min,
+                    min_exp,
+                    min_10_exp,
+                    dig,
+                    _mant_dig,
+                    _epsilon,
+                    _radix,
+                    _rounds
+                );
+            }
+
+            #region Object overrides
+
+            public override bool Equals(object obj) {
+                if (obj is floatinfo) {
+                    return MakeTuple().Equals(((floatinfo)obj).MakeTuple());
+                } else {
+                    return MakeTuple().Equals(obj);
+                }
+
+            }
+
+            public override int GetHashCode() {
+                return MakeTuple().GetHashCode();
+            }
+
+            #endregion
+
+            #region IList<object> Members
+
+            int IList<object>.IndexOf(object item) {
+                return MakeTuple().IndexOf(item);
+            }
+
+            void IList<object>.Insert(int index, object item) {
+                throw new InvalidOperationException();
+            }
+
+            void IList<object>.RemoveAt(int index) {
+                throw new InvalidOperationException();
+            }
+
+            object IList<object>.this[int index] {
+                get {
+                    return MakeTuple()[index];
+                }
+                set {
+                    throw new InvalidOperationException();
+                }
+            }
+
+            #endregion
+
+            #region ICollection<object> Members
+
+            void ICollection<object>.Add(object item) {
+                throw new InvalidOperationException();
+            }
+
+            void ICollection<object>.Clear() {
+                throw new InvalidOperationException();
+            }
+
+            bool ICollection<object>.Contains(object item) {
+                return __contains__(item);
+            }
+
+            void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
+                throw new NotImplementedException();
+            }
+
+            int ICollection<object>.Count {
+                get { return __len__(); }
+            }
+
+            bool ICollection<object>.IsReadOnly {
+                get { return true; }
+            }
+
+            bool ICollection<object>.Remove(object item) {
+                throw new InvalidOperationException();
+            }
+
+            #endregion
+
+            #region IEnumerable<object> Members
+
+            IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+                foreach (object o in MakeTuple()) {
+                    yield return o;
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable Members
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                foreach (object o in MakeTuple()) {
+                    yield return o;
+                }
+            }
+
+            #endregion
+
+            #region IList Members
+
+            int IList.Add(object value) {
+                throw new InvalidOperationException();
+            }
+
+            void IList.Clear() {
+                throw new InvalidOperationException();
+            }
+
+            bool IList.Contains(object value) {
+                return __contains__(value);
+            }
+
+            int IList.IndexOf(object value) {
+                return MakeTuple().IndexOf(value);
+            }
+
+            void IList.Insert(int index, object value) {
+                throw new InvalidOperationException();
+            }
+
+            bool IList.IsFixedSize {
+                get { return true; }
+            }
+
+            bool IList.IsReadOnly {
+                get { return true; }
+            }
+
+            void IList.Remove(object value) {
+                throw new InvalidOperationException();
+            }
+
+            void IList.RemoveAt(int index) {
+                throw new InvalidOperationException();
+            }
+
+            object IList.this[int index] {
+                get {
+                    return MakeTuple()[index];
+                }
+                set {
+                    throw new InvalidOperationException();
+                }
+            }
+
+            #endregion
+
+            #region ICollection Members
+
+            void ICollection.CopyTo(Array array, int index) {
+                throw new NotImplementedException();
+            }
+
+            int ICollection.Count {
+                get { return __len__(); }
+            }
+
+            bool ICollection.IsSynchronized {
+                get { return false; }
+            }
+
+            object ICollection.SyncRoot {
+                get { return this; }
+            }
+
+            #endregion
+        }
 
         [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {

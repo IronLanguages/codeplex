@@ -35,6 +35,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
+using IronPython.Modules;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
@@ -570,8 +571,6 @@ namespace IronPython.Runtime {
             _modulesDict["sys"] = _systemState;
 
             SetSystemStateValue("path", new List(3));
-            SetSystemStateValue("ps1", ">>> ");
-            SetSystemStateValue("ps2", "... ");
 
             SetStandardIO();
 
@@ -1613,7 +1612,6 @@ namespace IronPython.Runtime {
 
             //IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
             Scope builtinModule = CreateModule(null, new Scope(dict), null, ModuleOptions.NoBuiltins).Scope;
-            builtinModule.SetName(Symbols.Name, "__builtin__");
 
             _modulesDict["__builtin__"] = builtinModule;
         }
@@ -1784,6 +1782,10 @@ namespace IronPython.Runtime {
 
         internal void SetSystemStateValue(string name, object value) {
             SystemState.Dict[SymbolTable.StringToId(name)] = value;
+        }
+
+        internal void DelSystemStateValue(string name) {
+            SystemState.Dict.Remove(SymbolTable.StringToId(name));
         }
 
         private void SetStandardIO() {
