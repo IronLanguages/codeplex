@@ -512,6 +512,24 @@ namespace Microsoft.Scripting.Interpreter {
         }
     }
 
+    public sealed class CoalescingBranchInstruction : OffsetInstruction {
+        public CoalescingBranchInstruction() {
+        }
+
+        public override int ConsumedStack { get { return 1; } }
+        public override int ProducedStack { get { return 1; } }
+
+        public override int Run(InterpretedFrame frame) {
+            Debug.Assert(_offset != Unknown);
+
+            if (frame.Peek() != null) {
+                return _offset;
+            }
+
+            return +1;
+        }
+    }
+
     public class BranchInstruction : OffsetInstruction {
         internal readonly bool _hasResult;
         internal readonly bool _hasValue;

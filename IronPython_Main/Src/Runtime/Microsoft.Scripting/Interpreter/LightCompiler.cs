@@ -1389,7 +1389,20 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         private void CompileCoalesceBinaryExpression(Expression expr) {
-            throw new System.NotImplementedException();
+            var node = (BinaryExpression)expr;
+
+            if (TypeUtils.IsNullableType(node.Left.Type)) {
+                throw new NotImplementedException();
+            } else if (node.Conversion != null) {
+                throw new NotImplementedException();
+            } else {
+                var leftNotNull = MakeLabel();
+                Compile(node.Left);
+                AddBranch(new CoalescingBranchInstruction(), leftNotNull);
+                AddInstruction(PopInstruction.Instance);
+                Compile(node.Right);
+                leftNotNull.Mark();
+            }
         }
 
         private void CompileInvocationExpression(Expression expr) {
