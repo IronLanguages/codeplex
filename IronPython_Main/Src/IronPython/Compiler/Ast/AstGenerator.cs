@@ -506,11 +506,20 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceLocation start, SourceLocation end) {
+            if (PyContext.PythonOptions.GCStress != null) {
+                expression = Ast.Block(
+                    Ast.Call(
+                        typeof(GC).GetMethod("Collect", new[] { typeof(int) }), 
+                        Ast.Constant(PyContext.PythonOptions.GCStress.Value)
+                    ),
+                    expression
+                );
+            }
             return Utils.AddDebugInfo(expression, _document, start, end);
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfo(MSAst.Expression/*!*/ expression, SourceSpan location) {
-            return Utils.AddDebugInfo(expression, _document, location.Start, location.End);
+            return AddDebugInfo(expression, location.Start, location.End);
         }
 
         internal MSAst.Expression/*!*/ AddDebugInfoAndVoid(MSAst.Expression/*!*/ expression, SourceSpan location) {

@@ -76,7 +76,7 @@ namespace IronPython.Modules {
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 if (instance != null) {
                     CData inst = (CData)instance;
-                    value = _fieldType.GetValue(inst._memHolder, _offset, false);
+                    value = _fieldType.GetValue(inst._memHolder, inst, _offset, false);
                     if (_bits == -1) {
                         return true;
                     }
@@ -218,7 +218,7 @@ namespace IronPython.Modules {
 
                 // do the same for the existing value
                 int offset = checked(_offset + baseOffset);
-                object curValue = _fieldType.GetValue(address, offset, false);
+                object curValue = _fieldType.GetValue(address, null, offset, false);
                 ulong valueBits;
                 if (curValue is int) {
                     valueBits = (ulong)(int)curValue;

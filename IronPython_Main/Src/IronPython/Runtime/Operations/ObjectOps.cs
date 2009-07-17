@@ -67,13 +67,33 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Initializes the object.  The base class does nothing.
         /// </summary>
-        public static void __init__(object self, params object[] args) {
+        public static void __init__(CodeContext/*!*/ context, object self) {
         }
 
         /// <summary>
         /// Initializes the object.  The base class does nothing.
         /// </summary>
-        public static void __init__(object self, [ParamDictionary] IAttributesCollection kwargs, params object[] args) {
+        public static void __init__(CodeContext/*!*/ context, object self, params object[] args\u00F8) {
+            InstanceOps.CheckInitArgs(context, null, args\u00F8, self);
+        }
+
+        /// <summary>
+        /// Initializes the object.  The base class does nothing.
+        /// </summary>
+        public static void __init__(CodeContext/*!*/ context, object self, [ParamDictionary] IAttributesCollection kwargs, params object[] args\u00F8) {
+            InstanceOps.CheckInitArgs(context, kwargs, args\u00F8, self);
+        }
+
+        /// <summary>
+        /// Creates a new instance of the type
+        /// </summary>
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls) {
+            if (cls == null) {
+                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(cls)));
+            }
+
+            return cls.CreateInstance(context);
         }
 
         /// <summary>
@@ -85,7 +105,7 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(cls)));
             }
 
-            InstanceOps.CheckInitArgs(context, null, args\u00F8, cls);
+            InstanceOps.CheckNewArgs(context, null, args\u00F8, cls);
 
             return cls.CreateInstance(context);
         }
@@ -99,7 +119,7 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(cls)));
             }
 
-            InstanceOps.CheckInitArgs(context, kwargs\u00F8, args\u00F8, cls);
+            InstanceOps.CheckNewArgs(context, kwargs\u00F8, args\u00F8, cls);
 
             return cls.CreateInstance(context);
         }

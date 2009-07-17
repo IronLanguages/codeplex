@@ -415,6 +415,7 @@
     <Compile Include="Runtime\Types\FunctionType.cs" />
     <Compile Include="Runtime\Types\OperatorMapping.cs" />
     <Compile Include="Runtime\Types\PythonSiteCache.cs" />
+    <Compile Include="Runtime\Types\PythonType.Generated.cs" />
     <Compile Include="Runtime\Types\PythonTypeDataSlot.cs" />
     <Compile Include="Runtime\Types\ResolvedMember.cs" />
     <Compile Include="Runtime\Types\SlotFieldAttribute.cs" />

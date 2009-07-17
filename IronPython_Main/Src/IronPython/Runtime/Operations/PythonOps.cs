@@ -82,7 +82,7 @@ namespace IronPython.Runtime.Operations {
         /// provided data array.  Keys/values are adjacent in the array with
         /// the value coming first.
         /// </summary>
-        public static PythonDictionary MakeDictFromItems(object[] data) {
+        public static PythonDictionary MakeDictFromItems(params object[] data) {
             return new PythonDictionary(new CommonDictionaryStorage(data, false));
         }
 

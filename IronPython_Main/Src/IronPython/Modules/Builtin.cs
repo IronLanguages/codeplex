@@ -1558,6 +1558,11 @@ namespace IronPython.Modules {
                 throw PythonOps.RuntimeError("lost sys.std_out");
             }
 
+            if (args == null) {
+                // passing None to print passes a null object array
+                args = new object[1];
+            }
+
             PythonFile pf = file as PythonFile;
 
             for (int i = 0; i < args.Length; i++) {

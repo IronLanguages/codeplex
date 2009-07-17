@@ -104,7 +104,19 @@ STDMETHODIMP CIndexedProp::get_StringOne(BSTR one, BSTR* pVal)
 
 STDMETHODIMP CIndexedProp::put_StringOne(BSTR one, BSTR newVal)
 {
-	stringOne = newVal;
+	if(stringOne != NULL)
+	{
+		SysFreeString(stringOne);
+	}
+
+	if(newVal == NULL)
+	{
+		stringOne = newVal;
+	}
+	else
+	{
+		stringOne = SysAllocString(newVal);
+	}
 	return S_OK;
 }
 

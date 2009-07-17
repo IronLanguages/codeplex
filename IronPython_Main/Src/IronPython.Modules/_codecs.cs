@@ -559,11 +559,11 @@ namespace IronPython.Modules {
             string res;
 
             if (!Converter.TryConvertToString(input, out res)) {
-                Bytes bs = input as Bytes;
-                if (bs == null) {
+                Bytes tempBytes = input as Bytes;
+                if (tempBytes == null) {
                     throw PythonOps.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
                 } else {
-                    res = bs.ToString();
+                    res = tempBytes.ToString();
                 }
             }
 
