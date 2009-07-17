@@ -181,7 +181,7 @@ class CodeGenerator:
 
     def do_generate(self):
         if not self.generators:
-            raise "didn't find a match for %s" % self.replacer.name
+            raise Exception("didn't find a match for %s" % self.replacer.name)
             
         result = []
         for g in self.generators:

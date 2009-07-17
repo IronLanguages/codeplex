@@ -48,7 +48,7 @@ namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
 
     public sealed class PythonContext : LanguageContext {
-        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.6 Beta 1";
+        internal const string/*!*/ IronPythonDisplayName = "IronPython 2.6 Beta 2";
         internal const string/*!*/ IronPythonNames = "IronPython;Python;py";
         internal const string/*!*/ IronPythonFileExtensions = ".py";
 

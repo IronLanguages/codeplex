@@ -170,7 +170,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            object INativeType.GetValue(MemoryHolder/*!*/ owner, int offset, bool raw) {
+            object INativeType.GetValue(MemoryHolder/*!*/ owner, object readingFrom, int offset, bool raw) {
                 _Structure res = (_Structure)CreateInstance(this.Context.SharedContext);
                 res._memHolder = owner.GetSubBlock(offset);
                 return res;

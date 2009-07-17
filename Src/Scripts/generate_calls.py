@@ -409,8 +409,90 @@ def gen_python_switch(cw):
     originalTarget = (Func<%s>)OriginalCallTarget%d;
     return typeof(Func<%s>);""" % (nparams, genArgs, nparams, genArgs))
 
+fast_type_call_template = """
+class FastBindingBuilder<%(typeParams)s> : FastBindingBuilderBase {
+    public FastBindingBuilder(CodeContext context, PythonType type, PythonInvokeBinder binder, Type siteType, Type[] genTypeArgs) :
+        base(context, type, binder, siteType, genTypeArgs) {
+    }
+
+    protected override Delegate GetNewOrInitSiteDelegate(PythonInvokeBinder binder, object func) {
+        return new Func<%(newInitDlgParams)s>(new NewInitSite<%(typeParams)s>(binder, func).Call);
+    }
+
+    protected override Delegate MakeDelegate(int version, Delegate newDlg, Delegate initDlg) {
+        return new Func<%(funcParams)s>(
+                    new FastTypeSite<%(typeParams)s>
+                        (version, 
+                        (Func<%(newInitDlgParams)s>)newDlg, 
+                        (Func<%(newInitDlgParams)s>)initDlg).CallTarget
+        );
+    }
+}
+
+class FastTypeSite<%(typeParams)s> {
+    private readonly int _version;
+    private readonly Func<%(newInitDlgParams)s> _new;
+    private readonly Func<%(newInitDlgParams)s> _init;
+
+    public FastTypeSite(int version, Func<%(newInitDlgParams)s> @new, Func<%(newInitDlgParams)s> init) {
+        _version = version;
+        _new = @new;
+        _init = init;
+    }
+
+    public object CallTarget(CallSite site, CodeContext context, object type, %(callTargetArgs)s) {
+        PythonType pt = type as PythonType;
+        if (pt != null && pt.Version == _version) {
+            object res = _new(context, type, %(callTargetPassedArgs)s);
+            if (_init != null && res != null && res.GetType() == pt.UnderlyingSystemType) {
+                _init(context, res, %(callTargetPassedArgs)s);
+            }
+
+            return res;
+        }
+
+        return ((CallSite<Func<%(funcParams)s>>)site).Update(site, context, type, %(callTargetPassedArgs)s);
+    }
+}
+
+class NewInitSite<%(typeParams)s> {
+    private readonly CallSite<Func<%(nestedSiteParams)s>> _site;
+    private readonly object _target;
+
+    public NewInitSite(PythonInvokeBinder binder, object target) {
+        _site = CallSite<Func<%(nestedSiteParams)s>>.Create(binder);
+        _target = target;
+    }
+
+    public object Call(CodeContext context, object typeOrInstance, %(callTargetArgs)s) {
+        return _site.Target(_site, context, _target, typeOrInstance, %(callTargetPassedArgs)s);
+    }
+}
+"""
+def gen_fast_type_callers(cw):
+    for nparams in range(1, 6):       
+        funcParams = 'CallSite, CodeContext, object, ' + ', '.join(('T%d' % d for d in xrange(nparams))) + ', object'
+        newInitDlgParams = 'CodeContext, object, ' + ', '.join(('T%d' % d for d in xrange(nparams))) + ', object'
+        callTargetArgs = ', '.join(('T%d arg%d' % (d, d) for d in xrange(nparams)))
+        callTargetPassedArgs = ', '.join(('arg%d' % (d, ) for d in xrange(nparams)))
+        nestedSiteParams = 'CallSite, CodeContext, object, object, ' + ', '.join(('T%d' % d for d in xrange(nparams))) + ', object'
+        cw.write(fast_type_call_template % {
+                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                  'funcParams' : funcParams,
+                  'newInitDlgParams' : newInitDlgParams,
+                  'callTargetArgs' : callTargetArgs,
+                  'callTargetPassedArgs': callTargetPassedArgs,
+                  'nestedSiteParams' : nestedSiteParams,
+                 })
+                 
+def gen_fast_type_caller_switch(cw):
+    for nparams in range(1, 6):
+        cw.write('case %d: baseType = typeof(FastBindingBuilder<%s>); break;' % (nparams, (',' * (nparams - 1))))
+
 def main():
     return generate(
+        ("Python Fast Type Caller Switch", gen_fast_type_caller_switch),
+        ("Python Fast Type Callers", gen_fast_type_callers),
         ("Python Recursion Enforcement", gen_recursion_checks),
         ("Python Recursion Delegate Switch", gen_recursion_delegate_switch),
         ("Python Lazy Call Targets", gen_lazy_call_targets),

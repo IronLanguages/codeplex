@@ -316,6 +316,14 @@ def test_formatting_userdict():
             raise KeyError, key
     AreEqual('%(abc)s %(bar)s' % (mydict()), '42 23')
     
+    class mydict(dict):
+        def __missing__(self, key):
+            return 'ok' 
+    
+    a = mydict()
+
+    AreEqual('%(anykey)s' % a, 'ok')
+
 def test_str_to_numeric():
     class substring(str):
         def __int__(self): return 1

@@ -118,11 +118,14 @@ def test_print_function():
         print('foo')
         print('foo', end = 'abc')
         print()
-        print('foo', 'bar', sep = 'abc')        
+        print('foo', 'bar', sep = 'abc')
+        print(None)
 
-        AreEqual(sys.stdout.text, 'foo\n' + 'fooabc\n' + 'fooabcbar\n')
+        AreEqual(sys.stdout.text, 'foo\n' + 'fooabc\n' + 'fooabcbar\n' + 'None\n')
     finally:
         sys.stdout = oldout
+        
+        
 
 
 def test_user_mappings():

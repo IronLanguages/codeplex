@@ -103,6 +103,26 @@ namespace IronPython.Runtime {
             }
         }
 
+        public static object __new__(CodeContext/*!*/ context, PythonType cls) {
+            if (cls == TypeCache.List) {
+                return new List();
+            }
+
+            return cls.CreateInstance(context);
+        }
+
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, object arg) {
+            return __new__(context, cls);
+        }
+
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, params object[] args\u00F8) {
+            return __new__(context, cls);
+        }
+
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [ParamDictionary]IAttributesCollection kwArgs\u00F8, params object[] args\u00F8) {
+            return __new__(context, cls);
+        }
+
         private List(IEnumerator e)
             : this(10) {
             while (e.MoveNext()) AddNoLock(e.Current);

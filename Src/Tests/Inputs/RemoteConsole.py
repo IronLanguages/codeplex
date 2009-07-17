@@ -52,9 +52,6 @@ class AutoAbortableConsoleHost(RemoteConsoleHost):
         print "Press Enter to nudge the old thread out of Console.Readline..."        
 
 class TestConsoleRestartManager(ConsoleRestartManager):
-    def __init__(self, exitOnNormalExit):
-        super(TestConsoleRestartManager, self).__init__(exitOnNormalExit)
-    
     def CreateRemoteConsoleHost(self):
         return AutoAbortableConsoleHost()
     

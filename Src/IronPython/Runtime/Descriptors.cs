@@ -28,7 +28,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime {
     [PythonType]
     public class staticmethod : PythonTypeSlot {
-        private object _func;
+        internal object _func;
 
         public staticmethod(object func) {
             this._func = func;

@@ -551,6 +551,33 @@ function maxrecursion-helper
 	}
 }
 
+function gcstress-helper
+{
+	set-alias dlrexe $args[0]
+	$dlrexe = $args[0]
+
+		
+	#non-recursive script
+	foreach ($i in 0..2)
+	{
+		hello-helper $dlrexe "-X:GCStress" $args[1..$args.Length] $i
+	}
+
+    $ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	$stuff = dlrexe "-X:GCStress" -1 $args[1..$args.Length] $global:HELLO 3 2>&1
+	$ErrorActionPreference = "stop"
+	
+	$stuff = "$stuff.ErrorDetails"
+	echo $stuff
+	if (!$stuff.Contains("The argument for the -X:GCStress")) {show-failure "Failed."; }
+
+    $ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	$stuff = dlrexe "-X:GCStress" 100 $args[1..$args.Length] $global:HELLO 3 2>&1
+	$ErrorActionPreference = "stop"
+	$stuff = "$stuff.ErrorDetails"
+	if (!$stuff.Contains("The argument for the -X:GCStress")) {show-failure "Failed."; }
+}
+
 function noadaptivecompilation-helper 
 {
 	set-alias dlrexe $args[0]
@@ -669,6 +696,12 @@ function test-dlrmodes($dlrexe)
 	echo "Testing -X:MaxRecursion ..."
 	maxrecursion-helper $dlrexe	
 	
+	#------------------------------------------------------------------------------
+	## -X:GCStress
+	echo ""
+	echo "Testing -X:GCStress..."
+	gcstress-helper $dlrexe	
+
 	#------------------------------------------------------------------------------
 	## -X:MTA
 	echo ""

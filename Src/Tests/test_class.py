@@ -1656,7 +1656,7 @@ def test_default_new_init():
     """test cases to verify we do the right thing for the default new & init
     methods"""
 
-    anyInitList = [object,      # classes that take any set of args to __init__
+    anyInitList = [
                    int,
                    long,
                    float,
@@ -1667,12 +1667,9 @@ def test_default_new_init():
                    set,
                    ]
             
+    AssertError(TypeError, object().__init__, 1, 2, 3)
     for x in anyInitList:
-        if is_cli or is_silverlight or x!=object:
-            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=19585
-            x().__init__(1,2,3)
-        else:
-            AssertError(TypeError, x().__init__, x, 1, 2, 3)
+        x().__init__(1, 2, 3)
             
         AssertError(TypeError, x.__new__, x, 1, 2, 3)
         AreEqual(isinstance(x.__new__(x), x), True)
@@ -1705,7 +1702,86 @@ def test_default_new_init():
     
     AssertError(TypeError, object.__new__, object, 1,2,3)
     AreEqual(type(object.__new__(foo, 1, 2, 3)), foo)
+
+    # inheritance / mutating class hierarchy tests
     
+    # overrides __new__ w/ object.__new__
+    class x(object):
+        __new__ = object.__new__
+
+    AssertError(TypeError, x().__init__, 2)
+
+    # inherits __new__, overrides w/ default __new__
+    class x(object):
+        def __new__(cls, *args):
+            return object.__new__(cls)
+    
+    class y(x):
+        __new__ = object.__new__
+    
+    AreEqual(y().__init__(2), None)
+    
+    # then deletes the base __new__
+    del x.__new__
+    AreEqual(y().__init__(2), None)
+    
+    # then deletes y.__new__
+    del y.__new__
+    AreEqual(y().__init__(2), None)
+
+    # dynamically add __new__
+    class x(object): pass
+    
+    x.__new__ = staticmethod(lambda cls : object.__new__(x))
+    
+    AreEqual(x().__init__(2), None)
+    
+    # __init__ versions
+    # overrides __init__ w/ object.__init__
+    class x(object):
+        __init__ = object.__init__
+
+    AssertError(TypeError, x, 2)
+
+    # inherits __init__, overrides w/ default __init__
+    class x(object):
+        def __init__(cls, *args):
+            return object.__init__(cls)
+    
+    class y(x):
+        __init__ = object.__init__
+    
+    AssertError(TypeError, y, 2)
+    
+    # then deletes the base __init__
+    del x.__init__
+    AssertError(TypeError, y, 2)
+    
+    # then deletes y.__init__
+    del y.__init__
+    AssertError(TypeError, y, 2)
+
+    # dynamically add __init__
+    class x(object): pass
+    
+    x.__init__ = staticmethod(lambda cls : object.__init__(x))
+    
+    x(2)
+    
+    # switching bases doesn't change it either
+    class x(object):
+        def __new__(cls, *args):
+            return object.__new__(cls)
+    
+    class z(object): pass
+    
+    class y(x):
+        pass
+    
+    AreEqual(y().__init__(2), None)
+    y.__bases__ = (z, )
+    AreEqual(y().__init__(2), None)
+
 def test_hash():
     for x in [tuple, str, unicode, object, frozenset]:
         inst = x()

@@ -83,8 +83,8 @@ namespace IronPython.Runtime.Operations {
             if (es != null) return Value == es.Value;
             string os = other as string;
             if (os != null) return Value == os;
-            Bytes bs = other as Bytes;
-            if (bs != null) return Value == bs.ToString();
+            Bytes tempBytes = other as Bytes;
+            if (tempBytes != null) return Value == tempBytes.ToString();
 
             return false;
         }

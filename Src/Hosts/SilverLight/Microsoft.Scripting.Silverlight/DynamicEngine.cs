@@ -15,17 +15,81 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using System.Text;
-using System.Xml;
 using Microsoft.Scripting.Hosting;
+using System.Reflection;
+using System.IO;
 using Microsoft.Scripting.Runtime;
+using System.Xml;
+using System.Windows;
+using System.Windows.Browser;
 
 namespace Microsoft.Scripting.Silverlight {
-    public class Configuration {
+    public class DynamicEngine {
+        public ScriptRuntime Runtime { get; private set; }
+        public ScriptRuntimeSetup RuntimeSetup { get; private set; }
+        public ScriptEngine Engine { get; private set; }
+        public ScriptScope EntryPointScope { get; private set; }
 
-        private static string _languagesConfigFile = "languages.config";
+        public void Start() {
+            InitializeRuntime(Settings.Debug, Settings.ConsoleEnabled);
+            Run(Settings.GetEntryPoint());
+        }
+
+        public ScriptRuntimeSetup CreateRuntimeSetup() {
+            ScriptRuntimeSetup setup = TryParseFile();
+            if (setup == null) {
+                setup = LoadFromAssemblies(DynamicApplication.Current.AppManifest.Assemblies);
+            }
+            setup.HostType = typeof(BrowserScriptHost);
+            return setup;
+        }
+
+        private void LoadDefaultAssemblies() {
+            Runtime.LoadAssembly(GetType().Assembly);
+
+            // Add default references to Silverlight platform DLLs
+            // (Currently we auto reference CoreCLR, UI controls, browser interop, and networking stack.)
+            foreach (string name in new string[] { "mscorlib", "System", "System.Windows", "System.Windows.Browser", "System.Net" }) {
+                Runtime.LoadAssembly(Runtime.Host.PlatformAdaptationLayer.LoadAssembly(name));
+            }
+        }
+
+        private void InitializeRuntime(bool debugMode, bool consoleEnabled) {
+            RuntimeSetup = CreateRuntimeSetup();
+            RuntimeSetup.DebugMode = debugMode;
+            RuntimeSetup.Options["SearchPaths"] = new string[] { String.Empty };
+
+            Runtime = new ScriptRuntime(RuntimeSetup);
+            LoadDefaultAssemblies();
+
+            if (consoleEnabled) Repl.Show();
+        }
+
+
+        private void Run(string entryPoint) {
+            string code = GetEntryPointContents();
+            Engine = Runtime.GetEngineByFileExtension(Path.GetExtension(entryPoint));
+            EntryPointScope = Engine.CreateScope();
+
+            ScriptSource sourceCode = Engine.CreateScriptSourceFromString(code, entryPoint, SourceCodeKind.File);
+            sourceCode.Compile(new ErrorFormatter.Sink()).Execute(EntryPointScope);
+        }
+
+        internal IEnumerable<string> LanguageExtensions() {
+            foreach (var language in Runtime.Setup.LanguageSetups) {
+                foreach (var ext in language.FileExtensions) {
+                    yield return ext;
+                }
+            }
+        }
+
+        public string GetEntryPointContents() {
+            var stream = Runtime.Host.PlatformAdaptationLayer.OpenInputFileStream(Settings.EntryPoint);
+            using (StreamReader sr = new StreamReader(stream)) {
+                return sr.ReadToEnd();
+            }
+        }
 
         public static ScriptRuntimeSetup LoadFromAssemblies(IEnumerable<Assembly> assemblies) {
             var setup = new ScriptRuntimeSetup();
@@ -42,18 +106,16 @@ namespace Microsoft.Scripting.Silverlight {
             return setup;
         }
 
-        public static ScriptRuntimeSetup TryParseFile() {
-            Stream configFile = Package.GetFile(_languagesConfigFile);
-            if (configFile == null) {
-                return null;
-            }
+        public ScriptRuntimeSetup TryParseFile() {
+            Stream configFile = BrowserPAL.PAL.VirtualFilesystem.GetFile(Settings.LanguagesConfigFile);
+            if (configFile == null) return null;
 
             var result = new ScriptRuntimeSetup();
             try {
                 XmlReader reader = XmlReader.Create(configFile);
                 reader.MoveToContent();
                 if (!reader.IsStartElement("Languages")) {
-                    throw new ConfigFileException("expected 'Configuration' root element", _languagesConfigFile);
+                    throw new ConfigFileException("expected 'Configuration' root element", Settings.LanguagesConfigFile);
                 }
 
                 while (reader.Read()) {
@@ -76,7 +138,7 @@ namespace Microsoft.Scripting.Silverlight {
                     }
 
                     if (context == null || assembly == null || exts == null) {
-                        throw new ConfigFileException("expected 'Language' element to have attributes 'languageContext', 'assembly', 'extensions'", _languagesConfigFile);
+                        throw new ConfigFileException("expected 'Language' element to have attributes 'languageContext', 'assembly', 'extensions'", Settings.LanguagesConfigFile);
                     }
 
                     string[] extensions = exts.Split(',');
@@ -85,7 +147,7 @@ namespace Microsoft.Scripting.Silverlight {
             } catch (ConfigFileException cfe) {
                 throw cfe;
             } catch (Exception ex) {
-                throw new ConfigFileException(ex.Message, _languagesConfigFile, ex);
+                throw new ConfigFileException(ex.Message, Settings.LanguagesConfigFile, ex);
             }
 
             return result;
@@ -99,8 +161,6 @@ namespace Microsoft.Scripting.Silverlight {
             public ConfigFileException(string msg, string configFile, Exception inner)
                 : base("Invalid configuration file " + configFile + ": " + msg, inner) {
             }
-
         }
-
     }
 }

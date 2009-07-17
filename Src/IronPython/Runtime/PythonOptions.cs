@@ -49,6 +49,7 @@ namespace IronPython {
         private readonly bool _verbose;
         private readonly bool _frames, _fullFrames;
         private readonly Version _version;
+        private readonly int? _gcStress;
         private bool _enableProfiler;
         private readonly bool _lightweightScopes;
 
@@ -206,6 +207,10 @@ namespace IronPython {
             set { _enableProfiler = value; }
         }
 
+        public int? GCStress {
+            get { return _gcStress; }            
+        }
+
         public PythonOptions() 
             : this(null) {
         }
@@ -243,6 +248,7 @@ namespace IronPython {
             _lightweightScopes = GetOption(options, "LightweightScopes", false);
             _fullFrames = GetOption(options, "FullFrames", false);
             _frames = _fullFrames || GetOption(options, "Frames", false);
+            _gcStress = GetOption<int?>(options, "GCStress", null);
 
             object value;
             if (options != null && options.TryGetValue("PythonVersion", out value)) {
