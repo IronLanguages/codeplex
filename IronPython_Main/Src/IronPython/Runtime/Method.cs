@@ -29,7 +29,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime {
 
     [PythonType("instancemethod"), DontMapGetMemberNamesToDir]
-    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicMetaObjectProvider, ICodeFormattable {
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IPythonMembersList, IDynamicMetaObjectProvider, ICodeFormattable {
         private readonly object _func;
         private readonly object _inst;
         private readonly object _declaringClass;
@@ -205,7 +205,11 @@ namespace IronPython.Runtime {
             TypeCache.Method.DeleteMember(context, this, SymbolTable.StringToId(name));
         }
 
-        IList<object> IMembersList.GetMemberNames(CodeContext context) {
+        IList<string> IMembersList.GetMemberNames() {
+            return PythonOps.GetStringMemberList(this);
+        }
+
+        IList<object> IPythonMembersList.GetMemberNames(CodeContext/*!*/ context) {
             List ret = TypeCache.Method.GetMemberNames(context);
 
             ret.AddNoLockNoDups(SymbolTable.IdToString(Symbols.Module));

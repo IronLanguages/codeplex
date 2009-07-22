@@ -69,7 +69,7 @@ namespace IronPython.Hosting {
         private static string GetVersionString() {
 
             return String.Format("{0}{3} ({1}) on .NET {2}",
-                                "IronPython 2.6 Beta 2",
+                                "IronPython 2.6",
                                 PythonContext.GetPythonVersion().ToString(),
                                 Environment.Version,
 #if DEBUG
@@ -510,6 +510,13 @@ namespace IronPython.Hosting {
         protected override void UnhandledException(Exception e) {
             PythonOps.PrintException(new CodeContext(Scope, Language), e, Console);
         }
+
+        private new PythonContext Language {
+            get {
+                return (PythonContext)base.Language;
+            }
+        }
+
     }
 #endif
 }

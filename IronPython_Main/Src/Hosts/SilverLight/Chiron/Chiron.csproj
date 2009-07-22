@@ -89,7 +89,9 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>
-</PostBuildEvent>
+if not exist "$(ProjectDir)..\testsuites" goto END
+:END
+    </PostBuildEvent>
     <PreBuildEvent>
     </PreBuildEvent>
   </PropertyGroup>

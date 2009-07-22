@@ -52,13 +52,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Gets the value indicating if we should validate the result of the binding.
-        /// </summary>
-        protected virtual bool ValidateBindingResult {
-            get { return true; }
-        }
-
-        /// <summary>
         /// Performs the runtime binding of the dynamic operation on a set of arguments.
         /// </summary>
         /// <param name="args">An array of arguments to the dynamic operation.</param>
@@ -87,10 +80,8 @@ namespace Microsoft.Scripting {
             // Ensure that the binder's ReturnType matches CallSite's return
             // type. We do this so meta objects and language binders can
             // compose trees together without needing to insert converts.
-            //
-            // For now, we need to allow binders to opt out of this check.
             Type expectedResult;
-            if (ValidateBindingResult) {
+            if (IsStandardBinder) {
                 expectedResult = ReturnType;
 
                 if (returnLabel.Type != typeof(void) &&
@@ -98,8 +89,8 @@ namespace Microsoft.Scripting {
                     throw Error.BinderNotCompatibleWithCallSite(expectedResult, this, returnLabel.Type);
                 }
             } else {
-                // We have to at least make sure it works with the CallSite's
-                // type to build the return.
+                // Even for non-standard binders, we have to at least make sure
+                // it works with the CallSite's type to build the return.
                 expectedResult = returnLabel.Type;
             }
 
