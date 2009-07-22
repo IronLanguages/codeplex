@@ -20,7 +20,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 using System.Text;
-using Microsoft.Scripting.Runtime;
+using IronPython.Runtime;
 
 namespace IronPythonTest {
 

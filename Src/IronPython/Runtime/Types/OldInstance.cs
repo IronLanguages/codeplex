@@ -39,8 +39,8 @@ namespace IronPython.Runtime.Types {
 #endif
         ISerializable,
         IWeakReferenceable,
-        IMembersList,
-        IDynamicMetaObjectProvider
+        IDynamicMetaObjectProvider, 
+        IPythonMembersList
     {
 
         private PythonDictionary _dict;
@@ -586,7 +586,11 @@ namespace IronPython.Runtime.Types {
 
         #region IMembersList Members
 
-        IList<object> IMembersList.GetMemberNames(CodeContext context) {
+        IList<string> IMembersList.GetMemberNames() {
+            return PythonOps.GetStringMemberList(this);
+        }
+
+        IList<object> IPythonMembersList.GetMemberNames(CodeContext/*!*/ context) {
             PythonDictionary attrs = new PythonDictionary(_dict);
             OldClass.RecurseAttrHierarchy(this._class, attrs);
             return PythonOps.MakeListFromSequence(attrs);

@@ -253,7 +253,7 @@ namespace IronPython.Modules {
         }
 
         [PythonType, DynamicBaseTypeAttribute, PythonHidden]
-        public sealed partial class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, IMembersList {
+        public sealed partial class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, IPythonMembersList {
             private readonly WeakHandle _target;
             private readonly CodeContext/*!*/ _context;
 
@@ -408,7 +408,11 @@ namespace IronPython.Modules {
                 PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name));
             }
 
-            IList<object> IMembersList.GetMemberNames(CodeContext/*!*/ context) {
+            IList<string> IMembersList.GetMemberNames() {
+                return PythonOps.GetStringMemberList(this);
+            }
+
+            IList<object> IPythonMembersList.GetMemberNames(CodeContext/*!*/ context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
@@ -458,7 +462,7 @@ namespace IronPython.Modules {
             ICodeFormattable,            
             IProxyObject,
             IValueEquality,
-            IMembersList {
+            IPythonMembersList {
 
             private WeakHandle _target;
             private readonly CodeContext/*!*/ _context;
@@ -627,7 +631,11 @@ namespace IronPython.Modules {
                 PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name));
             }
 
-            IList<object> IMembersList.GetMemberNames(CodeContext/*!*/ context) {
+            IList<string> IMembersList.GetMemberNames() {
+                return PythonOps.GetStringMemberList(this);
+            }
+
+            IList<object> IPythonMembersList.GetMemberNames(CodeContext/*!*/ context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
