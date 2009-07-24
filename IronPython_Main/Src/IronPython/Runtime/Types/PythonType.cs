@@ -1894,7 +1894,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             }
 
             object modName;
-            if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
+            if (context.Scope.TryGetVariable(Symbols.Name, out modName)) {
                 PopulateSlot(Symbols.Module, modName);
             }
 
@@ -1975,7 +1975,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private static void EnsureModule(CodeContext context, IAttributesCollection dict) {
             if (!dict.ContainsKey(Symbols.Module)) {
                 object modName;
-                if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
+                if (context.Scope.TryGetVariable(Symbols.Name, out modName)) {
                     dict[Symbols.Module] = modName;
                 }
             }

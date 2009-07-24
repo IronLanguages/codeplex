@@ -21,7 +21,7 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Runtime {
     internal class GlobalScopeDictionaryStorage : ScopeDictionaryStorage {
         public GlobalScopeDictionaryStorage(Scope scope)
-            : base(scope.ModuleScope) {
+            : base(CodeContext.GetModuleScope(scope)) {
 
         }
 
