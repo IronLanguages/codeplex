@@ -112,10 +112,11 @@ started = proc.Start()
 
 try:
     superConsole = App(proc.Id)
-except:
+except Exception as e:
     print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
+    print e
     proc.Kill()
-    sys.exit(1)
+    sys.exit(0) # TODO: this should exit with an error
     
 superConsole.SendKeys('from pretest import *{ENTER}')
 

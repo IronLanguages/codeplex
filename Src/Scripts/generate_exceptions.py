@@ -134,8 +134,8 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                 ),
                             ),
                             ExceptionInfo('MemoryError', 'System.OutOfMemoryException', None, (), ()),
-                            ExceptionInfo('NameError', 'Microsoft.Scripting.Runtime.UnboundNameException', None, (), (
-                                    ExceptionInfo('UnboundLocalError', 'Microsoft.Scripting.Runtime.UnboundLocalException', None, (), ()),
+                            ExceptionInfo('NameError', 'IronPython.Runtime.UnboundNameException', None, (), (
+                                    ExceptionInfo('UnboundLocalError', 'IronPython.Runtime.UnboundLocalException', None, (), ()),
                                 ),
                             ),
                             ExceptionInfo('ReferenceError', 'IronPython.Runtime.Exceptions.ReferenceException', None, (), ()),
@@ -222,6 +222,12 @@ def compare_exceptions(a, b):
     
     ta = get_type(a)
     tb = get_type(b)
+    
+    if ta == None:
+        raise Exception("Exception class not found %s " % a)
+            
+    if tb == None:
+        raise Exception("Exception class not found %s " % b)
     
     if ta.IsSubclassOf(tb): return -1
     if tb.IsSubclassOf(ta): return 1

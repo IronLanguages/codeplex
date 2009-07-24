@@ -62,9 +62,9 @@ class FileConsole(object):
         
         module = self.context.CreateModule(ModuleOptions.ModuleBuiltins)
         self.context.PublishModule("__main__", module)
-        module.Scope.SetName(Symbols.Doc, None)
-        module.Scope.SetName(Symbols.File, fileName)
-        module.Scope.SetName(Symbols.Name, "__main__")
+        module.Scope.SetVariable(Symbols.Doc, None)
+        module.Scope.SetVariable(Symbols.File, fileName)
+        module.Scope.SetVariable(Symbols.Name, "__main__")
         self.mainScope = self.engine.CreateScope(module.Scope.Dict)
         
     def InitializePath(self):

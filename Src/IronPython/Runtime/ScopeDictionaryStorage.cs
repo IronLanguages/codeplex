@@ -30,14 +30,14 @@ namespace IronPython.Runtime {
         public override void Add(object key, object value) {
             string strKey = key as string;
             if (strKey != null) {
-                Scope.SetName(SymbolTable.StringToId(strKey), value);
+                Scope.SetVariable(SymbolTable.StringToId(strKey), value);
             } else {
                 Scope.SetObjectName(key, value);
             }
         }
 
         public override void Add(SymbolId key, object value) {
-            Scope.SetName(key, value);
+            Scope.SetVariable(key, value);
         }
 
         public override bool Contains(object key) {
@@ -51,7 +51,7 @@ namespace IronPython.Runtime {
 
         public override bool Contains(SymbolId key) {
             foreach (Scope scope in GetVisibleScopes()) {
-                if (scope.ContainsName(key)) {
+                if (scope.ContainsVariable(key)) {
                     return true;
                 }
             }
@@ -62,7 +62,7 @@ namespace IronPython.Runtime {
             foreach (Scope scope in GetVisibleScopes()) {
                 string strKey = key as string;
                 if (strKey != null) {
-                    if (scope.TryRemoveName(SymbolTable.StringToId(strKey))) {
+                    if (scope.TryRemoveVariable(SymbolTable.StringToId(strKey))) {
                         return true;
                     }
                 } else if (scope.TryRemoveObjectName(key)) {
@@ -77,7 +77,7 @@ namespace IronPython.Runtime {
             foreach (Scope scope in GetVisibleScopes()) {
                 string strKey = key as string;
                 if (strKey != null) {
-                    if (scope.TryGetName(SymbolTable.StringToId(strKey), out value)) {
+                    if (scope.TryGetVariable(SymbolTable.StringToId(strKey), out value)) {
                         return true;
                     }
                 } else if (scope.TryGetObjectName(key, out value)) {
@@ -91,7 +91,7 @@ namespace IronPython.Runtime {
 
         public override bool TryGetValue(SymbolId key, out object value) {
             foreach (Scope scope in GetVisibleScopes()) {
-                if (scope.TryGetName(key, out value)) {
+                if (scope.TryGetVariable(key, out value)) {
                     return true;
                 }
             }
@@ -132,7 +132,7 @@ namespace IronPython.Runtime {
             string strKey = key as string;
             if (strKey != null) {
                 object dummy;
-                if (scope.TryGetName(SymbolTable.StringToId(strKey), out dummy)) {
+                if (scope.TryGetVariable(SymbolTable.StringToId(strKey), out dummy)) {
                     return true;
                 }
             } else {
