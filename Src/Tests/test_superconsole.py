@@ -113,10 +113,10 @@ started = proc.Start()
 try:
     superConsole = App(proc.Id)
 except Exception as e:
-    print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
-    print e
+    print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window)"
+    print "On VSLGO-MAUI machines close all remote desktop sessions using EXIT command on desktop!"
     proc.Kill()
-    sys.exit(0) # TODO: this should exit with an error
+    sys.exit(1) 
     
 superConsole.SendKeys('from pretest import *{ENTER}')
 

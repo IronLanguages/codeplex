@@ -125,7 +125,7 @@ def gen_run_method(cw, n, is_void):
     else:
         cw.write('return ((Func%s)_compiled)(%s);' % (types, args))
     cw.exit_block()
-    
+    cw.write('')
     cw.write('var frame = MakeFrame();')
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
@@ -136,13 +136,33 @@ def gen_run_method(cw, n, is_void):
     if is_void: cw.write('_interpreter.Run(frame);')
     else: cw.write('return (TRet)_interpreter.Run(frame);')
     cw.exit_block()
+    cw.write('')
     
+def gen_run_maker(cw, n, is_void):
+    type_params = ['T%d' % i for i in xrange(n)]
     
+    if is_void:
+        name_extra = 'Void'
+        delegate_name = 'Action'
+    else:
+        type_params.append('TRet')
+        name_extra = ''
+        delegate_name = 'Func'
+
+    if type_params: types = '<' + ','.join(type_params) + '>'
+    else: types = ''
+
+    cw.enter_block('internal static Delegate MakeRun%s%d%s(LightLambda lambda)' % (name_extra, n, types))
+    cw.write('return new %s%s(lambda.Run%s%d%s);' % (delegate_name, types, name_extra, n, types, ));
+    cw.exit_block()
+
 def gen_run_methods(cw):
     cw.write('internal const int MaxParameters = %d;' % MAX_TYPES)
     for i in xrange(MAX_TYPES):
         gen_run_method(cw, i, False)
         gen_run_method(cw, i, True)
+        gen_run_maker(cw, i, False)
+        gen_run_maker(cw, i, True)
         
 
 

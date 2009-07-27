@@ -56,6 +56,9 @@ class Symbol:
         
     def is_comparison(self):
         return self.symbol in (sym for sym, name, rname,clrName,opposite, bool1, bool2, bool3 in compares)
+        
+    def is_bitwise(self):
+        return self.symbol in ['^', '&', '|', '<<', '>>']
 
 class Operator(Symbol):
     def __init__(self, symbol, name, rname, clrName=None,prec=-1, opposite=None, bool1=None, bool2=None, bool3=None, dotnetOp=False):
@@ -223,6 +226,13 @@ class Operator(Symbol):
         cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.reverse_symbol_name()))
         cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.inplace_symbol_name()))
     
+    def genConstantFolding(self, cw, type):
+        if self.isCompare(): 
+            if self.symbol != '<>':
+                cw.writeline('case PythonOperator.%s: return new ConstantExpression(ScriptingRuntimeHelpers.BooleanToObject(%sOps.Compare((%s)constLeft.Value, (%s)constRight.Value) %s 0));' % (self.clrName, type, type, type, self.symbol))
+        elif type !='Double' or not self.is_bitwise():
+            cw.writeline('case PythonOperator.%s: return new ConstantExpression(%sOps.%s((%s)constLeft.Value, (%s)constRight.Value));' % (self.clrName, type, self.clrName, type, type))
+
 class Grouping(Symbol):
     def __init__(self, symbol, name, side, titleName=None):
         Symbol.__init__(self, symbol, side+" "+name, titleName)
@@ -586,9 +596,22 @@ def fast_op_ret_bool(cw):
 
                     cw.exit_block()
                     cw.write('')
-            
+
+def gen_constant_folding(cw):
+    types = ['Int32', 'Double', 'BigInteger']
+    for cur_type in types:
+        cw.enter_block('if (constLeft.Value.GetType() == typeof(%s))' % (cur_type, ))
+        cw.enter_block('switch (_op)')
+        for op in ops:           
+            gen = getattr(op, 'genConstantFolding', None)
+            if gen is not None:            
+                gen(cw, cur_type)
+        cw.exit_block()
+        cw.exit_block()
+    
 def main():
     return generate(
+        ("Python Constant Folding", gen_constant_folding),
         ("Python Fast Ops RetBool Chooser", fast_op_ret_bool_chooser),
         ("Python Fast Ops Ret Bool", fast_op_ret_bool),
         ("Tokenize Ops", tokenize_generator),

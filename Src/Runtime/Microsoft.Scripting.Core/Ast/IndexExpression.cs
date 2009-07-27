@@ -25,6 +25,10 @@ using Microsoft.Runtime.CompilerServices;
 
 using System.Text;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents indexing a property or array.

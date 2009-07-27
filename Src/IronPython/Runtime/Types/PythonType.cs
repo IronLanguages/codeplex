@@ -76,6 +76,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private CallSite<Func<CallSite, object, int>> _hashSite;
         private CallSite<Func<CallSite, object, object, bool>> _eqSite;
         private CallSite<Func<CallSite, object, object, int>> _compareSite;
+        private Dictionary<CallSignature, LateBoundInitBinder> _lateBoundInitBinders;
 
         private PythonSiteCache _siteCache = new PythonSiteCache();
 
@@ -1015,7 +1016,25 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             return !TryResolveSlot(DefaultContext.Default, SymbolTable.StringToId(name), out dummySlot) &&
                     TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(name), out dummySlot);
         }
+        
+        internal LateBoundInitBinder GetLateBoundInitBinder(CallSignature signature) {
+            Debug.Assert(!IsSystemType); // going to hold onto a PythonContext, shouldn't ever be a system type
+            Debug.Assert(_pythonContext != null);
 
+            if (_lateBoundInitBinders == null) {
+                Interlocked.CompareExchange(ref _lateBoundInitBinders, new Dictionary<CallSignature, LateBoundInitBinder>(), null);
+            }
+
+            lock(_lateBoundInitBinders) {
+                LateBoundInitBinder res;
+                if (!_lateBoundInitBinders.TryGetValue(signature, out res)) {
+                    _lateBoundInitBinders[signature] = res = new LateBoundInitBinder(this, signature);
+                }
+
+                return res;
+            }
+        }
+        
         #endregion
 
         #region Type member access
@@ -2905,5 +2924,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
             return type == _self;
         }
-    }       
+    }
+
+    
 }

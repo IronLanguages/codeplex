@@ -1041,3 +1041,67 @@ class ClassWithGlobalMember:
 
 Assert(not hasattr(ClassWithGlobalMember, "global_class_member"), "invalid binding of global in a class")
 AreEqual(global_class_member, "global class member value")
+
+
+def f():
+    abc = eval("locals()")
+    abc['foo'] = 42
+    print foo
+
+AssertError(NameError, f)
+
+
+def f():
+    x = locals()
+    x['foo'] = 42
+    print foo
+
+AssertError(NameError, f)
+
+def f():
+    x = vars()
+    x['foo'] = 42
+    print foo
+
+AssertError(NameError, f)
+
+if not is_silverlight:
+    def f():
+        import nt
+        f = file('temptest.py', 'w+')
+        f.write('foo = 42')
+        f.close()
+        try:
+            execfile('temptest.py')
+        finally:
+            nt.unlink('temptest.py')
+        return foo
+    
+    AssertError(NameError, f)
+
+def f():
+    exec "foo = 42"
+    return foo
+
+AreEqual(f(), 42)
+
+if not is_silverlight:
+    def f():
+        import nt
+        f = file('temptest.py', 'w+')
+        f.write('foo = 42')
+        f.close()
+        try:
+            from temptest import *
+        finally:
+            nt.unlink('temptest.py')
+        return foo
+    
+    AreEqual(f(), 42)
+
+
+def f():
+    exec "foo = 42" in {}
+    return foo
+
+AssertError(NameError, f)

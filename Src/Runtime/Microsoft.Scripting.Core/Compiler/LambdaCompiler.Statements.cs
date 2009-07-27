@@ -22,6 +22,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Globalization;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
         private void EmitBlockExpression(Expression expr, CompilationFlags flags) {

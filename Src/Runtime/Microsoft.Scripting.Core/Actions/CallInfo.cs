@@ -20,6 +20,10 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 
+#if SILVERLIGHT
+using System.Core;
+#endif //SILVERLIGHT
+
 namespace Microsoft.Scripting {
 
     /// <summary>

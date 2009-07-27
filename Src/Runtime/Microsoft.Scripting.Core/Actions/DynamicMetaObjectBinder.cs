@@ -23,7 +23,12 @@ using Microsoft.Linq.Expressions.Compiler;
 using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
+
+#if SILVERLIGHT
+using System.Core;
+#else
 using System.Runtime.Remoting;
+#endif
 
 namespace Microsoft.Scripting {
     /// <summary>
