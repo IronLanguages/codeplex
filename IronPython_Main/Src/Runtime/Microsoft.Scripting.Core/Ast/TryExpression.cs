@@ -20,6 +20,10 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents a try/catch/finally/fault block.

@@ -19,6 +19,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Linq.Expressions;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Scripting.Utils {
 
     // Will be replaced with CLRv4 managed contracts

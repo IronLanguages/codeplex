@@ -21,6 +21,10 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 using System.Reflection;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>

@@ -101,6 +101,7 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, PythonFunction, object>> _functionCallSite;
         private CallSite<Func<CallSite, object, object, bool>> _greaterThanSite, _lessThanSite, _greaterThanEqualSite, _lessThanEqualSite, _containsSite;
         private CallSite<Func<CallSite, CodeContext, object, object[], object>> _callSplatSite;
+        private CallSite<Func<CallSite, CodeContext, object, object>> _callSite0;
         private CallSite<Func<CallSite, CodeContext, object, object, object>> _callSite1;
         private CallSite<Func<CallSite, CodeContext, object, object, object, object>> _callSite2;
         private CallSite<Func<CallSite, CodeContext, object, object[], IAttributesCollection, object>> _callDictSite;
@@ -254,7 +255,12 @@ namespace IronPython.Runtime {
             if (options == null ||
                 !options.TryGetValue("NoAssemblyResolveHook", out asmResolve) ||
                 !System.Convert.ToBoolean(asmResolve)) {
-                HookAssemblyResolve();
+                try {
+                    HookAssemblyResolve();
+                } catch (System.Security.SecurityException) {
+                    // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                    // If so, we will not look up sys.path for module loads
+                }
             }
 #endif
 
@@ -1143,13 +1149,9 @@ namespace IronPython.Runtime {
         /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
         /// find the dependencies, unless we can hook into the CLR loader.
         /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]   // avoid inlining due to LinkDemand from assembly resolve.
         private void HookAssemblyResolve() {
-            try {
-                AppDomain.CurrentDomain.AssemblyResolve += _resolveHolder.AssemblyResolveEvent;
-            } catch (System.Security.SecurityException) {
-                // We may not have SecurityPermissionFlag.ControlAppDomain. 
-                // If so, we will not look up sys.path for module loads
-            }
+            AppDomain.CurrentDomain.AssemblyResolve += _resolveHolder.AssemblyResolveEvent;
         }
 
         class AssemblyResolveHolder {
@@ -2531,6 +2533,12 @@ namespace IronPython.Runtime {
             return _callSplatSite.Target(_callSplatSite, context, func, args);
         }
 
+        internal object Call(CodeContext/*!*/ context, object func) {
+            EnsureCall0Site();
+
+            return _callSite0.Target(_callSite0, context, func);
+        }
+
         internal object Call(CodeContext/*!*/ context, object func, object arg0) {
             EnsureCall1Site();
 
@@ -2572,6 +2580,16 @@ namespace IronPython.Runtime {
                 Interlocked.CompareExchange(
                     ref _callSite1,
                     CallSite<Func<CallSite, CodeContext, object, object, object>>.Create(InvokeOne),
+                    null
+                );
+            }
+        }
+
+        private void EnsureCall0Site() {
+            if (_callSite0 == null) {
+                Interlocked.CompareExchange(
+                    ref _callSite0,
+                    CallSite<Func<CallSite, CodeContext, object, object>>.Create(InvokeNone),
                     null
                 );
             }

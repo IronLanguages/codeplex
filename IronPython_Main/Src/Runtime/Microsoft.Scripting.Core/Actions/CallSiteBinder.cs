@@ -24,6 +24,10 @@ using Microsoft.Linq.Expressions;
 using System.Threading;
 using System.Reflection;
 
+#if SILVERLIGHT
+using System.Core;
+#endif //SILVERLIGHT
+
 namespace Microsoft.Runtime.CompilerServices {
     /// <summary>
     /// Class responsible for runtime binding of the dynamic operations on the dynamic call site.
@@ -133,9 +137,10 @@ namespace Microsoft.Runtime.CompilerServices {
             //
             // finally produce the new rule if we need to
             //
-#if !MICROSOFT_SCRIPTING_CORE
+#if !MICROSOFT_SCRIPTING_CORE && !SILVERLIGHT
             // We cannot compile rules in the heterogeneous app domains since they
             // may come from less trusted sources
+            // Silverlight always uses a homogenous appdomain, so we don’t need this check
             if (!AppDomain.CurrentDomain.IsHomogenous) {
                 throw Error.HomogenousAppDomainRequired();
             }

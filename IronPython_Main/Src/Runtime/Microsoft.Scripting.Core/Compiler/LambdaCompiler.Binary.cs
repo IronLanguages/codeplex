@@ -21,6 +21,10 @@ using Microsoft.Scripting.Utils;
 using System.Reflection;
 using System.Reflection.Emit;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions.Compiler {
     partial class LambdaCompiler {
 

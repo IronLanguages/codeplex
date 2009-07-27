@@ -19,6 +19,10 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using System.Reflection;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>

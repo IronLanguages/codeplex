@@ -25,6 +25,10 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents a dynamic operation.

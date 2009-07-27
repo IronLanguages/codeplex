@@ -24,6 +24,10 @@ using Microsoft.Linq.Expressions;
 using Microsoft.Linq.Expressions.Compiler;
 using System.Reflection;
 
+#if SILVERLIGHT
+using System.Core;
+#endif //SILVERLIGHT
+
 namespace Microsoft.Runtime.CompilerServices {
 
     //

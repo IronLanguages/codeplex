@@ -18,6 +18,10 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 using System.Diagnostics;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
 
     /// <summary>

@@ -18,6 +18,10 @@ using System; using Microsoft;
 using System.Collections.Generic;
 using Microsoft.Linq.Expressions;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Scripting.Utils {
 
     // Like ReadOnlyCollection<T>: wraps an IDictionary<K, V> in a read-only wrapper

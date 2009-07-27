@@ -19,7 +19,12 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
+
+#if SILVERLIGHT
+using System.Core;
+#else
 using System.Runtime.Remoting;
+#endif
 
 namespace Microsoft.Scripting {
     /// <summary>

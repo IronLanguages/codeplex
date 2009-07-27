@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if MICROSOFT_SCRIPTING_CORE
+#if MICROSOFT_SCRIPTING_CORE || SILVERLIGHT
 using ILGenerator = Microsoft.Linq.Expressions.Compiler.OffsetTrackingILGenerator;
 #endif
 
@@ -87,7 +87,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
         private LambdaCompiler(AnalyzedTree tree, LambdaExpression lambda) {
             Type[] parameterTypes = GetParameterTypes(lambda).AddFirst(typeof(Closure));
 
-#if SILVERLIGHT
+#if SILVERLIGHT && MICROSOFT_SCRIPTING_CORE
             var method = new DynamicMethod(lambda.Name ?? "lambda_method", lambda.ReturnType, parameterTypes);
 #else
             var method = new DynamicMethod(lambda.Name ?? "lambda_method", lambda.ReturnType, parameterTypes, true);
@@ -97,7 +97,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _lambda = lambda;
             _method = method;
 
-#if MICROSOFT_SCRIPTING_CORE
+#if MICROSOFT_SCRIPTING_CORE || SILVERLIGHT
             _ilg = new OffsetTrackingILGenerator(method.GetILGenerator());
 #else
             _ilg = method.GetILGenerator();
@@ -136,7 +136,7 @@ namespace Microsoft.Linq.Expressions.Compiler {
             _typeBuilder = (TypeBuilder)method.DeclaringType;
             _method = method;
 
-#if MICROSOFT_SCRIPTING_CORE
+#if MICROSOFT_SCRIPTING_CORE || SILVERLIGHT
             _ilg = new OffsetTrackingILGenerator(method.GetILGenerator());
 #else
             _ilg = method.GetILGenerator();

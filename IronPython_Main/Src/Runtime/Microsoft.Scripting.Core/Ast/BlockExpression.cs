@@ -21,6 +21,10 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using System.Threading;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents a block that contains a sequence of expressions where variables can be defined.

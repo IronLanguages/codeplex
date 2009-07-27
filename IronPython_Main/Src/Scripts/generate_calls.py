@@ -415,16 +415,17 @@ class FastBindingBuilder<%(typeParams)s> : FastBindingBuilderBase {
         base(context, type, binder, siteType, genTypeArgs) {
     }
 
-    protected override Delegate GetNewOrInitSiteDelegate(PythonInvokeBinder binder, object func) {
-        return new Func<%(newInitDlgParams)s>(new NewInitSite<%(typeParams)s>(binder, func).Call);
+    protected override Delegate GetNewSiteDelegate(PythonInvokeBinder binder, object func) {
+        return new Func<%(newInitDlgParams)s>(new NewSite<%(typeParams)s>(binder, func).Call);
     }
 
-    protected override Delegate MakeDelegate(int version, Delegate newDlg, Delegate initDlg) {
+    protected override Delegate MakeDelegate(int version, Delegate newDlg, LateBoundInitBinder initBinder) {
         return new Func<%(funcParams)s>(
-                    new FastTypeSite<%(typeParams)s>
-                        (version, 
-                        (Func<%(newInitDlgParams)s>)newDlg, 
-                        (Func<%(newInitDlgParams)s>)initDlg).CallTarget
+            new FastTypeSite<%(typeParams)s>(
+                version, 
+                (Func<%(newInitDlgParams)s>)newDlg,
+                initBinder
+            ).CallTarget
         );
     }
 }
@@ -432,21 +433,19 @@ class FastBindingBuilder<%(typeParams)s> : FastBindingBuilderBase {
 class FastTypeSite<%(typeParams)s> {
     private readonly int _version;
     private readonly Func<%(newInitDlgParams)s> _new;
-    private readonly Func<%(newInitDlgParams)s> _init;
+    private readonly CallSite<Func<%(nestedSlowSiteParams)s>> _initSite;
 
-    public FastTypeSite(int version, Func<%(newInitDlgParams)s> @new, Func<%(newInitDlgParams)s> init) {
+    public FastTypeSite(int version, Func<%(newInitDlgParams)s> @new, LateBoundInitBinder initBinder) {
         _version = version;
         _new = @new;
-        _init = init;
+        _initSite = CallSite<Func<%(nestedSlowSiteParams)s>>.Create(initBinder);
     }
 
     public object CallTarget(CallSite site, CodeContext context, object type, %(callTargetArgs)s) {
         PythonType pt = type as PythonType;
         if (pt != null && pt.Version == _version) {
             object res = _new(context, type, %(callTargetPassedArgs)s);
-            if (_init != null && res != null && res.GetType() == pt.UnderlyingSystemType) {
-                _init(context, res, %(callTargetPassedArgs)s);
-            }
+            _initSite.Target(_initSite, context, res, %(callTargetPassedArgs)s);
 
             return res;
         }
@@ -455,11 +454,11 @@ class FastTypeSite<%(typeParams)s> {
     }
 }
 
-class NewInitSite<%(typeParams)s> {
+class NewSite<%(typeParams)s> {
     private readonly CallSite<Func<%(nestedSiteParams)s>> _site;
     private readonly object _target;
 
-    public NewInitSite(PythonInvokeBinder binder, object target) {
+    public NewSite(PythonInvokeBinder binder, object target) {
         _site = CallSite<Func<%(nestedSiteParams)s>>.Create(binder);
         _target = target;
     }
@@ -476,6 +475,7 @@ def gen_fast_type_callers(cw):
         callTargetArgs = ', '.join(('T%d arg%d' % (d, d) for d in xrange(nparams)))
         callTargetPassedArgs = ', '.join(('arg%d' % (d, ) for d in xrange(nparams)))
         nestedSiteParams = 'CallSite, CodeContext, object, object, ' + ', '.join(('T%d' % d for d in xrange(nparams))) + ', object'
+        nestedSlowSiteParams = 'CallSite, CodeContext, object, ' + ', '.join(('T%d' % d for d in xrange(nparams))) + ', object'
         cw.write(fast_type_call_template % {
                   'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
                   'funcParams' : funcParams,
@@ -483,14 +483,69 @@ def gen_fast_type_callers(cw):
                   'callTargetArgs' : callTargetArgs,
                   'callTargetPassedArgs': callTargetPassedArgs,
                   'nestedSiteParams' : nestedSiteParams,
+                  'nestedSlowSiteParams' : nestedSlowSiteParams,
                  })
                  
 def gen_fast_type_caller_switch(cw):
     for nparams in range(1, 6):
         cw.write('case %d: baseType = typeof(FastBindingBuilder<%s>); break;' % (nparams, (',' * (nparams - 1))))
 
-def main():
+fast_init_template = """
+class FastInitSite<%(typeParams)s> {
+    private readonly int _version;
+    private readonly PythonFunction _slot;
+    private readonly CallSite<Func<CallSite, CodeContext, PythonFunction, object, %(typeParams)s, object>> _initSite;
+
+    public FastInitSite(int version, PythonInvokeBinder binder, PythonFunction target) {
+        _version = version;
+        _slot = target;
+        _initSite = CallSite<Func<CallSite, CodeContext, PythonFunction, object,  %(typeParams)s, object>>.Create(binder);
+    }
+
+    public object CallTarget(CallSite site, CodeContext context, object inst, %(callParams)s) {
+        IPythonObject pyObj = inst as IPythonObject;
+        if (pyObj != null && pyObj.PythonType.Version == _version) {
+            _initSite.Target(_initSite, context, _slot, inst, %(callArgs)s);
+            return inst;
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object,  %(typeParams)s, object>>)site).Update(site, context, inst, %(callArgs)s);
+    }
+
+    public object EmptyCallTarget(CallSite site, CodeContext context, object inst, %(callParams)s) {
+        IPythonObject pyObj = inst as IPythonObject;
+        if ((pyObj != null && pyObj.PythonType.Version == _version) || DynamicHelpers.GetPythonType(inst).Version == _version) {
+            return inst;
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object,  %(typeParams)s, object>>)site).Update(site, context, inst, %(callArgs)s);
+    }
+}
+"""
+
+MAX_FAST_INIT_ARGS = 6
+def gen_fast_init_callers(cw):
+    for nparams in range(1, MAX_FAST_INIT_ARGS):       
+        callParams = ', '.join(('T%d arg%d' % (d, d) for d in xrange(nparams)))
+        callArgs = ', '.join(('arg%d' % (d, ) for d in xrange(nparams)))
+        cw.write(fast_init_template % {
+                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                  'callParams' : callParams,
+                  'callArgs': callArgs,
+                 })
+
+def gen_fast_init_switch(cw):
+    for nparams in range(1, MAX_FAST_INIT_ARGS):
+        cw.write("case %d: initSiteType = typeof(FastInitSite<%s>); break;" % (nparams, ',' * (nparams-1), ))
+
+def gen_fast_init_max_args(cw):
+    cw.write("public const int MaxFastLateBoundInitArgs = %d;" % MAX_FAST_INIT_ARGS)
+
+def main(): 
     return generate(
+        ("Python Fast Init Max Args", gen_fast_init_max_args),
+        ("Python Fast Init Switch", gen_fast_init_switch),
+        ("Python Fast Init Callers", gen_fast_init_callers),
         ("Python Fast Type Caller Switch", gen_fast_type_caller_switch),
         ("Python Fast Type Callers", gen_fast_type_callers),
         ("Python Recursion Enforcement", gen_recursion_checks),

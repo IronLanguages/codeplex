@@ -25,6 +25,10 @@ using System.Runtime.CompilerServices;
 using Microsoft.Runtime.CompilerServices;
 
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Scripting {
     /// <summary>
     /// Represents an object with members that can be dynamically added and removed at runtime.

@@ -3496,6 +3496,7 @@ def test_method_tuple_type():
     AreEqual(type(x.f)(f, None, (int, str))(42), 42)
     AreEqual(type(x.f)(f, None, (int, str))('abc'), 'abc')
     AssertError(TypeError, type(x.f)(f, None, (int, str)), 1L)
+
 def test_mutate_class():
     def f(): object.foo = 42
     def g(): type.foo = 42
@@ -3505,5 +3506,56 @@ def test_mutate_class():
     AssertError(TypeError, g)
     AssertError(TypeError, h)
     AssertError(TypeError, i)
+
+def test_wacky_new_init():
+    global initCalled
+
+    for base in [object, list]:
+        for has_finalizer in [True, False]:
+            class CustomInit(object):
+                def __get__(self, inst, ctx):
+                    return self
+                def __call__(self, *args):
+                    global initCalled
+                    initCalled = 'CustomInit'
+            
+            class Base(base):
+                def __new__(self, toCreate):
+                    return base.__new__(toCreate)
+                if has_finalizer:
+                    def __del__(self): pass
+                    
+            class Sub(Base):
+                def __init__(self, *args):
+                    global initCalled
+                    initCalled = 'Sub'
+            
+            class NotSub(base):
+                def __init__(self, *args):
+                    global initCalled
+                    initCalled = 'NotSub'
+                
+            class OC: pass
+            
+            class MixedSub(Base, OC):
+                def __init__(self, *args):
+                    global initCalled
+                    initCalled = 'MixedSub'
+            
+            class CustomSub(Base):
+                __init__ = CustomInit()
+            
+            Base(MixedSub)
+            AreEqual(initCalled, 'MixedSub')
+            
+            Base(Sub)
+            AreEqual(initCalled, 'Sub')
+            initCalled = None
+            
+            Base(NotSub)
+            AreEqual(initCalled, None)
+                
+            Base(CustomSub)
+            AreEqual(initCalled, 'CustomInit')
 
 run_test(__name__)

@@ -18,6 +18,10 @@ using System; using Microsoft;
 using Microsoft.Scripting.Utils;
 using System.Reflection;
 
+#if SILVERLIGHT
+using System.Core;
+#endif
+
 namespace Microsoft.Linq.Expressions {
     /// <summary>
     /// Represents assignment to a member of an object.
