@@ -239,6 +239,7 @@
     <Compile Include="PerfTrack.cs" />
     <Compile Include="Runtime\CompilerContext.cs" />
     <Compile Include="Runtime\DynamicLanguageProviderAttribute.cs" />
+    <Compile Include="Runtime\IConvertibleMetaObject.cs" />
     <Compile Include="Runtime\ICustomScriptCodeData.cs" />
     <Compile Include="Runtime\IRestrictedMetaObject.cs" />
     <Compile Include="Runtime\LegacyScriptCode.cs" />

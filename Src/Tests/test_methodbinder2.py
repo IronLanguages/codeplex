@@ -27,6 +27,9 @@ class PT_I(I): pass
 
 class PT_C1(C1): pass
 
+class PT_C3_int(C3):
+    def __int__(self): return 1
+
 class PT_I_int(I):
     def __int__(self): return 100
 
@@ -174,6 +177,10 @@ def test_other_concerns():
     for x in [100, 100.1234]:
         target.M130[int](x)
         AreEqual(Flag.Value, 230); Flag.Value = 99
+    
+    # narrowing levels and __int__ conversion
+    target.M140(PT_C3_int(), PT_C3_int())
+    AreEqual(Flag.Value, 140); Flag.Value = 99
 
 import clr
 clrRefInt = clr.Reference[int]()
