@@ -93,6 +93,14 @@ namespace IronPython.Runtime {
             return res;
         }
 
+        public override int Count {
+            get {
+                // need to ensure we're fully populated
+                GetItems();
+                return base.Count;
+            }
+        }
+
         public override bool TryGetValue(SymbolId key, out object value) {
             if (base.TryGetValue(key, out value)) {
                 if (value == Uninitialized.Instance) {

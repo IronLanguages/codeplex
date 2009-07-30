@@ -495,6 +495,7 @@ namespace IronPython.Runtime.Types {
                 // IValueEquality takes precedence over Equals which can be provided for
                 // nice .NET interop.
                 new OneOffResolver("__all__", AllResolver),
+
                 new OneOffResolver("__contains__", ContainsResolver),
                 new OneOffResolver("__dir__", DirResolver),
                 new OneOffResolver("__doc__", DocResolver),
@@ -685,9 +686,19 @@ namespace IronPython.Runtime.Types {
         /// Provides a resolution for IValueEquality.GetValueHashCode to __hash__.
         /// </summary>
         private static MemberGroup/*!*/ HashResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
-            // __repr__ for normal .NET types is special, if we're a Python type then
-            // we'll use one of the built-in reprs (from object or from the type)
             if (typeof(IValueEquality).IsAssignableFrom(type) && !type.IsInterface) {
+                // check and see if __new__ has been overridden by the base type.
+                foreach (Type t in binder.GetContributingTypes(type)) {
+                    if (t == typeof(ObjectOps) || t == typeof(object)) {
+                        break;
+                    }
+
+                    MemberInfo[] hash = t.GetMember("__hash__");
+                    if (hash.Length > 0) {
+                        return MemberGroup.EmptyGroup;
+                    }
+                }
+
                 return new MemberGroup(typeof(IValueEquality).GetMethod("GetValueHashCode"));
             }
 

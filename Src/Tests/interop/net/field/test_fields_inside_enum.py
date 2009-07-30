@@ -30,8 +30,7 @@ def test_get_set():
     AreEqual(o.A, EnumInt32.A)
    
     desc = EnumInt32.__dict__['B']
-    AreEqual(EnumInt32.B, desc.__get__(o, EnumInt32))
-    AreEqual(EnumInt32.B, desc.__get__(None, EnumInt32))
+    AreEqual(EnumInt32.B, desc)
     
     def f(): o.A = 10
     AssertErrorWithMatch(AttributeError, "attribute 'A' of 'EnumInt32' object is read-only", f)
@@ -41,16 +40,6 @@ def test_get_set():
 
     def f(): EnumInt32.B = EnumInt32.A
     AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
-    
-    def f(): desc.__set__(o, 12)
-    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
-
-    def f(): desc.__set__(EnumInt32, 12)
-    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
-
-    def f(): desc.__set__(None, EnumInt32.B) 
-    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
-
 
 def test_enum_bool():
     from Merlin.Testing.BaseClass import EmptyEnum

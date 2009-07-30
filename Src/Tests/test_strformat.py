@@ -241,8 +241,8 @@ def test_object___format___errors():
     errors = [ ("+",             "Sign not allowed in string format specifier"),
                ("=+",            "Sign not allowed in string format specifier"),
                ('=10',            "'=' alignment not allowed in string format specifier"),
-               ("10r",            "Unknown conversion type r"),
-               ("=+r",            "Unknown conversion type r"),
+               ("10r",            "Unknown format code 'r' for object of type 'str'"),
+               ("=+r",            "Unknown format code 'r' for object of type 'str'"),
                (".",              "Format specifier missing precision"),
                (".a",             "Format specifier missing precision"),
              ]
@@ -250,7 +250,7 @@ def test_object___format___errors():
     # ensure only the s format type is recognized
     for char in allChars:
         if char != 's' and (char < '0' or char > '9'):
-            errors.append(('10' + char, "Unknown conversion type " + char))
+            errors.append(('10' + char, "Unknown format code '%s' for object of type 'str'" % char))
         
     for errorFmt, errorMsg in errors:
         AssertErrorWithMessage(ValueError, errorMsg, object().__format__, errorFmt)
@@ -521,7 +521,7 @@ def test_float___format___errors():
 
     for char in allChars:
         if char not in okChars and (char < '0' or char > '9'):
-            errors.append((2.0, '10' + char, "Unknown conversion type " + char))
+            errors.append((2.0, '10' + char, "Unknown format code '%s' for object of type 'float'" % char))
 
     for value, errorFmt, errorMsg in errors:
         AssertErrorWithMessage(ValueError, errorMsg, value.__format__, errorFmt)
@@ -819,7 +819,7 @@ def test_int___format___errors():
     
     for char in allChars:
         if char not in okChars and (char < '0' or char > '9'):
-            errors.append((ValueError, 2, '10' + char, "Unknown conversion type " + char))
+            errors.append((ValueError, 2, '10' + char, "Unknown format code '%s'" % char))
 
     for error, value, errorFmt, errorMsg in errors:
         AssertErrorWithPartialMessage(error, errorMsg, value.__format__, errorFmt)
@@ -1118,7 +1118,7 @@ def test_long___format___errors():
 
     for char in allChars:
         if char not in okChars and (char < '0' or char > '9'):
-            errors.append((ValueError, 2L, '10' + char, "Unknown conversion type " + char))
+            errors.append((ValueError, 2L, '10' + char, "Unknown format code '%s'" % char))
 
     for exceptionType, value, errorFmt, errorMsg in errors:
         AssertErrorWithPartialMessage(exceptionType, errorMsg, value.__format__, errorFmt)

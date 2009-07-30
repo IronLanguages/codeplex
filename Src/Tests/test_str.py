@@ -337,7 +337,10 @@ def test_str_to_numeric():
     AreEqual(long(v), 1L)
     AreEqual(int(v), 1)
     AreEqual(complex(v), 123+0j)
-    AreEqual(float(v), 123.0)
+    if is_cpython and sys.version_info[:3] <= (2,6,2):
+        AreEqual(float(v), 123.0)
+    else:
+        AreEqual(float(v), 1.0)
     
     class substring(str): pass
     

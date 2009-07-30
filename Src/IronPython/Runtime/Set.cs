@@ -469,7 +469,9 @@ namespace IronPython.Runtime {
         }
 
         public void remove([NotNull]SetCollection o) {
-            remove(FrozenSetCollection.Make(((IEnumerable)o).GetEnumerator()));
+            if (!_items.RemoveAlwaysHash(FrozenSetCollection.Make(((IEnumerable)o).GetEnumerator()))) {
+                throw PythonOps.KeyError(o);
+            }
         }
 
         public void remove(object o) {
@@ -691,6 +693,9 @@ namespace IronPython.Runtime {
         public bool __ne__(object other) {
             return !((IValueEquality)this).ValueEquals(other);
         }
+
+        public const object __hash__ = null;
+
 
         #endregion
 

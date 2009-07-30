@@ -208,13 +208,29 @@ def test_re_paren_in_char_list_cp20191():
 
 @skip("silverlight")
 def test_struct_uint_bad_value_cp20039():
+    class x(object):
+        def __init__(self, value):
+            self.value = value
+        def __and__(self, other):
+            global andCalled
+            andCalled = True
+            return self.value
+        def __int__(self):
+            raise Exception('foo')
+
     import _struct
+    global andCalled
     AreEqual(_struct.Struct('L').pack(4294967296), '\x00\x00\x00\x00')
-    AreEqual(_struct.Struct('L').pack(-1), '\x00\x00\x00\x00')
-    AreEqual(_struct.Struct('L').pack('abc'), '\x00\x00\x00\x00')
+    AreEqual(_struct.Struct('L').pack(-1), '\xff\xff\xff\xff')
+    AreEqual(_struct.Struct('L').pack(x(0)), '\x00\x00\x00\x00')
+    AreEqual(andCalled, True)
     AreEqual(_struct.Struct('I').pack(4294967296), '\x00\x00\x00\x00')
-    AreEqual(_struct.Struct('I').pack(-1), '\x00\x00\x00\x00')
-    AreEqual(_struct.Struct('I').pack('abc'), '\x00\x00\x00\x00')
+    AreEqual(_struct.Struct('I').pack(-1), '\xff\xff\xff\xff')
+    andCalled = False
+    AreEqual(_struct.Struct('I').pack(x(0)), '\x00\x00\x00\x00')
+    AreEqual(andCalled, True)
+    AssertError(OverflowError, _struct.Struct('I').pack, x(-1))
+    AssertError(OverflowError, _struct.Struct('L').pack, x(-1))
 
 def test_reraise_backtrace_cp20051():
     def foo():

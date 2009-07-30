@@ -587,14 +587,12 @@ def test_field_const_write():
     try:
         ClassWithLiteral.__dict__['Literal'].__set__(None, 23)
     except AttributeError, e:
-        Assert(str(e).find('Literal') != -1)
-        Assert(str(e).find('ClassWithLiteral') != -1)
+        Assert(str(e).find('int') != -1)
 
     try:
         ClassWithLiteral.__dict__['Literal'].__set__(ClassWithLiteral(), 23)
     except AttributeError, e:
-        Assert(str(e).find('Literal') != -1)
-        Assert(str(e).find('ClassWithLiteral') != -1)
+        Assert(str(e).find('int') != -1)
 
     try:
         MySize().MaxSize = 23
