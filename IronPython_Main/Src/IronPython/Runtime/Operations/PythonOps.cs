@@ -1432,7 +1432,7 @@ namespace IronPython.Runtime.Operations {
                 f = pc.SystemStandardOut;
             }
             if (f == null || f == Uninitialized.Instance) {
-                throw PythonOps.RuntimeError("lost sys.std_out");
+                throw PythonOps.RuntimeError("lost sys.stdout");
             }
 
             PythonFile pf = f as PythonFile;
@@ -1773,7 +1773,7 @@ namespace IronPython.Runtime.Operations {
                 SourceUnit source;
 
                 if (noLineFeed) {
-                    source = pythonContext.CreateSourceUnit(new NoLineFeedSourceContentProvider(strCode), null, SourceCodeKind.Statements);
+                    source = pythonContext.CreateSourceUnit(new NoLineFeedSourceContentProvider(strCode), "<string>", SourceCodeKind.Statements);
                 } else {
                     source = pythonContext.CreateSnippet(strCode, SourceCodeKind.Statements);
                 }

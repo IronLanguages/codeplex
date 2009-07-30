@@ -27,7 +27,7 @@ using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Operations {
     internal static class PythonTypeOps {
-        private static readonly Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
+        private static readonly Dictionary<FieldInfo, PythonTypeSlot> _fieldCache = new Dictionary<FieldInfo, PythonTypeSlot>();
         private static readonly Dictionary<BuiltinFunction, BuiltinMethodDescriptor> _methodCache = new Dictionary<BuiltinFunction, BuiltinMethodDescriptor>();
         private static readonly Dictionary<BuiltinFunction, ClassMethodDescriptor> _classMethodCache = new Dictionary<BuiltinFunction, ClassMethodDescriptor>();
         internal static readonly Dictionary<BuiltinFunctionKey, BuiltinFunction> _functions = new Dictionary<BuiltinFunctionKey, BuiltinFunction>();
@@ -663,8 +663,8 @@ namespace IronPython.Runtime.Operations {
                 (mi.DeclaringType.IsAssignableFrom(type) || mi.IsDefined(typeof(StaticExtensionMethodAttribute), false)); // or it's not an extension method or it's a static extension method
         }
 
-        internal static ReflectedField GetReflectedField(FieldInfo info) {
-            ReflectedField res;
+        internal static PythonTypeSlot GetReflectedField(FieldInfo info) {
+            PythonTypeSlot res;
 
             NameType nt = NameType.Field;
             if (!PythonBinder.IsExtendedType(info.DeclaringType) && 
@@ -674,7 +674,28 @@ namespace IronPython.Runtime.Operations {
 
             lock (_fieldCache) {
                 if (!_fieldCache.TryGetValue(info, out res)) {
-                    _fieldCache[info] = res = new ReflectedField(info, nt);
+                    if (nt == NameType.PythonField && info.IsLiteral) {
+                        if (info.FieldType == typeof(int)) {
+                            res = new PythonTypeUserDescriptorSlot(
+                                ScriptingRuntimeHelpers.Int32ToObject((int)info.GetRawConstantValue()),
+                                true
+                            );
+                        } else if (info.FieldType == typeof(bool)) {
+                            res = new PythonTypeUserDescriptorSlot(
+                                ScriptingRuntimeHelpers.BooleanToObject((bool)info.GetRawConstantValue()),
+                                true
+                            );
+                        } else {
+                            res = new PythonTypeUserDescriptorSlot(
+                                info.GetValue(null),
+                                true
+                            );
+                        }
+                    } else {
+                        res = new ReflectedField(info, nt);
+                    }
+
+                    _fieldCache[info] = res;
                 }
             }
 

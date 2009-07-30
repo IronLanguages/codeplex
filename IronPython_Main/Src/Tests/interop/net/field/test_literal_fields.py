@@ -71,31 +71,25 @@ def _test_get_by_type(current_type):
 
 def _test_get_by_descriptor(current_type):
     o = current_type()
-    AreEqual(current_type.__dict__['LiteralByteField'].__get__(None, current_type), 1)
-    AreEqual(current_type.__dict__['LiteralSByteField'].__get__(o, current_type), 2)
-    AreEqual(current_type.__dict__['LiteralUInt16Field'].__get__(None, current_type), 3)
-    AreEqual(current_type.__dict__['LiteralInt16Field'].__get__(o, current_type), 4)
-    AreEqual(current_type.__dict__['LiteralUInt32Field'].__get__(None, current_type), 5)
-    AreEqual(current_type.__dict__['LiteralInt32Field'].__get__(o, current_type), 6)
-    AreEqual(current_type.__dict__['LiteralUInt64Field'].__get__(None, current_type), 7)
-    AreEqual(current_type.__dict__['LiteralInt64Field'].__get__(o, current_type), 8)
-    AreEqual(current_type.__dict__['LiteralDoubleField'].__get__(None, current_type), 9)
-    AreEqual(current_type.__dict__['LiteralSingleField'].__get__(o, current_type), 10)
-    AreEqual(current_type.__dict__['LiteralDecimalField'].__get__(None, current_type), 11)
+    AreEqual(current_type.__dict__['LiteralByteField'], 1)
+    AreEqual(current_type.__dict__['LiteralSByteField'], 2)
+    AreEqual(current_type.__dict__['LiteralUInt16Field'], 3)
+    AreEqual(current_type.__dict__['LiteralInt16Field'], 4)
+    AreEqual(current_type.__dict__['LiteralUInt32Field'], 5)
+    AreEqual(current_type.__dict__['LiteralInt32Field'], 6)
+    AreEqual(current_type.__dict__['LiteralUInt64Field'], 7)
+    AreEqual(current_type.__dict__['LiteralInt64Field'], 8)
+    AreEqual(current_type.__dict__['LiteralDoubleField'], 9)
+    AreEqual(current_type.__dict__['LiteralSingleField'], 10)
+    AreEqual(current_type.__dict__['LiteralDecimalField'].__get__(o, current_type), 11)
     
-    AreEqual(current_type.__dict__['LiteralCharField'].__get__(o, current_type), "K")
-    AreEqual(current_type.__dict__['LiteralBooleanField'].__get__(None, current_type), True)
-    AreEqual(current_type.__dict__['LiteralStringField'].__get__(o, current_type), "DLR")
+    AreEqual(current_type.__dict__['LiteralCharField'], "K")
+    AreEqual(current_type.__dict__['LiteralBooleanField'], True)
+    AreEqual(current_type.__dict__['LiteralStringField'], "DLR")
 
-    AreEqual(current_type.__dict__['LiteralEnumField'].__get__(None, current_type), EnumInt32.B)
-    AreEqual(current_type.__dict__['LiteralClassField'].__get__(o, current_type), None)
-    AreEqual(current_type.__dict__['LiteralInterfaceField'].__get__(o, current_type), None)
-
-    for t in [current_type, SimpleStruct, SimpleClass]:
-        AssertErrorWithMatch(TypeError, "(expected .*, got type)", lambda: current_type.__dict__['LiteralInt64Field'].__get__(t, current_type))
-    
-    for t in [None, o, SimpleClass, SimpleStruct]:
-        AreEqual(current_type.__dict__['LiteralEnumField'].__get__(None, t), EnumInt32.B)
+    AreEqual(current_type.__dict__['LiteralEnumField'], EnumInt32.B)
+    AreEqual(current_type.__dict__['LiteralClassField'], None)
+    AreEqual(current_type.__dict__['LiteralInterfaceField'], None)
 
 def _test_set_by_instance(current_type):
     o = current_type()
@@ -146,38 +140,6 @@ def _test_set_by_type(current_type):
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17]:
         AssertErrorWithMatch(AttributeError, "attribute '.*' of '.*' object is read-only", f)
 
-def _test_set_by_descriptor(current_type):
-    o = current_type()
-    for f in [
-     lambda : current_type.__dict__['LiteralByteField'].__set__(None, 2),
-     lambda : current_type.__dict__['LiteralUInt16Field'].__set__(None, 4),
-     lambda : current_type.__dict__['LiteralUInt64Field'].__set__(None, 8),
-     lambda : current_type.__dict__['LiteralDecimalField'].__set__(None, 12),
-     lambda : current_type.__dict__['LiteralBooleanField'].__set__(None, False),
-     lambda : current_type.__dict__['LiteralClassField'].__set__(None, None),
-     lambda : current_type.__dict__['LiteralUInt64Field'].__set__(None, 8),
-    ]:
-        AssertErrorWithMatch(AttributeError, "attribute 'Literal.*Field' of '.*' object is read-only", f)  
-    
-    for f in [
-     lambda : current_type.__dict__['LiteralSByteField'].__set__(o, 3),
-     lambda : current_type.__dict__['LiteralInt16Field'].__set__(o, 5),
-     lambda : current_type.__dict__['LiteralUInt32Field'].__set__(current_type, 6),
-     lambda : current_type.__dict__['LiteralInt32Field'].__set__(o, 7),
-     lambda : current_type.__dict__['LiteralInt64Field'].__set__(o, 9),
-     lambda : current_type.__dict__['LiteralDoubleField'].__set__(current_type, 10),
-     lambda : current_type.__dict__['LiteralSingleField'].__set__(o, 11),
-    
-     lambda : current_type.__dict__['LiteralCharField'].__set__(o, "Long"),  # wrong type by purpose
-     lambda : current_type.__dict__['LiteralStringField'].__set__(o, "Python"),
-
-     lambda : current_type.__dict__['LiteralEnumField'].__set__(current_type, EnumInt32.C),
-     lambda : current_type.__dict__['LiteralInterfaceField'].__set__(o, None),
-    ]: 
-        AssertErrorWithMatch(AttributeError, "attribute 'Literal.*Field' of '.*' object is read-only", f)
-
-    for t in [int, SimpleStruct, SimpleClass]:
-        AssertErrorWithMatch(AttributeError, "attribute 'Literal.*Field' of '.*' object is read-only", lambda: current_type.__dict__['LiteralCharField'].__set__(t, 'L'))
         
 def _test_delete_via_type(current_type):
     def f1(): del current_type.LiteralByteField
@@ -228,20 +190,6 @@ def _test_delete_via_instance(current_type, message="cannot delete attribute 'Li
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17]:
         AssertErrorWithMatch(AttributeError, message, f)
 
-def _test_delete_via_descriptor(current_type):
-    o = current_type()
-    i = 0 
-    for x in ['Byte', 'SByte', 'UInt16', 'Int16', 'UInt32', 'Int32', 'UInt64', 'Int64', 'Double', 'Single', 'Decimal', 
-              'Char', 'Boolean', 'String', 'Enum', 'Class', 'Interface'
-             ]:
-        if i % 3 == 0: arg = o
-        if i % 3 == 1: arg = None
-        if i % 3 == 2: arg = current_type
-        i += 1
-
-        AssertErrorWithMatch(AttributeError, "cannot delete attribute 'Literal.*Field' of builtin type", 
-               lambda : current_type.__dict__['Literal%sField' % x].__delete__(arg))
-
 types = [
     StructWithLiterals, 
     GenericStructWithLiterals[int], 
@@ -256,10 +204,8 @@ for i in range(len(types)):
     exec("def test_%s_get_by_descriptor():   _test_get_by_descriptor(types[%s])" % (i, i))
     exec("def test_%s_set_by_instance():   _test_set_by_instance(types[%s])" % (i, i))
     exec("def test_%s_set_by_type():   _test_set_by_type(types[%s])" % (i, i))
-    exec("def test_%s_set_by_descriptor():   _test_set_by_descriptor(types[%s])" % (i, i))
     exec("def test_%s_delete_via_type():   _test_delete_via_type(types[%s])" % (i, i))
     exec("def test_%s_delete_via_instance():   _test_delete_via_instance(types[%s])" % (i, i))
-    exec("def test_%s_delete_via_descriptor():   _test_delete_via_descriptor(types[%s])" % (i, i))
 
 def test_accessing_from_derived():
     _test_get_by_instance(DerivedClass)
