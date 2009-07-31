@@ -127,57 +127,6 @@ namespace Microsoft.Scripting.Utils {
             return result;
         }
 
-        public static T CreateInstance<T>(Type actualType, params object[] args) {
-            Type type = typeof(T);
-
-            Debug.Assert(type.IsAssignableFrom(actualType));
-
-            try {
-                return (T)Activator.CreateInstance(actualType, args);
-            } catch (TargetInvocationException e) {
-                throw new InvalidImplementationException(Strings.InvalidCtorImplementation(actualType, e.InnerException.Message), e.InnerException);
-            } catch (Exception e) {
-                throw new InvalidImplementationException(Strings.InvalidCtorImplementation(actualType, e.Message), e);
-            }
-        }
-
-        public static object InvokeDelegate(Delegate d, params object[] args) {
-#if SILVERLIGHT
-            // delegates:
-            //   - close (target != null)
-            //     - static (target becomes the first argument)
-            //     - instance (no argument shuffling)
-            //   - open (target == null)
-            //     - static (no argument shuffling)
-            //     - instance (first argument becomes the target)
-
-            object target = d.Target;
-
-            if (d.Method.IsStatic && target != null) {
-                // closed static -> target needs to be passed as the first arg:
-                object[] new_args = new object[args.Length + 1];
-                args.CopyTo(new_args, 1);
-                new_args[0] = d.Target;
-
-                target = null;
-                args = new_args;
-
-            } else if (!d.Method.IsStatic && target == null) {
-
-                // open instance -> the first arg is the target:
-                object[] new_args = new object[args.Length - 1];
-                System.Array.Copy(args, 1, new_args, 0, new_args.Length);
-
-                target = args[0];
-                args = new_args;
-            }
-
-            return d.Method.Invoke(target, args);
-#else
-            return d.DynamicInvoke(args);
-#endif
-        }
-
         /// <summary>
         /// Creates an open delegate for the given (dynamic)method.
         /// </summary>
