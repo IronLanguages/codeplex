@@ -333,7 +333,7 @@ namespace IronPythonTest {
             public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject errorSuggestion) {
                 return new DynamicMetaObject(
                     Expression.Constant("FallbackInvokeMember"),
-                    target.Restrictions.Merge(BindingRestrictions.Combine(args))
+                    target.Restrictions.Merge(BindingRestrictions.Combine(args)).Merge(target.Restrict(target.LimitType).Restrictions)
                 );
             }
 
@@ -451,6 +451,19 @@ namespace IronPythonTest {
                     BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
                 );
 
+            }
+        }
+
+        class MyUnaryBinder : UnaryOperationBinder {
+            public MyUnaryBinder(ExpressionType et)
+                : base(et) {
+            }
+
+            public override DynamicMetaObject FallbackUnaryOperation(DynamicMetaObject target, DynamicMetaObject errorSuggestion) {
+                return new DynamicMetaObject(
+                    Expression.Constant("UnaryFallback"),
+                    BindingRestrictionsHelpers.GetRuntimeTypeRestriction(target)
+                );
             }
         }
 
@@ -657,6 +670,22 @@ class os_getattr:
     def TestFunc(self):
         return 'TestFunc'
 
+class ns_nonzero(object):
+    def __nonzero__(self):
+        return True
+
+ns_nonzero_inst = ns_nonzero()
+
+class ns_len1(object):
+    def __len__(self): return 1
+
+ns_len1_inst = ns_len1()
+
+class ns_len0(object):
+    def __len__(self): return 0
+
+ns_len0_inst = ns_len0()
+
 def TestFunc():
     return 'TestFunc'
 
@@ -682,6 +711,8 @@ al_getattrinst = MyArrayList_getattr()
 
 ns_getattributeinst = ns_getattribute()
 al_getattributeinst = MyArrayList_getattribute()
+
+xrange = xrange
 ", SourceCodeKind.Statements);
 
             src.Execute(scope);
@@ -934,6 +965,14 @@ al_getattributeinst = MyArrayList_getattribute()
                 }
             }
 
+            site = CallSite<Func<CallSite, object, object>>.Create(new MyUnaryBinder(ExpressionType.Not));
+            AreEqual(site.Target(site, scope.GetVariable("nsinst")), true);
+            AreEqual(site.Target(site, scope.GetVariable("ns_nonzero_inst")), false);
+            AreEqual(site.Target(site, scope.GetVariable("ns_len0_inst")), true);
+            AreEqual(site.Target(site, scope.GetVariable("ns_len1_inst")), false);
+
+            site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ToString", new CallInfo(0)));
+            AreEqual(site.Target(site, scope.GetVariable("xrange")), "FallbackInvokeMember");
 #endif
         }
 

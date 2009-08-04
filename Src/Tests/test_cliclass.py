@@ -1597,5 +1597,9 @@ def test_abstract_class_no_interface_impl():
         import nt
         nt.unlink('testilcode.il')
 
+def test_event_validates_callable():
+    def f(): DelegateTest.StaticEvent += 3
+    AssertErrorWithMessage(TypeError, "event addition expected callable object, got int", f)
+
 run_test(__name__)
 

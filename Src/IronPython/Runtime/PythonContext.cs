@@ -250,7 +250,7 @@ namespace IronPython.Runtime {
 
             RecursionLimit = _options.RecursionLimit;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !CLR4
             object asmResolve;
             if (options == null ||
                 !options.TryGetValue("NoAssemblyResolveHook", out asmResolve) ||
@@ -1127,7 +1127,7 @@ namespace IronPython.Runtime {
             return null;
         }
 
-#if !SILVERLIGHT // AssemblyResolve, files, path
+#if !SILVERLIGHT && !CLR4 // AssemblyResolve, files, path
         private bool TryLoadAssemblyFromFileWithPath(string path, out Assembly res) {
             if (File.Exists(path) && Path.IsPathRooted(path)) {
                 try {
@@ -1205,7 +1205,7 @@ namespace IronPython.Runtime {
         public override void Shutdown() {
             object callable;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !CLR4
             UnhookAssemblyResolve();
 #endif
 
