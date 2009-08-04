@@ -118,6 +118,9 @@ namespace IronPython.Runtime.Binding {
                 case ExpressionType.OnesComplement:
                     res = BindingHelpers.AddPythonBoxing(MakeUnaryOperation(operation, arg, Symbols.OperatorOnesComplement));
                     break;
+                case ExpressionType.Not:
+                    res = MakeUnaryNotOperation(operation, arg, typeof(object));
+                    break;
                 case ExpressionType.IsFalse:
                     res = MakeUnaryNotOperation(operation, arg, typeof(bool));
                     retType = typeof(bool);

@@ -46,6 +46,17 @@ namespace IronPython.Runtime.Binding {
         #region MetaObject Overrides
 
         public override DynamicMetaObject/*!*/ BindInvokeMember(InvokeMemberBinder/*!*/ action, DynamicMetaObject/*!*/[]/*!*/ args) {
+            foreach (PythonType pt in Value.ResolutionOrder) {
+                PythonTypeSlot dummy;
+                if (pt.IsSystemType) {
+                    return action.FallbackInvokeMember(this, args);
+                } else if (
+                    pt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(action.Name), out dummy) ||
+                    pt.IsOldClass) {
+                    break;
+                }
+            }
+
             return BindingHelpers.GenericInvokeMember(action, null, this, args);
         }
 

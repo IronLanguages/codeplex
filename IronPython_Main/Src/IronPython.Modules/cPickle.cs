@@ -1413,7 +1413,11 @@ namespace IronPython.Modules {
             }
 
             private string Read(CodeContext/*!*/ context, int size) {
-                return _file.Read(context, size);
+                string res = _file.Read(context, size);
+                if (res.Length < size) {
+                    throw PythonOps.EofError("unexpected EOF while unpickling");
+                }
+                return res;
             }
 
             private string ReadLineNoNewline(CodeContext/*!*/ context) {
