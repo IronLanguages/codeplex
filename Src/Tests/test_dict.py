@@ -1076,5 +1076,17 @@ def test_cp16519():
     AreEqual(testpkg1.Dict["1"], "c")
     del testpkg1.Dict
 
+def test_dict_equality_lookup():
+    """dictionaries check object equality before running normal equality"""
+    class x(object):
+        def __eq__(self, other):
+                return False
+        def __ne__(self, other):
+                return True
+    
+    a = x()
+    d = {}
+    d[a] = 42
+    AreEqual(d[a], 42)
 
 run_test(__name__)

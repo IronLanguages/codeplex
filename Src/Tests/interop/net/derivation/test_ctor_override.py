@@ -36,7 +36,7 @@ def test_0():
     class C(CCtor10): pass
     C()
     Flag.Check(42)
-    AssertErrorWithMessage(TypeError, "default __new__ does not take parameters", C, 1)
+    AssertErrorWithMessage(TypeError, "object.__new__() takes no parameters", C, 1)
 
     class C(CCtor10): 
         def __new__(cls, arg1, arg2):

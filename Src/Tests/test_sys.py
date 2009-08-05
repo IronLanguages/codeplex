@@ -21,6 +21,10 @@ from iptest.assert_util import *
 
 import sys
 
+@skip("win32")
+def test_dont_write_bytecode():
+    AreEqual(sys.dont_write_bytecode, True)
+
 def test_getframe():
     # This test requires -X:FullFrames, run it in separate instance of IronPython.
     global testDelGetFrame

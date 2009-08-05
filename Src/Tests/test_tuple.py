@@ -187,5 +187,13 @@ def test_wacky_contains():
             pass
     AreEqual('abc' in x2(), False)
 
+def test_tuple_equality():
+    class x(object):
+        def __eq__(self, other): return False
+        def __ne__(self, other): return True
+    
+    a = x()
+    AreEqual((a, ), (a, ))
+
 run_test(__name__)
 

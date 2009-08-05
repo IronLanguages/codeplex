@@ -1158,12 +1158,16 @@ namespace IronPython.Modules {
             ProcessStartInfo psi = GetProcessInfo(command);
             psi.CreateNoWindow = false;
 
-            Process process = Process.Start(psi);
-            if (process == null) {
-                return -1;
+            try {
+                Process process = Process.Start(psi);
+                if (process == null) {
+                    return -1;
+                }
+                process.WaitForExit();
+                return process.ExitCode;
+            } catch (Win32Exception) {
+                return 1;
             }
-            process.WaitForExit();
-            return process.ExitCode;
         }
 
         public static string tempnam(CodeContext/*!*/ context) {

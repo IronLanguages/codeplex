@@ -196,7 +196,7 @@ def test_reflected_type():
         Assert(not hasattr(x, 'protected_instance_field'))
         Assert('protected_instance_field' in dir(C))
         Assert('protected_instance_field' in dir(x))
-        AssertError(System.Reflection.AmbiguousMatchException, lambda : x.protected_instance_field)
+        AssertError(TypeError, lambda : x.protected_instance_field)
 
 run_test(__name__)
 

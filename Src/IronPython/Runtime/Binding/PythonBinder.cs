@@ -646,7 +646,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         private static Expression ReturnPropertyTracker(PropertyTracker propertyTracker, bool privateBinding) {
-            return AstUtils.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, null, privateBinding));
+            return AstUtils.Constant(PythonTypeOps.GetReflectedProperty(propertyTracker, new MemberGroup(propertyTracker), privateBinding));
         }
 
         private static DynamicMetaObject ReturnTypeTracker(TypeTracker memberTracker) {

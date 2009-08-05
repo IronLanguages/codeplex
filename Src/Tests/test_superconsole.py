@@ -260,7 +260,7 @@ def test_member_completion_com():
     superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
     superConsole.SendKeys('wordapp.Activ{TAB}{ENTER}')
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
-    sleep(5)
+    sleep(10)
     Assert('<System.Dynamic.DispCallable object at ' in getTestOutput()[0][1])
 
 def test_cp17797():

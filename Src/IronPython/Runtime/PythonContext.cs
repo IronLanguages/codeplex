@@ -63,7 +63,7 @@ namespace IronPython.Runtime {
         private readonly Scope/*!*/ _systemState;
         private readonly Dictionary<string, Type>/*!*/ _builtinsDict;
         private readonly PythonOverloadResolverFactory _sharedOverloadResolverFactory;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !CLR4
         private readonly AssemblyResolveHolder _resolveHolder;
 #endif
         private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
@@ -222,14 +222,13 @@ namespace IronPython.Runtime {
             }
 
             if (_options.Frames) {
-                _systemState.Dict[SymbolTable.StringToId("_getframe")] = BuiltinFunction.MakeMethod("_getframe", 
+                _systemState.Dict[SymbolTable.StringToId("_getframe")] = BuiltinFunction.MakeFunction("_getframe", 
                     ArrayUtils.ConvertAll(typeof(SysModule).GetMember("_getframeImpl"), (x) => (MethodBase)x), 
-                    typeof(SysModule), 
-                    FunctionType.Function);
+                    typeof(SysModule));
             }
 
             List path = new List(_options.SearchPaths);
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !CLR4
             _resolveHolder = new AssemblyResolveHolder(this);
             try {
                 Assembly entryAssembly = Assembly.GetEntryAssembly();

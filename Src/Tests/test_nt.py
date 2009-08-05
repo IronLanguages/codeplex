@@ -805,6 +805,8 @@ def test_system_minimal():
     AreEqual(nt.system('"ping localhost'), 0)
         
     AreEqual(nt.system("ping"), 1)
+    
+    AreEqual(nt.system("some_command_which_is_not_available"), 1)
 
 # flags test
 def test_flags():

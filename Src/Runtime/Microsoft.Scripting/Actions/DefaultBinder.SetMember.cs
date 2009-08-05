@@ -299,22 +299,33 @@ namespace Microsoft.Scripting.Actions {
                     )
                 );
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
-                Debug.Assert(field.IsStatic || instance != null);
-
-                memInfo.Body.FinishCondition(
-                    MakeReturnValue(
-                        Ast.Assign(
-                            Ast.Field(
-                                field.IsStatic ?
-                                    null :
-                                    AstUtils.Convert(instance.Expression, field.DeclaringType),
-                                field.Field
+                if (!field.IsStatic && instance == null) {
+                    memInfo.Body.FinishCondition(
+                        Ast.Throw(
+                            Ast.New(
+                                typeof(ArgumentException).GetConstructor(new Type[] { typeof(string) }),
+                                AstUtils.Constant("assignment to instance field w/o instance")
                             ),
-                            ConvertExpression(target.Expression, field.FieldType, ConversionResultKind.ExplicitCast, memInfo.ResolutionFactory)
-                        ),
-                        target
-                    )
-                );
+                            typeof(object)
+                        )
+                    );
+
+                } else {
+                    memInfo.Body.FinishCondition(
+                        MakeReturnValue(
+                            Ast.Assign(
+                                Ast.Field(
+                                    field.IsStatic ?
+                                        null :
+                                        AstUtils.Convert(instance.Expression, field.DeclaringType),
+                                    field.Field
+                                ),
+                                ConvertExpression(target.Expression, field.FieldType, ConversionResultKind.ExplicitCast, memInfo.ResolutionFactory)
+                            ),
+                            target
+                        )
+                    );
+                }
             } else {
                 Debug.Assert(field.IsStatic || instance != null);
 
