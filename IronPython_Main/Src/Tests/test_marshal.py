@@ -131,5 +131,20 @@ def test_file_multiple_reads():
     for i in xrange(10):
         obj = marshal.load(f)
         AreEqual(obj, {i:i})
+
+def test_string_interning():
+    AreEqual(marshal.dumps(['abc', 'abc'], 1), '[\x02\x00\x00\x00t\x03\x00\x00\x00abcR\x00\x00\x00\x00')
+    AreEqual(marshal.dumps(['abc', 'abc']), '[\x02\x00\x00\x00t\x03\x00\x00\x00abcR\x00\x00\x00\x00')
+    AreEqual(marshal.dumps(['abc', 'abc'], 0), '[\x02\x00\x00\x00s\x03\x00\x00\x00abcs\x03\x00\x00\x00abc')
+    AreEqual(marshal.dumps(['abc', 'abc', 'abc', 'def', 'def'], 1), '[\x05\x00\x00\x00t\x03\x00\x00\x00abcR\x00\x00\x00\x00R\x00\x00\x00\x00t\x03\x00\x00\x00defR\x01\x00\x00\x00')
+    AreEqual(marshal.loads(marshal.dumps(['abc', 'abc'], 1)), ['abc', 'abc'])
+    AreEqual(marshal.loads(marshal.dumps(['abc', 'abc'], 0)), ['abc', 'abc'])
+    AreEqual(marshal.loads(marshal.dumps(['abc', 'abc', 'abc', 'def', 'def'], 1)), ['abc', 'abc', 'abc', 'def', 'def'])
     
+def test_binary_floats():
+    AreEqual(marshal.dumps(2.0, 2), 'g\x00\x00\x00\x00\x00\x00\x00@')
+    AreEqual(marshal.dumps(2.0), 'g\x00\x00\x00\x00\x00\x00\x00@')
+    AreEqual(marshal.dumps(2.0, 1), 'f\x032.0')
+    AreEqual(marshal.loads(marshal.dumps(2.0, 2)), 2.0)
+
 run_test(__name__)

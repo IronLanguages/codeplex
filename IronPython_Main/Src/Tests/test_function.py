@@ -400,10 +400,9 @@ AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (2 given)",
 #AssertErrorWithMessage(TypeError, "'dummy' is an invalid keyword argument for this function", apply, bool, [], dict({"dummy":2}))
 #AssertErrorWithMessage(TypeError, "'dummy' is an invalid keyword argument for this function", apply, bool, [1], dict({"dummy":2}))
 
-if is_cli or is_silverlight:
-    class UserClass(object): pass
-    AssertErrorWithMessage(TypeError, "default __new__ does not take parameters", UserClass, 1)
-    AssertErrorWithMessage(TypeError, "default __new__ does not take parameters", apply, UserClass, [], dict({"dummy":2}))
+class UserClass(object): pass
+AssertErrorWithMessage(TypeError, "object.__new__() takes no parameters", UserClass, 1)
+AssertErrorWithMessage(TypeError, "object.__new__() takes no parameters", apply, UserClass, [], dict({"dummy":2}))
     
 class OldStyleClass: pass
 AssertErrorWithMessage(TypeError, "this constructor takes no arguments", OldStyleClass, 1)

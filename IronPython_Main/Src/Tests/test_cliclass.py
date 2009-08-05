@@ -1597,6 +1597,16 @@ def test_abstract_class_no_interface_impl():
         import nt
         nt.unlink('testilcode.il')
 
+def test_field_assign():
+    """assign to an instance field through the type"""
+    
+    from IronPythonTest.BinderTest import KeywordBase
+    
+    def f():
+        KeywordBase.SomeField = 42
+    
+    AssertError(ValueError, f)
+
 def test_event_validates_callable():
     def f(): DelegateTest.StaticEvent += 3
     AssertErrorWithMessage(TypeError, "event addition expected callable object, got int", f)

@@ -202,9 +202,8 @@ def test_type___clrtype__():
     
     #Make sure the documentation is useful
     #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23252
-    AreEqual(type.__clrtype__.__doc__.replace("\r\n", "\n"),
-             '''Type __clrtype__(self)
-Type __clrtype__(self)''')
+    Assert(len(type.__clrtype__.__doc__.replace("\r\n", "\n").replace('''Type __clrtype__(self)
+Type __clrtype__(self)''', '')) > 0)
     
     AreEqual(type.__clrtype__(type),  type)
     AreEqual(type.__clrtype__(float), float)
@@ -824,18 +823,17 @@ def test_neg_clrtype_raises_exceptions():
             AreEqual(called, False)
     
     
-def test_neg_type___init___args():
+def test_neg_type___new___args():
     '''
     Make a type that cannot be constructed and see if __clrtype__ still gets 
     called.
     '''
     global called
     
-    #def __init__(self)
     called = False
     
     class MyType(type):
-        def __init__(self):
+        def __new__(self):
             pass
         def __clrtype__(self):
             global called
@@ -845,13 +843,13 @@ def test_neg_type___init___args():
     try:
         class X(object):
             __metaclass__ = MyType
-        Fail("type.__init__ signature is wrong")
+        Fail("type.__new__ signature is wrong")
     except TypeError, e:
         AreEqual(e.message,
-                 "__init__() takes exactly 1 argument (4 given)")
+                 "__new__() takes exactly 1 argument (4 given)")
     finally:
         #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23346
-        AreEqual(called, True)
+        AreEqual(called, False)
     
 
 def test_neg_type_misc():
@@ -865,28 +863,31 @@ def test_neg_type_misc():
     import IronPythonTest.interop.net.type.clrtype as IPT
     
     from IronPython.Runtime.Types import PythonType
+    called = False
     
-    for x in [  IPT.NegativeEmpty,
-                IPT.NegativeNoConstructor,
-                ]:
-        called = False
-        
-        class MyType(type):
-            def __clrtype__(self):
-                global called
-                called = True
-                return x
-        
-        try:
-            class X(object):
-                __metaclass__ = MyType
-            #Fail("Should not be able to define classes with a bogus __clrtype__ implementation!")
-            #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23418
-        except TypeError, e:
-            err_msg = "Need an assertion for this particular error message!"
-            raise Exception(err_msg)
-        finally:
-            AreEqual(called, True)
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            called = True
+            return IPT.NegativeEmpty
+    
+    class X(object):
+        __metaclass__ = MyType
+
+    a = X()
+    AreEqual(clr.GetClrType(type(a)), clr.GetClrType(IPT.NegativeEmpty))
+    
+    class MyType(type):
+        def __clrtype__(self):
+            global called
+            called = True
+            return IPT.NegativeNoConstructor
+
+    class X(object):
+            __metaclass__ = MyType
+    
+    a = X()
+    AreEqual(clr.GetClrType(type(a)), clr.GetClrType(int))
 
 
 #--MAIN------------------------------------------------------------------------    

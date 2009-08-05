@@ -57,12 +57,23 @@ namespace IronPython.Runtime.Types {
 
         #region Static factories
 
-        internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase info, Type declaringType, FunctionType ft) {
-            Debug.Assert(!info.ContainsGenericParameters);
+        /// <summary>
+        /// Creates a new builtin function for a static .NET function.  This is used for module methods
+        /// and well-known __new__ methods.
+        /// </summary>
+        internal static BuiltinFunction/*!*/ MakeFunction(string name, MethodBase[] infos, Type declaringType) {
+#if DEBUG
+            foreach (MethodBase mi in infos) {
+                Debug.Assert(!mi.ContainsGenericParameters);
+            }
+#endif
 
-            return new BuiltinFunction(name, new MethodBase[] { info }, declaringType, ft);
+            return new BuiltinFunction(name, infos, declaringType, FunctionType.AlwaysVisible | FunctionType.Function);
         }
 
+        /// <summary>
+        /// Creates a built-in function for a .NET method declared on a type.
+        /// </summary>
         internal static BuiltinFunction/*!*/ MakeMethod(string name, MethodBase[] infos, Type declaringType, FunctionType ft) {
             foreach (MethodBase mi in infos) {
                 if (mi.ContainsGenericParameters) {
@@ -71,18 +82,6 @@ namespace IronPython.Runtime.Types {
             }
 
             return new BuiltinFunction(name, infos, declaringType, ft);
-        }
-
-        internal static BuiltinFunction/*!*/ MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, Type declaringType, FunctionType funcType) {
-            Debug.Assert(!mi.ContainsGenericParameters);
-            PythonBinder.AssertNotExtensionType(declaringType);
-
-            if (existing != null) {
-                existing._data.AddMethod(mi);
-                return existing;
-            } else {
-                return MakeMethod(name, mi, declaringType, funcType);
-            }
         }
 
         internal virtual BuiltinFunction/*!*/ BindToInstance(object instance) {
@@ -477,16 +476,17 @@ namespace IronPython.Runtime.Types {
         }
 
         internal static DynamicMetaObject TranslateArguments(DynamicMetaObjectBinder call, Expression codeContext, DynamicMetaObject function, DynamicMetaObject/*!*/[] args, bool hasSelf, string name) {
+            if (hasSelf) {
+                args = ArrayUtils.RemoveFirst(args);
+            }
+
             CallSignature sig = BindingHelpers.GetCallSignature(call);
             if (sig.HasDictionaryArgument()) {
                 int index = sig.IndexOf(ArgumentType.Dictionary);
-                if (hasSelf) {
-                    args = ArrayUtils.RemoveFirst(args);
-                }
 
                 DynamicMetaObject dict = args[index];
 
-                if (!(dict.Value is IDictionary)) {
+                if (!(dict.Value is IDictionary) && dict.Value != null) {
                     // The DefaultBinder only handles types that implement IDictionary.  Here we have an
                     // arbitrary user-defined mapping type.  We'll convert it into a PythonDictionary
                     // and then have an embedded dynamic site pass that dictionary through to the default
@@ -524,15 +524,10 @@ namespace IronPython.Runtime.Types {
 
             if (sig.HasListArgument()) {
                 int index = sig.IndexOf(ArgumentType.List);
-                if (hasSelf) {
-                    args = ArrayUtils.RemoveFirst(args);
-                }
-
                 DynamicMetaObject str = args[index];
 
                  // TODO: ANything w/ __iter__ that's not an IList<object>
-                if (str.Value is string || 
-                    str.Value is XRange) {
+                if (!(str.Value is IList<object>) && str.Value is IEnumerable) {
                     // The DefaultBinder only handles types that implement IList<object>.  Here we have a
                     // string.  We'll convert it into a tuple
                     // and then have an embedded dynamic site pass that tuple through to the default
@@ -542,10 +537,9 @@ namespace IronPython.Runtime.Types {
                     dynamicArgs[index + 1] = new DynamicMetaObject(
                         Expression.Call(
                            typeof(PythonOps).GetMethod("MakeTupleFromSequence"),
-                           args[index].Expression
+                           Expression.Convert(args[index].Expression, typeof(object))
                         ),
-                        BindingRestrictions.Empty,
-                        PythonOps.MakeTupleFromSequence(str.Value)
+                        BindingRestrictions.Empty
                     );
 
                     if (call is IPythonSite) {
