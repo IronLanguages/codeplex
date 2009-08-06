@@ -37,7 +37,6 @@ of this coverage through our .NET interop inheritance tests.
 if hasattr(type, "__clrtype__"):
     exc_msg = "type.__clrtype__ should not exist until the 'clr/System' module has been imported"
     print exc_msg
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23251
     raise Exception(exc_msg)
 
 

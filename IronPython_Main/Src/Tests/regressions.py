@@ -400,6 +400,9 @@ def test_xxsubtype_bench():
 
 def test_str_ljust_cp21483():
     AreEqual('abc'.ljust(-2147483648), 'abc')
+    AreEqual('abc'.ljust(-2147483647), 'abc')
+    AssertError(OverflowError, #"long int too large to convert to int",
+                'abc'.ljust, -2147483649L)
 
 
 @skip("win32")

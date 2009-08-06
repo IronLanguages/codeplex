@@ -540,14 +540,13 @@ function maxrecursion-helper
 		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
 	}
 	
-	echo "CodePlex Work Item 10816"
-	foreach ($i in @()) #1..-2)
+	foreach ($i in @(-2, -1, 0, 1, 8, 9))
 	{
 		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 3 2>&1
 		$ErrorActionPreference = "stop"
 		$stuff = "$stuff.ErrorDetails"
-		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
+		if (!$stuff.Contains("The argument for the -X:MaxRecursion option must be an integer >= 10.")) {show-failure "Failed."; }
 	}
 }
 
