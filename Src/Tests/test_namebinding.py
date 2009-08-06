@@ -994,7 +994,6 @@ import __builtin__
 __builtin__.help = 10
 AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))
 
-#CodePlex 20956
 # Test that run time name lookup skips over class scopes
 # (because class variables aren't implicitly accessible inside member functions)
 a = 123
@@ -1008,7 +1007,6 @@ class C(object):
 
 AreEqual(C().foo(), 123)
 
-#CodePlex 20956
 class C:
     codeplex_20956 = 3
     def foo(self):
