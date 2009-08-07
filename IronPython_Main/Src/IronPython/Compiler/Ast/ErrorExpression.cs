@@ -18,6 +18,9 @@ using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     public class ErrorExpression : Expression {
+        public ErrorExpression() {
+        }
+
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return null;
         }

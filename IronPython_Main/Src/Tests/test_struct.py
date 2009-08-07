@@ -232,5 +232,17 @@ def test_cp16476():
         actual_val = unpack('I', encoded_val)
         AreEqual((expected,), actual_val)
         AreEqual(type(expected), type(actual_val[0]))
+
+
+def test_unpack_from():
+    '''
+    TODO: just a sanity test for now.  Needs far more testing.
+    '''
+    import array
+    _struct.unpack_from("", array.array("c"))
     
+    AreEqual(_struct.unpack_from("", array.array("c")),
+             ())
+
+#--MAIN------------------------------------------------------------------------    
 run_test(__name__)

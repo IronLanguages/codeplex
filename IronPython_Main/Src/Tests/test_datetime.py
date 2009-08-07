@@ -294,6 +294,7 @@ def test_datetime():
     AssertError(ValueError, datetime.datetime, 9999, 12, 31, 23, 59, 59, 1000000)
     AssertError(ValueError, datetime.datetime, 10000, 13, 32, 24, 60, 60, 1000000)
     AssertError(ValueError, datetime.datetime, 100000, 130, 320, 240, 600, 600, 10000000)
+    AssertError(TypeError,  datetime.datetime, 2006, 4, 11, 2, 28, 3, 99, 1)
     
     #--------------------------------------------------------------------------
     #--Test subtraction datetime
@@ -1115,4 +1116,12 @@ def test_pickle():
     nowstr = cPickle.dumps(now)
     AreEqual(now, cPickle.loads(nowstr))
 
+@disabled("CodePlex 18666")
+def test_datetime_datetime_pickled_by_cpy():
+    with open(r"pickles\cp18666.pickle", "rb") as f:
+        expected_dt    = datetime.datetime(2009, 8, 6, 8, 42, 38, 196000)
+        pickled_cpy_dt = cPickle.load(f)
+        AreEqual(expected_dt, pickled_cpy_dt)
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

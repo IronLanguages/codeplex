@@ -275,13 +275,13 @@ def test_cp9348():
     test_cases = {  ('c', "a") : "array('c', 'a')",
                     ('b', "a") : "array('b', [97])",
                     ('B', "a") : "array('B', [97])",
-                    ('u', u"a") : "array('u', u'a')", #CodePlex 19215
+                    ('u', u"a") : "array('u', u'a')",
                     ('h', "\x12\x34") : "array('h', [13330])",
                     ('H', "\x12\x34") : "array('H', [13330])",
                     ('i', "\x12\x34\x45\x67") : "array('i', [1732588562])",
-                    ('I', "\x12\x34\x45\x67") : "array('I', [1732588562L])", #CodePlex 19216
-                    ('I', "\x01\x00\x00\x00") : "array('I', [1L])", #CodePlex 19216
-                    ('l', "\x12\x34\x45\x67") : "array('l', [1732588562])", #CodePlex 19217
+                    ('I', "\x12\x34\x45\x67") : "array('I', [1732588562L])",
+                    ('I', "\x01\x00\x00\x00") : "array('I', [1L])",
+                    ('l', "\x12\x34\x45\x67") : "array('l', [1732588562])",
                     ('L', "\x12\x34\x45\x67") : "array('L', [1732588562L])",
                     ('f', "\x12\x34\x45\x67") : "array('f', [9.3126672485384569e+23])",
                     ('d', "\x12\x34\x45\x67\x12\x34\x45\x67") : "array('d', [2.9522485325887698e+189])",
@@ -300,11 +300,8 @@ def test_cp8736():
     a2 = array.array('b', 'a')
     a2[:-1] = a2
     AreEqual(str(a2), "array('b', [97, 97])")
-    a2[:-(2**64)-1] = a2
-    if is_cli or is_silverlight:
-        print "CodePlex 8736"
-    else:        
-        AreEqual(str(a2), "array('b', [97, 97, 97, 97])")  
+    a2[:-(2**64)-1] = a2 
+    AreEqual(str(a2), "array('b', [97, 97, 97, 97])")  
     
 def test_array_typecode():
     x = array.array('i')
