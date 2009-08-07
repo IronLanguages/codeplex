@@ -983,12 +983,9 @@ def test_pep19546():
     from future_builtins import oct as fb_oct
     test_cases = [  (0B11, "0b11", "0o3"),
                     (2147483648, "0b10000000000000000000000000000000", "0o20000000000"),
-                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
                     (-2147483649L, "-0b10000000000000000000000000000001", "-0o20000000001"),
                     (-1L,          "-0b1", "-0o1"),
-                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
                     (-0b10000000000000000000000000000000, "-0b10000000000000000000000000000000", "-0o20000000000"),
-                    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23143
                     (-0o17777777777, "-0b1111111111111111111111111111111", "-0o17777777777"),
                     (0o17777777777, "0b1111111111111111111111111111111", "0o17777777777"),
                     ]

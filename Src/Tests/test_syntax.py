@@ -794,4 +794,5 @@ def test_syntax_warnings():
         compile("x = 10\nglobal x\n", "", "exec")
         AreEqual(trapper.messages, [(":2: SyntaxWarning: name 'x' is assigned to before global declaration\n",)])
 
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

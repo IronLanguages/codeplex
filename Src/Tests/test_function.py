@@ -1058,6 +1058,12 @@ def test_func_defaults():
     del f.func_defaults
     AreEqual(f.func_defaults, None)
     
+    def func_with_many_args(one, two, three, four, five, six, seven, eight, nine, ten, eleven=None, twelve=None, thirteen=None, fourteen=None, fifteen=None, sixteen=None, seventeen=None, eighteen=None, nineteen=None):
+        print 'hello'
+        
+    func_with_many_args(None, None, None, None, None, None, None, None, None, None)
+
+
 def test_func_dict():
     def f(): pass
     

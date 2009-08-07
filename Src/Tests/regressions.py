@@ -417,6 +417,16 @@ def test_help_dir_cp11833():
         sys.stdout = oldstdout
     Assert(dir(System).count('Action') == 1)
 
+
+def test_not___len___cp_24129():
+    class C(object):
+        def __len__(self):
+            return 3
+    
+    c = C()
+    print bool(c)
+    AreEqual(not c, False)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

@@ -213,6 +213,9 @@ def test_deque():
     
     x.append(y())
     AreEqual(y() in x, True)
+    
+    x = deque({}, None)
+    AreEqual(x, deque([]))
 
 def test_singleton():
     """Verify that an empty frozenset is a singleton"""

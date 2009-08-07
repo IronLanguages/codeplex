@@ -307,7 +307,6 @@
     <Compile Include="Runtime\Exceptions\ObjectException.cs" />
     <Compile Include="Runtime\Exceptions\OldInstanceException.cs" />
     <Compile Include="Runtime\Exceptions\OSException.Generated.cs" />
-    <Compile Include="Runtime\Exceptions\OverflowWarningException.Generated.cs" />
     <Compile Include="Runtime\Exceptions\PendingDeprecationWarningException.Generated.cs" />
     <Compile Include="Runtime\Exceptions\PythonExceptions.cs" />
     <Compile Include="Runtime\Exceptions\PythonExceptions.Generated.cs" />
@@ -338,7 +337,6 @@
     <Compile Include="Runtime\Binding\PythonOperationBinder.cs" />
     <Compile Include="Runtime\MissingParameter.cs" />
     <Compile Include="Runtime\ModuleDictionaryStorage.cs" />
-    <Compile Include="Runtime\Operations\ScriptScopeOps.cs" />
     <Compile Include="Runtime\Operations\DBNullOps.cs" />
     <Compile Include="Runtime\Operations\DictionaryOfTOps.cs" />
     <Compile Include="Runtime\Operations\ListOfTOps.cs" />

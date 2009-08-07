@@ -705,8 +705,7 @@ namespace IronPython.Runtime.Binding {
             res[typeof(char)] = new Type[] { typeof(CharOps) };
             res[typeof(decimal)] = new Type[] { typeof(DecimalOps) };
             res[typeof(float)] = new Type[] { typeof(SingleOps) };
-            res[typeof(ScriptScope)] = new Type[] { typeof(ScriptScopeOps) };   // ScriptScope extensions should go away but we still need a methods for dir() support.
-
+            
             return res;
         }
 

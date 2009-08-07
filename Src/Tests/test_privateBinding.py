@@ -116,6 +116,14 @@ else:
             a = TransLabel()
             AreEqual(called, True)
 
+    def test_misc_coverage():
+        import clr
+        clr.AddReference("IronPython")
+        from IronPython.Runtime.Types import SlotFieldAttribute as SFA
+        
+        temp = SFA()
+        AreEqual(temp.GetType().Name, "SlotFieldAttribute")
+
 # use this when running standalone
 #run_test(__name__)
 

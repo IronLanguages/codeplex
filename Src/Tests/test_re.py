@@ -792,5 +792,16 @@ def test_mixed_named_and_unnamed_groups():
     for regString in RegExsToTest:
         g=re.compile(regString)
         AreEqual(g.groupindex, {'one' : 1})
-        
+
+def test__pickle():
+    '''
+    TODO: just a sanity test for now.  Needs far more testing.
+    '''
+    regex = re.compile(r"^(?P<msg>NMAKE[A-Za-z0-9]*)'\"?(?P<file>[\\A-Za-z0-9/:_\.\+]+)" )
+    pickled_regex = re._pickle(regex)
+    AreEqual(len(pickled_regex), 2)
+    AreEqual(pickled_regex[1],
+             ('^(?P<msg>NMAKE[A-Za-z0-9]*)\'\\"?(?P<file>[\\\\A-Za-z0-9/:_\\.\\+]+)', 0))
+
+#--MAIN------------------------------------------------------------------------        
 run_test(__name__)
