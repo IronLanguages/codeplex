@@ -448,7 +448,7 @@ namespace IronPython.Runtime.Types {
             // add any warnings that are applicable for calling this function
             WarningInfo info;
 
-            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call).Binder, target.Method, out info)) {
+            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call), target.Method, out info)) {
                 res = info.AddWarning(codeContext, res);
             }            
 
@@ -624,7 +624,7 @@ namespace IronPython.Runtime.Types {
             // add any warnings that are applicable for calling this function
             WarningInfo info;
 
-            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call).Binder, target.Method, out info)) {
+            if (target.Method != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call), target.Method, out info)) {
                 res = info.AddWarning(res);
             }
 
@@ -705,6 +705,31 @@ namespace IronPython.Runtime.Types {
             
             long lres = IdDispenser.GetId(this) - IdDispenser.GetId(other);
             return lres > 0 ? 1 : -1;
+        }
+
+        // these are present in CPython but always return NotImplemented.
+        [return: MaybeNotImplemented]
+        [Python3Warning("builtin_function_or_method order comparisons not supported in 3.x")]
+        public static NotImplementedType operator >(BuiltinFunction self, BuiltinFunction other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("builtin_function_or_method order comparisons not supported in 3.x")]
+        public static NotImplementedType operator <(BuiltinFunction self, BuiltinFunction other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("builtin_function_or_method order comparisons not supported in 3.x")]
+        public static NotImplementedType operator >=(BuiltinFunction self, BuiltinFunction other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("builtin_function_or_method order comparisons not supported in 3.x")]
+        public static NotImplementedType operator <=(BuiltinFunction self, BuiltinFunction other) {
+            return PythonOps.NotImplemented;
         }
 
         public int __hash__(CodeContext/*!*/ context) {

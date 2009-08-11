@@ -766,12 +766,6 @@ namespace IronPython.Runtime.Binding {
             return _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonTypeAttribute), false);
         }
 
-        public bool WarnOnPython3000 {
-            get {
-                return _context.PythonOptions.WarnPython30;
-            }
-        }
-
         /// <summary>
         /// Event handler for when our domain manager has an assembly loaded by the user hosting the script
         /// runtime.  Here we can gather any information regarding extension methods.  

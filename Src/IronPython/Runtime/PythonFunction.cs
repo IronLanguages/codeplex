@@ -599,6 +599,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        [Python3Warning("cell comparisons not supported in 3.x")]
         public int __cmp__(object other) {
             ClosureCell cc = other as ClosureCell;
             if (cc == null) throw PythonOps.TypeError("cell.__cmp__(x,y) expected cell, got {0}", PythonTypeOps.GetName(other));

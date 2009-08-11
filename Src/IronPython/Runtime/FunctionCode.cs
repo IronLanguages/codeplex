@@ -30,6 +30,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -551,6 +552,40 @@ namespace IronPython.Runtime {
             }
 
             return _lambda.GetHashCode();
+        }
+
+        public int __cmp__(CodeContext/*!*/ context, [NotNull]FunctionCode/*!*/  other) {
+            if (other == this) {
+                return 0;
+            }
+
+            long lres = IdDispenser.GetId(this) - IdDispenser.GetId(other);
+            return lres > 0 ? 1 : -1;
+        }
+
+        // these are present in CPython but always return NotImplemented.
+        [return: MaybeNotImplemented]
+        [Python3Warning("code inequality comparisons not supported in 3.x")]
+        public static NotImplementedType operator >(FunctionCode self, FunctionCode other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("code inequality comparisons not supported in 3.x")]
+        public static NotImplementedType operator <(FunctionCode self, FunctionCode other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("code inequality comparisons not supported in 3.x")]
+        public static NotImplementedType operator >=(FunctionCode self, FunctionCode other) {
+            return PythonOps.NotImplemented;
+        }
+
+        [return: MaybeNotImplemented]
+        [Python3Warning("code inequality comparisons not supported in 3.x")]
+        public static NotImplementedType operator <=(FunctionCode self, FunctionCode other) {
+            return PythonOps.NotImplemented;
         }
 
         /// <summary>

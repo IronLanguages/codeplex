@@ -10,22 +10,10 @@ DESCRIPTION # 23356 http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId
 Complete list of module attributes IronPython is still 
 missing implementations for:
     Type: <type 'builtin_function_or_method'>  __eq__                        
-    Type: <type 'builtin_function_or_method'>  __ge__                        
-    Type: <type 'builtin_function_or_method'>  __gt__                        
-    Type: <type 'builtin_function_or_method'>  __le__                        
-    Type: <type 'builtin_function_or_method'>  __lt__                        
     Type: <type 'builtin_function_or_method'>  __ne__                        
     Type: <type 'builtin_function_or_method'>  __eq__                        
-    Type: <type 'builtin_function_or_method'>  __ge__                        
-    Type: <type 'builtin_function_or_method'>  __gt__                        
-    Type: <type 'builtin_function_or_method'>  __le__                        
-    Type: <type 'builtin_function_or_method'>  __lt__                        
     Type: <type 'builtin_function_or_method'>  __ne__                        
     Type: <type 'builtin_function_or_method'>  __eq__                        
-    Type: <type 'builtin_function_or_method'>  __ge__                        
-    Type: <type 'builtin_function_or_method'>  __gt__                        
-    Type: <type 'builtin_function_or_method'>  __le__                        
-    Type: <type 'builtin_function_or_method'>  __lt__                        
     Type: <type 'builtin_function_or_method'>  __ne__                        
     Type: <type 'datetime.datetime'>  strptime                      
     Type: <type 'datetime.timedelta'>  __rdiv__                      
@@ -55,11 +43,7 @@ missing implementations for:
     Type: <type 'type'>  __basicsize__                 
     Type: <type 'type'>  __dictoffset__                
     Type: <type 'type'>  __eq__                        
-    Type: <type 'type'>  __ge__                        
-    Type: <type 'type'>  __gt__                        
     Type: <type 'type'>  __itemsize__                  
-    Type: <type 'type'>  __le__                        
-    Type: <type 'type'>  __lt__                        
     Type: <type 'type'>  __ne__                        
     Type: <type 'type'>  __weakrefoffset__             
     Type: <type 'wrapper_descriptor'>  __call__                      
@@ -142,7 +126,11 @@ from IronPython:
     Type: <type 'instancemethod'>  __eq__                        
     Type: <type 'instancemethod'>  __ne__                        
     Type: <type 'list'>  __radd__                      
+    Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __ge__                        
     Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __get__                       
+    Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __gt__                        
+    Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __le__                        
+    Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __lt__                        
     Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __module__                    
     Type: <type 'method_descriptor'>  __cmp__                       
     Type: <type 'str'>  __radd__                      
