@@ -15,10 +15,11 @@
 
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Linq.Expressions;
 using System; using Microsoft;
 
-namespace Microsoft.Scripting.Runtime {
+namespace IronPython.Runtime {
     /// <summary>
     /// Cached global value.  Created and maintained on a per-language basis.  Default
     /// implementation returns a singleton which indicates caching is not occuring.

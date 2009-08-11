@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Binding {
     /// callable object we will setup a nested dynamic site for performing the additional
     /// dispatch.
     /// 
-    /// TODO: Wwe could probably do a specific binding to the object if it's another IDyanmicObject.
+    /// TODO: We could probably do a specific binding to the object if it's another IDyanmicObject.
     /// </summary>
     sealed class SlotOrFunction {
         private readonly BindingTarget _function;
@@ -146,6 +146,15 @@ namespace IronPython.Runtime.Binding {
             return true;
         }
 
+        public bool ShouldWarn(PythonContext context, out WarningInfo info) {
+            if (_function != null) {
+                return BindingWarnings.ShouldWarn(context, _function.Method, out info);
+            }
+
+            info = null;
+            return false;
+        }
+
         public static SlotOrFunction/*!*/ GetSlotOrFunction(PythonContext/*!*/ state, SymbolId op, params DynamicMetaObject[] types) {
             PythonTypeSlot slot;
             SlotOrFunction res;
@@ -201,7 +210,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         /// <summary>
-        /// Trys to geta MethodBinder associated the slot for the specified type.
+        /// Tries to get a MethodBinder associated with the slot for the specified type.
         /// 
         /// If a method is found the binder is set and true is returned.
         /// If nothing is found binder is null and true is returned.
@@ -297,7 +306,8 @@ namespace IronPython.Runtime.Binding {
             if (xBf != null) {
                 bool returnsValue = false;
                 foreach (MethodBase mb in xBf.Targets) {
-                    if (CompilerHelpers.GetReturnType(mb) != typeof(NotImplementedType)) {
+                    if (CompilerHelpers.GetReturnType(mb) != typeof(NotImplementedType) ||
+                        mb.IsDefined(typeof(Python3WarningAttribute), true)) {
                         returnsValue = true;
                         break;
                     }

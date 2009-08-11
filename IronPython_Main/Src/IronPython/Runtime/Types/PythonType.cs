@@ -375,6 +375,26 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             return 0;
         }
 
+        [Python3Warning("type inequality comparisons not supported in 3.x")]
+        public static bool operator >(PythonType self, PythonType other) {
+            return self.__cmp__(other) > 0;
+        }
+
+        [Python3Warning("type inequality comparisons not supported in 3.x")]
+        public static bool operator <(PythonType self, PythonType other) {
+            return self.__cmp__(other) < 0;
+        }
+
+        [Python3Warning("type inequality comparisons not supported in 3.x")]
+        public static bool operator >=(PythonType self, PythonType other) {
+            return self.__cmp__(other) >= 0;
+        }
+
+        [Python3Warning("type inequality comparisons not supported in 3.x")]
+        public static bool operator <=(PythonType self, PythonType other) {
+            return self.__cmp__(other) <= 0;
+        }
+
         public void __delattr__(CodeContext/*!*/ context, string name) {
             DeleteCustomMember(context, SymbolTable.StringToId(name));
         }
