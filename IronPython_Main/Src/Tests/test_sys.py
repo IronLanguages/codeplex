@@ -128,6 +128,51 @@ def test_getframe():
     
     AreEqual(x.abc.f_locals['abc'], x.abc)
 
+    for i in xrange(2):
+        x = _getframe(0)
+        y = _getframe(0)
+        AreEqual(id(x), id(y))
+    
+
+    # odd func_code tests which require on _getframe
+    global get_odd_code
+    def get_odd_code():
+        c = sys._getframe(1)
+        return c.f_code
+    
+    def verify(code, is_defined):
+        d = { 'get_odd_code' : get_odd_code }
+        exec code in d
+        AreEqual('defined' in d, is_defined)
+
+    class x(object):
+        abc = get_odd_code()
+        defined = 42
+
+    verify(x.abc, False)
+    
+    class x(object):
+        abc = get_odd_code()
+        global defined
+        defined = 42
+
+    if is_cli: # bug 20553 http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=20553
+        verify(x.abc, False)
+    else:
+        verify(x.abc, True)
+
+    d = {'get_odd_code' : get_odd_code}
+    exec 'defined=42\nabc = get_odd_code()\n' in d
+    verify(d['abc'], True)
+    
+    # bug 24243, code objects should never be null
+    class x(object):
+        f = sys._getframe()
+        while f:
+            Assert(f.f_code is not None)
+            Assert(f.f_code.co_name is not None)
+            f = f.f_back
+
 @skip("win32")
 def test_api_version():
     # api_version

@@ -331,7 +331,7 @@ namespace IronPythonTest {
             }
 
             public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject errorSuggestion) {
-                return new DynamicMetaObject(
+                return errorSuggestion ?? new DynamicMetaObject(
                     Expression.Constant("FallbackInvokeMember"),
                     target.Restrictions.Merge(BindingRestrictions.Combine(args)).Merge(target.Restrict(target.LimitType).Restrictions)
                 );
@@ -689,6 +689,8 @@ ns_len0_inst = ns_len0()
 def TestFunc():
     return 'TestFunc'
 
+TestFunc.SubFunc = TestFunc
+
 def Invokable(*args, **kwargs):
     return args, kwargs
 
@@ -973,6 +975,13 @@ xrange = xrange
 
             site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("ToString", new CallInfo(0)));
             AreEqual(site.Target(site, scope.GetVariable("xrange")), "FallbackInvokeMember");
+
+            // invoke a function defined as a member of a function
+            site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("SubFunc", new CallInfo(0)));
+            AreEqual(site.Target(site, (object)scope.GetVariable("TestFunc")), "TestFunc");
+
+            site = CallSite<Func<CallSite, object, object>>.Create(new MyInvokeMemberBinder("DoesNotExist", new CallInfo(0)));
+            AreEqual(site.Target(site, (object)scope.GetVariable("TestFunc")), "FallbackInvokeMember");
 #endif
         }
 
@@ -1019,6 +1028,19 @@ xrange = xrange
             var scope = _pe.CreateScope();
             scope.SetVariable("ops", ops);
             AreEqual("[1, 2, 3]", _pe.Execute<string>("ops.Format([1,2,3])", scope));
+
+            ScriptSource src = _pe.CreateScriptSourceFromString("def f(*args): return args", SourceCodeKind.Statements);
+            src.Execute(scope);
+            object f = (object)scope.GetVariable("f");
+
+            for (int i = 0; i < 20; i++) {
+                object[] inp = new object[i];
+                for (int j = 0; j < inp.Length; j++) {
+                    inp[j] = j;
+                }
+
+                AreEqual((object)ops.Invoke(f, inp), PythonTuple.MakeTuple(inp));
+            }
         }
 
         public void ScenarioCP712() {

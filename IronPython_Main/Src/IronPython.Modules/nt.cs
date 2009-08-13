@@ -1096,6 +1096,7 @@ namespace IronPython.Modules {
 
         public static string strerror(int code) {
             switch(code) {
+                case 0: return "No error";
                 case PythonErrorNumber.E2BIG: return "Arg list too long";
                 case PythonErrorNumber.EACCES: return "Permission denied";
                 case PythonErrorNumber.EAGAIN: return "Resource temporarily unavailable";
