@@ -727,7 +727,7 @@ namespace IronPython.Runtime {
 
         protected override ScriptCode/*!*/ LoadCompiledCode(Delegate/*!*/ method, string path, string customData) {
             SourceUnit su = new SourceUnit(this, NullTextContentProvider.Null, path, SourceCodeKind.File);
-            return new OnDiskScriptCode((Func<Scope, LanguageContext, object>)method, su, customData);
+            return new OnDiskScriptCode((Func<CodeContext, object>)method, su, customData);
         }
 
         public override SourceCodeReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ defaultEncoding, string path) {

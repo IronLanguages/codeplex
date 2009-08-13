@@ -170,6 +170,14 @@ def test_map():
     Assert(map(None, [1,2,3], [4,5,6]) == [(1,4),(2,5),(3,6)])
     AreEqual(map(lambda x:'a' + x + 'c', 'b'), ['abc'])
     
+def test_range():
+    AreEqual(range(2, 5.0), [2,3,4])
+    AreEqual(range(3, 10, 2.0), [3, 5, 7, 9])
+    AssertErrorWithPartialMessage(TypeError, " end ", range, float(-2<<32))
+    AssertErrorWithPartialMessage(TypeError, " end ", range, 0, float(-2<<32))
+    AssertErrorWithPartialMessage(TypeError, " start ", range, float(-2<<32), 100)
+    AssertErrorWithPartialMessage(TypeError, " step ", range, 0, 100, float(-2<<32))
+
 def test_sorted():
     a = [6,9,4,5,3,1,2,7,8]
     Assert(sorted(a) == [1,2,3,4,5,6,7,8,9])

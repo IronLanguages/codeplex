@@ -732,6 +732,172 @@ def test_stat_result():
     AreEqual(x.st_ctime, 12)
     
     Assert(not isinstance(x, tuple))
+    
+    #--Misc
+    
+    #+
+    x = nt.stat_result(range(10))
+    AreEqual(x + (), x)
+    AreEqual(x + tuple(x), tuple(range(10)*2))
+    AssertError(TypeError, lambda: x + (1))
+    AssertError(TypeError, lambda: x + 1)
+    AssertError(TypeError, lambda: x + x)
+    
+    #> (list/object)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(nt.stat_result(range(10)) > None)
+    Assert(nt.stat_result(range(10)) > 1)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(nt.stat_result(range(10)) > range(10))
+    Assert(nt.stat_result([1 for x in range(10)]) > nt.stat_result(range(10)))
+    Assert(not nt.stat_result(range(10)) > nt.stat_result(range(10)))
+    Assert(not nt.stat_result(range(10)) > nt.stat_result(range(11)))
+    Assert(not nt.stat_result(range(10)) > nt.stat_result([1 for x in range(10)]))
+    Assert(not nt.stat_result(range(11)) > nt.stat_result(range(10)))
+    
+    #< (list/object)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(not nt.stat_result(range(10)) < None)
+    Assert(not nt.stat_result(range(10)) < 1)
+    Assert(not nt.stat_result(range(10)) < range(10))
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(not nt.stat_result([1 for x in range(10)]) < nt.stat_result(range(10)))
+    Assert(not nt.stat_result(range(10)) < nt.stat_result(range(10)))
+    Assert(not nt.stat_result(range(10)) < nt.stat_result(range(11)))
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(nt.stat_result(range(10)) < nt.stat_result([1 for x in range(10)]))
+    Assert(not nt.stat_result(range(11)) < nt.stat_result(range(10)))
+    
+    #>= (list/object)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(nt.stat_result(range(10)) >= None)
+    Assert(nt.stat_result(range(10)) >= 1)
+    Assert(nt.stat_result(range(10)) >= range(10))
+    Assert(nt.stat_result([1 for x in range(10)]) >= nt.stat_result(range(10)))
+    Assert(nt.stat_result(range(10)) >= nt.stat_result(range(10)))
+    Assert(nt.stat_result(range(10)) >= nt.stat_result(range(11)))
+    Assert(not nt.stat_result(range(10)) >= nt.stat_result([1 for x in range(10)]))
+    Assert(nt.stat_result(range(11)) >= nt.stat_result(range(10)))
+    
+    #<= (list/object)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(not nt.stat_result(range(10)) <= None)
+    Assert(not nt.stat_result(range(10)) <= 1)
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(not nt.stat_result(range(10)) <= range(10))
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(not nt.stat_result([1 for x in range(10)]) <= nt.stat_result(range(10)))
+    Assert(nt.stat_result(range(10)) <= nt.stat_result(range(10)))
+    Assert(nt.stat_result(range(10)) <= nt.stat_result(range(11)))
+    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
+        Assert(nt.stat_result(range(10)) <= nt.stat_result([1 for x in range(10)]))
+    Assert(nt.stat_result(range(11)) <= nt.stat_result(range(10)))
+    
+    #* (size/stat_result)
+    x = nt.stat_result(range(10))
+    AreEqual(x * 1, tuple(x))
+    AreEqual(x * 2, tuple(range(10)*2))
+    AreEqual(1 * x, tuple(x))
+    AreEqual(3 * x, tuple(range(10)*3))
+    AssertError(TypeError, lambda: x * x)
+    AssertError(TypeError, lambda: x * 3.14)
+    AssertError(TypeError, lambda: x * None)
+    AssertError(TypeError, lambda: x * "abc")
+    AssertError(TypeError, lambda: "abc" * x)
+    
+    #__repr__
+    x = nt.stat_result(range(10))
+    if is_cpython:
+        AreEqual(x.__repr__(),
+                 "nt.stat_result(st_mode=0, st_ino=1, st_dev=2, st_nlink=3, st_uid=4, st_gid=5, st_size=6, st_atime=7, st_mtime=8, st_ctime=9)")
+    else:
+        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21917
+        AreEqual(x.__repr__(),
+                 "(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)")
+    
+    #index get/set
+    x = nt.stat_result(range(10))
+    for i in xrange(10):
+        AreEqual(x[i], i)
+    
+    def temp_func():        
+        z = nt.stat_result(range(10))
+        z[3] = 4
+    AssertError(TypeError, temp_func)
+    
+    #__getslice__
+    x = nt.stat_result(range(10))
+    AreEqual(x[1:3], (1, 2))
+    AreEqual(x[7:100], (7, 8, 9))
+    AreEqual(x[7:-100], ())
+    AreEqual(x[-101:-100], ())
+    AreEqual(x[-2:8], ())
+    AreEqual(x[-2:1000], (8,9))
+    
+    #__contains__
+    x = nt.stat_result(range(10))
+    for i in xrange(10):
+        Assert(i in x)
+        x.__contains__(i)
+    Assert(-1 not in x)
+    Assert(None not in x)
+    Assert(20 not in x)
+    
+    #GetHashCode
+    x = nt.stat_result(range(10))
+    Assert(type(hash(x))==int)
+    
+    #IndexOf
+    x = nt.stat_result(range(10))
+    AreEqual(x.__getitem__(0), 0)
+    AreEqual(x.__getitem__(3), 3)
+    AreEqual(x.__getitem__(9), 9)
+    AreEqual(x.__getitem__(-1), 9)
+    AssertError(IndexError, lambda: x.__getitem__(10))
+    AssertError(IndexError, lambda: x.__getitem__(11))
+    
+    #Insert
+    x = nt.stat_result(range(10))
+    AreEqual(x.__add__(()), tuple(x))
+    AreEqual(x.__add__((1,2,3)), tuple(x) + (1, 2, 3))
+    if is_cpython:#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24295
+        AssertError(TypeError, lambda: x.__add__(3))
+    else:
+        x.__add__(3)
+    if is_cpython:#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24296
+        AssertError(TypeError, lambda: x.__add__(None))
+    else:
+        AssertError(SystemError, lambda: x.__add__(None))
+    
+    #Remove
+    x = nt.stat_result(range(10))
+    def temp_func():
+        z = nt.stat_result(range(10))
+        del z[3]
+    AssertError(TypeError, temp_func)
+    
+    #enumerate
+    x = nt.stat_result(range(10))
+    temp_list = []
+    for i in x:
+        temp_list.append(i)
+    AreEqual(tuple(x), tuple(temp_list))
+    
+    statResult = ["a","b","c","y","r","a","a","b","d","r","f"]
+    x = nt.stat_result(statResult)
+    temp_list = []
+    for i in x:
+        temp_list.append(i)
+    AreEqual(tuple(x), tuple(temp_list))
+    
+    temp = Exception()
+    statResult = [temp for i in xrange(10)]
+    x = nt.stat_result(statResult)
+    temp_list = []
+    for i in x:
+        temp_list.append(i)
+    AreEqual(tuple(x), tuple(temp_list))
+    
 
 # urandom tests
 def test_urandom():
@@ -887,7 +1053,7 @@ def test_cp15514():
    
 def test_strerror():
     test_dict = {
-                    #0: 'No error', #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24235
+                    0: 'No error', #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24235
                     1: 'Operation not permitted', 
                     2: 'No such file or directory', 
                     3: 'No such process', 

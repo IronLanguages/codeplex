@@ -1245,11 +1245,17 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object MakeClass(object body, CodeContext/*!*/ parentContext, string name, object[] bases, string selfNames) {
+            Func<CodeContext, CodeContext> func = GetClassCode(body);
+
+            return MakeClass(parentContext, name, bases, selfNames, func(parentContext).Scope.Dict);
+        }
+
+        private static Func<CodeContext, CodeContext> GetClassCode(object body) {
             Func<CodeContext, CodeContext> func = body as Func<CodeContext, CodeContext>;
             if (func == null) {
                 func = ((Compiler.LazyCode<Func<CodeContext, CodeContext>>)body).EnsureDelegate();
             }
-            return MakeClass(parentContext, name, bases, selfNames, func(parentContext).Scope.Dict);
+            return func;
         }
 
         internal static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, IAttributesCollection vars) {
@@ -1786,7 +1792,7 @@ namespace IronPython.Runtime.Operations {
 
             FunctionCode fc = code as FunctionCode;
             if (fc == null) {
-                throw PythonOps.TypeError("arg 1 must be a string, file, Stream, or code object");
+                throw PythonOps.TypeError("arg 1 must be a string, file, Stream, or code object, not {0}", PythonTypeOps.GetName(code));
             }
 
             if (locals == null) locals = globals;
@@ -2390,6 +2396,37 @@ namespace IronPython.Runtime.Operations {
             }
 
             return true;
+        }
+
+        public static object PythonFunctionGetMember(PythonFunction function, SymbolId name) {
+            object res;
+            if (function._dict != null && function._dict.TryGetValue(name, out res)) {
+                return res;
+            }
+
+            return OperationFailed.Value;
+        }
+
+        public static object PythonFunctionSetMember(PythonFunction function, SymbolId name, object value) {
+            return function.__dict__[name] = value;
+        }
+
+        public static void PythonFunctionDeleteDict() {
+            throw PythonOps.TypeError("function's dictionary may not be deleted");
+        }
+
+        public static void PythonFunctionDeleteDoc(PythonFunction function) {
+            function.__doc__ = null;
+        }
+
+        public static void PythonFunctionDeleteDefaults(PythonFunction function) {
+            function.__defaults__ = null;
+        }
+
+        public static bool PythonFunctionDeleteMember(PythonFunction function, SymbolId name) {
+            if (function._dict == null) return false;
+
+            return function._dict.Remove(name);
         }
 
         /// <summary>
@@ -3702,12 +3739,7 @@ namespace IronPython.Runtime.Operations {
             throw NameError(name);
         }
 
-        public static CodeContext/*!*/ CreateTopLevelCodeContext(Scope/*!*/ scope, LanguageContext/*!*/ context) {
-            context.EnsureScopeExtension(CodeContext.GetModuleScope(scope));
-            return new CodeContext(scope, (PythonContext)context);
-        }
-
-        public static PythonGlobal/*!*/[]/*!*/ GetGlobalArray(Scope/*!*/ scope) {
+        private static PythonGlobal/*!*/[]/*!*/ GetGlobalArray(Scope/*!*/ scope) {
             return ((GlobalDictionaryStorage)((PythonDictionary)scope.Dict)._storage).Data;
         }
 
@@ -4096,7 +4128,7 @@ namespace IronPython.Runtime.Operations {
             return _funcStack.GetOrCreate(Creator);
         }
 
-        public static List<FunctionStack> PushFrame(CodeContext context, PythonFunction function) {
+        public static List<FunctionStack> PushFrame(CodeContext context, FunctionCode function) {
             List<FunctionStack> stack = GetFunctionStack();
             stack.Add(new FunctionStack(context, function));
             return stack;
@@ -4127,14 +4159,24 @@ namespace IronPython.Runtime.Operations {
     }
 
     public struct FunctionStack {
-        public readonly CodeContext Context;
-        public readonly PythonFunction Function;
+        public readonly CodeContext/*!*/ Context;
+        public readonly FunctionCode/*!*/ Code;
         public TraceBackFrame Frame;
 
-        public FunctionStack(CodeContext/*!*/ context, PythonFunction/*!*/ function) {
+        internal FunctionStack(CodeContext/*!*/ context, FunctionCode/*!*/ code) {
+            Assert.NotNull(context, code);
+
             Context = context;
-            Function = function;
+            Code = code;
             Frame = null;
+        }
+
+        internal FunctionStack(CodeContext/*!*/ context, FunctionCode/*!*/ code, TraceBackFrame frame) {
+            Assert.NotNull(context, code);
+
+            Context = context;
+            Code = code;
+            Frame = frame;
         }
     }
 
