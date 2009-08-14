@@ -19,10 +19,8 @@
 
 from iptest.assert_util import *
 
-if not sys.platform=="win32":
+if not is_cpython:
     import System
-
-import array
 
 @skip("win32")
 def test_sanity():
@@ -235,110 +233,5 @@ def test_array_type():
     type_helper(str, " ")
     type_helper(str, "abc")
 
-def test_array_array_I():
-    for x in [  0, 1, 2,
-                (2**8)-2, (2**8)-1, (2**8), (2**8)+1, (2**8)+2,
-                (2**16)-2, (2**16)-1, (2**16), (2**16)+1, (2**16)+2,
-                (2**32)-2, (2**32)-1,
-                ]:
-                
-        temp_array1 = array.array('I', [x])
-        AreEqual(temp_array1[0], x)
-        
-        temp_array1 = array.array('I', [x, x])
-        AreEqual(temp_array1[0], x)
-        AreEqual(temp_array1[1], x)
-        
-    for x in [  (2**32), (2**32)+1, (2**32)+2 ]:
-        AssertError(OverflowError, array.array, 'I', [x])
-
-def test_array_array_c():
-    a = array.array('c', "stuff")
-    a[1:0] = a
-    b = array.array('c', "stuff"[:1] + "stuff" + "stuff"[1:])
-    AreEqual(a, b)
-
-def test_array_array_L():
-    a = array.array('L', "\x12\x34\x45\x67")
-    AreEqual(1, len(a))
-    AreEqual(1732588562, a[0])
-
-def test_array_array_B():
-    a = array.array('B', [0]) * 2L
-    AreEqual(2, len(a))
-    AreEqual("array('B', [0, 0])", str(a))
-    
-    AreEqual(array.array('b', 'foo'), array.array('b', [102, 111, 111]))
-
-
-def test_cp9348():
-    test_cases = {  ('c', "a") : "array('c', 'a')",
-                    ('b', "a") : "array('b', [97])",
-                    ('B', "a") : "array('B', [97])",
-                    ('u', u"a") : "array('u', u'a')",
-                    ('h', "\x12\x34") : "array('h', [13330])",
-                    ('H', "\x12\x34") : "array('H', [13330])",
-                    ('i', "\x12\x34\x45\x67") : "array('i', [1732588562])",
-                    ('I', "\x12\x34\x45\x67") : "array('I', [1732588562L])",
-                    ('I', "\x01\x00\x00\x00") : "array('I', [1L])",
-                    ('l', "\x12\x34\x45\x67") : "array('l', [1732588562])",
-                    ('L', "\x12\x34\x45\x67") : "array('L', [1732588562L])",
-                    ('f', "\x12\x34\x45\x67") : "array('f', [9.3126672485384569e+23])",
-                    ('d', "\x12\x34\x45\x67\x12\x34\x45\x67") : "array('d', [2.9522485325887698e+189])",
-                }
-    for key in test_cases.keys():
-        type_code, param = key
-        temp_val = array.array(type_code, param)
-        AreEqual(str(temp_val), test_cases[key]) 
-
-def test_cp8736():
-    a = array.array('b')
-    for i in [-1, -2, -3, -(2**8), -1000, -(2**16)+1, -(2**16), -(2**16)-1, -(2**64)]:
-        a[:i] = a
-        AreEqual(str(a), "array('b')")
-
-    a2 = array.array('b', 'a')
-    a2[:-1] = a2
-    AreEqual(str(a2), "array('b', [97, 97])")
-    a2[:-(2**64)-1] = a2 
-    AreEqual(str(a2), "array('b', [97, 97, 97, 97])")  
-    
-def test_array_typecode():
-    x = array.array('i')
-    AreEqual(type(x.typecode), str)
-
-def test_reduce():
-    x = array.array('i', [1,2,3])
-    AreEqual(repr(x.__reduce_ex__(1)), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
-    AreEqual(repr(x.__reduce_ex__()), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
-    AreEqual(repr(x.__reduce__()), "(<type 'array.array'>, ('i', '\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x03\\x00\\x00\\x00'), None)")
-
-def test_copy():
-    x = array.array('i', [1,2,3])
-    y = x.__copy__()
-    Assert(id(x) != id(y), "copy should copy")
-    
-    if is_cli or is_silverlight:
-        #CodePlex 19200
-        y = x.__deepcopy__()
-    else:
-        y = x.__deepcopy__(x)
-    Assert(id(x) != id(y), "copy should copy")
-
-def test_cp9350():
-    for i in [1, 1L]:
-        a = array.array('B', [0]) * i
-        AreEqual(a, array.array('B', [0]))
-
-    for i in [2, 2L]:
-        a = array.array('B', [0]) * i
-        AreEqual(a, array.array('B', [0, 0]))
-    
-    for i in [2**8, long(2**8)]:
-        a = array.array('B', [1]) * i
-        AreEqual(a, array.array('B', [1]*2**8))
-    
-
-
-
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
