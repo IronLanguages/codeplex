@@ -3558,4 +3558,17 @@ def test_wacky_new_init():
             Base(CustomSub)
             AreEqual(initCalled, 'CustomInit')
 
+def test_new_init_error_combinations():
+    class x(object):
+        def __init__(self, *args):
+            object.__init__(self, *args)
+    
+    AssertError(TypeError, x, 42)
+
+    class x(object):
+        def __new__(cls, *args):
+            return object.__new__(cls, *args)
+    
+    AssertError(TypeError, x, 42)
+
 run_test(__name__)

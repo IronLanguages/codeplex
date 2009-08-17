@@ -15,17 +15,18 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
+using Microsoft.Scripting;
 using System.Text;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Binding {
     /// <summary>
-    /// Marks a type so that IronPython will not expose types which have GetMemberNames
-    /// as having a __dir__ method.
+    /// An interface that is implemented on DynamicMetaObjects.
     /// 
-    /// Also suppresses __dir__ on something which implements IDynamicMetaObjectProvider
-    /// but is not an IPythonObject.
+    /// This allows objects to opt-into custom conversions when calling
+    /// COM APIs.  The IronPython binders all call this interface before
+    /// doing any COM binding.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-    class DontMapGetMemberNamesToDirAttribute : Attribute {
+    interface IComConvertible {
+        DynamicMetaObject GetComMetaObject();
     }
 }

@@ -58,6 +58,10 @@ namespace IronPython.Compiler {
                     false,
                     true,
                     new SymbolId[0],
+                    new SymbolId[0],
+                    new SymbolId[0],
+                    new SymbolId[0],
+                    0,
                     null,
                     null
                 );
