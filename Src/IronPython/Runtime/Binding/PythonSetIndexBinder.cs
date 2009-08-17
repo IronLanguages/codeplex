@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Binding {
         public override DynamicMetaObject FallbackSetIndex(DynamicMetaObject target, DynamicMetaObject[] indexes, DynamicMetaObject value, DynamicMetaObject errorSuggestion) {
 #if !SILVERLIGHT
             DynamicMetaObject com;
-            if (Microsoft.Scripting.ComBinder.TryBindSetIndex(this, target, indexes, value, out com)) {
+            if (Microsoft.Scripting.ComBinder.TryBindSetIndex(this, target, BindingHelpers.GetComArguments(indexes), BindingHelpers.GetComArgument(value), out com)) {
                 return com;
             }
 #endif

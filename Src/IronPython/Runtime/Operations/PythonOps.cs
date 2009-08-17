@@ -2930,8 +2930,8 @@ namespace IronPython.Runtime.Operations {
             return ((Func<PythonFunction, object, object>)func.func_code.Target)(func, input);
         }
 
-        public static FunctionCode MakeFunctionCode(CodeContext context, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, Delegate code, string[] closureVars) {
-            return new FunctionCode(PythonContext.GetContext(context), code, name, documentation, argNames, flags, span, path, closureVars);
+        public static FunctionCode MakeFunctionCode(CodeContext context, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, Delegate code, string[] freeVars, string[] names, string[] cellVars, string[] varNames, int localCount) {
+            return new FunctionCode(PythonContext.GetContext(context), code, name, documentation, argNames, flags, span, path, freeVars, names, cellVars, varNames, localCount);
         }
 
         [NoSideEffects]
@@ -4156,6 +4156,9 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        public static byte[] ConvertBufferToByteArray(PythonBuffer buffer) {
+            return buffer.ToString().MakeByteArray();
+        }
     }
 
     public struct FunctionStack {

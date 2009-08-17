@@ -333,12 +333,21 @@ namespace IronPython.Runtime {
                 if (level == -1) {
                     // absolute import of some module
                     full = modName + "." + name;
+                    object parentModule;
+                    if (PythonContext.GetContext(context).SystemStateModules.TryGetValue(modName, out parentModule)) {
+                        parentScope = parentModule as Scope;
+                    }
                 } else if (name == String.Empty) {
                     // relative import of ancestor
                     full = (StringOps.rsplit(modName, ".", level - 1)[0] as string);
                 } else {
                     // relative import of some ancestors child
-                    full = (StringOps.rsplit(modName, ".", level - 1)[0] as string) + "." + name;
+                    string parentName = (StringOps.rsplit(modName, ".", level - 1)[0] as string);
+                    full = parentName + "." + name;
+                    object parentModule;
+                    if (PythonContext.GetContext(context).SystemStateModules.TryGetValue(parentName, out parentModule)) {
+                        parentScope = parentModule as Scope;
+                    }
                 }
                 return true;
             }

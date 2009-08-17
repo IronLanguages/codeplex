@@ -48,7 +48,7 @@ using Microsoft.Runtime.CompilerServices;
             }
 #if !SILVERLIGHT
             DynamicMetaObject com;
-            if (Microsoft.Scripting.ComBinder.TryBindSetMember(this, self, value, out com)) {
+            if (Microsoft.Scripting.ComBinder.TryBindSetMember(this, self, BindingHelpers.GetComArgument(value), out com)) {
                 return com;
             }
 #endif

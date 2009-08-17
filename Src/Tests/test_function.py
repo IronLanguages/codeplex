@@ -1176,4 +1176,97 @@ def test_exec_funccode_filename():
     exec "def x(): pass" in mod.__dict__
     AreEqual(mod.x.func_code.co_filename, '<string>')
 
+def test_func_code_variables():
+    def CompareCodeVars(code, varnames, names, freevars, cellvars):
+        AreEqual(code.co_varnames, varnames)
+        AreEqual(code.co_names, names)
+        AreEqual(code.co_freevars, freevars)
+        AreEqual(code.co_cellvars, cellvars)
+    
+    # simple local
+    def f():
+        a = 2
+    
+    CompareCodeVars(f.func_code, ('a', ), (), (), ())    
+    
+    # closed over var
+    def f():
+        a = 2
+        def g():
+            print a
+        return g
+        
+    CompareCodeVars(f.func_code, ('g', ), (), (), ('a', ))
+    CompareCodeVars(f().func_code, (), (), ('a', ), ())
+
+    # tuple parameters
+    def f((a, b)): pass
+    
+    CompareCodeVars(f.func_code, ('.0', 'a', 'b'), (), (), ())
+    
+    def f((a, b), (c, d)): pass
+    
+    CompareCodeVars(f.func_code, ('.0', '.1', 'a', 'b', 'c', 'd'), (), (), ())
+    
+    # explicitly marked global
+    def f():
+        global a
+        a = 2
+        
+    CompareCodeVars(f.func_code, (), ('a', ), (), ())
+    
+    # implicit global
+    def f():
+        print some_global
+        
+    CompareCodeVars(f.func_code, (), ('some_global', ), (), ())
+
+    # global that's been "closed over"
+    def f():
+        global a
+        a = 2
+        def g():
+            print a
+        return g
+        
+    CompareCodeVars(f.func_code, ('g', ), ('a', ), (), ())
+    CompareCodeVars(f().func_code, (), ('a', ), (), ())
+
+    # multi-depth closure
+    def f():
+        a = 2
+        def g():
+            x = a
+            def h():
+                y = a
+            return h
+        return g
+                
+    CompareCodeVars(f.func_code, ('g', ), (), (), ('a', ))
+    CompareCodeVars(f().func_code, ('x', 'h'), (), ('a', ), ())
+    CompareCodeVars(f()().func_code, ('y', ), (), ('a', ), ())
+
+    # multi-depth closure 2
+    def f():
+        a = 2
+        def g():
+            def h():
+                y = a
+            return h
+        return g
+                
+    CompareCodeVars(f.func_code, ('g', ), (), (), ('a', ))
+    CompareCodeVars(f().func_code, ('h', ), (), ('a', ), ())
+    CompareCodeVars(f()().func_code, ('y', ), (), ('a', ), ())
+    
+    # closed over parameter
+    def f(a):
+        def g():
+            return a
+        return g
+    
+    CompareCodeVars(f.func_code, ('a', 'g'), (), (), ('a', ))    
+    CompareCodeVars(f(42).func_code, (), (), ('a', ), ())
+        
+
 run_test(__name__)

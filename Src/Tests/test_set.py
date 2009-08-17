@@ -216,6 +216,8 @@ def test_deque():
     
     x = deque({}, None)
     AreEqual(x, deque([]))
+    
+    AssertErrorWithPartialMessage(TypeError, "takes at most 2 arguments (3 given)", deque, 'abc', 2, 2)
 
 def test_singleton():
     """Verify that an empty frozenset is a singleton"""

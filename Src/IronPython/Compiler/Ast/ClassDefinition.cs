@@ -36,7 +36,6 @@ namespace IronPython.Compiler.Ast {
         private readonly Statement _body;
         private readonly Expression[] _bases;
         private IList<Expression> _decorators;
-        private List<SymbolId> _closureVars;
 
         private PythonVariable _variable;           // Variable corresponding to the class name
         private PythonVariable _modVariable;        // Variable for the the __module__ (module name)
@@ -120,14 +119,7 @@ namespace IronPython.Compiler.Ast {
             for (ScopeStatement parent = Parent; parent != null; parent = parent.Parent) {
                 if (parent.TryBindOuter(name, out variable)) {
                     variable.AccessedInNestedScope = true;
-                    if (variable.Kind != VariableKind.Global) {
-                        if (_closureVars == null) {
-                            _closureVars = new List<SymbolId>();
-                        }
-                        if (!_closureVars.Contains(name)) {
-                            _closureVars.Add(name);
-                        }
-                    }
+                    UpdateReferencedVariables(name, variable, parent);
                     return variable;
                 }
             }
@@ -183,7 +175,11 @@ namespace IronPython.Compiler.Ast {
                     ag.Context.SourceUnit.Path,
                     ag.EmitDebugSymbols,
                     ag.ShouldInterpret,
-                    _closureVars,
+                    FreeVariables,
+                    GlobalVariables,
+                    CellVariables,
+                    AppendVariables(new List<SymbolId>()),
+                    Variables == null ? 0 : Variables.Count,
                     classGen.LoopLocationsNoCreate,
                     classGen.HandlerLocationsNoCreate
                 );

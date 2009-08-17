@@ -902,6 +902,100 @@ def test_pack_module_relative_collision():
         nt.unlink(_f_foo_init)
         nt.unlink(_f_init)
 
+@skip("silverlight", "multiple_execute")
+def test_from_import_publishes_in_package():
+    try:
+        mod_backup = dict(sys.modules)
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir2')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_py   = path_combine(_f_dir, 'foo.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'from foo import bar')
+        write_to_file(_f_foo_py, 'bar = "BAR"')
+                
+        import test_dir2
+        AreEqual(type(test_dir2.foo), type(sys))
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_init)
+
+@skip("silverlight", "multiple_execute")
+def test_from_import_publishes_in_package_relative():
+    try:
+        mod_backup = dict(sys.modules)
+        print testpath.public_testdir
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir3')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_py   = path_combine(_f_dir, 'foof.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'from .foof import bar')
+        write_to_file(_f_foo_py, 'bar = "BxAR"')
+                
+        import test_dir3
+        print test_dir3, dir(test_dir3)
+        #print test_dir2.foof, dir(test_dir2.foof), test_dir2.foof.bar
+        AreEqual(test_dir3.bar, 'BxAR')
+        AreEqual(type(test_dir3.foof), type(sys))
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_init)
+
+@skip("silverlight", "multiple_execute")
+def test_from_import_publishes_in_package_relative():
+    try:
+        mod_backup = dict(sys.modules)
+        print testpath.public_testdir
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir3')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_py   = path_combine(_f_dir, 'foof.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'from .foof import bar')
+        write_to_file(_f_foo_py, 'bar = "BxAR"')
+                
+        import test_dir3
+
+        AreEqual(test_dir3.bar, 'BxAR')
+        AreEqual(type(test_dir3.foof), type(sys))
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_init)
+
+@skip("silverlight", "multiple_execute")
+def test_from_import_publishes_in_package_relative_self():
+    try:
+        mod_backup = dict(sys.modules)
+        print testpath.public_testdir
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir4')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_py   = path_combine(_f_dir, 'foof.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'from . import foof')
+        write_to_file(_f_foo_py, 'bar = "BxAR"')
+
+        import test_dir4
+        print test_dir4, dir(test_dir4)
+        #AreEqual(test_dir4.bar, 'BxAR')
+        AreEqual(type(test_dir4.foof), type(sys))
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_init)
+
 run_test(__name__)
 
 # remove all test files
