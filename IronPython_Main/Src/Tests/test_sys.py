@@ -206,7 +206,30 @@ def test_ps1():
 
 def test_ps2():
     Assert(not hasattr(sys, "ps2"))    
+
+@skip("silverlight")
+def test_getsizeof():
+    '''TODO: revisit'''
+    if is_cpython:
+        Assert(sys.getsizeof(1)<sys.getsizeof(1.0))
+    else:
+        AreEqual(sys.getsizeof(1), sys.getsizeof(1.0))
+
+@skip("silverlight")
+def test_gettrace():
+    '''TODO: revisit'''
+    if is_cpython: #CodePlex 19578
+        AreEqual(sys.gettrace(), None)
     
+    def temp_func(*args, **kwargs):
+        pass
+        
+    sys.settrace(temp_func)
+    AreEqual(sys.gettrace(), temp_func)
+    sys.settrace(None)
+    AreEqual(sys.gettrace(), None)
+
+#--MAIN------------------------------------------------------------------------    
 
 testDelGetFrame = "Test_GetFrame" in sys.argv
 if testDelGetFrame:

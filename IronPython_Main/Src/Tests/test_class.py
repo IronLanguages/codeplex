@@ -3571,4 +3571,5 @@ def test_new_init_error_combinations():
     
     AssertError(TypeError, x, 42)
 
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

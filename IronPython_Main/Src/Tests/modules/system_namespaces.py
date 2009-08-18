@@ -209,7 +209,7 @@ from System.Xml.Xsl.Runtime import *
 
 
 #--GLOBALS---------------------------------------------------------------------
-broken_types = [ "System.ArgIterator", #CodePlex 17235
+broken_types = [ 
                 ]
 
 #--HELPERS---------------------------------------------------------------------

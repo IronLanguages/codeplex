@@ -353,7 +353,6 @@ def test_charbuffer_encode():
 
 def test_charmap_encode():
     #Sanity
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22738
     AreEqual(codecs.charmap_encode("abc"), 
              ('abc', 3))
     AreEqual(codecs.charmap_encode("abc", "strict"), 
