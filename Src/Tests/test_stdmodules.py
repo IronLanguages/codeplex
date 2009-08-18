@@ -97,7 +97,6 @@ def test_cp12907():
                         "single", ["1\n"]),
                     ("1",
                         "exec", []),
-                    #CodePlex 12907
                     ("def f(n):\n    return n*n\nprint f(3)",
                         "exec", ["9\n"]),
                     ("if 1:\n    print 1\n",

@@ -233,25 +233,36 @@ def test_struct_uint_bad_value_cp20039():
     AssertError(OverflowError, _struct.Struct('L').pack, x(-1))
 
 def test_reraise_backtrace_cp20051():
+    '''
+    TODO: this test needs far better verification.
+    '''
+    import sys
     def foo():
         some_exception_raising_code()
-
+    
     try:
         try:
             foo()
         except:
-            print "Exception"
+            excinfo1 = sys.exc_info()[2]
+            exc1_list = []
+            while excinfo1:
+                exc1_list.append((excinfo1.tb_frame.f_code.co_filename, 
+                                  excinfo1.tb_frame.f_code.co_name,
+                                  excinfo1.tb_frame.f_lineno))
+                excinfo1 = excinfo1.tb_next
             raise
     except Exception, e:
-        import sys
-        excinfo = sys.exc_info()[2]
-        frameCount = 0
-        while excinfo:
-            excinfo = excinfo.tb_next
-            frameCount += 1
-        
-		# CPython reports 2 frames, IroPython includes the re-raise and reports 3
-        Assert(frameCount >= 2)
+        excinfo2 = sys.exc_info()[2]
+        exc2_list = []
+        while excinfo2:
+            exc2_list.append((excinfo2.tb_frame.f_code.co_filename, 
+                              excinfo2.tb_frame.f_code.co_name,
+                              excinfo2.tb_frame.f_lineno))
+            excinfo2 = excinfo2.tb_next
+
+        # CPython reports 2 frames, IroPython includes the re-raise and reports 3
+        Assert(len(exc2_list) >= 2)
 
 @skip("silverlight")
 def test_winreg_error_cp17050():

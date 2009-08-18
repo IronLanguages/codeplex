@@ -154,16 +154,18 @@ if len(sys.argv)==3:
 
 
 
-#TODO: each of these members attached to string objects include MANY more
+#TODO: each of these members attached to objects include MANY more
 #      members IP does not implement
-str_functions = [   'capitalize', 'center', 'count', 'decode',
+recursive_functions = [   'capitalize', 'center', 'count', 'decode',
                     'encode', 'endswith', 'expandtabs', 'find', 'index', 
                     'isalnum', 'isalpha', 'isdigit', 'islower', 'isspace', 
                     'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 
                     'partition', 'replace', 'rfind', 'rindex', 'rjust', 
                     'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 
                     'startswith', 'strip', 'swapcase', 'title', 'translate', 
-                    'upper', 'zfill']
+                    'upper', 'zfill',
+                    'denominator', 'numerator', 'imag', 'conjugate', 'real',
+                    ]
 
 #The maximum recursion depth used when examining the attributes of any 
 #CPython module.
@@ -284,8 +286,8 @@ def get_cpython_results(name, level=0, temp_mod=None):
         #Skip these as they overload the log files
         elif x in ["_Printer__setup", "im_class", "_Printer__name", "func_code", "func_dict", "func_globals"]:
             continue 
-        #Each of these str functions has many __*__ methods
-        elif x in str_functions and level > 2:
+        #Each of these functions has many __*__ methods
+        elif x in recursive_functions and level > 2:
             continue
         #Skip these as they recurse forever
         elif name.startswith("datetime") and x in ["min", "max", "resolution"]:
