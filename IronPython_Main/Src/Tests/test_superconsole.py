@@ -58,11 +58,11 @@ def getTestOutput():
     #On some platforms 'ip_session.log' is not immediately created after
     #calling the 'close' method of the file object writing to 'ip_session.log'.
     #Give it a few seconds to catch up.
+    sleep(1)
     for i in xrange(5):
         if "ip_session.log" in nt.listdir(nt.getcwd()):
             tfile = open('ip_session.log', 'r')
             break
-        from time import sleep
         print "Waiting for ip_session.log to be created..."
         sleep(1)
     
@@ -596,7 +596,9 @@ def test_triple_strings():
 
 def test_areraise():
     superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
-    superConsole.SendKeys('def foo{(}{)}:{ENTER}{TAB}some(){ENTER}{ENTER}try:{ENTER}{TAB}foo{(}{)}{ENTER}{BACKSPACE}{BACKSPACE}{BACKSPACE}{BACKSPACE}except:{ENTER}{TAB}raise{ENTER}{ENTER}')
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}{TAB}some(){ENTER}{ENTER}')
+    superConsole.SendKeys(    'try:{ENTER}{TAB}foo{(}{)}{ENTER}{BACKSPACE}{BACKSPACE}{BACKSPACE}{BACKSPACE}')
+    superConsole.SendKeys(    'except:{ENTER}{TAB}raise{ENTER}{ENTER}')
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     lines = getTestOutput()[1]
     AreEqual(lines, ['Traceback (most recent call last):\r\n', '  File "<stdin>", line 2, in <module>\r\n', '  File "<stdin>", line 2, in foo\r\n', "NameError: global name 'some' is not defined\r\n"])
@@ -608,6 +610,14 @@ def test_syntax_errors():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     lines = getTestOutput()[1]
     AreEqual(lines, ['  File "<stdin>", line 1\r\n', '    def foo((1)): pass\n', '\r\n', '             ^\r\n', "SyntaxError: unexpected token '1'\r\n", '\r\n'])
+
+def test_missing_member_syntax_error_cp15428():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('".".{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    lines = getTestOutput()[1]
+    AreEqual(lines, ['  File "<stdin>", line 1\r\n', '    ".".\n', '\r\n', '        ^\r\n', "SyntaxError: syntax error\r\n", '\r\n'])
+                    
     
 #------------------------------------------------------------------------------
 #--__main__

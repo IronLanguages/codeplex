@@ -661,9 +661,17 @@ function test-dlrmodes($dlrexe)
 
 	#------------------------------------------------------------------------------
 	## -D
-	echo "-D needs coverage"
+	echo "-D needs more coverage"
 	
 	hello-helper $dlrexe -D
+	$stuff = dlrexe -c "print __debug__"
+	if ($stuff -ne "True") { show-failure "Failed: $stuff";  }
+	$stuff = dlrexe -D -c "print __debug__"
+	if ($stuff -ne "True") { show-failure "Failed: $stuff";  }
+	$stuff = dlrexe -O -c "print __debug__"
+	if ($stuff -ne "False") { show-failure "Failed: $stuff";  }
+	$stuff = dlrexe -O -D -c "print __debug__"
+	if ($stuff -ne "False") { show-failure "Failed: $stuff";  }
 
 	#------------------------------------------------------------------------------
 	## -X:AssembliesDir

@@ -13,9 +13,13 @@
 #
 #####################################################################################
 
+#--IMPORTS---------------------------------------------------------------------
 from iptest.assert_util import *
 from iptest.type_util import *
 import sys
+
+#--HELPERS---------------------------------------------------------------------
+
 
 ############################################################
 def test_common_attributes():
@@ -3559,17 +3563,59 @@ def test_wacky_new_init():
             AreEqual(initCalled, 'CustomInit')
 
 def test_new_init_error_combinations():
-    class x(object):
-        def __init__(self, *args):
-            object.__init__(self, *args)
+    class X1(object):
+        args = ()
+        def __init__(self):
+            object.__init__(self, *X1.args)
     
-    AssertError(TypeError, x, 42)
+    class X2(object):
+        args = ()
+        def __new__(cls):
+            return object.__new__(cls, *X2.args)
+    
+    
+    
+    temp = X1()
+    temp = X2()
+    for args in [(42,), 
+                 #(None,), #CP19585
+                 (42, 43), ("abc",), 
+                    ]:
+        X1.args = args
+        X2.args = args
+        AssertError(TypeError, X1)
+        AssertError(TypeError, X2)
 
-    class x(object):
-        def __new__(cls, *args):
-            return object.__new__(cls, *args)
+    #--args plus kwargs
+    class X3(object):
+        args = ()
+        kwargs = {}
+        def __init__(self):
+            object.__init__(self, *X3.args, **X3.kwargs)
     
-    AssertError(TypeError, x, 42)
+    class X4(object):
+        args = ()
+        kwargs = {}
+        def __new__(cls):
+            return object.__new__(cls, *X4.args, **X4.kwargs)
+    
+    temp = X3()
+    temp = X4()
+    
+    for args, kwargs in [
+                            [(42,), {}], 
+                            [(None,), {'a':3}], 
+                            [(42, 43), {'a':3, 'b': 4}], 
+                            [("abc",), {'z':None}], 
+                            [(), {'a':3}],
+                        ]:
+        X3.args = args
+        X3.kwargs = kwargs
+        X4.args = args
+        X4.kwargs = kwargs
+        AssertError(TypeError, X3)
+        AssertError(TypeError, X4)
+
 
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
