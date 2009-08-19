@@ -200,9 +200,7 @@ def test_type___clrtype__():
     Assert(hasattr(type, "__clrtype__"))
     
     #Make sure the documentation is useful
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23252
-    Assert(len(type.__clrtype__.__doc__.replace("\r\n", "\n").replace('''Type __clrtype__(self)
-Type __clrtype__(self)''', '')) > 0)
+    Assert("Gets the .NET type which is" in type.__clrtype__.__doc__, type.__clrtype__.__doc__)
     
     AreEqual(type.__clrtype__(type),  type)
     AreEqual(type.__clrtype__(float), float)
