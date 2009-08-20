@@ -195,13 +195,8 @@ def test_start_new_thread():
     #--Sanity Negative
     global temp_stderr
     temp_stderr = ""
+    se = sys.stderr
     
-    if is_cpython:
-        se = sys.stderr
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22746
-        se = sys.stdout
-        
     class myStdOut:
         def write(self, text): 
             global temp_stderr

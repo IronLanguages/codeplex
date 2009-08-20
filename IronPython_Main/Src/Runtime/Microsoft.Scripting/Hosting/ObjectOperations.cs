@@ -23,7 +23,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
 
-#if !SYSTEM_CORE
+#if !CLR4
 using dynamic = System.Object;
 #endif
 

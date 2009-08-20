@@ -1142,10 +1142,21 @@ def test_splat_none():
     def g(**kwargs): pass
     def h(*args, **kwargs): pass
     
-    AssertError(TypeError, lambda : f(*None))
-    AssertError(TypeError, lambda : g(**None))
-    AssertError(TypeError, lambda : h(*None, **None))
-
+    #CodePlex 20250
+    if is_cpython:
+        AssertErrorWithMessage(TypeError, "f() argument after * must be a sequence, not NoneType", 
+                               lambda : f(*None))
+        AssertErrorWithMessage(TypeError, "g() argument after ** must be a mapping, not NoneType", 
+                               lambda : g(**None))
+        AssertErrorWithMessage(TypeError, "h() argument after ** must be a mapping, not NoneType",
+                               lambda : h(*None, **None))
+    else:
+        AssertError(TypeError, "argument after * must be a sequence, not NoneType", 
+                   lambda : f(*None))
+        AssertError(TypeError, "argument after ** must be a mapping, not NoneType", 
+                    lambda : g(**None))
+        AssertError(TypeError, "argument after ** must be a mapping, not NoneType",
+                    lambda : h(*None, **None))
 
 def test_exec_funccode():
     # can't exec a func code w/ parameters

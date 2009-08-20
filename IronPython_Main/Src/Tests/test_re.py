@@ -63,6 +63,12 @@ def test_sanity_re():
     AreEqual(re.search("(abc){1}", "abcxyz", flags=re.L).span(), (0,3))
     AreEqual(re.search("(abc){1}", "xyzabc").span(), (3,6))
     
+    AreEqual(re.search("(abc){1}", buffer("")), None)
+    AreEqual(re.search("(abc){1}", buffer("abcxyz")).span(), (0,3))
+    AreEqual(re.search("(abc){1}", buffer("abcxyz"), re.L).span(), (0,3))
+    AreEqual(re.search("(abc){1}", buffer("abcxyz"), flags=re.L).span(), (0,3))
+    AreEqual(re.search("(abc){1}", buffer("xyzabc")).span(), (3,6))
+    
     #match
     AreEqual(re.match("(abc){1}", ""), None)
     AreEqual(re.match("(abc){1}", "abcxyz").span(), (0,3))

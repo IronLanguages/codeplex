@@ -326,13 +326,13 @@ def test_sys_path_none_builtins():
         Assert('copy_reg' in sys.modules.keys())
         
         sys.path = [None]
-        Assert('cStringIO' not in sys.modules.keys())
+        Assert('binascii' not in sys.modules.keys())
         import datetime
         import copy_reg
-        import cStringIO
+        import binascii
         Assert('datetime' in sys.modules.keys())
         Assert('copy_reg' in sys.modules.keys())
-        Assert('cStringIO' in sys.modules.keys())
+        Assert('binascii' in sys.modules.keys())
         
     finally:
         sys.path = prevPath

@@ -44,7 +44,6 @@ def remove_worksheet_event(ws):
 
 #-----------------------------------------------------------------------------
 #--TESTS
-@disabled("Merlin 372472")
 def test_excel():
     ex = None
     
@@ -161,6 +160,12 @@ def test_excelevents():
     try: 
         ex = CreateExcelApplication() 
         ex.DisplayAlerts = False 
+        #Regression for CodePlex 18614
+        temp_list = dir(ex)
+        for x in temp_list:
+            if temp_list.count(x)!=1:
+                Fail("There should be exactly one '%s' in dir(excel)" % str(x))
+        
         #ex.Visible = True
                 
         global selection_counter

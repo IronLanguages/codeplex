@@ -204,6 +204,14 @@ function test-pymodes($pyexe)
 	$stuff = pyexe -h
 	$temp_content = $stuff
 	$stuff = [string]$stuff
+	if ($pyexe.ToLower().EndsWith("ipy.exe")) {
+		$temp_content2 = pyexe /?
+		if ($stuff -ne [string]$temp_content2) {
+			show-failure "'ipy -h' and 'ipy /?' output should be the same!"
+		}
+	}
+	
+	
 	
 	$expected_stuff = "-c cmd", "-V ", "-h "
 

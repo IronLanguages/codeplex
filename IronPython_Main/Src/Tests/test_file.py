@@ -812,8 +812,23 @@ def test_write_bytes():
 
 def test_kw_args():
     file(name = 'some_test_file.txt', mode = 'w').close()
-    file(name = 'some_test_file.txt', mode = 'w', buffering=1024).close()
     nt.unlink('some_test_file.txt')
+
+def test_buffering_kwparam():
+    #--Positive
+    for x in [-2147483648, -1, 0, 1, 2, 1024, 2147483646, 2147483647, 3.14]:
+        f = file(name = 'some_test_file.txt', mode = 'w', buffering=x)
+        f.close()
+        nt.unlink('some_test_file.txt')
+    
+    #--Negative
+    for x in [None, "abc", u"", [], tuple()]:
+        AssertError(TypeError, #"an integer is required",
+                   lambda: file(name = 'some_test_file.txt', mode = 'w', buffering=x))
+    
+    for x in [2147483648, -2147483649]:
+        AssertError(OverflowError, #"long int too large to convert to int",
+                    lambda: file(name = 'some_test_file.txt', mode = 'w', buffering=x))
 
 #------------------------------------------------------------------------------    
 run_test(__name__)

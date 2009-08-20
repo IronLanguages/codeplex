@@ -54,18 +54,6 @@ def expect(warn_type, message):
     EXPECTED.append(": " + warn_type.__name__ + ": " + message + "\n")
 
 
-def standardize_stderr(messages):
-    '''
-    Converts the messages of a iptest.assert_util.stderr_trapper instance into
-    a list of strings.
-    '''
-    temp_messages = []
-    for temp_tuple in messages:
-        temp_list = temp_tuple[0].rstrip().split("\n")
-        temp_messages += temp_list
-    return temp_messages
-
-
 #--TEST CASES------------------------------------------------------------------
 @skip("multiple_execute")
 def test_sanity():
@@ -89,7 +77,7 @@ def test_sanity():
                 _warnings.warn_explicit("Explicit Warning!", warn_type, "test_python26.py", 78, "module.py")
                 expect(warn_type, "Explicit Warning!")
     
-        temp_messages = standardize_stderr(output.messages)
+        temp_messages = output.messages
         
         #No point in going further if the number of lines is not what we expect
         nlines = len([x for x in temp_messages if not x.startswith("  ")])

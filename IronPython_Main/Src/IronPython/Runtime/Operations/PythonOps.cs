@@ -1389,6 +1389,9 @@ namespace IronPython.Runtime.Operations {
         /// Python Runtime Helper for enumerator unpacking (tuple assignments, ...)
         /// Creates enumerator from the input parameter e, and then extracts 
         /// expected number of values, returning them as array
+        /// 
+        /// If the input is a Python tuple returns the tuples underlying data array.  Callers
+        /// should not mutate the resulting tuple.
         /// </summary>
         /// <param name="context">The code context of the AST getting enumerator values.</param>
         /// <param name="e">object to enumerate</param>
@@ -1398,6 +1401,11 @@ namespace IronPython.Runtime.Operations {
         /// Otherwise throws exception
         /// </returns>
         public static object[] GetEnumeratorValues(CodeContext/*!*/ context, object e, int expected) {
+            if (e != null && e.GetType() == typeof(PythonTuple)) {
+                // fast path for tuples, avoid enumerating & copying the tuple.
+                return GetEnumeratorValuesFromTuple((PythonTuple)e, expected);
+            }
+
             IEnumerator ie = PythonOps.GetEnumeratorForUnpack(context, e);
 
             int count = 0;
@@ -1416,6 +1424,14 @@ namespace IronPython.Runtime.Operations {
             }
 
             return values;
+        }
+
+        private static object[] GetEnumeratorValuesFromTuple(PythonTuple pythonTuple, int expected) {
+            if (pythonTuple.Count == expected) {
+                return pythonTuple._data;
+            }
+
+            throw PythonOps.ValueErrorForUnpackMismatch(expected, pythonTuple.Count);
         }
 
         /// <summary>
