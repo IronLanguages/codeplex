@@ -433,6 +433,13 @@ def test_tempnam():
             Assert(temp_dir != dir_name)
             Assert(file_name.startswith(prefix_name))
 
+@skip("cli", "silverlight") #CodePlex 24299
+def test_tempnam_warning():
+    with stderr_trapper() as trapper:
+        temp = nt.tempnam()
+    
+    Assert(trapper.messages[0].endswith("RuntimeWarning: tempnam is a potential security risk to your program"), trapper.messages)
+
 # BUG 8777,Should IronPython throw a warning when tmpnam is called ?
 # tmpnam test
 def test_tmpnam():

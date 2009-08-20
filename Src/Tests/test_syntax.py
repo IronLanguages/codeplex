@@ -768,31 +768,33 @@ def test_syntax_warnings():
     # checked for the presence of the stdlib.
     with stderr_trapper() as trapper:
         compile("def f():\n    a = 1\n    global a\n", "", "exec")
-        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, [":3: SyntaxWarning: name 'a' is assigned to before global declaration"])
 
     with stderr_trapper() as trapper:
         compile("def f():\n    def a(): pass\n    global a\n", "", "exec")
-        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, [":3: SyntaxWarning: name 'a' is assigned to before global declaration"])
 
     with stderr_trapper() as trapper:   
         compile("def f():\n    for a in []: pass\n    global a\n", "", "exec")
-        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, [":3: SyntaxWarning: name 'a' is assigned to before global declaration"])
 
     with stderr_trapper() as trapper:   
         compile("def f():\n    global a\n    a = 1\n    global a\n", "", "exec")
-        AreEqual(trapper.messages, [(":4: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, [":4: SyntaxWarning: name 'a' is assigned to before global declaration"])
 
     with stderr_trapper() as trapper:   
         compile("def f():\n    print a\n    global a\n", "", "exec")
-        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is used prior to global declaration\n",)])
+    AreEqual(trapper.messages, [":3: SyntaxWarning: name 'a' is used prior to global declaration"])
 
     with stderr_trapper() as trapper:   
         compile("def f():\n    a = 1\n    global a\n    global a\n    a = 1", "", "exec")
-        AreEqual(trapper.messages, [(":3: SyntaxWarning: name 'a' is assigned to before global declaration\n",), (":4: SyntaxWarning: name 'a' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, 
+             [":3: SyntaxWarning: name 'a' is assigned to before global declaration", 
+              ":4: SyntaxWarning: name 'a' is assigned to before global declaration"])
 
     with stderr_trapper() as trapper:   
         compile("x = 10\nglobal x\n", "", "exec")
-        AreEqual(trapper.messages, [(":2: SyntaxWarning: name 'x' is assigned to before global declaration\n",)])
+    AreEqual(trapper.messages, [":2: SyntaxWarning: name 'x' is assigned to before global declaration"])
 
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
