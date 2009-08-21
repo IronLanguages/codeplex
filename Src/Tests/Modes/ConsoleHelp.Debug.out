@@ -41,6 +41,7 @@ Options:
  -X:SaveAssemblies                      Save generated assemblies [debug only]
  -X:ShowClrExceptions                   Display CLS Exception information
  -X:TabCompletion                       Enable TabCompletion mode
+ -X:Tracing                             Enable support for tracing all methods even before sys.settrace is called
  -X:TrackPerformance                    Track performance sensitive areas [debug only]
 
 Environment variables:

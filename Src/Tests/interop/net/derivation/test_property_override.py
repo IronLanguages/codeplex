@@ -345,8 +345,8 @@ def test_super_on_property():
             super(C, self).Property = value
         Property = property(get_Property, set_Property)
     x = C()
-    #Callback.On(x)  # StackOverflowException, suspect: bug 372528
-    #x.Property      # read
+    AssertError(AttributeError, Callback.On, x)
+    AreEqual(x.Property, 0)      # read
     
     def f(): x.Property = 1  # write
     AssertError(AttributeError, f)   # cannot set slot

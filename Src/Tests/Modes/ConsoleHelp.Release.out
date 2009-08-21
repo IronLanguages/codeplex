@@ -37,6 +37,7 @@ Options:
  -X:Python30              Enable available Python 3.0 features
  -X:ShowClrExceptions     Display CLS Exception information
  -X:TabCompletion         Enable TabCompletion mode
+ -X:Tracing               Enable support for tracing all methods even before sys.settrace is called
 
 Environment variables:
  IRONPYTHONPATH    Path to search for module

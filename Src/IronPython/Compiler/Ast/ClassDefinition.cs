@@ -161,31 +161,30 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            FunctionCode funcCodeObj = null;
+            FunctionCode funcCodeObj = new FunctionCode(
+                ag.PyContext,
+                null,
+                null,
+                SymbolTable.IdToString(Name),
+                ag.GetDocumentation(_body),
+                ArrayUtils.EmptyStrings,
+                FunctionAttributes.None,
+                Span,
+                ag.Context.SourceUnit.Path,
+                ag.EmitDebugSymbols,
+                ag.ShouldInterpret,
+                FreeVariables,
+                GlobalVariables,
+                CellVariables,
+                AppendVariables(new List<SymbolId>()),
+                Variables == null ? 0 : Variables.Count,
+                classGen.LoopLocationsNoCreate,
+                classGen.HandlerLocationsNoCreate
+            );
+            MSAst.Expression funcCode = classGen.Globals.GetConstant(funcCodeObj);
+            classGen.FuncCodeExpr = funcCode;
+
             if (_body.CanThrow && ag.PyContext.PythonOptions.Frames) {
-                funcCodeObj = new FunctionCode(
-                    ag.PyContext,
-                    null,
-                    null,
-                    SymbolTable.IdToString(Name),
-                    ag.GetDocumentation(_body),
-                    ArrayUtils.EmptyStrings,
-                    FunctionAttributes.None,
-                    Span,
-                    ag.Context.SourceUnit.Path,
-                    ag.EmitDebugSymbols,
-                    ag.ShouldInterpret,
-                    FreeVariables,
-                    GlobalVariables,
-                    CellVariables,
-                    AppendVariables(new List<SymbolId>()),
-                    Variables == null ? 0 : Variables.Count,
-                    classGen.LoopLocationsNoCreate,
-                    classGen.HandlerLocationsNoCreate
-                );
-
-                MSAst.Expression funcCode = Ast.Constant(funcCodeObj);
-
                 bodyStmt = AstGenerator.AddFrame(classGen.LocalContext, funcCode, bodyStmt);
                 classGen.AddHiddenVariable(AstGenerator._functionStack);
             }

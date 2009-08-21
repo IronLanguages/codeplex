@@ -173,6 +173,23 @@ def test_getframe():
             Assert(f.f_code.co_name is not None)
             f = f.f_back
 
+    # bug 24313, sys._getframe should return the same frame objects
+    # that tracing functions receive
+    def method():
+        global method_id
+        method_id = id(sys._getframe())
+
+    def trace_dispatch(frame, event, arg):
+        global found_id
+        found_id = id(frame)
+
+    sys.settrace(trace_dispatch)
+    method()
+    sys.settrace(None)
+    
+    AreEqual(method_id, found_id)
+
+
 @skip("win32")
 def test_api_version():
     # api_version

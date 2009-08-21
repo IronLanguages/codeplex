@@ -37,6 +37,7 @@ namespace Microsoft.Scripting.Generation {
     internal sealed class ToDiskRewriter : ExpressionVisitor {
         private static int _uniqueNameId;
         private List<Expression> _constants;
+        private Dictionary<ConstantExpression, Expression> _constantCache;
         private ParameterExpression _constantPool;
         private Dictionary<Type, Type> _delegateTypes;
 #if SILVERLIGHT
@@ -147,7 +148,7 @@ namespace Microsoft.Scripting.Generation {
                 return value;
 
             }
-            return base.VisitExtension(node);
+            return Visit(node.Reduce());
         }
 
         protected override Expression VisitConstant(ConstantExpression node) {
@@ -159,13 +160,19 @@ namespace Microsoft.Scripting.Generation {
             var exprSerializable = node.Value as IExpressionSerializable;
             if (exprSerializable != null) {
                 EnsureConstantPool();
-                Expression serialized = exprSerializable.CreateExpression();
-                _constants.Add(serialized);
+                Expression res;
 
-                return AstUtils.Convert(
-                    Expression.ArrayAccess(_constantPool, AstUtils.Constant(_constants.Count - 1)),
-                    serialized.Type
-                );
+                if (!_constantCache.TryGetValue(node, out res)) {
+                    Expression serialized = exprSerializable.CreateExpression();
+                    _constants.Add(serialized);
+
+                    _constantCache[node] = res = AstUtils.Convert(
+                        Expression.ArrayAccess(_constantPool, AstUtils.Constant(_constants.Count - 1)),
+                        serialized.Type
+                    );
+                }
+
+                return res;
             }
 
             var symbols = node.Value as SymbolId[];
@@ -272,6 +279,7 @@ namespace Microsoft.Scripting.Generation {
             if (_constantPool == null) {
                 _constantPool = Expression.Variable(typeof(object[]), "$constantPool");
                 _constants = new List<Expression>();
+                _constantCache = new Dictionary<ConstantExpression, Expression>();
             }
         }
     }

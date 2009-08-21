@@ -325,8 +325,7 @@ def test_cp8567():
     
 def test_i_o():
     for t in [  call_close,
-                #Work Item 151029
-                #call_isatty,
+                call_isatty,
                 call_read,
                 call_readline,
                 call_readline_n,

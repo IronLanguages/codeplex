@@ -44,7 +44,6 @@ namespace IronPython.Runtime {
         public Delegate Target;                                     // the current target for the function.  This can change based upon adaptive compilation, recursion enforcement, and tracing.
         private Delegate _normalDelegate;                           // the normal delegate - this can be a compiled or interpreted delegate.
 
-        private readonly ScriptCode _code;
         private readonly string _filename;                          // the filename that created the function co
         private readonly FunctionAttributes _flags;                 // future division, generator
         private LambdaExpression _lambda;                           // the original DLR lambda that contains the code
@@ -74,17 +73,6 @@ namespace IronPython.Runtime {
         /// so that we don't race against sys.settrace/sys.setprofile.
         /// </summary>
         private static CodeList _CodeCreateAndUpdateDelegateLock = new CodeList();
-
-        internal FunctionCode() {
-            _freevars = PythonTuple.EMPTY;
-        }
-
-        internal FunctionCode(string name, string filename, int lineNo) {
-            _name = name;
-            _filename = filename;
-            _span = new SourceSpan(new SourceLocation(0, lineNo == 0 ? 1 : lineNo, 1), new SourceLocation(0, lineNo == 0 ? 1 : lineNo, 1));
-            _freevars = PythonTuple.EMPTY;
-        }
 
         /// <summary>
         /// Constructor used to create a FunctionCode for code that's been serialized to disk.  
@@ -152,22 +140,6 @@ namespace IronPython.Runtime {
             Target = initialDelegate;
             RegisterFunctionCode(context);
         }
-
-        internal FunctionCode(ScriptCode code, CompileFlags compilerFlags, string fileName)
-            : this(code) {
-
-            if ((compilerFlags & CompileFlags.CO_FUTURE_DIVISION) != 0) {
-                _flags |= FunctionAttributes.FutureDivision;
-            }
-            _filename = fileName;
-            _freevars = PythonTuple.EMPTY;
-        }
-
-        internal FunctionCode(ScriptCode code) {
-            _code = code;
-            _freevars = PythonTuple.EMPTY;
-        }
-
 
         private static PythonTuple SymbolListToTuple(IList<SymbolId> vars) {
             if (vars != null) {
@@ -557,10 +529,6 @@ namespace IronPython.Runtime {
         }
 
         internal object Call(CodeContext/*!*/ context, Scope/*!*/ scope) {
-            if (_code != null) {
-                return _code.Run(scope);
-            }
-
             if (_freevars != PythonTuple.EMPTY) {
                 throw PythonOps.TypeError("cannot exec code object that contains free variables: {0}", _freevars.__repr__(context));
             }
@@ -574,14 +542,14 @@ namespace IronPython.Runtime {
                 return classTarget(new CodeContext(scope, context.LanguageContext));
             }
 
-            Func<CodeContext, object> moduleCode = Target as Func<CodeContext, object>;
+            Func<CodeContext, FunctionCode, object> moduleCode = Target as Func<CodeContext, FunctionCode, object>;
             if (moduleCode != null) {
-                return moduleCode(new CodeContext(scope, context.LanguageContext));
+                return moduleCode(new CodeContext(scope, context.LanguageContext), this);
             }
 
-            Func<object> optimizedModuleCode = Target as Func<object>;
+            Func<FunctionCode, object> optimizedModuleCode = Target as Func<FunctionCode, object>;
             if (optimizedModuleCode != null) {
-                return optimizedModuleCode();
+                return optimizedModuleCode(this);
             }
 
             var func = new PythonFunction(context, this, null, ArrayUtils.EmptyObjects, new MutableTuple<object>());
@@ -606,22 +574,13 @@ namespace IronPython.Runtime {
         #endregion
 
         public override bool Equals(object obj) {
-            FunctionCode other = obj as FunctionCode;
-            if (other == null) return false;
-
-            if (_code != null) {
-                return _code == other._code;
-            }
-
-            return _lambda == other._lambda;
+            // overridden because CPython defines this on code objects
+            return base.Equals(obj);
         }
 
         public override int GetHashCode() {
-            if (_code != null) {
-                return _code.GetHashCode();
-            }
-
-            return _lambda.GetHashCode();
+            // overridden because CPython defines this on code objects
+            return base.GetHashCode();
         }
 
         public int __cmp__(CodeContext/*!*/ context, [NotNull]FunctionCode/*!*/  other) {
@@ -681,7 +640,7 @@ namespace IronPython.Runtime {
         internal void UpdateDelegate(PythonContext context, bool forceCreation) {
             Delegate finalTarget;
 
-            if (context._enableTracing && _lambda != null) {
+            if (context.EnableTracing && _lambda != null) {
                 if (_tracingLambda == null) {
                     if (!forceCreation) {
                         // the user just called sys.settrace(), don't force re-compilation of every method in the system.  Instead

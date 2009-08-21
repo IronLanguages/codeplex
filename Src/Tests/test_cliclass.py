@@ -34,14 +34,12 @@ if __name__  == '__main__' and sys.platform == 'cli' or sys.platform == 'silverl
 
 from iptest.assert_util import *
 skiptest("win32")
-import clr
 
 load_iron_python_test()
 
 from IronPythonTest import *
 
 def test_inheritance():
-    import System
     class MyList(System.Collections.Generic.List[int]):
         def get0(self):
             return self[0]
@@ -172,7 +170,6 @@ def test_open_generic():
         Assert(exc_value.message.__contains__("cannot inhert from open generic instantiation"))
 
 def test_interface_slots():
-    import System
     
     # slots & interfaces
     class foo(object):
@@ -487,7 +484,6 @@ def test_type_descs():
 #silverlight does not support System.Char.Parse
 @skip("silverlight")
 def test_char():
-    import System
     for x in range(256):
         c = System.Char.Parse(chr(x))
         AreEqual(c, chr(x))
@@ -504,7 +500,6 @@ def test_char():
         if not chr(x) == c: Assert(False)
 
 def test_repr():
-    import clr
     if not is_silverlight:
         clr.AddReference('System.Drawing')
     
@@ -613,7 +608,6 @@ def test_field_const_access():
     AreEqual(ClassWithLiteral().Literal, 5)
 
 def test_array():
-    import System
     arr = System.Array[int]([0])
     AreEqual(repr(arr), str(arr))
     AreEqual(repr(System.Array[int]([0, 1])), 'Array[int]((0, 1))')
@@ -687,7 +681,7 @@ End Class
         name = 'vbproptest%f.dll' % (r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
-        import clr
+        
         clr.AddReferenceToFileAndPath(name)
         import VbPropertyTest
         
@@ -774,7 +768,7 @@ End Class
         name = 'vbproptest%f.dll' % (r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
-        import clr
+
         clr.AddReferenceToFileAndPath(name)
         import VbPropertyTest, VbPropertyTest2
         
@@ -845,7 +839,7 @@ def test_dynamic_assembly_ref():
     # verify we can add a reference to a dynamic assembly, and
     # then create an instance of that type
     class foo(object): pass
-    import clr
+
     clr.AddReference(foo().GetType().Assembly)
     import IronPython.NewTypes.System
     for x in dir(IronPython.NewTypes.System):
@@ -951,7 +945,6 @@ def test_write_only_property_set():
     AssertError(AttributeError, getattr, obj, 'Writer')
 
 def test_isinstance_interface():
-    import System
     Assert(isinstance('abc', System.Collections.IEnumerable))
 
 def test_constructor_function():
@@ -967,7 +960,6 @@ def test_constructor_function():
 
 def test_class_property():
     """__class__ should work on standard .NET types and should return the type object associated with that class"""
-    import System
     AreEqual(System.Environment.Version.__class__, System.Version)
 
 def test_null_str():
@@ -978,14 +970,12 @@ def test_null_str():
     Assert(repr(RudeObjectOverride()).startswith('<IronPythonTest.RudeObjectOverride object at '))
 
 def test_keyword_construction_readonly():
-    import System
     # Build is read-only property
     AssertError(AttributeError, System.Version, 1, 0, Build=100)  
     AssertError(AttributeError, ClassWithLiteral, Literal=3)
 
 @skip("silverlight") # no FileSystemWatcher in Silverlight
 def test_kw_construction_types():
-    import System
     for val in [True, False]:
         x = System.IO.FileSystemWatcher('.', EnableRaisingEvents = val)
         AreEqual(x.EnableRaisingEvents, val)
@@ -994,9 +984,7 @@ def test_as_bool():
     """verify using expressions in if statements works correctly.  This generates an
     site whose return type is bool so it's important this works for various ways we can
     generate the body of the site, and use the site both w/ the initial & generated targets"""
-    import clr
     clr.AddReference('System') # ensure test passes in ipt
-    import System
     
     # instance property
     x = System.Uri('http://foo')
@@ -1049,7 +1037,6 @@ def test_as_bool():
 @skip("silverlight") # no Stack on Silverlight
 def test_generic_getitem():
     # calling __getitem__ is the same as indexing
-    import System
     AreEqual(System.Collections.Generic.Stack.__getitem__(int), System.Collections.Generic.Stack[int])
     
     # but __getitem__ on a type takes precedence
@@ -1066,7 +1053,6 @@ def test_generic_getitem():
 def test_multiple_inheritance():
     """multiple inheritance from two types in the same hierarchy should work, this is similar to class foo(int, object)"""
     clr.AddReference("System.Windows.Forms")
-    import System
     class foo(System.Windows.Forms.Form, System.Windows.Forms.Control): pass
     
 def test_struct_no_ctor_kw_args():
@@ -1088,14 +1074,12 @@ def test_ctor_keyword_args_newslot():
 
 def test_enum_truth():
     # zero enums are false, non-zero enums are true
-    import System
     Assert(not System.StringSplitOptions.None)
     Assert(System.StringSplitOptions.RemoveEmptyEntries)
     AreEqual(System.StringSplitOptions.None.__nonzero__(), False)
     AreEqual(System.StringSplitOptions.RemoveEmptyEntries.__nonzero__(), True)
 
 def test_enum_repr():
-    import clr
     clr.AddReference('IronPython')
     from IronPython.Compiler import PythonLanguageFeatures
     AreEqual(repr(PythonLanguageFeatures.AllowWithStatement), 'IronPython.Compiler.PythonLanguageFeatures.AllowWithStatement')
@@ -1104,7 +1088,6 @@ def test_enum_repr():
     
 def test_bad_inheritance():
     """verify a bad inheritance reports the type name you're inheriting from"""
-    import System
     def f(): 
         class x(System.Single): pass
     def g(): 
@@ -1209,7 +1192,6 @@ def test_serialization():
     """
     
     import cPickle
-    import clr
     
     # test the primitive data types...    
     data = [1, 1.0, 2j, 2L, System.Int64(1), System.UInt64(1), 
@@ -1332,7 +1314,6 @@ def test_serialization():
     #    AreEqual(temp_except.Message, "another message")
 
 def test_generic_method_error():
-    import clr
     clr.AddReference('System.Core')
     from System.Linq import Queryable
     AssertErrorWithMessage(TypeError, "The type arguments for method 'First' cannot be inferred from the usage. Try specifying the type arguments explicitly.", Queryable.First, [])
@@ -1478,7 +1459,6 @@ def test_inherited_interface_impl():
 def test_dir():
     # make sure you can do dir on everything in System which 
     # includes special types like ArgIterator and Func
-    import System
     for attr in dir(System):
         dir(getattr(System, attr))
         
