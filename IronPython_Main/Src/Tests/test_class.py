@@ -3617,5 +3617,13 @@ def test_new_init_error_combinations():
         AssertError(TypeError, X4)
 
 
+def test_oldstyle_splat_dict():
+    class C: pass
+    
+    def E(): return {}
+    
+    AreEqual(type(C(*E())), type(C()))
+    
+    
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

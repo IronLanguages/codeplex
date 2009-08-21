@@ -1060,7 +1060,7 @@ def test_cp15514():
    
 def test_strerror():
     test_dict = {
-                    0: 'No error', #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24235
+                    0: 'No error',
                     1: 'Operation not permitted', 
                     2: 'No such file or directory', 
                     3: 'No such process', 

@@ -74,6 +74,7 @@ namespace IronPython.Runtime.Exceptions {
     public class TraceBackFrame {
         private readonly PythonTracebackListener _traceAdapter;
         private TracebackDelegate _trace;
+        private object _traceObject;
         internal int _lineNo;
         private readonly PythonDebuggingPayload _debugProperties;
         private readonly Func<Scope> _scopeCallback;
@@ -106,8 +107,30 @@ namespace IronPython.Runtime.Exceptions {
             _debugProperties = debugProperties;
             _scopeCallback = scopeCallback;
         }
-        
-        public TracebackDelegate f_trace {
+
+        [SpecialName, PropertyMethod]
+        public object Getf_trace() {
+                if (_traceAdapter != null) {
+                    return _traceObject;
+                } else {
+                    return null;
+                }
+        }
+
+        [SpecialName, PropertyMethod]
+        public void Setf_trace(object value) {
+            if (_traceAdapter != null) {
+                _traceObject = value;
+                _trace = (TracebackDelegate)Converter.ConvertToDelegate(value, typeof(TracebackDelegate));
+            }
+        }
+
+        [SpecialName, PropertyMethod]
+        public void Deletef_trace() {
+            Setf_trace(null);
+        }
+
+        internal TracebackDelegate TraceDelegate {
             get {
                 if (_traceAdapter != null) {
                     return _trace;
@@ -115,16 +138,6 @@ namespace IronPython.Runtime.Exceptions {
                     return null;
                 }
             }
-            set {
-                if (_traceAdapter != null) {
-                    _trace = value;
-                }
-            }
-        }
-
-        [SpecialName]
-        public void Deletef_trace() {
-            f_trace = null;
         }
 
         public object f_globals {
@@ -207,8 +220,8 @@ namespace IronPython.Runtime.Exceptions {
         }
 
         private void SetLineNumber(int newLineNum) {
-            var pyThread = _traceAdapter.GetCurrentThread();
-            if (pyThread == null || !Type.ReferenceEquals(this, pyThread.Frames.Peek())) {
+            var pyThread = PythonTracebackListener.GetCurrentThread();
+            if (!TracingThisFrame(pyThread)) {
                 throw PythonOps.ValueError("f_lineno can only be set by a trace function");
             }
 
@@ -269,6 +282,10 @@ namespace IronPython.Runtime.Exceptions {
             }
 
             throw PythonOps.ValueError("line {0} is invalid jump location ({1} - {2} are valid)", originalNewLine, funcCode.Span.Start.Line, funcCode.Span.End.Line);
+        }
+
+        private bool TracingThisFrame(TraceThread pyThread) {
+            return pyThread != null &&  pyThread.Frames.Count != 0 && Type.ReferenceEquals(this, pyThread.Frames[pyThread.Frames.Count - 1]);
         }
 
         private static Exception BadForOrFinallyJump(int newLineNum, Dictionary<int, bool> jumpIntoLoopIds) {

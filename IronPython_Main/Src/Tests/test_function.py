@@ -790,6 +790,9 @@ def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
     
+    x = compile("2/3", "<string>", "eval", 8192)
+    AreEqual(eval(x), 2.0 / 3.0)
+
     names = [   "", ".", "1", "\n", " ", "@", "%^",
                 "a", "A", "Abc", "aBC", "filename.py",
                 "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",

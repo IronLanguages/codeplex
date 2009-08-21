@@ -70,10 +70,10 @@ def test_modify():
             __metaclass__ = f((Old,), "D")
         _check(C)
 
-        #try:
-        #    class C: __metaclass__ = f((Old,), "D")
-        #except TypeError: pass
-        #else: Fail("Should have thrown: bug 364860")
+        try:
+            class C: __metaclass__ = f((Old,), "D")
+        except TypeError: pass
+        else: Fail("Should have thrown")
 
 class dash_attributes(type):
     def __new__(metaclass, name, bases, dict):

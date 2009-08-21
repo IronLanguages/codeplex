@@ -140,7 +140,7 @@ def test_subclassing():
     y.a = 1; AreEqual(1, y.a)    # 'a' is available
     y.b = 2; AreEqual(2, y.b)
     def f(): y.c = 3
-    #AssertError(AttributeError, f)  # bug 364438
+    AssertError(AttributeError, f)  # bug 364438
 
     #
     # If a class defines a slot also defined in a base class, the instance variable
@@ -153,7 +153,13 @@ def test_subclassing():
         __slots__ = ['a', 'b']  # 'a' is re-defined
         
     # more after bug 364423 fix
-    # ...
+    class C1(object): 
+        __slots__ = []
+    class C2(object):
+        __slots__ = ['a']    
+    
+    class D1(C1, C2): pass
+
     
 def test_subclass_with_interesting_slots():
     class C1(object):

@@ -51,6 +51,7 @@ import gc
 # Note that silverlight doesn't support finalizers, so we don't test Generator.__del__ on that platform.
 skiptest("silverlight")
 def test_del():
+  global l
   l=[0]
   def nested():
     def ff3(l):

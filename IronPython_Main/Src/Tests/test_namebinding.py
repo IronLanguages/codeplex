@@ -129,7 +129,6 @@ def nested_locals():
     f()
 nested_locals()
 
-#Skipped: Rowan #288893
 def nested_locals2():
     # Test locals in nested functions with locals also used in outer function
     x = 5
@@ -138,7 +137,7 @@ def nested_locals2():
         AreEqual(locals(),{'a':10})
     AreEqual(sorted(locals().keys()), ['f','x'])
     f()
-#nested_locals2()
+nested_locals2()
 
 # Test that namebinding uses name lookup when locals() is accessed inside a class
 xyz = False
@@ -1101,5 +1100,33 @@ if not is_silverlight:
 def f():
     exec "foo = 42" in {}
     return foo
-
+  
 AssertError(NameError, f)
+
+
+
+def F():
+  a = 4
+  class C:
+    field=7
+    def G(self):
+      b = a
+      b = 4
+      return locals()
+  c = C()
+  return c.G()
+
+AreEqual(set(F()), set(['self', 'b', 'a']))
+
+
+def f():
+  a = 10
+  def g1():
+    return a, locals()
+  def g2():
+    return locals()
+  res = [g1()]
+  res.append(g2())
+  return res
+
+AreEqual(f(), [(10, {'a':10}), {}])
