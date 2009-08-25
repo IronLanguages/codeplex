@@ -89,7 +89,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Assign(expression, Ast.Field(null, typeof(Uninitialized).GetField("Instance")));
         }
 
-        // TODO: Optimized overloads for various aritys.
+        // TODO: Optimized overloads for various arities.
         public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0) {
             return Ast.Dynamic(binder, retType, arg0);
         }
