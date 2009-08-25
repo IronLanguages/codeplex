@@ -735,19 +735,19 @@ namespace Microsoft.Scripting.Interpreter {
         private void CompileArrayIndex(Expression array, Expression index) {
             if (index.Type == typeof(int)) {
                 Type elemType = array.Type.GetElementType();
+                Compile(array);
+                Compile(index);
                 if (elemType.IsClass || elemType.IsInterface) {
-                    Compile(array);
-                    Compile(index);
                     AddInstruction(GetArrayItemInstruction<object>.Instance);
                 } else if (elemType == typeof(bool)) {
-                    Compile(array);
-                    Compile(index);
                     AddInstruction(GetArrayItemInstruction<bool>.Instance);
+                } else if (elemType == typeof(SymbolId)) {
+                    AddInstruction(GetArrayItemInstruction<SymbolId>.Instance);
                 } else {
-                    throw new NotImplementedException("ArrayIndex index type " + elemType);
+                    AddInstruction((Instruction)typeof(GetArrayItemInstruction<>).MakeGenericType(elemType).GetField("Instance").GetValue(null));
                 }
             } else {
-                throw new NotImplementedException("ArrayIndex element type " + index.Type);
+                throw new NotImplementedException("ArrayIndex index type " + index.Type);
             }
         }
 

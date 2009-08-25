@@ -133,7 +133,7 @@ namespace IronPython.Compiler.Ast {
                 case CompilationMode.Collectable: _globals = new ArrayGlobalAllocator(_pythonContext); break;
                 case CompilationMode.Lookup: _globals = new DictionaryGlobalAllocator(); break;
                 case CompilationMode.ToDisk: _globals = new SavableGlobalAllocator(_pythonContext); break;
-                case CompilationMode.Uncollectable: _globals = new StaticGlobalAllocator(_pythonContext, name); break;
+                case CompilationMode.Uncollectable: _globals = new SharedGlobalAllocator(_pythonContext); break;
             }
 
             PythonOptions po = (_pythonContext.Options as PythonOptions);

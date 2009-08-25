@@ -252,16 +252,21 @@ def test_member_completion():
     verifyResults(getTestOutput()[0], testRegex)
     
 def test_member_completion_com():
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
     superConsole.SendKeys('import clr{ENTER}')
     superConsole.SendKeys('import System{ENTER}')
     superConsole.SendKeys('clr.AddReference{(}"Microsoft.Office.Interop.Word"{)}{ENTER}')
     superConsole.SendKeys('import Microsoft.Office.Interop.Word{ENTER}')
     superConsole.SendKeys('wordapp = Microsoft.Office.Interop.Word.ApplicationClass{(}{)}{ENTER}')
-    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    sleep(10) #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24427
     superConsole.SendKeys('wordapp.Activ{TAB}{ENTER}')
+    sleep(15) #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24427
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
-    sleep(10)
-    Assert('<System.Dynamic.DispCallable object at ' in getTestOutput()[0][1])
+    
+    #Verification
+    temp = getTestOutput()
+    Assert(len(temp[0])==8, str(temp[0]))
+    Assert(temp[0][6].startswith('<System.Dynamic.DispCallable object at '), str(temp[0]))
 
 def test_cp17797():
     #setup

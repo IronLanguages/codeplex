@@ -30,7 +30,7 @@ using MSAst = Microsoft.Linq.Expressions;
 namespace IronPython.Compiler {
     /// <summary>
     /// Represents a script code which can be consumed at runtime as-is.  This code has
-    /// no external dependencies and is closed over it's scope.  
+    /// no external dependencies and is closed over its scope.  
     /// </summary>
     class RuntimeScriptCode : RunnableScriptCode {
         private readonly CompilerContext/*!*/ _context;
