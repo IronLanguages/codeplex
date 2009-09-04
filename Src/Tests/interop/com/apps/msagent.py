@@ -21,7 +21,10 @@ from iptest.cominterop_util import *
 from clr import StrongBox
 from System.Runtime.InteropServices import DispatchWrapper
 
-
+if is_win7:
+    import sys
+    print "MSAgent is unavailable on Windows 7!"
+    sys.exit(0)
 #------------------------------------------------------------------------------
 #--GLOBALS
 com_obj = CreateAgentServer()

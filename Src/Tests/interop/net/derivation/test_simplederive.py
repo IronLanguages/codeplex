@@ -95,7 +95,7 @@ def test_negative_simply_derive():
     def f():
         class C(EmptyClass, EmptyGenericClass[int]): pass
     AssertErrorWithMessage(TypeError, 
-        "C: can only extend one CLI or builtin type, not both Merlin.Testing.BaseClass.EmptyClass (for IronPython.Runtime.Types.PythonType) and Merlin.Testing.BaseClass.EmptyGenericClass`1[[System.Int32, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]] (for IronPython.Runtime.Types.PythonType)",
+        "C: can only extend one CLI or builtin type, not both Merlin.Testing.BaseClass.EmptyClass (for IronPython.Runtime.Types.PythonType) and Merlin.Testing.BaseClass.EmptyGenericClass`1[[System.Int32, mscorlib, Version=%d.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]] (for IronPython.Runtime.Types.PythonType)" % System.Environment.Version.Major,
         f)
     
     class B:pass

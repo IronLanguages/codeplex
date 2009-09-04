@@ -17,12 +17,17 @@
 # this needs to run before we add ref to Microsoft.Scripting where we'll get the
 # non-generic version of Action[T].  Therefore it also can't run in test_interpret_sanity.
 import sys
-if __name__  == '__main__' and sys.platform == 'cli' or sys.platform == 'silverlight':
+if sys.platform=="win32":
+    print "Will not run this test on CPython.  Goodbye."
+    sys.exit(0)
+import System
+
+if __name__  == '__main__':
     def f(): print 'hello'
-    import System
     try:
         System.Action(f)
-        raise Exception('action[t] test failed')
+        if not System.Environment.Version.Major>3:
+            raise Exception('action[t] test failed')
     except TypeError, e:
         if e.message!="cannot create instances of Action[T] because it is a generic type definition":
             raise Exception(e.message)
@@ -33,6 +38,7 @@ if __name__  == '__main__' and sys.platform == 'cli' or sys.platform == 'silverl
 
 
 from iptest.assert_util import *
+from iptest.warning_util import warning_trapper
 skiptest("win32")
 
 load_iron_python_test()
@@ -1081,10 +1087,10 @@ def test_enum_truth():
 
 def test_enum_repr():
     clr.AddReference('IronPython')
-    from IronPython.Compiler import PythonLanguageFeatures
-    AreEqual(repr(PythonLanguageFeatures.AllowWithStatement), 'IronPython.Compiler.PythonLanguageFeatures.AllowWithStatement')
-    AreEqual(repr(PythonLanguageFeatures.AllowWithStatement | PythonLanguageFeatures.TrueDivision), 
-             '<enum IronPython.Compiler.PythonLanguageFeatures: AllowWithStatement, TrueDivision>')
+    from IronPython.Runtime import ModuleOptions
+    AreEqual(repr(ModuleOptions.WithStatement), 'IronPython.Runtime.ModuleOptions.WithStatement')
+    AreEqual(repr(ModuleOptions.WithStatement | ModuleOptions.TrueDivision), 
+             '<enum IronPython.Runtime.ModuleOptions: TrueDivision, WithStatement>')
     
 def test_bad_inheritance():
     """verify a bad inheritance reports the type name you're inheriting from"""
@@ -1590,6 +1596,30 @@ def test_field_assign():
 def test_event_validates_callable():
     def f(): DelegateTest.StaticEvent += 3
     AssertErrorWithMessage(TypeError, "event addition expected callable object, got int", f)
+
+def test_struct_assign():
+    with warning_trapper() as wt:
+        from IronPythonTest.BinderTest import ValueTypeWithFields
+        from System import Array
+        arr = Array.CreateInstance(ValueTypeWithFields, 10)        
+
+        # no warning method
+        ValueTypeWithFields.X.SetValue(arr[0], 42)
+        AreEqual(wt.messages, [])
+        
+        # should warn
+        arr[0].X = 42
+        AreEqual([x.message for x in wt.messages], ['Setting field X on value type ValueTypeWithFields may result in updating a copy.  Use ValueTypeWithFields.X.SetValue(instance, value) if this is safe.  For more information help(ValueTypeWithFields.X.SetValue).'])
+
+def test_ctor_field_assign_conversions():
+    from IronPythonTest.BinderTest import  ValueTypeWithFields
+    res = ValueTypeWithFields(Y=42)
+    res.Y = 42
+    AreEqual(ValueTypeWithFields(Y=42), res)
+    
+    class myint(int): pass
+        
+    AreEqual(ValueTypeWithFields(Y=myint(42)), res)
 
 run_test(__name__)
 

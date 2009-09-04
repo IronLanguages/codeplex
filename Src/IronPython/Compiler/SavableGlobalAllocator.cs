@@ -29,11 +29,8 @@ namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
 
     class SavableGlobalAllocator : ArrayGlobalAllocator {
-        private readonly List<MSAst.Expression/*!*/>/*!*/ _constants;
-
         public SavableGlobalAllocator(PythonContext/*!*/ context)
             : base(context) {
-            _constants = new List<MSAst.Expression>();
         }
 
         public override Microsoft.Linq.Expressions.Expression GetConstant(object value) {
@@ -53,7 +50,7 @@ namespace IronPython.Compiler.Ast {
             };
         }
 
-        public override ScriptCode/*!*/ MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast) {
+        public override ScriptCode/*!*/ MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast, Dictionary<int, bool> handlerLocations, Dictionary<int, Dictionary<int, bool>> loopAndFinallyLocations) {
             // finally build the funcion that's closed over the array
             var func = Ast.Lambda<Func<CodeContext, FunctionCode, object>>(
                 Ast.Block(
@@ -74,7 +71,7 @@ namespace IronPython.Compiler.Ast {
 
             PythonCompilerOptions pco = context.Options as PythonCompilerOptions;
 
-            return new SavableScriptCode(func, context.SourceUnit, GetNames(), pco.ModuleName);
+            return new PythonSavableScriptCode(func, context.SourceUnit, GetNames(), pco.ModuleName);
         }
     }
 }

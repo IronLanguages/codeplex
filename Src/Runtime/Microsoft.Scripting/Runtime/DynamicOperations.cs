@@ -24,7 +24,6 @@ using Microsoft.Runtime.CompilerServices;
 
 
 using Microsoft.Contracts;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
@@ -78,46 +77,9 @@ namespace Microsoft.Scripting.Runtime {
         /// using the ConvertTo methods and then invoking that delegate.
         /// </summary>
         public object Invoke(object obj, params object[] parameters) {
-            Func<DynamicOperations, CallSiteBinder, object, object[], object> invoker;
-            lock(_invokers) {
-                if (!_invokers.TryGetValue(parameters.Length, out invoker)) {
-                    ParameterExpression dynOps = Expression.Parameter(typeof(DynamicOperations));
-                    ParameterExpression callInfo = Expression.Parameter(typeof(CallSiteBinder));
-                    ParameterExpression target = Expression.Parameter(typeof(object));
-                    ParameterExpression args = Expression.Parameter(typeof(object[]));
-                    Type funcType = ReflectionUtils.GetObjectCallSiteDelegateType(parameters.Length);
-                    ParameterExpression site = Expression.Parameter(typeof(CallSite<>).MakeGenericType(funcType));
-                    Expression[] siteArgs = new Expression[parameters.Length + 2];
-                    siteArgs[0] = site;
-                    siteArgs[1] = target;
-                    for (int i = 0; i < parameters.Length; i++) {
-                        siteArgs[i + 2] = Expression.ArrayIndex(args, Expression.Constant(i));
-                    }
-
-                    var getOrCreateSiteFunc = new Func<CallSiteBinder, CallSite<Func<object>>>(GetOrCreateSite<Func<object>>).Method.GetGenericMethodDefinition();
-                    _invokers[parameters.Length] = invoker = Expression.Lambda<Func<DynamicOperations, CallSiteBinder, object, object[], object>>(
-                        Expression.Block(
-                            new[] { site },
-                            Expression.Assign(
-                                site, 
-                                Expression.Call(dynOps, getOrCreateSiteFunc.MakeGenericMethod(funcType), callInfo)
-                            ),
-                            Expression.Invoke(
-                                Expression.Field(
-                                    site,
-                                    site.Type.GetField("Target")
-                                ),
-                                siteArgs
-                            )
-                        ),
-                        new[] { dynOps, callInfo, target, args }
-                    ).Compile();
-                }
-            }
-
-            return invoker(this, _lc.CreateInvokeBinder(new CallInfo(parameters.Length)), obj, parameters);
+            return GetInvoker(parameters.Length)(this, _lc.CreateInvokeBinder(new CallInfo(parameters.Length)), obj, parameters);
         }
-       
+        
         /// <summary>
         /// Invokes a member on the provided object with the given parameters and returns the result.
         /// </summary>
@@ -129,52 +91,14 @@ namespace Microsoft.Scripting.Runtime {
         /// Invokes a member on the provided object with the given parameters and returns the result.
         /// </summary>
         public object InvokeMember(object obj, string memberName, bool ignoreCase, params object[] parameters) {
-            // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
-            switch (parameters.Length) {
-                case 0: {
-                        CallSite<Func<CallSite, object, object>> site;
-                        site = GetOrCreateSite<object, object>(_lc.CreateCallBinder(memberName, ignoreCase, new CallInfo(0)));
-                        return site.Target(site, obj);
-                    }
-                case 1: {
-                        CallSite<Func<CallSite, object, object, object>> site;
-                        site = GetOrCreateSite<object, object, object>(_lc.CreateCallBinder(memberName, ignoreCase, new CallInfo(1)));
-                        return site.Target(site, obj, parameters[0]);
-                    }
-                case 2: {
-                        CallSite<Func<CallSite, object, object, object, object>> site;
-                        site = GetOrCreateSite<object, object, object, object>(_lc.CreateCallBinder(memberName, ignoreCase, new CallInfo(2)));
-                        return site.Target(site, obj, parameters[0], parameters[1]);
-                    }
-                default:
-                    throw new NotImplementedException();
-            }
+            return GetInvoker(parameters.Length)(this, _lc.CreateCallBinder(memberName, ignoreCase, new CallInfo(parameters.Length)), obj, parameters);
         }
 
         /// <summary>
         /// Creates a new instance from the provided object using the given parameters, and returns the result.
         /// </summary>
         public object CreateInstance(object obj, params object[] parameters) {
-            // we support a couple of parameters instead of just splatting because JS doesn't yet support splatted arguments for function calls.
-            switch (parameters.Length) {
-                case 0: {
-                        CallSite<Func<CallSite, object, object>> site;
-                        site = GetOrCreateSite<object, object>(_lc.CreateCreateBinder(new CallInfo(0)));
-                        return site.Target(site, obj);
-                    }
-                case 1: {
-                        CallSite<Func<CallSite, object, object, object>> site;
-                        site = GetOrCreateSite<object, object, object>(_lc.CreateCreateBinder(new CallInfo(1)));
-                        return site.Target(site, obj, parameters[0]);
-                    }
-                case 2: {
-                        CallSite<Func<CallSite, object, object, object, object>> site;
-                        site = GetOrCreateSite<object, object, object, object>(_lc.CreateCreateBinder(new CallInfo(2)));
-                        return site.Target(site, obj, parameters[0], parameters[1]);
-                    }
-                default:
-                    throw new NotImplementedException();
-            }
+            return GetInvoker(parameters.Length)(this, _lc.CreateCreateBinder(new CallInfo(parameters.Length)), obj, parameters);
         }
 
         /// <summary>
@@ -432,25 +356,7 @@ namespace Microsoft.Scripting.Runtime {
             var site = GetOrCreateSite<TTarget, TOther, TResult>(_lc.CreateBinaryOperationBinder(operation));
             return site.Target(site, target, other);
         }
-        
-        /// <summary>
-        /// Performs a generic unary operation on the specified target and returns the result.
-        /// </summary>
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public object DoOperation(string op, object target) {
-            return DoOperation<object, object>(op, target);
-        }
-
-        /// <summary>
-        /// Performs a generic unary operation on the strongly typed target and returns the value as the specified type
-        /// </summary>
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public TResult DoOperation<TTarget, TResult>(string op, TTarget target) {
-            CallSite<Func<CallSite, TTarget, TResult>> site;
-            site = GetOrCreateSite<TTarget, TResult>(_lc.CreateOperationBinder(op));
-            return site.Target(site, target);
-        }
-
+                
         public string GetDocumentation(object o) {
             return _lc.GetDocumentation(o);
         }
@@ -462,26 +368,7 @@ namespace Microsoft.Scripting.Runtime {
         public bool IsCallable(object o) {
             return _lc.IsCallable(o);
         }
-
-        /// <summary>
-        /// Performs the generic binary operation on the specified targets and returns the result.
-        /// </summary>
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public object DoOperation(Operators op, object target, object other) {
-            return DoOperation<object, object, object>(op.ToString(), target, other);
-        }
-
-        /// <summary>
-        /// Peforms the generic binary operation on the specified strongly typed targets and returns
-        /// the strongly typed result.
-        /// </summary>
-        [Obsolete("Use UnaryOperation or BinaryOperation")]
-        public TResult DoOperation<TTarget, TOther, TResult>(string op, TTarget target, TOther other) {
-            CallSite<Func<CallSite, TTarget, TOther, TResult>> site;
-            site = GetOrCreateSite<TTarget, TOther, TResult>(_lc.CreateOperationBinder(op));
-            return site.Target(site, target, other);
-        }
-
+        
         /// <summary>
         /// Returns a list of strings which contain the known members of the object.
         /// </summary>
@@ -507,8 +394,8 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it. The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </remarks>
-        public CallSite<Func<CallSite, T0, Tret>> GetOrCreateSite<T0, Tret>(CallSiteBinder siteBinder) {
-            return GetOrCreateSite<CallSite<Func<CallSite, T0, Tret>>>(siteBinder, CallSite<Func<CallSite, T0, Tret>>.Create);
+        public CallSite<Func<CallSite, T1, TResult>> GetOrCreateSite<T1, TResult>(CallSiteBinder siteBinder) {
+            return GetOrCreateSite<CallSite<Func<CallSite, T1, TResult>>>(siteBinder, CallSite<Func<CallSite, T1, TResult>>.Create);
         }
 
         /// <summary>
@@ -518,8 +405,8 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it. The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </remarks>
-        public CallSite<Action<CallSite, T0>> GetOrCreateActionSite<T0>(CallSiteBinder siteBinder) {
-            return GetOrCreateSite<CallSite<Action<CallSite, T0>>>(siteBinder, CallSite<Action<CallSite, T0>>.Create);
+        public CallSite<Action<CallSite, T1>> GetOrCreateActionSite<T1>(CallSiteBinder siteBinder) {
+            return GetOrCreateSite<CallSite<Action<CallSite, T1>>>(siteBinder, CallSite<Action<CallSite, T1>>.Create);
         }
 
         /// <summary>
@@ -529,8 +416,8 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it. The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </remarks>
-        public CallSite<Func<CallSite, T0, T1, Tret>> GetOrCreateSite<T0, T1, Tret>(CallSiteBinder siteBinder) {
-            return GetOrCreateSite<CallSite<Func<CallSite, T0, T1, Tret>>>(siteBinder, CallSite<Func<CallSite, T0, T1, Tret>>.Create);
+        public CallSite<Func<CallSite, T1, T2, TResult>> GetOrCreateSite<T1, T2, TResult>(CallSiteBinder siteBinder) {
+            return GetOrCreateSite<CallSite<Func<CallSite, T1, T2, TResult>>>(siteBinder, CallSite<Func<CallSite, T1, T2, TResult>>.Create);
         }
 
         /// <summary>
@@ -540,8 +427,8 @@ namespace Microsoft.Scripting.Runtime {
         /// This will either get the site from the cache or create a new site and return it. The cache
         /// may be cleaned if it's gotten too big since the last usage.
         /// </remarks>
-        public CallSite<Func<CallSite, T0, T1, T2, Tret>> GetOrCreateSite<T0, T1, T2, Tret>(CallSiteBinder siteBinder) {
-            return GetOrCreateSite<CallSite<Func<CallSite, T0, T1, T2, Tret>>>(siteBinder, CallSite<Func<CallSite, T0, T1, T2, Tret>>.Create);
+        public CallSite<Func<CallSite, T1, T2, T3, TResult>> GetOrCreateSite<T1, T2, T3, TResult>(CallSiteBinder siteBinder) {
+            return GetOrCreateSite<CallSite<Func<CallSite, T1, T2, T3, TResult>>>(siteBinder, CallSite<Func<CallSite, T1, T2, T3, TResult>>.Create);
         }
 
         /// <summary>
@@ -690,6 +577,46 @@ namespace Microsoft.Scripting.Runtime {
 #endif
         }
 
+        private Func<DynamicOperations, CallSiteBinder, object, object[], object> GetInvoker(int paramCount) {
+            Func<DynamicOperations, CallSiteBinder, object, object[], object> invoker;
+            lock (_invokers) {
+                if (!_invokers.TryGetValue(paramCount, out invoker)) {
+                    ParameterExpression dynOps = Expression.Parameter(typeof(DynamicOperations));
+                    ParameterExpression callInfo = Expression.Parameter(typeof(CallSiteBinder));
+                    ParameterExpression target = Expression.Parameter(typeof(object));
+                    ParameterExpression args = Expression.Parameter(typeof(object[]));
+                    Type funcType = ReflectionUtils.GetObjectCallSiteDelegateType(paramCount);
+                    ParameterExpression site = Expression.Parameter(typeof(CallSite<>).MakeGenericType(funcType));
+                    Expression[] siteArgs = new Expression[paramCount + 2];
+                    siteArgs[0] = site;
+                    siteArgs[1] = target;
+                    for (int i = 0; i < paramCount; i++) {
+                        siteArgs[i + 2] = Expression.ArrayIndex(args, Expression.Constant(i));
+                    }
+
+                    var getOrCreateSiteFunc = new Func<CallSiteBinder, CallSite<Func<object>>>(GetOrCreateSite<Func<object>>).Method.GetGenericMethodDefinition();
+                    _invokers[paramCount] = invoker = Expression.Lambda<Func<DynamicOperations, CallSiteBinder, object, object[], object>>(
+                        Expression.Block(
+                            new[] { site },
+                            Expression.Assign(
+                                site,
+                                Expression.Call(dynOps, getOrCreateSiteFunc.MakeGenericMethod(funcType), callInfo)
+                            ),
+                            Expression.Invoke(
+                                Expression.Field(
+                                    site,
+                                    site.Type.GetField("Target")
+                                ),
+                                siteArgs
+                            )
+                        ),
+                        new[] { dynOps, callInfo, target, args }
+                    ).Compile();
+                }
+            }
+            return invoker;
+        }
+       
         #endregion
     }
 }

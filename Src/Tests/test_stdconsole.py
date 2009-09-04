@@ -21,12 +21,15 @@ import sys
 import nt
 import re
 from System import *
+import os
 
 # Test that IronPython console behaves as expected (command line argument processing etc.).
 
 # Get a temporary directory in which the tests can scribble.
 tmpdir = Environment.GetEnvironmentVariable("TEMP")
 tmpdir = IO.Path.Combine(tmpdir, "IronPython")
+if not os.path.exists(tmpdir):
+    nt.mkdir(tmpdir)
 
 # Name of a temporary file used to capture console output.
 tmpfile = IO.Path.Combine(tmpdir, "tmp_output.txt")

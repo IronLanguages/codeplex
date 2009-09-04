@@ -45,7 +45,8 @@ namespace IronPython.Modules {
         // builtin_module_names is set by PythonContext and updated on reload
         public const string copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
 
-        static SysModule() {
+        private static string GetPrefix() {
+            string prefix;
 #if SILVERLIGHT
             prefix = String.Empty;
 #else
@@ -55,6 +56,7 @@ namespace IronPython.Modules {
                 prefix = String.Empty;
             }
 #endif
+            return prefix;
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace IronPython.Modules {
         public static void displayhook(CodeContext/*!*/ context, object value) {
             if (value != null) {
                 PythonOps.Print(context, PythonOps.Repr(context, value));
-                ScopeOps.SetMember(context, PythonContext.GetContext(context).BuiltinModuleInstance, "_", value);
+                PythonContext.GetContext(context).BuiltinModuleDict["_"] = value;
             }
         }
 
@@ -218,7 +220,7 @@ namespace IronPython.Modules {
         public const string platform = "cli";
 #endif
 
-        public static readonly string prefix;
+        public static readonly string prefix = GetPrefix();
 
         // ps1 and ps2 are set by PythonContext and only on the initial load
 
@@ -1057,9 +1059,9 @@ namespace IronPython.Modules {
         }
 
         private static void PublishBuiltinModuleNames(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
-            object[] keys = new object[context.Builtins.Keys.Count];
+            object[] keys = new object[context.BuiltinModules.Keys.Count];
             int index = 0;
-            foreach (object key in context.Builtins.Keys) {
+            foreach (object key in context.BuiltinModules.Keys) {
                 keys[index++] = key;
             }
             dict[SymbolTable.StringToId("builtin_module_names")] = PythonTuple.MakeTuple(keys);

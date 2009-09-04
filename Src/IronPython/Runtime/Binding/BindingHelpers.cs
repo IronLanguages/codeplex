@@ -19,6 +19,7 @@ using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -419,8 +420,8 @@ namespace IronPython.Runtime.Binding {
         internal static DynamicMetaObject[] GetComArguments(DynamicMetaObject[] args) {
             DynamicMetaObject[] res = null;
             for (int i = 0; i < args.Length; i++) {
-                IComConvertible comConv = args[i] as IComConvertible;
-                if (comConv != null) {
+                DynamicMetaObject converted = GetComArgument(args[i]);
+                if (!ReferenceEquals(converted, args[i])) {
                     if (res == null) {
                         res = new DynamicMetaObject[args.Length];
                         for (int j = 0; j < i; j++) {
@@ -428,7 +429,7 @@ namespace IronPython.Runtime.Binding {
                         }
                     }
 
-                    res[i] = comConv.GetComMetaObject();
+                    res[i] = converted;
                 } else if (res != null) {
                     res[i] = args[i];
                 }
@@ -448,6 +449,16 @@ namespace IronPython.Runtime.Binding {
             IComConvertible comConv = arg as IComConvertible;
             if (comConv != null) {
                 return comConv.GetComMetaObject();
+            }
+
+            if (arg.Value != null) {
+                Type type = arg.Value.GetType();
+                if (type == typeof(BigInteger)) {
+                    return new DynamicMetaObject(
+                        Ast.Convert(AstUtils.Convert(arg.Expression, typeof(BigInteger)), typeof(double)),
+                        BindingRestrictions.GetTypeRestriction(arg.Expression, type)
+                    );
+                }
             }
 
             return arg;

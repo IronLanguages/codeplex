@@ -124,16 +124,24 @@ namespace IronPython.Compiler {
     }
 
     public static class Tokens {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token EndOfFileToken = new SymbolToken(TokenKind.EndOfFile, "<eof>");
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token NewLineToken = new SymbolToken(TokenKind.NewLine, "<newline>");
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token NLToken = new SymbolToken(TokenKind.NLToken, "<NL>");  // virtual token used for error reporting
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token IndentToken = new SymbolToken(TokenKind.Indent, "<indent>");
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Dedent")]
         public static readonly Token DedentToken = new SymbolToken(TokenKind.Dedent, "<dedent>");
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token CommentToken = new SymbolToken(TokenKind.Comment, "<comment>");
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token NoneToken = new ConstantValueToken(null);
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Token DotToken = new SymbolToken(TokenKind.Dot, ".");
 
         #region Generated Tokens
@@ -525,6 +533,7 @@ namespace IronPython.Compiler {
         public static IDictionary<SymbolId, Token> Keywords {
             get { return kws; }
         }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static Tokens() {
             Keywords[SymbolTable.StringToId("and")] = kwAndToken;
             Keywords[SymbolTable.StringToId("as")] = kwAsToken;

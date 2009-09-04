@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
+using System.Collections.Generic;
 
-
-using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
+
 using MSAst = Microsoft.Linq.Expressions;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -31,7 +31,7 @@ namespace IronPython.Compiler.Ast {
             _statements = statements;
         }
 
-        public Statement[] Statements {
+        public IList<Statement> Statements {
             get { return _statements; }
         } 
 
@@ -40,10 +40,7 @@ namespace IronPython.Compiler.Ast {
                 return AstGenerator.EmptyBlock;
             }
 
-            MSAst.Expression[] stmts = ag.Transform(_statements);
-            if (stmts.Length == 0) {
-                return AstUtils.Empty();
-            }
+            var stmts = ag.Transform(_statements);
 
             foreach (MSAst.Expression stmt in stmts) {
                 if (stmt == null) {
@@ -52,7 +49,7 @@ namespace IronPython.Compiler.Ast {
                     return null;
                 }
             }
-            return AstUtils.Void(Ast.Block(new ReadOnlyCollection<MSAst.Expression>(stmts)));
+            return Ast.Block(stmts);
         }
        
         public override void Walk(PythonWalker walker) {

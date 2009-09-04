@@ -359,10 +359,14 @@ def test_dir():
     
     if is_cli:
         import clr
-        if System.Environment.Version.Major >=4:
-            clr.AddReference("System.Core")
-        else:
+        try:
             clr.AddReference("Microsoft.Scripting.Core")
+        except Exception, e:
+            if is_net40:
+                clr.AddReference("System.Core")
+            else:
+                raise e
+        
         from Microsoft.Scripting import ExpandoObject
         eo = ExpandoObject()
         eo.bill = 5

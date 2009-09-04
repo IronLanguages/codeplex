@@ -43,19 +43,19 @@ namespace IronPython.Compiler.Ast {
         private readonly Dictionary<SymbolId, PythonGlobal> _globalVals = new Dictionary<SymbolId, PythonGlobal>();
         private readonly MSAst.ParameterExpression/*!*/ _globalArray;
         private readonly CodeContext _context;
-        private readonly Scope _scope;
+        private readonly ModuleContext _modContext;
         private readonly GlobalArrayConstant _array;
         internal static readonly MSAst.ParameterExpression/*!*/ _globalContext = Ast.Parameter(typeof(CodeContext), "$globalContext");
         internal static readonly ReadOnlyCollection<MSAst.ParameterExpression> _arrayFuncParams = new ReadOnlyCollectionBuilder<MSAst.ParameterExpression>(new[] { _globalContext, AstGenerator._functionCode }).ToReadOnlyCollection();
 
         public ArrayGlobalAllocator(PythonContext/*!*/ context) {
             _globalArray = Ast.Parameter(typeof(PythonGlobal[]), "$globalArray");
-            _scope = new Scope(new PythonDictionary(new GlobalDictionaryStorage(_globalVals)));
-            _context = new CodeContext(_scope, context);
+            _modContext = new ModuleContext(new PythonDictionary(new GlobalDictionaryStorage(_globalVals)), context);
+            _context = _modContext.GlobalContext;
             _array = new GlobalArrayConstant();
         }
 
-        public override ScriptCode/*!*/ MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast) {
+        public override ScriptCode/*!*/ MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast, Dictionary<int, bool> handlerLocations, Dictionary<int, Dictionary<int, bool>> loopAndFinallyLocations) {
             // create the CodeContext
             PythonGlobal[] globalArray = new PythonGlobal[_globals.Count];
 

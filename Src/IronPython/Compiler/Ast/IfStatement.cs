@@ -12,11 +12,12 @@
  *
  *
  * ***************************************************************************/
+
 using System; using Microsoft;
+using System.Collections.Generic;
 
-
-using System.Diagnostics;
 using Microsoft.Scripting;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
@@ -32,7 +33,7 @@ namespace IronPython.Compiler.Ast {
             _else = else_;
         }
 
-        public IfStatementTest[] Tests {
+        public IList<IfStatementTest> Tests {
             get { return _tests; }
         }
 
@@ -54,7 +55,7 @@ namespace IronPython.Compiler.Ast {
             while (i-- > 0) {
                 IfStatementTest ist = _tests[i];
 
-                result = ag.AddDebugInfo(
+                result = ag.AddDebugInfoAndVoid(
                     Ast.Condition(
                         ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
                         ag.TransformMaybeSingleLineSuite(ist.Body, ist.Test.Start), 

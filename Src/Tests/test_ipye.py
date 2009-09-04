@@ -36,6 +36,8 @@ et = IronPythonTest.EngineTest()
 multipleexecskips = [ ]
 for s in dir(et):
     if s.startswith("Scenario"):
+        if is_net40 and s in ["ScenarioPartialTrust"]: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24085
+            continue
         if s in multipleexecskips:
             exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
         else :
@@ -138,7 +140,7 @@ def test_formatexception_exceptiondetail():
     
     exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(System.Exception("first", e))
     Assert(exc_string.startswith("first"))
-    Assert(re.match("first\r\n   at .*ThrowArgumentNullException.*\n   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
+    Assert(re.match("first\r\n(   at .*ThrowArgumentNullException.*\n)?   at .*Insert.*\n(   at .*\n)*",exc_string) is not None) 
     exc_string = pe.GetService[Microsoft.Scripting.Hosting.ExceptionOperations]().FormatException(c())
     Assert(exc_string.endswith("Exception: first"))
 

@@ -16,6 +16,9 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
@@ -33,7 +36,7 @@ namespace IronPython.Compiler.Ast {
 
         private PythonVariable[] _variables;
 
-        public static SymbolId[] Star {
+        public static IList<SymbolId> Star {
             get { return FromImportStatement._star; }
         }
 
@@ -81,7 +84,7 @@ namespace IronPython.Compiler.Ast {
             } else {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
-                List<MSAst.Expression> statements = new List<MSAst.Expression>();
+                ReadOnlyCollectionBuilder<MSAst.Expression> statements = new ReadOnlyCollectionBuilder<MSAst.Expression>();
                 MSAst.ParameterExpression module = ag.GetTemporary("module");
 
                 // Create initializer of the array of names being passed to ImportWithNames
@@ -92,8 +95,8 @@ namespace IronPython.Compiler.Ast {
 
                 // module = PythonOps.ImportWithNames(<context>, _root, make_array(_names))
                 statements.Add(
-                    ag.AddDebugInfo(
-                        ag.Globals.Assign(
+                    ag.AddDebugInfoAndVoid(
+                        GlobalAllocator.Assign(
                             module, 
                             Ast.Call(
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
@@ -110,8 +113,8 @@ namespace IronPython.Compiler.Ast {
                 // now load all the names being imported and assign the variables
                 for (int i = 0; i < names.Length; i++) {
                     statements.Add(
-                        ag.AddDebugInfo(
-                            ag.Globals.Assign(
+                        ag.AddDebugInfoAndVoid(
+                            GlobalAllocator.Assign(
                                 ag.Globals.GetVariable(ag, _variables[i]), 
                                 Ast.Call(
                                     AstGenerator.GetHelperMethod("ImportFrom"),

@@ -14,11 +14,11 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
+using System.Diagnostics;
 using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Compiler.Ast;
@@ -43,6 +43,8 @@ namespace IronPython.Compiler {
 
         public RuntimeScriptCode(CompilerContext/*!*/ context, MSAst.Expression<Func<FunctionCode, object>>/*!*/ expression, PythonAst/*!*/ ast, CodeContext/*!*/ codeContext)
             : base(context.SourceUnit) {
+            Debug.Assert(codeContext.GlobalScope.GetExtension(codeContext.LanguageContext.ContextId) != null);
+
             _code = expression;
             _ast = ast;
             _context = context;
@@ -50,11 +52,11 @@ namespace IronPython.Compiler {
         }
 
         public override object Run() {
-            return InvokeTarget(_code, CreateScope());
+            return InvokeTarget(CreateScope());
         }
 
         public override object Run(Scope scope) {
-            return InvokeTarget(_code, scope);
+            return InvokeTarget(scope);
         }
 
         public override FunctionCode GetFunctionCode() {
@@ -63,8 +65,8 @@ namespace IronPython.Compiler {
             return EnsureFunctionCode(_optimizedTarget);
         }
 
-        private object InvokeTarget(MSAst.LambdaExpression code, Scope scope) {
-            if (scope == _optimizedContext.Scope) {
+        private object InvokeTarget(Scope scope) {
+            if (scope == _optimizedContext.GlobalScope && !_optimizedContext.LanguageContext.EnableTracing) {
                 EnsureCompiled();
 
                 PushFrame(_optimizedContext, _optimizedTarget);
@@ -78,7 +80,7 @@ namespace IronPython.Compiler {
                 }
             }
 
-            // if we're running different code then re-compile the code under a new scope
+            // if we're running against a different scope or we need tracing then re-compile the code.
             if (_unoptimizedCode == null) {
                 // TODO: Copy instead of mutate
                 ((PythonCompilerOptions)_context.Options).Optimized = false;
@@ -105,7 +107,7 @@ namespace IronPython.Compiler {
         }
 
         public override Scope/*!*/ CreateScope() {
-            return _optimizedContext.Scope;
+            return _optimizedContext.GlobalScope;
         }
 
         private void EnsureCompiled() {
@@ -123,7 +125,7 @@ namespace IronPython.Compiler {
             var pc = (PythonContext)SourceUnit.LanguageContext;
             
             if (pc.ShouldInterpret(pco, SourceUnit)) {
-                return CompilerHelpers.LightCompile(_code);
+                return CompilerHelpers.LightCompile(_code, false);
             } else {
                 return _code.Compile(SourceUnit.EmitDebugSymbols);
             }

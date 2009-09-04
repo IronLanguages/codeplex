@@ -56,7 +56,7 @@ class VariantType:
     def write_ToObject(self, cw):
         cw.write("case VarEnum.VT_%s: return %s;" % (self.variantType, self.accessorName))
 
-    def write_accessor(self, cw):
+    def write_accessor(self, cw, transparent):
         if self.emitAccessors == False :
             return
             
@@ -65,7 +65,7 @@ class VariantType:
         cw.enter_block('public %s %s' % (self.managedType, self.accessorName))
 
         # Getter
-        if self.critical: gen_exposed_code_security(cw)
+        if not transparent and self.critical: gen_exposed_code_security(cw)
         cw.enter_block("get")
         cw.write("Debug.Assert(VariantType == VarEnum.VT_%s);" % self.variantType)
         if self.getStatements == None:
@@ -75,7 +75,7 @@ class VariantType:
         cw.exit_block()
 
         # Setter
-        if self.critical: gen_exposed_code_security(cw)
+        if not transparent and self.critical: gen_exposed_code_security(cw)
         cw.enter_block("set")
         cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
         cw.write("VariantType = VarEnum.VT_%s;" % self.variantType)
@@ -89,7 +89,7 @@ class VariantType:
 
         # Byref Setter
         cw.writeline()
-        gen_exposed_code_security(cw)
+        if not transparent: gen_exposed_code_security(cw)
 
         cw.enter_block("public void SetAsByref%s(ref %s value)" % (self.name, self.unmanagedRepresentationType))
         cw.write("Debug.Assert(IsEmpty); // The setter can only be called once as VariantClear might be needed otherwise")
@@ -116,9 +116,9 @@ class VariantType:
         if not self.isPrimitiveType: return
         cw.write("case VarEnum.VT_%s:" % self.variantType)
 
-    def write_ConvertByrefToPtr(self, cw):
+    def write_ConvertByrefToPtr(self, cw, transparent):
         if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType and self.variantType != "ERROR":
-            gen_exposed_code_security(cw)
+            if not transparent: gen_exposed_code_security(cw)
             cw.write('[SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
             if self.unmanagedRepresentationType == 'Int32':
                 cw.enter_block("public static unsafe IntPtr Convert%sByrefToPtr(ref %s value)" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType))
@@ -251,9 +251,11 @@ def gen_ToObject(cw):
     for variantType in variantTypes:
         variantType.write_ToObject(cw)
 
-def gen_accessors(cw):
-    for variantType in variantTypes:
-        variantType.write_accessor(cw)
+def gen_accessors(transparent):
+    def gen_accessors(cw):
+        for variantType in variantTypes:
+            variantType.write_accessor(cw, transparent)
+    return gen_accessors
 
 def gen_accessor_propertyinfo(cw):
     for variantType in variantTypes:
@@ -311,21 +313,33 @@ def gen_IsPrimitiveType(cw):
     for variantType in variantTypes:
         variantType.write_IsPrimitiveType(cw)
 
-def gen_ConvertByrefToPtr(cw):
-    for variantType in variantTypes:
-        variantType.write_ConvertByrefToPtr(cw)
+def gen_ConvertByrefToPtr(transparent):
+    def gen_ConvertByrefToPtr(cw):
+        for variantType in variantTypes:
+            variantType.write_ConvertByrefToPtr(cw, transparent)
+    return gen_ConvertByrefToPtr
 
 def main():
     return generate(
+        ("Outer Managed To COM Primitive Type Map", gen_ManagedToComPrimitiveTypes),
+        ("Outer Variant union types", gen_UnionTypes),
+        ("Outer Variant ToObject", gen_ToObject),
+        ("Outer Variant accessors", gen_accessors(True)),
+        ("Outer Variant accessors PropertyInfos", gen_accessor_propertyinfo),
+        ("Outer Variant byref setter", gen_byref_setters),
+        ("Outer ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes),
+        ("Outer Variant IsPrimitiveType", gen_IsPrimitiveType),
+        ("Outer ConvertByrefToPtr", gen_ConvertByrefToPtr(True)),
+
         ("Managed To COM Primitive Type Map", gen_ManagedToComPrimitiveTypes),
         ("Variant union types", gen_UnionTypes),
         ("Variant ToObject", gen_ToObject),
-        ("Variant accessors", gen_accessors),
+        ("Variant accessors", gen_accessors(False)),
         ("Variant accessors PropertyInfos", gen_accessor_propertyinfo),
         ("Variant byref setter", gen_byref_setters),
         ("ComToManagedPrimitiveTypes", gen_ComToManagedPrimitiveTypes),
         ("Variant IsPrimitiveType", gen_IsPrimitiveType),
-        ("ConvertByrefToPtr", gen_ConvertByrefToPtr),
+        ("ConvertByrefToPtr", gen_ConvertByrefToPtr(False)),
     )
 
 if __name__ == "__main__":

@@ -266,7 +266,7 @@ def test_member_completion_com():
     #Verification
     temp = getTestOutput()
     Assert(len(temp[0])==8, str(temp[0]))
-    Assert(temp[0][6].startswith('<System.Dynamic.DispCallable object at '), str(temp[0]))
+    Assert(temp[0][6].startswith('<Microsoft.Scripting.ComInterop.DispCallable object at '), str(temp[0]))
 
 def test_cp17797():
     #setup
@@ -604,6 +604,7 @@ def test_areraise():
     superConsole.SendKeys('def foo{(}{)}:{ENTER}{TAB}some(){ENTER}{ENTER}')
     superConsole.SendKeys(    'try:{ENTER}{TAB}foo{(}{)}{ENTER}{BACKSPACE}{BACKSPACE}{BACKSPACE}{BACKSPACE}')
     superConsole.SendKeys(    'except:{ENTER}{TAB}raise{ENTER}{ENTER}')
+    sleep(3)
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     lines = getTestOutput()[1]
     AreEqual(lines, ['Traceback (most recent call last):\r\n', '  File "<stdin>", line 2, in <module>\r\n', '  File "<stdin>", line 2, in foo\r\n', "NameError: global name 'some' is not defined\r\n"])

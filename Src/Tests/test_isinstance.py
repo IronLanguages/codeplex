@@ -734,11 +734,8 @@ def test_explicit_interface_impl():
     AreEqual(System.IConvertible.ToDouble('32', None), 32.0)
 
 
-#################################################################
-# Value types are now immutable (at least through attribute sets)
-
 @skip('win32')
-def test_immutable_Valuetypes():
+def test_mutable_Valuetypes():
     load_iron_python_test()
     from IronPythonTest import MySize, BaseClass
     
@@ -758,27 +755,28 @@ def test_immutable_Valuetypes():
         direct_vt.width = 5
     except ValueError:
         success = 1
-    Assert(success == 1 and direct_vt.width == 1)
+    Assert(success == 0 and direct_vt.width == 1)
     
     success = 0
     try:
         embedded_vt.size.width = 5
     except ValueError:
         success = 1
-    Assert(success == 1 and embedded_vt.size.width == 3)
+    Assert(success == 0 and embedded_vt.size.width == 3)
     
     success = 0
     try:
         embedded_vt.Size.width = 5
     except ValueError:
         success = 1
-    Assert(success == 1 and embedded_vt.Size.width == 3)
+    Assert(success == 0 and embedded_vt.Size.width == 3)
     
     import clr
     # ensure .GetType() and calling the helper w/ the type work
     AreEqual(clr.GetClrType(str), ''.GetType())
     # and ensure we're not just auto-converting back on both of them
-    Assert(clr.GetClrType(str) != str)
+    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24083
+        Assert(clr.GetClrType(str) != str)
     
     # as well as GetPythonType
     import System

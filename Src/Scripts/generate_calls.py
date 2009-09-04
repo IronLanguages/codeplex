@@ -96,16 +96,14 @@ def builtin_function_callers_switch(cw):
                  })
 
 builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(typeParams)s> where TFuncType : class {
-    private readonly CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> _site;
     private readonly OptimizingInfo _info;
     public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
     private readonly BuiltinFunction _func;
 %(typeVars)s
 
-    public BuiltinFunctionCaller(CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> site, OptimizingInfo info, BuiltinFunction func, %(typeCheckParams)s) {
+    public BuiltinFunctionCaller(OptimizingInfo info, BuiltinFunction func, %(typeCheckParams)s) {
         _func = func;
         _info = info;
-        _site = site;
         MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
 %(argsAssign)s
     }
@@ -123,18 +121,16 @@ builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(t
 }
 
 class BuiltinMethodCaller<TFuncType, %(typeParams)s> where TFuncType : class {
-    private readonly CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> _site;
     private readonly OptimizingInfo _info;
     public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
     private readonly Type _selfType;
     private readonly BuiltinFunctionData _data;
 %(typeVars)s
 
-    public BuiltinMethodCaller(CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>> site, OptimizingInfo info, BuiltinFunction func, Type selfType, %(typeCheckParams)s) {
+    public BuiltinMethodCaller(OptimizingInfo info, BuiltinFunction func, Type selfType, %(typeCheckParams)s) {
         _selfType = selfType;
         _data = func._data;
         _info = info;
-        _site = site;
         MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
 %(argsAssign)s
     }
