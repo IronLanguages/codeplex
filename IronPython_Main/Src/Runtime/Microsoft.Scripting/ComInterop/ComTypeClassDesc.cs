@@ -17,17 +17,17 @@
 
 using System; using Microsoft;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting;
+using Microsoft.Linq.Expressions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {
 
     public class ComTypeClassDesc : ComTypeDesc, IDynamicMetaObjectProvider {
-        LinkedList<string> _itfs; // implemented interfaces
-        LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
+        private LinkedList<string> _itfs; // implemented interfaces
+        private LinkedList<string> _sourceItfs; // source interfaces supported by this coclass
         private Type _typeObj;
-
+        
         public object CreateInstance() {
             if (_typeObj == null) {
                 _typeObj = System.Type.GetTypeFromCLSID(Guid);

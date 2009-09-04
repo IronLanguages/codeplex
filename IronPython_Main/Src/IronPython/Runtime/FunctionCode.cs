@@ -403,6 +403,7 @@ namespace IronPython.Runtime {
         /// Returns the byte code.  IronPython does not implement this and always
         /// returns an empty string for byte code.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public object co_code {
             get {
                 return String.Empty;
@@ -472,6 +473,7 @@ namespace IronPython.Runtime {
         /// Returns a mapping between byte code and line numbers.  IronPython does
         /// not implement this because byte code is not available.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public object co_lnotab {
             get {
                 throw PythonOps.NotImplementedError("");
@@ -509,6 +511,7 @@ namespace IronPython.Runtime {
         /// Returns the stack size.  IronPython does not implement this
         /// because byte code is not supported.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public object co_stacksize {
             get {
                 throw PythonOps.NotImplementedError("");
@@ -528,7 +531,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal object Call(CodeContext/*!*/ context, Scope/*!*/ scope) {
+        internal object Call(CodeContext/*!*/ context) {
             if (_freevars != PythonTuple.EMPTY) {
                 throw PythonOps.TypeError("cannot exec code object that contains free variables: {0}", _freevars.__repr__(context));
             }
@@ -539,12 +542,12 @@ namespace IronPython.Runtime {
 
             Func<CodeContext, CodeContext> classTarget = Target as Func<CodeContext, CodeContext>;
             if (classTarget != null) {
-                return classTarget(new CodeContext(scope, context.LanguageContext));
+                return classTarget(context);
             }
 
             Func<CodeContext, FunctionCode, object> moduleCode = Target as Func<CodeContext, FunctionCode, object>;
             if (moduleCode != null) {
-                return moduleCode(new CodeContext(scope, context.LanguageContext), this);
+                return moduleCode(context, this);
             }
 
             Func<FunctionCode, object> optimizedModuleCode = Target as Func<FunctionCode, object>;
@@ -555,6 +558,17 @@ namespace IronPython.Runtime {
             var func = new PythonFunction(context, this, null, ArrayUtils.EmptyObjects, new MutableTuple<object>());
             CallSite<Func<CallSite, CodeContext, PythonFunction, object>> site = PythonContext.GetContext(context).FunctionCallSite;
             return site.Target(site, context, func);
+        }
+
+        /// <summary>
+        /// Creates a FunctionCode object for exec/eval/execfile'd/compile'd code.
+        /// 
+        /// The code is then executed in a specific CodeContext by calling the .Call method.
+        /// </summary>
+        internal static FunctionCode FromSourceUnit(SourceUnit sourceUnit, PythonCompilerOptions options) {
+            var code = ((PythonContext)sourceUnit.LanguageContext).CompilePythonCode(Compiler.CompilationMode.Lookup, sourceUnit, options, ThrowingErrorSink.Default);
+            
+            return ((RunnableScriptCode)code).GetFunctionCode();
         }
 
         #endregion
@@ -755,6 +769,11 @@ namespace IronPython.Runtime {
 
         internal Delegate AddRecursionCheck(PythonContext context, Delegate finalTarget) {
             if (context.RecursionLimit != Int32.MaxValue) {
+                if (finalTarget is Func<CodeContext, CodeContext>) {
+                    // no recursion enforcement on classes
+                    return finalTarget;
+                }
+
                 switch (_argNames.Length) {
                     #region Generated Python Recursion Delegate Switch
 
@@ -878,7 +897,7 @@ namespace IronPython.Runtime {
             );
         }
 
-        private Expression TupleToStringArray(PythonTuple tuple) {
+        private static Expression TupleToStringArray(PythonTuple tuple) {
             return tuple.Count > 0 ?
                 (Expression)Expression.NewArrayInit(
                     typeof(string),
@@ -910,7 +929,7 @@ namespace IronPython.Runtime {
     internal class PythonDebuggingPayload {
         public readonly Dictionary<int, Dictionary<int, bool>> LoopAndFinallyLocations;
         public readonly Dictionary<int, bool> HandlerLocations;
-        public readonly FunctionCode Code;
+        public FunctionCode Code;
 
         public PythonDebuggingPayload(FunctionCode code, Dictionary<int, Dictionary<int, bool>> loopLocations, Dictionary<int, bool> handlerLocations) {
             Code = code;

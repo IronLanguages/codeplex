@@ -809,5 +809,18 @@ def test__pickle():
     AreEqual(pickled_regex[1],
              ('^(?P<msg>NMAKE[A-Za-z0-9]*)\'\\"?(?P<file>[\\\\A-Za-z0-9/:_\\.\\+]+)', 0))
 
+
+def test_conditional():
+    p = re.compile(r'(a)?(b)((?(1)c))')
+    AreEqual(p.match('abc').groups(), ('a', 'b', 'c'))
+    p = re.compile(r'(?P<first>a)?(b)((?(first)c))')
+    AreEqual(p.match('abc').groups(), ('a', 'b', 'c'))
+    s = r'((?(a)ab|cd))'
+    if is_cli or is_silverlight:
+        p = re.compile(s)
+        AreEqual(p.match('ab').groups(), ('ab',))
+    else:
+        AssertError(re.error, re.compile, s)
+    
 #--MAIN------------------------------------------------------------------------        
 run_test(__name__)

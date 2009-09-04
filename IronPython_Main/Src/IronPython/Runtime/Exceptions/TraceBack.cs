@@ -143,7 +143,7 @@ namespace IronPython.Runtime.Exceptions {
         public object f_globals {
             get {
                 if (_traceAdapter != null && _scopeCallback != null) {
-                    return new PythonDictionary(new GlobalScopeDictionaryStorage(_scopeCallback()));
+                    return new PythonDictionary(new ScopeDictionaryStorage(_scopeCallback()));
                 } else {
                     return _globals;
                 }
@@ -153,7 +153,7 @@ namespace IronPython.Runtime.Exceptions {
         public object f_locals {
             get {
                 if (_traceAdapter != null && _scopeCallback != null) {
-                    return new PythonDictionary(new GlobalScopeDictionaryStorage(_scopeCallback()));
+                    return new PythonDictionary(new ScopeDictionaryStorage(_scopeCallback()));
                 } else {
                     return _locals;
                 }
@@ -168,7 +168,7 @@ namespace IronPython.Runtime.Exceptions {
 
         public object f_builtins {
             get {
-                return PythonContext.GetContext(_context).BuiltinModuleInstance.Dict;
+                return PythonContext.GetContext(_context).BuiltinModuleDict;
             }
         }
 

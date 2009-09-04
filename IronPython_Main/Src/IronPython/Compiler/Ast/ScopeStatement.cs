@@ -248,7 +248,7 @@ namespace IronPython.Compiler.Ast {
                                 init.Add(((ClosureExpression)var).Create());
                             } else {
                                 init.Add(
-                                    ag.Globals.Assign(
+                                    GlobalAllocator.Assign(
                                         var,
                                         MSAst.Expression.Field(null, typeof(Uninitialized).GetField("Instance"))
                                     )

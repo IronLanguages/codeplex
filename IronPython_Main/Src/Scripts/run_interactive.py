@@ -57,15 +57,15 @@ class FileConsole(object):
         executable = Assembly.GetEntryAssembly().Location
         prefix = Path.GetDirectoryName(executable)
         
-        self.context.SystemState.Dict["executable"] = executable
-        self.context.SystemState.Dict["exec_prefix"] = self.context.SystemState.Dict["prefix"] = prefix
+        self.context.SystemState.executable = executable
+        self.context.SystemState.exec_prefix = self.context.SystemState.prefix = prefix
         
-        module = self.context.CreateModule(ModuleOptions.ModuleBuiltins)
-        self.context.PublishModule("__main__", module)
-        module.Scope.SetVariable(Symbols.Doc, None)
-        module.Scope.SetVariable(Symbols.File, fileName)
-        module.Scope.SetVariable(Symbols.Name, "__main__")
-        self.mainScope = self.engine.CreateScope(module.Scope.Dict)
+        import imp
+        mod = imp.new_module('__main__')
+        mod.__file__ = fileName
+        mod.__builtins__ = sys.modules['__builtin__']
+        self.context.SystemState.modules['__main__'] = mod
+        self.mainScope = scriptEnv.CreateScope(mod.__dict__)
         
     def InitializePath(self):
         searchPath = []
@@ -127,7 +127,8 @@ def run_interactive_main():
             print "\nRunning test in interactive mode - ", test
             con = FileConsole(test)        
             con.Run()
-        except:
+        except Exception, e:
+            print e, e.clsException
             allErrors.append((test, sys.exc_info()[0], sys.exc_info()[1]))
 
     if(allErrors):

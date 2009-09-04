@@ -878,7 +878,7 @@ namespace IronPython.Compiler {
         }
 
 
-        private Expression DelayedAssign(Expression lhs, Expression rhs) {
+        private static Expression DelayedAssign(Expression lhs, Expression rhs) {
             return new DelayedTupleAssign(lhs, rhs);
         }
 

@@ -87,7 +87,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             if (_reference.PythonVariable != null) {
-                assignment = ag.Globals.Assign(
+                assignment = GlobalAllocator.Assign(
                     ag.Globals.GetVariable(ag, _reference.PythonVariable), 
                     AstGenerator.ConvertIfNeeded(right, typeof(object))
                 );
@@ -125,7 +125,7 @@ namespace IronPython.Compiler.Ast {
                         typeof(GC).GetMethod("KeepAlive"),
                         variable
                     ),
-                    ag.Globals.Delete(variable)
+                    GlobalAllocator.Delete(variable)
                 );
 
                 if (!_assigned) {

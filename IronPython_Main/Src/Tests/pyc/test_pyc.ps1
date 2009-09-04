@@ -27,6 +27,11 @@ if (! (test-path $env:ROWAN_BIN\ipy.exe)) {
     exit 1
 }
 
+if ([System.Environment]::Version.Major -eq 4) {
+    echo "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24497"
+    exit 0
+}
+
 #------------------------------------------------------------------------------
 #--Prereqs and globals
 

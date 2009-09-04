@@ -16,6 +16,9 @@ using System; using Microsoft;
 
 
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Microsoft.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
@@ -50,13 +53,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            List<MSAst.Expression> statements = new List<MSAst.Expression>();
+            ReadOnlyCollectionBuilder<MSAst.Expression> statements = new ReadOnlyCollectionBuilder<MSAst.Expression>();
 
             for (int i = 0; i < _names.Length; i++) {
                 statements.Add(
                     // _references[i] = PythonOps.Import(<code context>, _names[i])
-                    ag.AddDebugInfo(
-                        ag.Globals.Assign(
+                    ag.AddDebugInfoAndVoid(
+                        GlobalAllocator.Assign(
                             ag.Globals.GetVariable(ag, _variables[i]), 
                             Ast.Call(
                                 AstGenerator.GetHelperMethod(                           // helper
@@ -73,7 +76,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             statements.Add(AstUtils.Empty());
-            return ag.AddDebugInfo(Ast.Block(statements.ToArray()), Span);
+            return ag.AddDebugInfo(Ast.Block(statements.ToReadOnlyCollection()), Span);
         }
 
         public override void Walk(PythonWalker walker) {

@@ -505,7 +505,7 @@ namespace IronPython.Runtime.Binding {
                 );
 
 #if !SILVERLIGHT
-                if (ComOps.IsComObject(self.Value)) {
+                if (Microsoft.Scripting.ComInterop.ComBinder.IsComObject(self.Value)) {
                     ieres = new DynamicMetaObject(
                         Expression.Convert(
                              self.Expression,
@@ -1662,10 +1662,6 @@ namespace IronPython.Runtime.Binding {
                 get { return _binder; }
             }
 
-            protected PythonIndexType Operator {
-                get { return _op; }
-            }
-
             protected bool IsSetter {
                 get { return _op == PythonIndexType.SetItem || _op == PythonIndexType.SetSlice; }
             }
@@ -1811,10 +1807,6 @@ namespace IronPython.Runtime.Binding {
 
             protected Callable/*!*/ Callable {
                 get { return _callable; }
-            }
-
-            protected DynamicMetaObject/*!*/[]/*!*/ Types {
-                get { return _types; }
             }
 
             protected PythonType/*!*/ GetTypeAt(int index) {
@@ -2388,18 +2380,6 @@ namespace IronPython.Runtime.Binding {
 
             // let the site produce its own error
             return GenericFallback(action, args);
-        }
-
-        private static List<string/*!*/>/*!*/ GetMemberNames(CodeContext/*!*/ context, PythonType/*!*/ pt, object value) {
-            List names = pt.GetMemberNames(context, value);
-            List<string> strNames = new List<string>();
-            foreach (object o in names) {
-                string s = o as string;
-                if (s != null) {
-                    strNames.Add(s);
-                }
-            }
-            return strNames;
         }
 
         #endregion

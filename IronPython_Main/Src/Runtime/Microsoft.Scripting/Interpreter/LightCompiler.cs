@@ -183,7 +183,8 @@ namespace Microsoft.Scripting.Interpreter {
 #endif
         #endregion
     }
-    
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public class LightCompiler {
         private static readonly MethodInfo _RunMethod = typeof(Interpreter).GetMethod("Run");
         private static readonly MethodInfo _GetCurrentMethod = typeof(MethodBase).GetMethod("GetCurrentMethod");
@@ -227,11 +228,15 @@ namespace Microsoft.Scripting.Interpreter {
         private bool _forceCompile;
 
         private readonly LightCompiler _parent;
+        private readonly bool _compileLoops;
 
-        internal LightCompiler() {}
+        internal LightCompiler(bool compileLoops) {
+            _compileLoops = compileLoops;
+        }
 
         private LightCompiler(LightCompiler parent) {
-            this._parent = parent;
+            _parent = parent;
+            _compileLoops = parent._compileLoops;
         }
 
         internal LightDelegateCreator CompileTop(LambdaExpression node) {
@@ -240,6 +245,12 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             Compile(node.Body);
+            
+            // pop the result of the last expression:
+            if (node.Body.Type != typeof(void) && node.ReturnType == typeof(void)) {
+                AddInstruction(PopInstruction.Instance);
+            }
+
             Debug.Assert(_currentStackDepth == (node.ReturnType != typeof(void) ? 1 : 0));
 
             return new LightDelegateCreator(MakeInterpreter(node), node, _closureVariables);
@@ -920,14 +931,16 @@ namespace Microsoft.Scripting.Interpreter {
             // As it is, you can open code using GotoExpression and still have
             // the lambda be interpreted.
             //
-            _forceCompile = true;
+            if (_compileLoops) {
+                _forceCompile = true;
+            }
 
             var continueLabel = node.ContinueLabel == null ? 
                 MakeLabel() : ReferenceLabel(node.ContinueLabel);
 
             continueLabel.Mark();
-            this.CompileAsVoid(node.Body);
-            AddBranch(new BranchInstruction(), continueLabel);
+            CompileAsVoid(node.Body);
+            AddBranch(new BranchInstruction(expr.Type != typeof(void), false), continueLabel);
 
             if (node.BreakLabel != null) {
                 ReferenceLabel(node.BreakLabel).Mark();
@@ -1449,14 +1462,17 @@ namespace Microsoft.Scripting.Interpreter {
             CompileMethodCallExpression(Expression.Call(node.Expression, node.Expression.Type.GetMethod("Invoke"), node.Arguments));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private void CompileListInitExpression(Expression expr) {
             throw new System.NotImplementedException();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private void CompileMemberInitExpression(Expression expr) {
             throw new System.NotImplementedException();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private void CompileQuoteUnaryExpression(Expression expr) {
             throw new System.NotImplementedException();
         }
@@ -1492,6 +1508,7 @@ namespace Microsoft.Scripting.Interpreter {
             throw new System.NotImplementedException();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "expr")]
         private void CompileReducibleExpression(Expression expr) {
             throw new System.NotImplementedException();
         }

@@ -340,7 +340,7 @@ def test_gethostbyaddr():
     '''
     socket.gethostbyaddr("localhost")
     socket.gethostbyaddr("127.0.0.1")
-    if is_cli:
+    if is_cli and not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24495
         socket.gethostbyaddr("<broadcast>")
     
 @retry_on_failure

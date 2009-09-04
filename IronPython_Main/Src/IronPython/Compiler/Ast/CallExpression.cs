@@ -14,11 +14,13 @@
  * ***************************************************************************/
 
 using System; using Microsoft;
-using IronPython.Runtime;
-using IronPython.Runtime.Binding;
+using System.Collections.Generic;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+
+using IronPython.Runtime;
+
 using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
@@ -36,7 +38,7 @@ namespace IronPython.Compiler.Ast {
             get { return _target; }
         }
 
-        public Arg[] Args {
+        public IList<Arg> Args {
             get { return _args; }
         } 
 

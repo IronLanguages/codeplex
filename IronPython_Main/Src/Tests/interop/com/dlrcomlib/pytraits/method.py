@@ -549,7 +549,7 @@ m0(self) method of win32com.client.CDispatch instance
 """
         else:
             #Dev10 409942
-            expected = """Help on DispCallable object"""
+            expected = """Help on DispCallable"""
             Assert(expected in fake_stdout.text, fake_stdout.text)
             return
             

@@ -282,7 +282,7 @@ namespace IronPython.Runtime.Binding {
             return res;
         }
 
-        private Expression/*!*/ CheckSelf(DynamicMetaObjectBinder/*!*/ binder, Expression/*!*/ method, Expression/*!*/ inst) {
+        private static Expression/*!*/ CheckSelf(DynamicMetaObjectBinder/*!*/ binder, Expression/*!*/ method, Expression/*!*/ inst) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MethodCheckSelf"),
                 PythonContext.GetCodeContext(binder),

@@ -61,7 +61,7 @@ namespace IronPython.Compiler.Ast {
             get { return _name; }
         }
 
-        public Expression[] Bases {
+        public IList<Expression> Bases {
             get { return _bases; }
         }
 
@@ -73,7 +73,7 @@ namespace IronPython.Compiler.Ast {
             get {
                 return _decorators;
             }
-            set {
+            internal set {
                 _decorators = value;
             }
         }
@@ -147,14 +147,14 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression bodyStmt = classGen.Transform(_body);
             
             // __module__ = __name__
-            MSAst.Expression modStmt = classGen.Globals.Assign(
+            MSAst.Expression modStmt = GlobalAllocator.Assign(
                 classGen.Globals.GetVariable(classGen, _modVariable), 
                 classGen.Globals.GetVariable(classGen, _modNameVariable));
 
             string doc = classGen.GetDocumentation(_body);
             if (doc != null) {
                 statements.Add(
-                    classGen.Globals.Assign(
+                    GlobalAllocator.Assign(
                         classGen.Globals.GetVariable(classGen, _docVariable),
                         AstUtils.Constant(doc)
                     )
@@ -201,20 +201,18 @@ namespace IronPython.Compiler.Ast {
             );
 
             var lambda = Ast.Lambda<Func<CodeContext, CodeContext>>(
-                classGen.MakeBody(_parentContextParam, init.ToArray(), bodyStmt, false),
+                classGen.MakeBody(_parentContextParam, init.ToArray(), bodyStmt),
                 classGen.Name + "$" + _classId++,
                 classGen.Parameters
             );
             
-            if (funcCodeObj != null) {
-                funcCodeObj.Code = lambda;
-            }
+            funcCodeObj.Code = lambda;
 
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 ag.EmitDebugSymbols ? 
                     (MSAst.Expression)lambda : 
-                    (MSAst.Expression)Ast.Constant(new LazyCode<Func<CodeContext, CodeContext>>(lambda, ag.ShouldInterpret), typeof(object)),
+                    Ast.Convert(funcCode, typeof(object)),
                 ag.LocalContext,
                 AstUtils.Constant(SymbolTable.IdToString(_name)),
                 Ast.NewArrayInit(
@@ -226,7 +224,7 @@ namespace IronPython.Compiler.Ast {
 
             classDef = ag.AddDecorators(classDef, _decorators);
 
-            return ag.AddDebugInfo(ag.Globals.Assign(ag.Globals.GetVariable(ag, _variable), classDef), new SourceSpan(Start, Header));
+            return ag.AddDebugInfoAndVoid(GlobalAllocator.Assign(ag.Globals.GetVariable(ag, _variable), classDef), new SourceSpan(Start, Header));
         }
 
         /// <summary>
@@ -281,9 +279,9 @@ namespace IronPython.Compiler.Ast {
             }
 
             public static string[] FindNames(FunctionDefinition function) {
-                Parameter[] parameters = function.Parameters;
+                var parameters = function.Parameters;
 
-                if (parameters.Length > 0) {
+                if (parameters.Count > 0) {
                     SelfNameFinder finder = new SelfNameFinder(function, parameters[0]);
                     function.Body.Walk(finder);
                     return SymbolTable.IdsToStrings(new List<SymbolId>(finder._names.Keys));

@@ -12,10 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+using System; using Microsoft;
+using System.Collections.Generic;
 
 using Microsoft.Scripting;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using MSAst = Microsoft.Linq.Expressions;
 
@@ -28,13 +30,13 @@ namespace IronPython.Compiler.Ast {
             _names = names;
         }
 
-        public SymbolId[] Names {
+        public IList<SymbolId> Names {
             get { return _names; }
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // global statement is Python's specific syntactic sugar.
-            return ag.AddDebugInfo(AstUtils.Empty(), Span);
+            return AstUtils.Empty();
         }
 
         public override void Walk(PythonWalker walker) {

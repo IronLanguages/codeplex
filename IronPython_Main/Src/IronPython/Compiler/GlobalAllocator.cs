@@ -44,7 +44,7 @@ namespace IronPython.Compiler.Ast {
 
         #region Customizable APIs
 
-        public abstract ScriptCode MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast);
+        public abstract ScriptCode MakeScriptCode(MSAst.Expression/*!*/ body, CompilerContext/*!*/ context, PythonAst/*!*/ ast, Dictionary<int, bool> handlerLocations, Dictionary<int, Dictionary<int, bool>> loopAndFinallyLocations);
 
         public abstract MSAst.Expression/*!*/ GlobalContext {
             get;
@@ -71,7 +71,7 @@ namespace IronPython.Compiler.Ast {
 
         #region Fixed Public API Surface
 
-        public MSAst.Expression/*!*/ Assign(MSAst.Expression/*!*/ expression, MSAst.Expression value) {
+        public static MSAst.Expression/*!*/ Assign(MSAst.Expression/*!*/ expression, MSAst.Expression value) {
             IPythonVariableExpression pyGlobal = expression as IPythonVariableExpression;
             if(pyGlobal != null) {
                 return pyGlobal.Assign(value);
@@ -80,7 +80,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Assign(expression, value);
         }
 
-        public MSAst.Expression/*!*/ Delete(MSAst.Expression/*!*/ expression) {
+        public static MSAst.Expression/*!*/ Delete(MSAst.Expression/*!*/ expression) {
             IPythonVariableExpression pyGlobal = expression as IPythonVariableExpression;
             if (pyGlobal != null) {
                 return pyGlobal.Delete();

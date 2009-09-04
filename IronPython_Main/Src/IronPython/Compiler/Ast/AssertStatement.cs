@@ -40,7 +40,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag) {
             // If debugging is off, return empty statement
             if (ag.Optimize) {
-                return ag.AddDebugInfo(AstUtils.Empty(), Span);
+                return AstUtils.Empty();
             }
 
             // Transform into:
@@ -48,7 +48,7 @@ namespace IronPython.Compiler.Ast {
             // } else {
             //     RaiseAssertionError(_message);
             // }
-            return ag.AddDebugInfo(
+            return ag.AddDebugInfoAndVoid(
                 AstUtils.Unless(                                 // if
                     ag.TransformAndDynamicConvert(_test, typeof(bool)), // _test
                     Ast.Call(                                           // else branch

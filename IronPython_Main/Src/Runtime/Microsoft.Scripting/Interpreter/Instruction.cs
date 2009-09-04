@@ -66,7 +66,8 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class PopInstruction : Instruction {
-        public static PopInstruction Instance = new PopInstruction();
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
+        public static readonly PopInstruction Instance = new PopInstruction();
 
         private PopInstruction() { }
 
@@ -82,7 +83,8 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class DupInstruction : Instruction {
-        public static DupInstruction Instance = new DupInstruction();
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
+        public readonly static DupInstruction Instance = new DupInstruction();
 
         private DupInstruction() { }
 
@@ -110,7 +112,7 @@ namespace Microsoft.Scripting.Interpreter {
     public abstract class LocalAccessInstruction : Instruction {
         internal readonly int _index;
 
-        public LocalAccessInstruction(int index) {
+        protected LocalAccessInstruction(int index) {
             _index = index;
         }
 
@@ -295,6 +297,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1012:AbstractTypesShouldNotHaveConstructors")]
     public abstract class InitializeLocalInstruction : LocalAccessInstruction {
         public InitializeLocalInstruction(int index)
             : base(index) {
@@ -658,7 +661,9 @@ namespace Microsoft.Scripting.Interpreter {
 
     // no-op: we need this just to balance the stack depth.
     public sealed class EnterExceptionHandlerInstruction : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly EnterExceptionHandlerInstruction Void = new EnterExceptionHandlerInstruction(false);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly EnterExceptionHandlerInstruction NonVoid = new EnterExceptionHandlerInstruction(true);
 
         // True if try-expression is non-void.
@@ -726,7 +731,10 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public sealed class ThrowInstruction : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly ThrowInstruction Throw = new ThrowInstruction(true);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly ThrowInstruction VoidThrow = new ThrowInstruction(false);
 
         private readonly bool _hasResult;
@@ -990,6 +998,7 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class GetArrayItemInstruction<T> : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Instruction Instance = new GetArrayItemInstruction<T>();
 
         private GetArrayItemInstruction() { }
@@ -1010,6 +1019,7 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class SetArrayItemInstruction<T> : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Instruction Instance = new SetArrayItemInstruction<T>();
 
         private SetArrayItemInstruction() { }
@@ -1032,7 +1042,7 @@ namespace Microsoft.Scripting.Interpreter {
     public abstract class NumericConvertInstruction : Instruction {
         internal readonly TypeCode _from, _to;
 
-        public NumericConvertInstruction(TypeCode from, TypeCode to) {
+        protected NumericConvertInstruction(TypeCode from, TypeCode to) {
             _from = from;
             _to = to;
         }
@@ -1043,7 +1053,8 @@ namespace Microsoft.Scripting.Interpreter {
         public override string ToString() {
             return InstructionName + "(" + _from + "->" + _to + ")";
         }
-        
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
         public sealed class Unchecked : NumericConvertInstruction {
             public override string InstructionName { get { return "UncheckedConvert"; } }
 
@@ -1150,6 +1161,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
         public sealed class Checked : NumericConvertInstruction {
             public override string InstructionName { get { return "CheckedConvert"; } }
 
@@ -1258,6 +1270,7 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class NotInstruction : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Instruction Instance = new NotInstruction();
 
         private NotInstruction() { }
@@ -1270,6 +1283,7 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public class AddIntInstruction : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly Instruction Instance = new AddIntInstruction();
 
         private AddIntInstruction() { }
@@ -1384,6 +1398,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public static Instruction Create(Type type) {
             // Boxed enums can be unboxed as their underlying types:
             switch (Type.GetTypeCode(type.IsEnum ? Enum.GetUnderlyingType(type) : type)) {
@@ -1520,6 +1535,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public static Instruction Instance(Type type) {
             // Boxed enums can be unboxed as their underlying types:
             switch (Type.GetTypeCode(type.IsEnum ? Enum.GetUnderlyingType(type) : type)) {
@@ -1800,6 +1816,7 @@ namespace Microsoft.Scripting.Interpreter {
     }
 
     public sealed class TypeEqualsInstruction : Instruction {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly TypeEqualsInstruction Instance = new TypeEqualsInstruction();
 
         public override int ConsumedStack { get { return 2; } }

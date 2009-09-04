@@ -171,12 +171,6 @@ namespace IronPython.Modules {
 
             #endregion
 
-            internal int Flags {
-                get {
-                    return _flags;
-                }
-            }
-
             internal CallingConvention CallingConvention {
                 get {
                     switch (_flags & 0x07) {

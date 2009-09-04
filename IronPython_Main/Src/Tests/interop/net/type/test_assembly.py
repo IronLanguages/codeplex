@@ -39,17 +39,26 @@ def test_assemblybuilder_instance():
     assemblyBuilder = System.AppDomain.CurrentDomain.DefineDynamicAssembly(name, System.Reflection.Emit.AssemblyBuilderAccess.Run)    
     
     asm_builder_dir = dir(assemblyBuilder)
-    AreEqual(len(asm_builder_dir), 78)
+    if not is_net40:
+        AreEqual(len(asm_builder_dir), 78)
+        Assert("GetCustomAttributesData" not in asm_builder_dir)
+    else:
+        AreEqual(len(asm_builder_dir), 84)
+        Assert("GetCustomAttributesData" in asm_builder_dir)
+        
     Assert("AddResourceFile" in asm_builder_dir)
     Assert("CreateInstance" in asm_builder_dir)
     
 def test_type():
     mscorlib = Assembly.Load("mscorlib")
     Assert("Assembly" in repr(mscorlib))  
-
-    AreEqual(len(dir(Assembly)), 65)
-    AreEqual(len(dir(AssemblyBuilder)), 78)   
-    
+    if not is_net40:
+        AreEqual(len(dir(Assembly)), 65)
+        AreEqual(len(dir(AssemblyBuilder)), 78)
+    else:
+        AreEqual(len(dir(Assembly)), 71)
+        AreEqual(len(dir(AssemblyBuilder)), 84)
+        
 #####################################################################################
 run_test(__name__)
 #####################################################################################

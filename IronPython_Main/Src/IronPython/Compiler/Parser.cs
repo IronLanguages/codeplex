@@ -48,7 +48,7 @@ namespace IronPython.Compiler {
         /// Language features initialized on parser construction and possibly updated during parsing. 
         /// The code can set the language features (e.g. "from __future__ import division").
         /// </summary>
-        private PythonLanguageFeatures _languageFeatures;
+        private ModuleOptions _languageFeatures;
 
         // state:
         private TokenWithSpan _token;
@@ -66,7 +66,7 @@ namespace IronPython.Compiler {
       
         #region Construction
 
-        private Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
+        private Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, ModuleOptions languageFeatures) {
             ContractUtils.RequiresNotNull(tokenizer, "tokenizer");
             ContractUtils.RequiresNotNull(errorSink, "errorSink");
             ContractUtils.RequiresNotNull(parserSink, "parserSink");
@@ -115,7 +115,7 @@ namespace IronPython.Compiler {
             tokenizer.Initialize(null, reader, context.SourceUnit, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
-            Parser result = new Parser(tokenizer, context.Errors, context.ParserSink, compilerOptions.LanguageFeatures);
+            Parser result = new Parser(tokenizer, context.Errors, context.ParserSink, compilerOptions.Module);
             result._sourceReader = reader;
             return result;
         }
@@ -267,8 +267,8 @@ namespace IronPython.Compiler {
         public int ErrorCode {
             get { return _errorCode; }
         }
-       
-        public void Reset(SourceUnit sourceUnit, PythonLanguageFeatures languageFeatures) {
+
+        public void Reset(SourceUnit sourceUnit, ModuleOptions languageFeatures) {
             ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _sourceUnit = sourceUnit;
@@ -811,7 +811,7 @@ namespace IronPython.Compiler {
 
             bool ateParen = MaybeEat(TokenKind.LeftParenthesis);
 
-            SymbolId[] names;
+            IList<SymbolId> names;
             SymbolId[] asNames;
             bool fromFuture = false;
 
@@ -844,17 +844,17 @@ namespace IronPython.Compiler {
                 fromFuture = true;
                 foreach (SymbolId name in names) {
                     if (name == Symbols.Division) {
-                        _languageFeatures |= PythonLanguageFeatures.TrueDivision;
+                        _languageFeatures |= ModuleOptions.TrueDivision;
                     } else if (name == Symbols.WithStmt) {
-                        _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
+                        _languageFeatures |= ModuleOptions.WithStatement;
                     } else if (name == Symbols.AbsoluteImport) {
-                        _languageFeatures |= PythonLanguageFeatures.AbsoluteImports;
+                        _languageFeatures |= ModuleOptions.AbsoluteImports;
                     } else if (name == Symbols.PrintFunction) {
-                        _languageFeatures |= PythonLanguageFeatures.PrintFunction;
+                        _languageFeatures |= ModuleOptions.PrintFunction;
                         _tokenizer.PrintFunction = true;
                     } else if (name == Symbols.UnicodeLiterals) {
                         _tokenizer.UnicodeLiterals = true;
-                        _languageFeatures |= PythonLanguageFeatures.UnicodeLiterals;
+                        _languageFeatures |= ModuleOptions.UnicodeLiterals;
                     } else if (name == Symbols.NestedScopes) {
                     } else if (name == Symbols.Generators) {
                     } else {
@@ -875,7 +875,7 @@ namespace IronPython.Compiler {
                 Eat(TokenKind.RightParenthesis);
             }
 
-            FromImportStatement ret = new FromImportStatement(dname, names, asNames, fromFuture, AbsoluteImports);
+            FromImportStatement ret = new FromImportStatement(dname, (SymbolId[])names, asNames, fromFuture, AbsoluteImports);
             ret.SetLoc(start, GetEnd());
             return ret;
         }
@@ -1976,7 +1976,6 @@ namespace IronPython.Compiler {
 
         private Bytes FinishBytesPlus(Bytes s) {
             Token t = PeekToken();
-            List<byte> res = new List<byte>(s);
             while (true) {
                 if (t is ConstantValueToken) {
                     Bytes cvs;
@@ -3004,15 +3003,11 @@ namespace IronPython.Compiler {
         }
 
         private bool TrueDivision {
-            get { return (_languageFeatures & PythonLanguageFeatures.TrueDivision) == PythonLanguageFeatures.TrueDivision; }
+            get { return (_languageFeatures & ModuleOptions.TrueDivision) == ModuleOptions.TrueDivision; }
         }
 
         private bool AbsoluteImports {
-            get { return (_languageFeatures & PythonLanguageFeatures.AbsoluteImports) == PythonLanguageFeatures.AbsoluteImports; }
-        }
-
-        private bool PrintFunction {
-            get { return (_languageFeatures & PythonLanguageFeatures.PrintFunction) == PythonLanguageFeatures.PrintFunction; }
+            get { return (_languageFeatures & ModuleOptions.AbsoluteImports) == ModuleOptions.AbsoluteImports; }
         }
 
         private void StartParsing() {
@@ -3060,14 +3055,7 @@ namespace IronPython.Compiler {
 
         private bool PeekToken(Token check) {
             return PeekToken() == check;
-        }
-
-        private bool PeekName(SymbolId id) {
-            NameToken t = PeekToken() as NameToken;
-            if (t != null && t.Name == id)
-                return true;
-            return false;
-        }
+        }       
 
         private bool Eat(TokenKind kind) {
             Token next = PeekToken();
@@ -3097,20 +3085,6 @@ namespace IronPython.Compiler {
             } else {
                 return false;
             }
-        }
-
-        private bool MaybeEat(SymbolId id) {
-            if (PeekName(id)) {
-                NextToken();
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        private void SkipName(SymbolId id) {
-            Debug.Assert(PeekName(id));
-            NextToken();
         }
 
         private class TokenizerErrorSink : ErrorSink {

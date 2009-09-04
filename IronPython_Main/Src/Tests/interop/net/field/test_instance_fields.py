@@ -17,12 +17,19 @@
 #------------------------------------------------------------------------------
 from iptest import *
 from iptest.assert_util import *
+from iptest.warning_util import *
 skiptest("silverlight")
 
 add_clr_assemblies("fieldtests", "typesamples")
 if options.RUN_TESTS: #TODO - bug when generating Pydoc
     from Merlin.Testing.FieldTest import *
     from Merlin.Testing.TypeSample import *
+
+
+def AssertFieldWarnings(warning_trapper):
+    warnings = [x.message for x in warning_trapper.messages]
+    AreEqual(len(warnings), 1)
+    Assert("may result in updating a copy" in warnings[0])
 
 def _test_get_by_instance(o):
     o.SetInstanceFields()
@@ -181,7 +188,9 @@ def _test_set_by_instance(o, vf, t):
     funcs = [ eval("f%s" % i) for i in range(1, 25) ]
     if clr.GetClrType(t).IsValueType:
         for f in funcs:
-            AssertErrorWithMatch(ValueError, "cannot assign to value types", f) 
+            with warning_trapper() as wt:
+                f()
+            AssertFieldWarnings(wt)
     else: 
         for f in funcs: f()
         _test_verify(o)
@@ -233,7 +242,9 @@ def _test_set_by_type(o, vf, t):
     funcs = [ eval("f%s" % i) for i in range(1, 25) ]
     if clr.GetClrType(t).IsValueType:
         for f in funcs:
-            AssertErrorWithMatch(ValueError, "Attempt to update field.*value type fields cannot be directly modified", f) 
+            with warning_trapper() as wt:
+                f()
+            AssertFieldWarnings(wt)
     else: 
         for f in funcs: f()
         _test_verify(o)
@@ -285,7 +296,9 @@ def _test_set_by_descriptor(o, vf, t):
     funcs = [ eval("f%s" % i) for i in range(1, 25) ]
     if clr.GetClrType(t).IsValueType:
         for f in funcs:
-            AssertErrorWithMatch(ValueError, "Attempt to update field.*value type fields cannot be directly modified", f) 
+            with warning_trapper() as wt:
+                f()
+            AssertFieldWarnings(wt)
     else: 
         for f in funcs: f()
         _test_verify(o)
@@ -446,8 +459,9 @@ def test_generic_fields():
     AreEqual(o.InstanceClassTField, None)
     AreEqual(o.InstanceStructTField.Flag, None)
     
-    def f(): o.InstanceTField = "abc"
-    AssertError(ValueError, f) 
+    with warning_trapper() as wt:
+        o.InstanceTField = "abc"
+    AssertFieldWarnings(wt)
     
     current_type = GenericClass2[int]
     o = current_type()

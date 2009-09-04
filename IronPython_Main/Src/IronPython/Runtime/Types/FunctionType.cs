@@ -15,7 +15,7 @@
 
 using System; using Microsoft;
 
-namespace Microsoft.Scripting {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// Represents a set of attributes that different functions can have.
     /// </summary>

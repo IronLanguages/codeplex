@@ -1089,4 +1089,26 @@ def test_dict_equality_lookup():
     d[a] = 42
     AreEqual(d[a], 42)
 
+def test_missing():
+    class Foo(dict):
+        def __missing__(self, key):
+            raise TypeError('Foo.__missing__ should not be called')
+    
+    f = Foo()
+    
+    AreEqual(f.setdefault(1, 2), 2)
+    AreEqual(f.get(2), None)
+    AreEqual(f.get(2, 3), 3)
+    AssertError(KeyError, f.pop, 3)
+    AreEqual(f.pop(3, 4), 4)
+    
+    x = {2:3}
+    for f in (Foo({'abc':3}), Foo()):
+        Assert(x != f)
+        Assert(f != x)
+        
+        AreEqual(x.__eq__(f), False)
+        AreEqual(f.__eq__(x), False)
+    
+    
 run_test(__name__)

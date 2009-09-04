@@ -20,19 +20,18 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Threading;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
     using Ast = Microsoft.Linq.Expressions.Expression;
@@ -171,6 +170,41 @@ namespace IronPython.Runtime.Binding {
 
         public override Candidate PreferConvert(Type t1, Type t2) {
             return Converter.PreferConvert(t1, t2);
+        }
+
+        public override ErrorInfo MakeSetValueTypeFieldError(FieldTracker field, DynamicMetaObject instance, DynamicMetaObject value) {
+            // allow the set but emit a warning
+            return ErrorInfo.FromValueNoError(
+                Expression.Block(
+                    Expression.Call(
+                        typeof(PythonOps).GetMethod("Warn"),
+                        Expression.Constant(_context.SharedContext),
+                        Expression.Constant(PythonExceptions.RuntimeWarning),
+                        Expression.Constant(ReflectedField.UpdateValueTypeFieldWarning),
+                        Expression.Constant(
+                            new object[] { field.Name, field.DeclaringType.Name }
+                        )
+                    ),
+                    Expression.Assign(
+                        Expression.Field(
+                            AstUtils.Convert(
+                                instance.Expression, 
+                                field.DeclaringType
+                            ), 
+                            field.Field
+                        ),
+                        ConvertExpression(
+                            value.Expression, 
+                            field.FieldType, 
+                            ConversionResultKind.ExplicitCast, 
+                            new PythonOverloadResolverFactory(
+                                this, 
+                                Expression.Constant(_context.SharedContext)
+                            )
+                        )
+                    )
+                )
+            );
         }
 
         public override ErrorInfo MakeConversionError(Type toType, Expression value) {
@@ -732,10 +766,10 @@ namespace IronPython.Runtime.Binding {
             res[typeof(DynamicNull)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
             res[typeof(BaseSymbolDictionary)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(IAttributesCollection)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
+            res[typeof(IDictionary<object, object>)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(NamespaceTracker)] = new ExtensionTypeInfo(typeof(NamespaceTrackerOps), "namespace#");
             res[typeof(TypeGroup)] = new ExtensionTypeInfo(typeof(TypeGroupOps), "type-collision");
             res[typeof(TypeTracker)] = new ExtensionTypeInfo(typeof(TypeTrackerOps), "type-collision");
-            res[typeof(Scope)] = new ExtensionTypeInfo(typeof(ScopeOps), "module");
 
             return res;
         }
@@ -808,14 +842,14 @@ namespace IronPython.Runtime.Binding {
             LoadScriptCode(_context, asm);
 
             // load any Python modules
-            _context.LoadBuiltins(_context.Builtins, asm);
+            _context.LoadBuiltins(_context.BuiltinModules, asm);
 
             // load any cached new types
             NewTypeMaker.LoadNewTypes(asm);
         }
 
         private static void LoadScriptCode(PythonContext/*!*/ pc, Assembly/*!*/ asm) {
-            ScriptCode[] codes = ScriptCode.LoadFromAssembly(pc.DomainManager, asm);
+            ScriptCode[] codes = SavableScriptCode.LoadFromAssembly(pc.DomainManager, asm);
 
             foreach (ScriptCode sc in codes) {
                 pc.GetCompiledLoader().AddScriptCode(sc);
@@ -1002,13 +1036,7 @@ namespace IronPython.Runtime.Binding {
             private class SlotCacheInfo {
                 public SlotCacheInfo() {
                     Members = new Dictionary<string/*!*/, KeyValuePair<PythonTypeSlot, MemberGroup/*!*/>>();
-                }
-
-                public void Add(string/*!*/ name, PythonTypeSlot slot, MemberGroup/*!*/ group) {
-                    Debug.Assert(name != null); Debug.Assert(group != null);
-
-                    Members[name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(slot, group);
-                }
+                }               
 
                 public bool TryGetSlot(string/*!*/ name, out PythonTypeSlot slot) {
                     Debug.Assert(name != null);

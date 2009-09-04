@@ -30,7 +30,7 @@ namespace IronPython.Runtime {
         IDictionary, ICodeFormattable, IAttributesCollection {
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
-        internal DictionaryStorage _storage;
+        internal readonly DictionaryStorage _storage;
 
         internal static object MakeDict(CodeContext/*!*/ context, PythonType cls) {
             if (cls == TypeCache.Dict) {
@@ -71,6 +71,14 @@ namespace IronPython.Runtime {
             _storage = new CommonDictionaryStorage();
         }
 
+        internal static PythonDictionary FromIAC(CodeContext context, IAttributesCollection iac) {
+            return iac.GetType() == typeof(PythonDictionary) ? (PythonDictionary)iac : MakeDictFromIAC(context, iac);
+        }
+
+        private static PythonDictionary MakeDictFromIAC(CodeContext context, IAttributesCollection iac) {
+            return new PythonDictionary(new ObjectAttributesAdapter(context, iac));
+        }
+        
         internal static PythonDictionary MakeSymbolDictionary() {
             return new PythonDictionary(new SymbolIdDictionaryStorage());
         }
@@ -79,12 +87,12 @@ namespace IronPython.Runtime {
             return new PythonDictionary(new SymbolIdDictionaryStorage(count));
         }
 
-        public void __init__(CodeContext/*!*/ context, object o, [ParamDictionary] IAttributesCollection kwArgs) {
+        public void __init__(CodeContext/*!*/ context, object o, [ParamDictionary]IDictionary<object, object> kwArgs) {
             update(context, o);
             update(context, kwArgs);
         }
 
-        public void __init__(CodeContext/*!*/ context, [ParamDictionary] IAttributesCollection kwArgs) {
+        public void __init__(CodeContext/*!*/ context, [ParamDictionary]IDictionary<object, object> kwArgs) {
             update(context, kwArgs);
         }
 
@@ -92,6 +100,7 @@ namespace IronPython.Runtime {
             update(context, o);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public void __init__() {
         }
 
@@ -126,6 +135,8 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public bool TryGetValue(object key, out object value) {
+            Debug.Assert(!(key is SymbolId));
+
             if (_storage.TryGetValue(key, out value)) {
                 return true;
             }
@@ -142,6 +153,10 @@ namespace IronPython.Runtime {
             }
 
             return false;
+        }
+        
+        internal bool TryGetValueNoMissing(object key, out object value) {
+            return _storage.TryGetValue(key, out value);
         }
 
         public ICollection<object> Values {
@@ -367,10 +382,11 @@ namespace IronPython.Runtime {
             return new DictionaryValueEnumerator(_storage);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public void update() {
         }
 
-        public void update(CodeContext/*!*/ context, [ParamDictionary]IAttributesCollection b) {
+        public void update(CodeContext/*!*/ context, [ParamDictionary]IDictionary<object, object> b) {
             DictionaryOps.update(context, this, b);
         }
 
@@ -378,7 +394,7 @@ namespace IronPython.Runtime {
             DictionaryOps.update(context, this, b);
         }
 
-        public void update(CodeContext/*!*/ context, object b, [ParamDictionary]IAttributesCollection f) {
+        public void update(CodeContext/*!*/ context, object b, [ParamDictionary]IDictionary<object, object> f) {
             DictionaryOps.update(context, this, b);
             DictionaryOps.update(context, this, f);
         }
@@ -564,6 +580,10 @@ namespace IronPython.Runtime {
             if (oth == null) return false;
             if (oth.Count != __len__()) return false;
 
+            PythonDictionary pd = other as PythonDictionary;
+            if (pd != null) {
+                return ValueEqualsPythonDict(pd);
+            }
             // we cannot call Compare here and compare against zero because Python defines
             // value equality as working even if the keys/values are unordered.
             List myKeys = keys();
@@ -571,6 +591,23 @@ namespace IronPython.Runtime {
             foreach (object o in myKeys) {
                 object res;
                 if (!oth.TryGetValue(o, out res)) return false;
+
+                CompareUtil.Push(res);
+                try {
+                    if (!PythonOps.EqualRetBool(res, this[o])) return false;
+                } finally {
+                    CompareUtil.Pop(res);
+                }
+            }
+            return true;
+        }
+
+        private bool ValueEqualsPythonDict(PythonDictionary pd) {
+            List myKeys = keys();
+
+            foreach (object o in myKeys) {
+                object res;
+                if (!pd.TryGetValueNoMissing(o, out res)) return false;
 
                 CompareUtil.Push(res);
                 try {

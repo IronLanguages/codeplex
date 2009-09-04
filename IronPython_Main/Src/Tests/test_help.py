@@ -51,7 +51,8 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
     if not is_silverlight:
         # requires std lib
         Assert('Help on Array[str] object' in x)
-        Assert('Clear(...)' in x)
+        if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24508
+            Assert('Clear(...)' in x)
         
 def test_module():
     import time
