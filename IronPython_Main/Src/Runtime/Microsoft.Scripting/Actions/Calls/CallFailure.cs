@@ -12,11 +12,9 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Dynamic;
 
 namespace Microsoft.Scripting.Actions.Calls {
     /// <summary>

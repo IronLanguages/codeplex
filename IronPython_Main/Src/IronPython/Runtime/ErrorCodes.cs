@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 namespace IronPython.Hosting {
     public static class ErrorCodes {

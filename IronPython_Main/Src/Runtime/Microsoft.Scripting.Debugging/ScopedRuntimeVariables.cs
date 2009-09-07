@@ -12,14 +12,10 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 namespace Microsoft.Scripting.Debugging {
     /// <summary>

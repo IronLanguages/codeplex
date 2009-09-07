@@ -13,17 +13,21 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

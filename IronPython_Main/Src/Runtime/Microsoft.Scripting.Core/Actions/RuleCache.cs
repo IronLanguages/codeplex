@@ -12,14 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
     /// <summary>
     /// This API supports the .NET Framework infrastructure and is not intended to be used directly from your code.
     /// Represents a cache of runtime binding rules.

@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 namespace Microsoft.Scripting.Debugging {
     internal enum DebugMode {

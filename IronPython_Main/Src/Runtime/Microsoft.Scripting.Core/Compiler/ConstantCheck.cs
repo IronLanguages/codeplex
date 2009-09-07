@@ -12,13 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
+
     internal enum AnalyzeTypeIsResult {
         KnownFalse,
         KnownTrue,

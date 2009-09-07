@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Threading;
 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Utils")]

@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.ComponentModel;
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 

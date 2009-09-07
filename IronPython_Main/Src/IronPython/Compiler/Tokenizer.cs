@@ -14,7 +14,7 @@
  * ***************************************************************************/
 //#define DUMP_TOKENS
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -983,8 +983,8 @@ namespace IronPython.Compiler {
 
             _buffer.MarkSingleLineTokenEnd();
 
-            SymbolId name = SymbolTable.StringToId(_buffer.GetTokenString());
-            if (name == Symbols.None) return Tokens.NoneToken;
+            string name = _buffer.GetTokenString();
+            if (name == "None") return Tokens.NoneToken;
 
             Token result;
             if (Tokens.Keywords.TryGetValue(name, out result)) {

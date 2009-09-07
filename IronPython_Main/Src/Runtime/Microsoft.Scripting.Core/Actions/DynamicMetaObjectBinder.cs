@@ -12,17 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using Microsoft.Linq.Expressions.Compiler;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
+#if CLR2
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Ast.Compiler;
+#else
+using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
+#endif
 
 #if SILVERLIGHT
 using System.Core;
@@ -30,7 +27,12 @@ using System.Core;
 using System.Runtime.Remoting;
 #endif
 
-namespace Microsoft.Scripting {
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Dynamic.Utils;
+using System.Runtime.CompilerServices;
+
+namespace System.Dynamic {
     /// <summary>
     /// The dynamic call site binder that participates in the <see cref="DynamicMetaObject"/> binding protocol.
     /// </summary>

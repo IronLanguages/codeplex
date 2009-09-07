@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -433,10 +433,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
 
         public virtual IList<string> GetGlobals(string name) {
             List<string> res = new List<string>();
-            foreach (SymbolId scopeName in _scope.Scope.Keys) {
-                string strName = SymbolTable.IdToString(scopeName);
-                if (strName.StartsWith(name)) {
-                    res.Add(strName);
+            foreach (string scopeName in _scope.GetVariableNames()) {
+                if (scopeName.StartsWith(name)) {
+                    res.Add(scopeName);
                 }
             }
 

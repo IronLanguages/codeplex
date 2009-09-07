@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 namespace IronPythonTest {
     // The sole purpose of this class is to provide many different methods of the same name that

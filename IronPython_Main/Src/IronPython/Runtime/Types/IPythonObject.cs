@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {

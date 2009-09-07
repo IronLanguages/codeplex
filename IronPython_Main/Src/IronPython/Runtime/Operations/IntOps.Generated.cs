@@ -13,10 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;

@@ -12,16 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Collections.Generic;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
 
     // Conceptually these are instance methods on CallSite<T> but
     // we don't want users to see them

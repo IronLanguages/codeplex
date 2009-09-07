@@ -12,13 +12,15 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Linq.Expressions.Compiler {
+#if CLR2
+namespace Microsoft.Scripting.Ast.Compiler {
+#else
+namespace System.Linq.Expressions.Compiler {
+#endif
 
     // The part of the LambdaCompiler dealing with low level control flow
     // break, contiue, return, exceptions, etc

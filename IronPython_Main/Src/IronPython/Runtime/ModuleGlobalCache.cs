@@ -13,11 +13,16 @@
  *
  * ***************************************************************************/
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Linq.Expressions;
-using System; using Microsoft;
+using System;
 
 namespace IronPython.Runtime {
     /// <summary>

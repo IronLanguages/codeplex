@@ -1443,9 +1443,8 @@ def test_a_override_patching():
     TestHelpers.HashObject(x())
 
     # derive from a type which overrides GetHashCode
-    from Microsoft.Scripting import InvokeBinder
-    from Microsoft.Scripting import CallInfo
-    from System.Linq.Expressions import Expression
+    from System.Dynamic import InvokeBinder
+    from System.Dynamic import CallInfo
     
     class y(InvokeBinder):
         def GetHashCode(self): return super(InvokeBinder, self).GetHashCode()

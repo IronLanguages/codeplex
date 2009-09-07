@@ -12,18 +12,20 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.Generic;
-using System.Diagnostics;
-using Microsoft.Linq.Expressions;
-
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Scripting.Utils {
+using System.Collections.Generic;
+using System.Diagnostics;
+
+namespace System.Dynamic.Utils {
 
     // Will be replaced with CLRv4 managed contracts
     internal static class ContractUtils {

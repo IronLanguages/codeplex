@@ -14,13 +14,15 @@
  * ***************************************************************************/
 
 #if !SILVERLIGHT // ComObject
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System;
+using System.Dynamic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Security;
 using System.Security.Permissions;
 using Microsoft.Scripting.Utils;

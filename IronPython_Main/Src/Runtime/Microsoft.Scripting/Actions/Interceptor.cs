@@ -12,14 +12,15 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
 using System.Collections.ObjectModel;
-using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

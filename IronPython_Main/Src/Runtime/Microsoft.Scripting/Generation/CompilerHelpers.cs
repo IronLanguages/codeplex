@@ -13,21 +13,23 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Interpreter;
-using Microsoft.Linq.Expressions.Compiler;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using System.Collections;
 using System.Diagnostics;
@@ -77,7 +79,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static bool IsAttributeDefined(this ParameterInfo parameter, Type type, bool inherited) {
-#if CLR4
+#if !CLR2
             // TODO: workaround for CLR4 bug #772820:
             var method = parameter.Member as MethodInfo;
             if (method != null && method.IsDynamicMethod()) {

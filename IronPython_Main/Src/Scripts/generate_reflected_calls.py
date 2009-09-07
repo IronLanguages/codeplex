@@ -17,7 +17,7 @@ import sys
 from generate import generate
 
 MAX_ARGS = 3
-MAX_HELPERS = 7
+MAX_HELPERS = 10
 TYPE_CODE_TYPES = ['Int16', 'Int32', 'Int64', 'Boolean', 'Char', 'Byte', 'Decimal', 'DateTime', 'Double', 'Single', 'UInt16', 'UInt32', 'UInt64', 'String', 'SByte']
 
 def get_args(i):

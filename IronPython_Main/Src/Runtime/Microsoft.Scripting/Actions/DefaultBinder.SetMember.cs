@@ -13,14 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
@@ -30,7 +33,7 @@ using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
     
     public partial class DefaultBinder : ActionBinder {        
         /// <summary>

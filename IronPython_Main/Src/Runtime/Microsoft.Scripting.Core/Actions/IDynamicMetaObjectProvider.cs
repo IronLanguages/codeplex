@@ -12,12 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
-using Microsoft.Linq.Expressions;
-
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     /// <summary>
     /// Represents a dynamic object, that can have its operations bound at runtime.
     /// </summary>

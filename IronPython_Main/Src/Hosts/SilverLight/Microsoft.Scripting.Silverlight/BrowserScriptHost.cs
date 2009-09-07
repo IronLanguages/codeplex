@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.IO;
 using System.Reflection;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Windows;
 using System.Windows.Resources;
 using Microsoft.Scripting.Hosting;

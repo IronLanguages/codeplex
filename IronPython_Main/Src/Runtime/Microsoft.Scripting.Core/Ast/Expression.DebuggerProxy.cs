@@ -12,16 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
 #if !SILVERLIGHT
     public partial class Expression {
         #region Generated Expression Debugger Proxies

@@ -12,17 +12,21 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Ast.Compiler;
+#else
+using System.Linq.Expressions;
+using System.Linq.Expressions.Compiler;
+#endif
 
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using Microsoft.Linq.Expressions.Compiler;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
     public partial class RuntimeOps {
         /// <summary>
         /// Quotes the provided expression tree.

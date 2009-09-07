@@ -12,11 +12,9 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {

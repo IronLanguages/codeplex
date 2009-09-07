@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Security.Permissions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;

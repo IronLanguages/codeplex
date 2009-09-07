@@ -13,12 +13,17 @@
  *
  * ***************************************************************************/
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using System.Diagnostics;
 using System.Reflection;
-using System; using Microsoft;
-using Microsoft.Scripting;
+using System;
+using System.Dynamic;
 using Microsoft.Scripting.Actions.Calls;
 
 namespace IronPython.Runtime.Binding {

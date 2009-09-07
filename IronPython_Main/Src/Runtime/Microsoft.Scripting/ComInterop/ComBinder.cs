@@ -14,17 +14,21 @@
  * ***************************************************************************/
 
 #if !SILVERLIGHT
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Linq.Expressions;
 using System.Security;
 using System.Security.Permissions;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting;
+using System.Dynamic;
 
-[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "System.Dynamic")]
 
 namespace Microsoft.Scripting.ComInterop {
 

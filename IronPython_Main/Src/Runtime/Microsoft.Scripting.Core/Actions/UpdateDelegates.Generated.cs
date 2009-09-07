@@ -12,15 +12,11 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Threading;
 
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     internal static partial class UpdateDelegates {
 
         //

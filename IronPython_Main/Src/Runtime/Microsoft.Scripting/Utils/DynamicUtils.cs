@@ -12,11 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 
 namespace Microsoft.Scripting.Utils {
     public static class DynamicUtils {

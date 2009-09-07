@@ -13,9 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
-using Microsoft.Linq;
 using System.Text;
 
 namespace Microsoft.Scripting.Debugging {

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Represents the type of a null value.

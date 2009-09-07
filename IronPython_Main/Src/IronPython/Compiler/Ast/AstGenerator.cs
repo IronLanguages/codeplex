@@ -13,14 +13,18 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting;
@@ -34,19 +38,17 @@ using IronPython.Runtime;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
-using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
-
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     internal class AstGenerator {
         private readonly CompilerContext/*!*/ _context;                 // compiler context (source unit, etc...) that we are compiling against
         private readonly bool _print;                                   // true if we should print expression statements
         private readonly string _name;                                  // the name of the method, module, etc...
         private int? _curLine;                                          // tracks what the current line we've emitted at code-gen time
-        private MSAst.ParameterExpression _lineNoVar, _lineNoUpdated;   // the variable used for storing current line # and if we need to store to it
-        private List<MSAst.ParameterExpression/*!*/> _temps;            // temporary variables allocated against the lambda so we can re-use them
+        private ParameterExpression _lineNoVar, _lineNoUpdated;   // the variable used for storing current line # and if we need to store to it
+        private List<ParameterExpression/*!*/> _temps;            // temporary variables allocated against the lambda so we can re-use them
         private readonly PythonContext/*!*/ _pythonContext;             // the state stored for the binder
         private bool _inFinally;                                        // true if we are currently in a finally (coordinated with our loop state)
         private LabelTarget _breakLabel;                                // the current label for break, if we're in a loop
@@ -418,8 +420,8 @@ namespace IronPython.Compiler.Ast {
                     MutableTuple.Create(ArrayUtils.ConvertAll<ClosureInfo, MSAst.Expression>(_liftedVars.ToArray(), x => x.GetClosureCellExpression())) :
                     MutableTuple.Create(),
                 _liftedVars != null ?
-                Ast.Constant(ArrayUtils.ConvertAll<ClosureInfo, SymbolId>(_liftedVars.ToArray(), x => (x.IsClosedOver ? x.Name : SymbolId.Empty))) :
-                    Ast.Constant(new SymbolId[0])
+                Ast.Constant(ArrayUtils.ConvertAll<ClosureInfo, string>(_liftedVars.ToArray(), x => (x.IsClosedOver ? x.Name : null))) :
+                    Ast.Constant(ArrayUtils.EmptyStrings)
             );
         }
 
@@ -1073,7 +1075,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            protected override Microsoft.Linq.Expressions.Expression VisitChildren(ExpressionVisitor visitor) {
+            protected override MSAst.Expression VisitChildren(ExpressionVisitor visitor) {
                 if (_funcCode != null) {
                     MSAst.Expression funcCode = visitor.Visit(_funcCode);
                     if (funcCode != _funcCode) {
@@ -1085,7 +1087,7 @@ namespace IronPython.Compiler.Ast {
                 return this;
             }
 
-            public override Microsoft.Linq.Expressions.Expression Reduce() {
+            public override MSAst.Expression Reduce() {
                 Debug.Assert(_funcCode != null);
                 return _funcCode;
             }

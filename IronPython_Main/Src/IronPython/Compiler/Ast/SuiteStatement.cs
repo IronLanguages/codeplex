@@ -13,15 +13,19 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 using System.Collections.Generic;
-
+using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
-
-using MSAst = Microsoft.Linq.Expressions;
+using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
     
     public sealed class SuiteStatement : Statement {
         private readonly Statement[] _statements;

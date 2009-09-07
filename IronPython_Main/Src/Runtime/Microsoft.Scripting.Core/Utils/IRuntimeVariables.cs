@@ -12,10 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
     /// <summary>
     /// An interface to represent values of runtime variables.
     /// </summary>

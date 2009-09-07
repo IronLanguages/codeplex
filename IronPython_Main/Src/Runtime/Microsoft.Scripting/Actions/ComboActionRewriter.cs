@@ -12,13 +12,16 @@
  *
  *
  * ***************************************************************************/
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
+using System.Dynamic;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 

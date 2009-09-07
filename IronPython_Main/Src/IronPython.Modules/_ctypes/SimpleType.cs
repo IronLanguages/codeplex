@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 
 using Microsoft.Scripting;

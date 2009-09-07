@@ -13,14 +13,19 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 
 namespace Microsoft.Scripting.Actions.Calls {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
 
     /// <summary>
     /// Builds a parameter for a reference argument when a StrongBox has not been provided.  The

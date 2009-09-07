@@ -13,22 +13,27 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
+using System;
+using System.Dynamic;
+
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
-
 namespace IronPython.Runtime.Binding {
+    using Ast = Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class MetaBuiltinMethodDescriptor : MetaPythonObject, IPythonInvokable, IPythonOperable {
         public MetaBuiltinMethodDescriptor(Expression/*!*/ expression, BindingRestrictions/*!*/ restrictions, BuiltinMethodDescriptor/*!*/ value)

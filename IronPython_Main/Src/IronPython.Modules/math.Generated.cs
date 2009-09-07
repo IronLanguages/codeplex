@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 namespace IronPython.Modules {
     public static partial class PythonMath {

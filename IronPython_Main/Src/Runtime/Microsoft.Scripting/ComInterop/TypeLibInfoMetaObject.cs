@@ -12,14 +12,16 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 #if !SILVERLIGHT
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 

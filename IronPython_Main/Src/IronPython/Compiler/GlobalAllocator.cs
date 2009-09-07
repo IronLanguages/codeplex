@@ -13,22 +13,26 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 
-using Microsoft.Scripting.Ast;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 
-using MSAst = Microsoft.Linq.Expressions;
-
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// Provides specific behaviors for different compilation modes.  For example pre-compiled
@@ -54,10 +58,6 @@ namespace IronPython.Compiler.Ast {
 
         public virtual MSAst.Expression/*!*/ GetConstant(object value) {
             return Ast.Constant(value);
-        }
-
-        public virtual MSAst.Expression/*!*/ GetSymbol(SymbolId name) {
-            return Utils.Constant(name);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace IronPython.Compiler.Ast {
 
             Debug.Assert(variable.Kind != VariableKind.Parameter);
             
-            string name = SymbolTable.IdToString(variable.Name);
+            string name = variable.Name;
             switch (variable.Kind) {
                 case VariableKind.Global:
                 case VariableKind.GlobalLocal:

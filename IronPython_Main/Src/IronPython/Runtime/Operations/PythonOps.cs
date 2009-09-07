@@ -13,22 +13,26 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.IO;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting.Providers;
@@ -3118,9 +3122,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         [NoSideEffects]
-        public static object CheckUninitialized(object value, SymbolId name) {
+        public static object CheckUninitialized(object value, string name) {
             if (value == Uninitialized.Instance) {
-                throw new UnboundLocalException(String.Format("Local variable '{0}' referenced before assignment.", SymbolTable.IdToString(name)));
+                throw new UnboundLocalException(String.Format("Local variable '{0}' referenced before assignment.", name));
             }
             return value;
         }
@@ -3585,7 +3589,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Called from generated code, helper to remove a name
         /// </summary>
-        public static void RemoveName(CodeContext context, SymbolId name) {
+        public static void RemoveName(CodeContext context, string name) {
             if (!context.TryRemoveVariable(name)) {
                 throw PythonOps.NameError(name);
             }
@@ -3594,7 +3598,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Called from generated code, helper to do name lookup
         /// </summary>
-        public static object LookupName(CodeContext context, SymbolId name) {
+        public static object LookupName(CodeContext context, string name) {
             object value;
             if (context.TryLookupName(name, out value) && value != Uninitialized.Instance) {
                 return value;
@@ -3610,7 +3614,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Called from generated code, helper to do name assignment
         /// </summary>
-        public static object SetName(CodeContext context, SymbolId name, object value) {
+        public static object SetName(CodeContext context, string name, object value) {
             context.SetVariable(name, value);
             return value;
         }
@@ -3629,7 +3633,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Global Access
 
-        public static CodeContext/*!*/ CreateLocalContext(CodeContext/*!*/ outerContext, MutableTuple boxes, SymbolId[] args) {
+        public static CodeContext/*!*/ CreateLocalContext(CodeContext/*!*/ outerContext, MutableTuple boxes, string[] args) {
             return new CodeContext(
                 new PythonDictionary(
                     new RuntimeVariablesDictionaryStorage(boxes, args)
@@ -3670,15 +3674,15 @@ namespace IronPython.Runtime.Operations {
             return generator.Context;
         }
 
-        public static object GetGlobal(CodeContext/*!*/ context, SymbolId name) {
+        public static object GetGlobal(CodeContext/*!*/ context, string name) {
             return GetVariable(context, name, true);
         }
 
-        public static object GetLocal(CodeContext/*!*/ context, SymbolId name) {
+        public static object GetLocal(CodeContext/*!*/ context, string name) {
             return GetVariable(context, name, false);
         }
 
-        private static object GetVariable(CodeContext/*!*/ context, SymbolId name, bool isGlobal) {
+        private static object GetVariable(CodeContext/*!*/ context, string name, bool isGlobal) {
             object res;
             if (isGlobal) {
                 if (context.TryGetGlobalVariable(name, out res)) {
@@ -3693,11 +3697,11 @@ namespace IronPython.Runtime.Operations {
             object builtins;
             if (context.TryGetGlobalVariable(Symbols.Builtins, out builtins)) {
                 PythonModule builtinsScope = builtins as PythonModule;
-                if (builtinsScope != null && builtinsScope.__dict__.TryGetValue(SymbolTable.IdToString(name), out res)) {
+                if (builtinsScope != null && builtinsScope.__dict__.TryGetValue(name, out res)) {
                     return res;
                 }
 
-                IAttributesCollection dict = builtins as IAttributesCollection;
+                PythonDictionary dict = builtins as PythonDictionary;
                 if (dict != null && dict.TryGetValue(name, out res)) {
                     return res;
                 }
@@ -3727,15 +3731,15 @@ namespace IronPython.Runtime.Operations {
             return Uninitialized.Instance;
         }
 
-        public static void SetGlobal(CodeContext/*!*/ context, SymbolId name, object value) {
+        public static void SetGlobal(CodeContext/*!*/ context, string name, object value) {
             context.SetGlobalVariable(name, value);
         }
 
-        public static void SetLocal(CodeContext/*!*/ context, SymbolId name, object value) {
+        public static void SetLocal(CodeContext/*!*/ context, string name, object value) {
             context.SetVariable(name, value);
         }
 
-        public static void DeleteGlobal(CodeContext/*!*/ context, SymbolId name) {
+        public static void DeleteGlobal(CodeContext/*!*/ context, string name) {
             if (context.TryRemoveGlobalVariable(name)) {
                 return;
             }
@@ -3743,7 +3747,7 @@ namespace IronPython.Runtime.Operations {
             throw NameError(name);
         }
 
-        public static void DeleteLocal(CodeContext/*!*/ context, SymbolId name) {
+        public static void DeleteLocal(CodeContext/*!*/ context, string name) {
             if (context.TryRemoveVariable(name)) {
                 return;
             }
@@ -3962,12 +3966,12 @@ namespace IronPython.Runtime.Operations {
                 return ValueError("too many values to unpack");
         }
 
-        public static Exception NameError(SymbolId name) {
-            return new UnboundNameException(string.Format("name '{0}' is not defined", SymbolTable.IdToString(name)));
+        public static Exception NameError(string name) {
+            return new UnboundNameException(string.Format("name '{0}' is not defined", name));
         }
 
-        public static Exception GlobalNameError(SymbolId name) {
-            return new UnboundNameException(string.Format("global name '{0}' is not defined", SymbolTable.IdToString(name)));
+        public static Exception GlobalNameError(string name) {
+            return new UnboundNameException(string.Format("global name '{0}' is not defined", name));
         }
 
         // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
@@ -4178,7 +4182,76 @@ namespace IronPython.Runtime.Operations {
             return module.__dict__.Remove(name);
         }
 
-        
+        internal static void ScopeSetMember(CodeContext context, Scope scope, string name, object value) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                scopeStorage.SetValue(name, false, value);
+                return;
+            }
+
+            PythonOps.SetAttr(context, scope, SymbolTable.StringToId(name), value);
+        }
+
+        internal static object ScopeGetMember(CodeContext context, Scope scope, string name) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                return scopeStorage.GetValue(name, false);
+            }
+
+            return PythonOps.GetBoundAttr(context, scope, SymbolTable.StringToId(name));
+        }
+
+        internal static bool ScopeTryGetMember(CodeContext context, Scope scope, string name, out object value) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                return scopeStorage.TryGetValue(name, false, out value);
+            }
+
+            return PythonOps.TryGetBoundAttr(context, scope, SymbolTable.StringToId(name), out value);
+        }
+
+        internal static bool ScopeContainsMember(CodeContext context, Scope scope, string name) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                return scopeStorage.HasValue(name, false);
+            }
+
+            return PythonOps.HasAttr(context, scope, SymbolTable.StringToId(name));
+        }
+
+        internal static bool ScopeDeleteMember(CodeContext context, Scope scope, string name) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                return scopeStorage.DeleteValue(name, false);
+            }
+
+            bool res = PythonOps.HasAttr(context, scope, SymbolTable.StringToId(name));
+            PythonOps.DeleteAttr(context, scope, SymbolTable.StringToId(name));
+            return res;
+        }
+
+        internal static IList<object> ScopeGetMemberNames(CodeContext context, Scope scope) {
+            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            if (scopeStorage != null) {
+                List<object> res = new List<object>();
+
+                foreach (string name in scopeStorage.GetMemberNames()) {
+                    res.Add(name);
+                }
+
+                var objKeys = ((PythonScopeExtension)context.LanguageContext.EnsureScopeExtension(scope)).ObjectKeys;
+                if (objKeys != null) {
+                    foreach (object o in objKeys.Keys) {
+                        res.Add(o);
+                    }
+                }
+
+                return res;
+            }
+
+            return PythonOps.GetAttrNames(context, scope);
+        }
+
     }
 
     public struct FunctionStack {

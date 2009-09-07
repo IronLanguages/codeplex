@@ -13,11 +13,11 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Security.Permissions;
 using System.Text;
 using Microsoft.Scripting.Utils;

@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 

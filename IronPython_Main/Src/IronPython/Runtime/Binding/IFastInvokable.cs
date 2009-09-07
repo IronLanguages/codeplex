@@ -13,17 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using Microsoft.Scripting.Actions;
-
-using Ast = Microsoft.Linq.Expressions.Expression;
-using Microsoft.Scripting.Runtime;
+using System;
+using System.Dynamic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Binding {
     interface IFastInvokable {

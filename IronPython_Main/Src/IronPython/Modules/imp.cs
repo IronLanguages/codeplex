@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;

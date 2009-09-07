@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // TypeDescriptor, COM
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Runtime.InteropServices;

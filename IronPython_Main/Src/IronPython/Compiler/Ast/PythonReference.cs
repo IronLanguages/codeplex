@@ -12,22 +12,25 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
 
 using Microsoft.Scripting;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
     class PythonReference {
-        private SymbolId _name;
+        private string _name;
         private PythonVariable _variable;
 
-        public PythonReference(SymbolId name) {
+        public PythonReference(string name) {
             _name = name;
         }
 
-        public SymbolId Name {
+        public string Name {
             get { return _name; }
         }
 

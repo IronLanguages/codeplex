@@ -12,12 +12,10 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+using System.Dynamic.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     /// <summary>
     /// Represents the convert dynamic operation at the call site, providing the binding semantic and the details about the operation.
     /// </summary>

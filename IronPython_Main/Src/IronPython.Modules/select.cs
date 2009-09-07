@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -28,8 +28,6 @@ using IronPython.Runtime.Types;
 using System.Net.Sockets;
 using Microsoft.Scripting.Runtime;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {

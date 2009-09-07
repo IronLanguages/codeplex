@@ -12,19 +12,21 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Runtime.CompilerServices {
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Dynamic.Utils;
+
+namespace System.Runtime.CompilerServices {
     /// <summary>
     /// The builder for read only collection.
     /// </summary>

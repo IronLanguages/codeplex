@@ -13,13 +13,16 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using RuntimeHelpers = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers;
 

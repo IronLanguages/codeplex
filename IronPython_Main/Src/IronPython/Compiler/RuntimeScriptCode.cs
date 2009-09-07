@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using System.Threading;
 
@@ -25,7 +25,12 @@ using IronPython.Compiler.Ast;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
-using MSAst = Microsoft.Linq.Expressions;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 
 namespace IronPython.Compiler {
     /// <summary>
@@ -69,6 +74,7 @@ namespace IronPython.Compiler {
             if (scope == _optimizedContext.GlobalScope && !_optimizedContext.LanguageContext.EnableTracing) {
                 EnsureCompiled();
 
+                Exception e = PythonOps.SaveCurrentException();
                 PushFrame(_optimizedContext, _optimizedTarget);
                 try {
                     if (_context.SourceUnit.Kind == SourceCodeKind.Expression) {
@@ -76,6 +82,7 @@ namespace IronPython.Compiler {
                     }
                     return _optimizedTarget(EnsureFunctionCode(_optimizedTarget));
                 } finally {
+                    PythonOps.RestoreCurrentException(e);
                     PopFrame();
                 }
             }

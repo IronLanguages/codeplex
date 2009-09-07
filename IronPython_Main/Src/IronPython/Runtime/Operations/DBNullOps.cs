@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 namespace IronPython.Runtime.Operations {
     public static class DBNullOps {

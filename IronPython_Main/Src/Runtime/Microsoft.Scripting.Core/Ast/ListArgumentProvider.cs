@@ -13,13 +13,16 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
     /// <summary>
     /// Provides a wrapper around an IArgumentProvider which exposes the argument providers
     /// members out as an IList of Expression.  This is used to avoid allocating an array

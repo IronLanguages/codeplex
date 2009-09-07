@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 namespace Microsoft.Scripting {
     /// <summary>
     /// Stores information needed to emit debugging symbol information for a

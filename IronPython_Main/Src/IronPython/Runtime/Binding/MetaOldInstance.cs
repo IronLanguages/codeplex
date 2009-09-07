@@ -13,13 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
+using System.Dynamic;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
@@ -28,7 +32,7 @@ using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
 
     /// <summary>
     /// Provides a MetaObject for instances of Python's old-style classes.

@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
+using System;
+using System.Dynamic;
 using Microsoft.Scripting.Actions.Calls;
 
 namespace Microsoft.Scripting.Actions {

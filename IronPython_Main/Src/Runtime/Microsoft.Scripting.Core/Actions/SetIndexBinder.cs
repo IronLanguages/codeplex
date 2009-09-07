@@ -12,12 +12,10 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+using System.Dynamic.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
 
     /// <summary>
     /// Represents the dynamic set index operation at the call site, providing the binding semantic and the details about the operation.

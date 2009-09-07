@@ -13,16 +13,20 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
+using System;
+using System.Dynamic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Linq.Expressions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Binding {
 

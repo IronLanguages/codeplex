@@ -12,13 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.Generic;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using System.Reflection;
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
 #if SILVERLIGHT
 using System.Core;
@@ -26,7 +25,11 @@ using System.Core;
 using System.Runtime.Remoting;
 #endif
 
-namespace Microsoft.Scripting {
+using System.Collections.Generic;
+using System.Dynamic.Utils;
+using System.Reflection;
+
+namespace System.Dynamic {
     /// <summary>
     /// Represents the dynamic binding and a binding logic of an object participating in the dynamic binding.
     /// </summary>

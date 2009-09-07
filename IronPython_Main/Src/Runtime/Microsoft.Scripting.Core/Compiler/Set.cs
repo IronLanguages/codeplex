@@ -12,15 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections;
 using System.Collections.Generic;
 
-// Note: can't move to Utils because name conflicts with Microsoft.Linq.Set
-namespace Microsoft.Linq.Expressions {
-    
+// Note: can't move to Utils because name conflicts with System.Linq.Set
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
+
     /// <summary>
     /// A simple hashset, built on Dictionary{K, V}
     /// </summary>

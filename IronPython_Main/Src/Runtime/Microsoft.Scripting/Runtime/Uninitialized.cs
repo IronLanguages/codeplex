@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 namespace Microsoft.Scripting.Runtime {
     public sealed class Uninitialized {

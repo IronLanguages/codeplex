@@ -13,11 +13,9 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -53,7 +51,7 @@ using System.Security;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 [assembly: SecurityTransparent]
-#if CLR4
+#if !CLR2
 [assembly: SecurityRules(SecurityRuleSet.Level1)]
 #endif
 

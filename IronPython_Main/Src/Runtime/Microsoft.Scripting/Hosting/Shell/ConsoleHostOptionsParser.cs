@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Scripting.Utils;

@@ -13,19 +13,21 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using dynamic = System.Object;
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Security.Permissions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
-
-#if !CLR4
-using dynamic = System.Object;
-#endif
+using System.Dynamic;
 
 namespace Microsoft.Scripting.Hosting {
 

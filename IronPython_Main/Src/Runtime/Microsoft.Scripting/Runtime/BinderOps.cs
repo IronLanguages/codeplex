@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Text;
 
 using Microsoft.Scripting.Actions;

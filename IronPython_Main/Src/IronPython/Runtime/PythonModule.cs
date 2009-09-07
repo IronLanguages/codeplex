@@ -13,13 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
@@ -45,8 +49,8 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Creates a new module backed by a Scope.  Used for creating modules for foreign Scope's.
         /// </summary>
-        internal PythonModule(Scope scope) {
-            _dict = new PythonDictionary(new ScopeDictionaryStorage(scope));
+        internal PythonModule(PythonContext context, Scope scope) {
+            _dict = new PythonDictionary(new ScopeDictionaryStorage(context, scope));
             _scope = scope;
         }
 
@@ -157,8 +161,12 @@ namespace IronPython.Runtime {
 
         public string/*!*/ __str__() {
             object fileObj, nameObj;
-            _dict.TryGetValue("__file__", out fileObj);
-            _dict.TryGetValue("__name__", out nameObj);
+            if (!_dict.TryGetValue("__file__", out fileObj)) {
+                fileObj = null;
+            }
+            if (!_dict._storage.TryGetName(out nameObj)) {
+                nameObj = null;
+            }
             
             string file = fileObj as string;
             string name = nameObj as string ?? "?";
@@ -305,7 +313,7 @@ namespace IronPython.Runtime {
                             Utils.Convert(Expression, typeof(PythonModule)),
                             Expression.Constant(binder.Name)
                         ),
-                        Expression.Default(typeof(object)),
+                        Expression.Default(binder.ReturnType),
                         binder.FallbackDeleteMember(this).Expression
                     ),
                     BindingRestrictions.GetTypeRestriction(Expression, Value.GetType())
@@ -332,7 +340,7 @@ namespace IronPython.Runtime {
 
         internal string GetName() {
             object res;
-            if (_dict.TryGetValue("__name__", out res)) {
+            if (_dict._storage.TryGetName(out res)) {
                 return res as string;
             }
             return null;

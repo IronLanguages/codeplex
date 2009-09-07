@@ -13,23 +13,26 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
-
 namespace IronPython.Runtime.Types {
+    using Ast = Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     [PythonType("method_descriptor"), DontMapGetMemberNamesToDir]
     public sealed class BuiltinMethodDescriptor : PythonTypeSlot, IDynamicMetaObjectProvider, ICodeFormattable {

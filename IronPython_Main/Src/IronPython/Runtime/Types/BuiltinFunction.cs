@@ -13,19 +13,23 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Text;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Generation;
@@ -35,10 +39,9 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
-
 namespace IronPython.Runtime.Types {
+    using Ast = Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     /// <summary>
     /// BuiltinFunction represents any standard CLR function exposed to Python.

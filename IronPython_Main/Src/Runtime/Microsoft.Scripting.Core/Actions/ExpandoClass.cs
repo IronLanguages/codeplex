@@ -13,14 +13,13 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Text;
 
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     /// <summary>
     /// Represents a dynamically assigned class.  Expando objects which share the same 
     /// members will share the same class.  Classes are dynamically assigned as the

@@ -12,20 +12,23 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Threading;
 
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
     /// <summary>
     /// Represents a block that contains a sequence of expressions where variables can be defined.
     /// </summary>

@@ -12,28 +12,29 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
 
     public class ImportStatement : Statement {
         private readonly ModuleName[] _names;
-        private readonly SymbolId[] _asNames;
+        private readonly string[] _asNames;
         private readonly bool _forceAbsolute;
 
         private PythonVariable[] _variables;
 
-        public ImportStatement(ModuleName[] names, SymbolId[] asNames, bool forceAbsolute) {
+        public ImportStatement(ModuleName[] names, string[] asNames, bool forceAbsolute) {
             _names = names;
             _asNames = asNames;
             _forceAbsolute = forceAbsolute;
@@ -48,7 +49,7 @@ namespace IronPython.Compiler.Ast {
             get { return _names; }
         }
 
-        public IList<SymbolId> AsNames {
+        public IList<string> AsNames {
             get { return _asNames; }
         }
 
@@ -63,7 +64,7 @@ namespace IronPython.Compiler.Ast {
                             ag.Globals.GetVariable(ag, _variables[i]), 
                             Ast.Call(
                                 AstGenerator.GetHelperMethod(                           // helper
-                                    _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
+                                    _asNames[i] == null ? "ImportTop" : "ImportBottom"
                                 ),
                                 ag.LocalContext,                                        // 1st arg - code context
                                 AstUtils.Constant(_names[i].MakeString()),                   // 2nd arg - module name

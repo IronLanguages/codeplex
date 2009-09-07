@@ -12,12 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 #if !SILVERLIGHT
 
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
 namespace Microsoft.Scripting.ComInterop {
     /// <summary>

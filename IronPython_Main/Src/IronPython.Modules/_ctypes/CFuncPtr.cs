@@ -12,19 +12,20 @@
  *
  *
  * ***************************************************************************/
+#if !CLR2
+using System.Linq.Expressions;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;

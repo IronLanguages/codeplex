@@ -12,14 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
     sealed class TrueReadOnlyCollection<T> : ReadOnlyCollection<T> {
         /// <summary>
         /// Creates instnace of TrueReadOnlyCollection, wrapping passed in array.

@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System; using Microsoft;
+using System;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 

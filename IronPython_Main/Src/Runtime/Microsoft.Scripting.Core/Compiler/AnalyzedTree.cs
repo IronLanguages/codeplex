@@ -12,18 +12,18 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.SymbolStore;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
-namespace Microsoft.Linq.Expressions.Compiler {
+#if CLR2
+namespace Microsoft.Scripting.Ast.Compiler {
+#else
+namespace System.Linq.Expressions.Compiler {
+#endif
     internal sealed class AnalyzedTree {
         internal readonly Dictionary<object, CompilerScope> Scopes = new Dictionary<object, CompilerScope>();
         internal readonly Dictionary<LambdaExpression, BoundConstants> Constants = new Dictionary<LambdaExpression, BoundConstants>();

@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 
-using System; using Microsoft;
+using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Interpreter {

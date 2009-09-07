@@ -13,9 +13,14 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
+using System.Dynamic;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Utils {

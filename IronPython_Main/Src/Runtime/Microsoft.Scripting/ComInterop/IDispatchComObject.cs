@@ -14,19 +14,23 @@
  * ***************************************************************************/
 
 #if !SILVERLIGHT // ComObject
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Permissions;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
-using Microsoft.Scripting;
+using System.Dynamic;
 
 namespace Microsoft.Scripting.ComInterop {
 

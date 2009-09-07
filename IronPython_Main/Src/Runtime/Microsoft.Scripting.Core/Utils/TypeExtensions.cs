@@ -12,15 +12,13 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Dynamic.Utils {
 
     // Extensions on System.Type and friends
     internal static class TypeExtensions {

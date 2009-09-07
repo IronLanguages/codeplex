@@ -12,17 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
+using System.Dynamic.Utils;
 
-using Microsoft.Scripting.Utils;
-
-namespace Microsoft.Linq.Expressions.Compiler {
+#if CLR2
+namespace Microsoft.Scripting.Ast.Compiler {
+#else
+namespace System.Linq.Expressions.Compiler {
+#endif
 
     // Suppose we have something like:
     //

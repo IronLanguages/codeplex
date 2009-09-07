@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using IronPython.Runtime.Exceptions;

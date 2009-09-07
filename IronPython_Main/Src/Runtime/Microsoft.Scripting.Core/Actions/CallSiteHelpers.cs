@@ -12,11 +12,9 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Reflection;
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
     /// <summary>
     /// Class that contains helper methods for DLR CallSites.
     /// </summary>
@@ -44,7 +42,7 @@ namespace Microsoft.Runtime.CompilerServices {
             }
 
             //Filter out the helper methods.
-            if (mb.DeclaringType == typeof(Microsoft.Scripting.UpdateDelegates)) {
+            if (mb.DeclaringType == typeof(System.Dynamic.UpdateDelegates)) {
                 return true;
             }
 

@@ -12,10 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+using System;
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
 
     internal static partial class Strings {
         private static string FormatString(string format, params object[] args) {

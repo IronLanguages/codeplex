@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Reflection;
 
 using Microsoft.Scripting.Actions.Calls;

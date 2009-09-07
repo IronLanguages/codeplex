@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;

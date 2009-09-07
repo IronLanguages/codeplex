@@ -13,17 +13,22 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Debugging.CompilerServices;
 using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace Microsoft.Scripting.Debugging {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
 
     /// <summary>
     /// DebuggableLambdaBuilder is used to transform a DLR expression tree into a debuggable lambda expression.

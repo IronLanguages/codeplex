@@ -13,14 +13,20 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting;
+using System.Dynamic;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
@@ -30,7 +36,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class MetaPythonFunction : MetaPythonObject, IPythonInvokable, IPythonOperable, IPythonConvertible, IInferableInvokable, IConvertibleMetaObject, IPythonGetable {

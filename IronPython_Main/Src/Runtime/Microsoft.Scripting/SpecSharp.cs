@@ -15,7 +15,7 @@
 
 #if !SPECSHARP
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 

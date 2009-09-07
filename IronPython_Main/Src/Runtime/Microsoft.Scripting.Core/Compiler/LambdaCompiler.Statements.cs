@@ -12,12 +12,11 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Globalization;
@@ -26,7 +25,11 @@ using System.Globalization;
 using System.Core;
 #endif
 
-namespace Microsoft.Linq.Expressions.Compiler {
+#if CLR2
+namespace Microsoft.Scripting.Ast.Compiler {
+#else
+namespace System.Linq.Expressions.Compiler {
+#endif
     partial class LambdaCompiler {
         private void EmitBlockExpression(Expression expr, CompilationFlags flags) {
             // emit body

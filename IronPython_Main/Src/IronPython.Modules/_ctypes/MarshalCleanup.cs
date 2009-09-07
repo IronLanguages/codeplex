@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 

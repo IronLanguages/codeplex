@@ -14,16 +14,17 @@
  * ***************************************************************************/
 
 #if !SILVERLIGHT
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using Microsoft.Linq.Expressions.Compiler;
+using System.Dynamic;
+using System.Dynamic.Utils;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 

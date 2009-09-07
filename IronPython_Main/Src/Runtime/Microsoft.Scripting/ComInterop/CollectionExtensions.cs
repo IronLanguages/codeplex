@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting.ComInterop {
     internal static class CollectionExtensions { 

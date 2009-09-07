@@ -13,11 +13,9 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -25,11 +23,16 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
 
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
 
     public class WithStatement : Statement {
         private SourceLocation _header;

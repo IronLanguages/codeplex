@@ -13,14 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
-using Microsoft.Scripting;
+using System.Dynamic;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Actions;
@@ -28,12 +31,13 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using Microsoft.Scripting;
 using System.Reflection;
 using System.Diagnostics;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     class PythonConversionBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
         private readonly PythonContext/*!*/ _context;

@@ -13,11 +13,17 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
+using System;
+using System.Diagnostics;
+using System.Dynamic;
+
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
@@ -26,11 +32,11 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
-using AstUtils = Microsoft.Scripting.Ast.Utils;
 using System.Reflection;
 
 namespace IronPython.Runtime.Binding {
+    using Ast = Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
     
     /// <summary>
     /// Common helpers used by the various binding logic.

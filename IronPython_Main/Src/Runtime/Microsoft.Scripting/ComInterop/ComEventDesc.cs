@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class ComEventDesc {

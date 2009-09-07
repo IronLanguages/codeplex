@@ -13,12 +13,12 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Dynamic.Utils {
     /// <summary>
     /// Provides a dictionary-like object used for caches which holds onto a maximum
     /// number of elements specified at construction time.

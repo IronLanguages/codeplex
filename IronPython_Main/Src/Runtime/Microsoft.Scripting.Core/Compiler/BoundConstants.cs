@@ -12,22 +12,23 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Linq.Expressions.Compiler {
+#if CLR2
+namespace Microsoft.Scripting.Ast.Compiler {
+#else
+namespace System.Linq.Expressions.Compiler {
+#endif
     /// <summary>
     /// This type tracks "runtime" constants--live objects that appear in
     /// ConstantExpression nodes and must be bound to the delegate.

@@ -12,7 +12,7 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
+using System;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
@@ -55,6 +55,6 @@ using System.Security;
 #endif
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
-#if CLR4
+#if !CLR2
 [assembly: SecurityRules(SecurityRuleSet.Level1)]
 #endif

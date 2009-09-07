@@ -13,10 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;

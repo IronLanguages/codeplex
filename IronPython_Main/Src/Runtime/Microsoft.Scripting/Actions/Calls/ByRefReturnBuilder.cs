@@ -12,18 +12,21 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
 
     internal sealed class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;

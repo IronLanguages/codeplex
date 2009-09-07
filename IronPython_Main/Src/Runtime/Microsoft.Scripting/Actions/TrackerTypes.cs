@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting.Actions {
     [Flags]

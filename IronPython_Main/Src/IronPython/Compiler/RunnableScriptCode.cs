@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -75,10 +75,10 @@ namespace IronPython.Compiler {
                         SourceUnit.Path,
                         false,
                         true,
-                        new SymbolId[0],
-                        new SymbolId[0],
-                        new SymbolId[0],
-                        new SymbolId[0],
+                        ArrayUtils.EmptyStrings,
+                        ArrayUtils.EmptyStrings,
+                        ArrayUtils.EmptyStrings,
+                        ArrayUtils.EmptyStrings,
                         0,
                         null,
                         null

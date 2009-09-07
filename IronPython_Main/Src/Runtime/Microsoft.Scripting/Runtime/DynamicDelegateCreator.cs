@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
+using System;
+using System.Dynamic;
 using System.Reflection;
 
 using Microsoft.Scripting.Utils;

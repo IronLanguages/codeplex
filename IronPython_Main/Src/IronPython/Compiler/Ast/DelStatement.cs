@@ -13,14 +13,15 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
-
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
 
