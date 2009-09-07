@@ -415,7 +415,7 @@ def tokens_generator(cw):
         cw.write("private static readonly Token kw%sToken = %s;" %
                (keywordToFriendly(kw), creator))
 
-        dict_init.append("Keywords[SymbolTable.StringToId(\"%s\")] = kw%sToken;" %
+        dict_init.append("Keywords[\"%s\"] = kw%sToken;" %
                          (kw, keywordToFriendly(kw)))
 
     cw.write("")
@@ -427,9 +427,9 @@ def tokens_generator(cw):
         cw.write("")
         
     cw.writeline()
-    cw.write("private static readonly Dictionary<SymbolId, Token> kws = new Dictionary<SymbolId, Token>();");
+    cw.write("private static readonly Dictionary<string, Token> kws = new Dictionary<string, Token>(StringComparer.Ordinal);");
     cw.writeline()
-    cw.enter_block("public static IDictionary<SymbolId, Token> Keywords")
+    cw.enter_block("public static IDictionary<string, Token> Keywords")
     cw.write("get { return kws; }")
     cw.exit_block()
 

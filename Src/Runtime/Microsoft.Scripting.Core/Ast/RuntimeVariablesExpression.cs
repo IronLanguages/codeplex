@@ -12,18 +12,19 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
     /// <summary>
     /// An expression that provides runtime read/write access to variables.
     /// Needed to implement "eval" in some dynamic languages.
@@ -88,19 +89,19 @@ namespace Microsoft.Linq.Expressions {
     public partial class Expression {
 
         /// <summary>
-        /// Creates an instance of <see cref="T:Microsoft.Linq.Expressions.RuntimeVariablesExpression" />.
+        /// Creates an instance of <see cref="T:System.Linq.Expressions.RuntimeVariablesExpression" />.
         /// </summary>
-        /// <param name="variables">An array of <see cref="T:Microsoft.Linq.Expressions.ParameterExpression" /> objects to use to populate the <see cref="P:Microsoft.Linq.Expressions.RuntimeVariablesExpression.Variables" /> collection.</param>
-        /// <returns>An instance of <see cref="T:Microsoft.Linq.Expressions.RuntimeVariablesExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.RuntimeVariables" /> and the <see cref="P:Microsoft.Linq.Expressions.RuntimeVariablesExpression.Variables" /> property set to the specified value.</returns>
+        /// <param name="variables">An array of <see cref="T:System.Linq.Expressions.ParameterExpression" /> objects to use to populate the <see cref="P:System.Linq.Expressions.RuntimeVariablesExpression.Variables" /> collection.</param>
+        /// <returns>An instance of <see cref="T:System.Linq.Expressions.RuntimeVariablesExpression" /> that has the <see cref="P:System.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:System.Linq.Expressions.ExpressionType.RuntimeVariables" /> and the <see cref="P:System.Linq.Expressions.RuntimeVariablesExpression.Variables" /> property set to the specified value.</returns>
         public static RuntimeVariablesExpression RuntimeVariables(params ParameterExpression[] variables) {
             return RuntimeVariables((IEnumerable<ParameterExpression>)variables);
         }
 
         /// <summary>
-        /// Creates an instance of <see cref="T:Microsoft.Linq.Expressions.RuntimeVariablesExpression" />.
+        /// Creates an instance of <see cref="T:System.Linq.Expressions.RuntimeVariablesExpression" />.
         /// </summary>
-        /// <param name="variables">A collection of <see cref="T:Microsoft.Linq.Expressions.ParameterExpression" /> objects to use to populate the <see cref="P:Microsoft.Linq.Expressions.RuntimeVariablesExpression.Variables" /> collection.</param>
-        /// <returns>An instance of <see cref="T:Microsoft.Linq.Expressions.RuntimeVariablesExpression" /> that has the <see cref="P:Microsoft.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:Microsoft.Linq.Expressions.ExpressionType.RuntimeVariables" /> and the <see cref="P:Microsoft.Linq.Expressions.RuntimeVariablesExpression.Variables" /> property set to the specified value.</returns>
+        /// <param name="variables">A collection of <see cref="T:System.Linq.Expressions.ParameterExpression" /> objects to use to populate the <see cref="P:System.Linq.Expressions.RuntimeVariablesExpression.Variables" /> collection.</param>
+        /// <returns>An instance of <see cref="T:System.Linq.Expressions.RuntimeVariablesExpression" /> that has the <see cref="P:System.Linq.Expressions.Expression.NodeType" /> property equal to <see cref="F:System.Linq.Expressions.ExpressionType.RuntimeVariables" /> and the <see cref="P:System.Linq.Expressions.RuntimeVariablesExpression.Variables" /> property set to the specified value.</returns>
         public static RuntimeVariablesExpression RuntimeVariables(IEnumerable<ParameterExpression> variables) {
             ContractUtils.RequiresNotNull(variables, "variables");
 

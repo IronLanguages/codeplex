@@ -13,15 +13,20 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Reflection;
-using Microsoft.Linq.Expressions;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions.Calls {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
 
     /// <summary>
     /// Builds the argument for an out argument when not passed a StrongBox.  The out parameter

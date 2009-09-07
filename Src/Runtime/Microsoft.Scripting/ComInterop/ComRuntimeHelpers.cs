@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;

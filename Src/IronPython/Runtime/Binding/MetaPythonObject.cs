@@ -13,10 +13,13 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#endif
+
+using System;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
@@ -24,7 +27,7 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Binding {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     partial class MetaPythonObject : DynamicMetaObject {

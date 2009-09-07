@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.IO;
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Scripting.Utils;
 using System.Text;
 

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 #if !SILVERLIGHT
 namespace IronPython.Modules {

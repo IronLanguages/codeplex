@@ -13,22 +13,26 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Globalization;
 using System.IO;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Security;
 using System.Text;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
@@ -57,7 +61,7 @@ namespace IronPython.Runtime {
 
         // fields used during startup
         private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
-        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
+        private readonly Dictionary<string, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<string, ModuleGlobalCache>(StringComparer.Ordinal);
         private readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
         private readonly PythonOptions/*!*/ _options;
         private readonly PythonModule/*!*/ _systemState;
@@ -746,8 +750,9 @@ namespace IronPython.Runtime {
                 // if this is an optimized module we need to initialize the optimized scope.
                 // Optimized scopes come w/ extensions already attached so we use that to know
                 // if we're optimized or not.
-                if (scope.GetExtension(ContextId) != null) {
-                    InitializeModule(sourceUnit.Path, res.CreateScope(), res, ModuleOptions.None);
+                PythonScopeExtension scopeExtension = (PythonScopeExtension)scope.GetExtension(ContextId);
+                if (scopeExtension != null) {
+                    InitializeModule(sourceUnit.Path, scopeExtension.ModuleContext, res, ModuleOptions.None);
                 }
             }
 
@@ -927,11 +932,9 @@ namespace IronPython.Runtime {
             return (module != null) ? module.Scope : null;
         }
 
-        public PythonModule/*!*/ InitializeModule(string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
-            var module = (PythonScopeExtension)scope.GetExtension(ContextId);
-
+        public PythonModule/*!*/ InitializeModule(string fileName, ModuleContext moduleContext, ScriptCode scriptCode, ModuleOptions options) {
             if ((options & ModuleOptions.NoBuiltins) == 0) {
-                module.ModuleContext.InitializeBuiltins((options & ModuleOptions.ModuleBuiltins) != 0);
+                moduleContext.InitializeBuiltins((options & ModuleOptions.ModuleBuiltins) != 0);
             }
 
             // If the filename is __init__.py then this is the initialization code
@@ -939,23 +942,21 @@ namespace IronPython.Runtime {
             if (fileName != null && Path.GetFileName(fileName) == "__init__.py") {
                 string dirname = Path.GetDirectoryName(fileName);
                 string dir_path = DomainManager.Platform.GetFullPath(dirname);
-                scope.SetVariable("__path__", PythonOps.MakeList(dir_path));
+                moduleContext.Globals["__path__"] = PythonOps.MakeList(dir_path);
             }
 
-            Debug.Assert(module != null);
-
-            module.ModuleContext.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
-            module.ModuleContext.Features = options;
+            moduleContext.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
+            moduleContext.Features = options;
 
             if ((options & ModuleOptions.Initialize) != 0) {
-                scriptCode.Run(module.Scope);
+                scriptCode.Run(moduleContext.GlobalScope);
 
-                if (!scope.ContainsVariable("__package__")) {
-                    scope.SetVariable("__package__", null);
+                if (!moduleContext.Globals.ContainsKey("__package__")) {
+                    moduleContext.Globals["__package__"] = null;
                 }
             }
 
-            return module.Module;
+            return moduleContext.Module;
         }
 
         public override ScopeExtension CreateScopeExtension(Scope scope) {
@@ -977,7 +978,7 @@ namespace IronPython.Runtime {
 
             scriptCode = GetScriptCode(sourceCode, moduleName, options);
             Scope scope = scriptCode.CreateScope();
-            return InitializeModule(fileName, scope, scriptCode, options);
+            return InitializeModule(fileName, ((PythonScopeExtension)scope.GetExtension(ContextId)).ModuleContext, scriptCode, options);
         }
 
         internal ScriptCode GetScriptCode(SourceUnit sourceCode, string moduleName, ModuleOptions options) {
@@ -1044,7 +1045,7 @@ namespace IronPython.Runtime {
             Assert.NotNull(module);
 
             object name;
-            if (!module.__dict__.TryGetValue("__name__", out name) || !(name is string)) {
+            if (!module.__dict__._storage.TryGetName(out name) || !(name is string)) {
                 throw PythonOps.SystemError("nameless module");
             }
 
@@ -1080,7 +1081,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal ModuleGlobalCache GetModuleGlobalCache(SymbolId name) {
+        internal ModuleGlobalCache GetModuleGlobalCache(string name) {
             ModuleGlobalCache res;
             if (!TryGetModuleGlobalCache(name, out res)) {
                 res = ModuleGlobalCache.NoCache;
@@ -1649,13 +1650,13 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal bool TryGetModuleGlobalCache(SymbolId name, out ModuleGlobalCache cache) {
+        internal bool TryGetModuleGlobalCache(string name, out ModuleGlobalCache cache) {
             lock (_builtinCache) {
                 if (!_builtinCache.TryGetValue(name, out cache)) {
                     // only cache values currently in built-ins, everything else will have
                     // no caching policy and will fall back to the LanguageContext.
                     object value;
-                    if (BuiltinModuleInstance.__dict__.TryGetValue(SymbolTable.IdToString(name), out value)) {
+                    if (BuiltinModuleInstance.__dict__.TryGetValue(name, out value)) {
                         _builtinCache[name] = cache = new ModuleGlobalCache(value);
                     }
                 }

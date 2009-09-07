@@ -12,10 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
 
     /// <summary>
     /// Describes the node types for the nodes of an expression tree.

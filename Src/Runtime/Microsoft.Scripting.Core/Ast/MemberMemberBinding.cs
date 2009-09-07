@@ -12,19 +12,22 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 using System.Reflection;
 
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
     /// <summary>
     /// Represents initializing members of a member of a newly created object.
     /// </summary>

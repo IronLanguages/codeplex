@@ -9,7 +9,7 @@
 //------------------------------------------------------------------------------
 
 namespace IronPython {
-    using System; using Microsoft;
+    using System;
     
     
     /// <summary>

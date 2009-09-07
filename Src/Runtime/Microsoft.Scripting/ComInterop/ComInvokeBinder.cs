@@ -14,14 +14,18 @@
  * ***************************************************************************/
 
 #if !SILVERLIGHT
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
+using System.Dynamic;
+using System.Dynamic.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.ComInterop {

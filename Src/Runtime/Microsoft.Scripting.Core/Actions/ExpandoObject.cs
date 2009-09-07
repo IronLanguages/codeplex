@@ -12,24 +12,24 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
-
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Scripting {
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Dynamic;
+using System.Dynamic.Utils;
+using System.Runtime.CompilerServices;
+
+namespace System.Dynamic {
     /// <summary>
     /// Represents an object with members that can be dynamically added and removed at runtime.
     /// </summary>
@@ -1018,7 +1018,7 @@ namespace Microsoft.Scripting {
     }
 }
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
 
     //
     // Note: these helpers are kept as simple wrappers so they have a better 

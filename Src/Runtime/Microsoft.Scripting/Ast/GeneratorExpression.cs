@@ -13,11 +13,16 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {

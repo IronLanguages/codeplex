@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting.Actions {
     [Obsolete("Use ExtensionBinaryOperationBinder or ExtensionUnaryOperationBinder")]

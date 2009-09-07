@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using IronPython.Runtime.Operations;
-using System; using Microsoft;
+using System;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

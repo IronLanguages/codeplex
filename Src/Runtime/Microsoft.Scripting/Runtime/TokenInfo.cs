@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
+using System;
+using System.Dynamic;
 using Microsoft.Contracts; 
 
 namespace Microsoft.Scripting {

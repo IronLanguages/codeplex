@@ -13,10 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 namespace Microsoft.Scripting.Utils {
     public static class EnumUtils {        

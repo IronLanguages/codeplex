@@ -13,15 +13,18 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 using Microsoft.Contracts;
 using Microsoft.Scripting.Utils;
@@ -61,7 +64,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary> the number of sites we should clear after if we can't make progress cleaning up otherwise </summary>
         private const int ClearThreshold = 50;
 
-        internal DynamicOperations(LanguageContext lc) {
+        public DynamicOperations(LanguageContext lc) {
             ContractUtils.RequiresNotNull(lc, "lc");
             _lc = lc;
         }

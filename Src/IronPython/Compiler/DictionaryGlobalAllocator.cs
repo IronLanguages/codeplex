@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
@@ -22,10 +22,15 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 
-using MSAst = Microsoft.Linq.Expressions;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
 
     /// <summary>
     /// Provides globals for when we need to lookup into a dictionary for each global access.

@@ -15,12 +15,17 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+using System.Dynamic.Utils;
 
 namespace Microsoft.Scripting.ComInterop {
     internal class UnknownArgBuilder : SimpleArgBuilder {

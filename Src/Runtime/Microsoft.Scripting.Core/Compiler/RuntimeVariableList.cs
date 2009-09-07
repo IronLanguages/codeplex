@@ -12,14 +12,17 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast.Compiler;
+#else
+using System.Linq.Expressions.Compiler;
+#endif
 
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions.Compiler;
 
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
 
     /// <summary>
     /// This API supports the .NET Framework infrastructure and is not intended to be used directly from your code.

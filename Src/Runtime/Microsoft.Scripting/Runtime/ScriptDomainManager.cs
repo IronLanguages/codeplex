@@ -13,13 +13,13 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Microsoft.Scripting;
+using System.Dynamic;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using System.Threading;

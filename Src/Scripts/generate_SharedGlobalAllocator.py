@@ -91,7 +91,6 @@ def gen_static_storage(cw):
     cw.write("// Fallback array storage and locking objects")
     cw.write("public static CodeContext[] Contexts = new CodeContext[%d];" % n_fallback_slots)
     cw.write("public static object[] Constants = new object[%d];" % n_fallback_slots)
-    cw.write("public static SymbolId[] Symbols = new SymbolId[%d];" % n_fallback_slots)
     cw.write("public static PythonGlobal[] Globals = new PythonGlobal[%d];" % n_fallback_slots)
     cw.write("")
     cw.write("// Locking object for site storage")
@@ -116,7 +115,6 @@ def gen_static_storage(cw):
     
     gen_storage(cw, "CodeContext", "Context", n_context_types)
     gen_storage(cw, "object", "Constant", n_constant_types)
-    gen_storage(cw, "SymbolId", "Symbol", n_symbol_types)
     gen_storage(cw, "PythonGlobal", "Global", n_global_types)
 
 def gen_site_storage(cw):

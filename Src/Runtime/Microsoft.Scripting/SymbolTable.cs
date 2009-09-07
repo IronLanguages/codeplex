@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting {
     /// <summary>

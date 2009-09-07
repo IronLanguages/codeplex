@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System.Security;
-using System; using Microsoft;
+using System;
 
 namespace Microsoft.Scripting {
 

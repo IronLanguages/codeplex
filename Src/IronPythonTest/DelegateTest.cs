@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 namespace IronPythonTest {
     public delegate void ParamsDelegate(object sender, params object[] args);

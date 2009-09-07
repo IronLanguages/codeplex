@@ -264,12 +264,12 @@ public %(name)s(%(expression)s node) {
 def gen_debug_proxies(cw):
     import clr
     msc = clr.LoadAssemblyByPartialName("Microsoft.Scripting.Core")
-    expr = msc.GetType("System.Linq.Expressions.Expression")
+    expr = msc.GetType("Microsoft.Scripting.Ast.Expression")
     custom = [ 'SwitchCase', 'CatchBlock' ]
     ignore = [ 'Expression' ]
     def expression_filter(e):
         if not e.IsPublic: return False
-        if not e.Namespace.EndsWith(".Expressions"): return False
+        if not e.Namespace.StartsWith("Microsoft.Scripting.Ast"): return False
         if e.IsGenericType: return False
         if e.Name in ignore: return False
         if expr.IsAssignableFrom(e): return True

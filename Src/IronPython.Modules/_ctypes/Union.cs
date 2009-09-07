@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;

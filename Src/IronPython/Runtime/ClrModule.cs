@@ -13,14 +13,12 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -361,8 +359,7 @@ the assembly object.")]
         }
 
         private static void PublishTypeLibDesc(CodeContext context, ComTypeLibDesc typeLibDesc) {
-            SymbolId symbol = SymbolTable.StringToId(typeLibDesc.Name);
-            context.LanguageContext.DomainManager.Globals.SetVariable(symbol, typeLibDesc);
+            PythonOps.ScopeSetMember(context, context.LanguageContext.DomainManager.Globals, typeLibDesc.Name, typeLibDesc);
         }
 #endif
         private static void AddReferenceByName(CodeContext/*!*/ context, string name) {

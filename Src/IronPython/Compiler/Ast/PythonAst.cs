@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,11 +24,16 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = MSAst.Expression;
 
     public class PythonAst : ScopeStatement {
         private readonly Statement _body;
@@ -102,7 +107,7 @@ namespace IronPython.Compiler.Ast {
             return true;
         }
 
-        internal PythonVariable EnsureGlobalVariable(PythonNameBinder binder, SymbolId name) {
+        internal PythonVariable EnsureGlobalVariable(PythonNameBinder binder, string name) {
             PythonVariable variable;
             if (TryGetVariable(name, out variable)) {
                 // use the current one if it is global only
@@ -114,7 +119,7 @@ namespace IronPython.Compiler.Ast {
             return EnsureUnboundVariable(name);
         }
 
-        internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
+        internal override PythonVariable BindName(PythonNameBinder binder, string name) {
             return EnsureVariable(name);
         }
 

@@ -12,17 +12,20 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using Microsoft.Scripting.Utils;
+using System;
+using System.Dynamic.Utils;
 using System.Diagnostics;
 
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Linq.Expressions {
+#if CLR2
+namespace Microsoft.Scripting.Ast {
+#else
+namespace System.Linq.Expressions {
+#endif
 
     /// <summary>
     /// Represents an expression that has a conditional operator.

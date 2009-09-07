@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Text;
 using System.Windows.Forms;
 using IronPython.Hosting;

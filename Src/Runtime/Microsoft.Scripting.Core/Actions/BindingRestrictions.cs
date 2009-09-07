@@ -12,18 +12,20 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
+using System.Dynamic.Utils;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
 
-
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
 
     /// <summary>
     /// Represents a set of binding restrictions on the <see cref="DynamicMetaObject"/>under which the dynamic binding is valid.

@@ -27,7 +27,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
 <OutputPath>$(SolutionDir)\..\Bin\fxcop\</OutputPath>
-    <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
+    <DefineConstants>TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -40,7 +40,7 @@
     <Optimize>false</Optimize>
 <OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
-    <DefineConstants>DEBUG;TRACE;$(SignedSym)</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -51,7 +51,7 @@
     <Optimize>true</Optimize>
 <OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
-    <DefineConstants>TRACE;$(SignedSym)</DefineConstants>
+    <DefineConstants>TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -60,7 +60,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
 <OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;$(SignedSym)</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;CLR2;$(SignedSym)</DefineConstants>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -74,7 +74,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
 <OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
-    <DefineConstants>TRACE;SILVERLIGHT;$(SignedSym)</DefineConstants>
+    <DefineConstants>TRACE;SILVERLIGHT;CLR2;$(SignedSym)</DefineConstants>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591,618</NoWarn>
@@ -295,6 +295,7 @@
     <Compile Include="Runtime\MetaObjectExtensions.cs" />
     <Compile Include="Runtime\ParserSink.cs" />
     <Compile Include="Runtime\RestrictedMetaObject.cs" />
+    <Compile Include="Runtime\ScopeStorage.cs" />
     <Compile Include="Runtime\SavableScriptCode.cs" />
     <Compile Include="Runtime\TokenizerBuffer.cs" />
     <Compile Include="Runtime\TokenizerService.cs" />

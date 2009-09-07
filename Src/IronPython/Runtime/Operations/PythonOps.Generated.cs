@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using IronPython.Runtime.Exceptions;
 #if !SILVERLIGHT
 using System.ComponentModel;

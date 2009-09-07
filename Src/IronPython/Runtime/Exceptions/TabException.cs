@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
+using System.Dynamic;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Exceptions {

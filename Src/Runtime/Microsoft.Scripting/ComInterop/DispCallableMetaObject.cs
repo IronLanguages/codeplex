@@ -15,9 +15,14 @@
 
 #if !SILVERLIGHT
 
-using System; using Microsoft;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
+using System.Dynamic;
 using System.Security;
 using System.Security.Permissions;
 

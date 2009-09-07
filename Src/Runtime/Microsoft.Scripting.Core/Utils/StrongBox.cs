@@ -12,10 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-namespace Microsoft.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices {
 
     /// <summary>
     /// Holds a reference to a value.

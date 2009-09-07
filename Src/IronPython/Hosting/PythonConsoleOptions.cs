@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using Microsoft.Scripting.Hosting.Shell; 
 
 namespace IronPython.Hosting {

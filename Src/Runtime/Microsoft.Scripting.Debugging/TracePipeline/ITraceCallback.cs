@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Debugging {
@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Debugging {
             string name,
             string sourceFileName,
             SourceSpan sourceSpan,
-            Func<Scope> scopeCallback,
+            Func<IAttributesCollection> scopeCallback,
             object payload,
             object customPayload
         );

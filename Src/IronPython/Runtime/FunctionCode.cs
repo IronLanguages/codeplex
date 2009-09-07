@@ -13,13 +13,16 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Threading;
 
 using Microsoft.Scripting;
@@ -115,7 +118,7 @@ namespace IronPython.Runtime {
         /// 
         /// the initial delegate provided here should NOT be the actual code.  It should always be a delegate which updates our Target lazily.
         /// </summary>
-        internal FunctionCode(PythonContext context, Delegate initialDelegate, LambdaExpression code, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, bool isDebuggable, bool shouldInterpret, IList<SymbolId> freeVars, IList<SymbolId> names, IList<SymbolId> cellVars, IList<SymbolId> varNames, int localCount, Dictionary<int, Dictionary<int, bool>> loopLocations, Dictionary<int, bool> handlerLocations) {
+        internal FunctionCode(PythonContext context, Delegate initialDelegate, LambdaExpression code, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, bool isDebuggable, bool shouldInterpret, IList<string> freeVars, IList<string> names, IList<string> cellVars, IList<string> varNames, int localCount, Dictionary<int, Dictionary<int, bool>> loopLocations, Dictionary<int, bool> handlerLocations) {
             _lambda = code;
             _name = name;
             _span = span;
@@ -141,16 +144,20 @@ namespace IronPython.Runtime {
             RegisterFunctionCode(context);
         }
 
-        private static PythonTuple SymbolListToTuple(IList<SymbolId> vars) {
-            if (vars != null) {
-                return PythonTuple.MakeTuple(SymbolTable.IdsToStrings(vars));
+        private static PythonTuple SymbolListToTuple(IList<string> vars) {
+            if (vars != null && vars.Count != 0) {
+                object[] tupleData = new object[vars.Count];
+                for (int i = 0; i < vars.Count; i++) {
+                    tupleData[i] = vars[i];
+                }
+                return PythonTuple.MakeTuple(tupleData);
             } else {
                 return PythonTuple.EMPTY;
             }
         }
 
         private static PythonTuple StringArrayToTuple(string[] closureVars) {
-            if (closureVars != null) {
+            if (closureVars != null && closureVars.Length != 0) {
                 return PythonTuple.MakeTuple((object[])closureVars);
             } else {
                 return PythonTuple.EMPTY;

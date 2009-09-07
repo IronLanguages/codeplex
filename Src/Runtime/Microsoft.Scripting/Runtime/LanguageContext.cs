@@ -13,18 +13,22 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.IO;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Text;
 
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -350,7 +354,16 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             public override DynamicMetaObject FallbackGetMember(DynamicMetaObject self, DynamicMetaObject errorSuggestion) {
-                return ErrorMetaObject(ReturnType, self, DynamicMetaObject.EmptyMetaObjects, errorSuggestion);
+                return errorSuggestion ?? new DynamicMetaObject(
+                    Expression.Throw(
+                        Expression.New(
+                            typeof(MissingMemberException).GetConstructor(new[] { typeof(string) }),
+                            Expression.Constant(String.Format("unknown member: {0}", Name))
+                        ),
+                        typeof(object)
+                    ),
+                    self.Restrict(CompilerHelpers.GetType(self.Value)).Restrictions
+                );
             }
         }
 

@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting;
+using System.Dynamic;
 
 namespace IronPython.Runtime.Binding {
     interface IPythonOperable {

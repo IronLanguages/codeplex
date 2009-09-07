@@ -12,12 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 namespace Microsoft.Scripting.Debugging {
     /// <summary>

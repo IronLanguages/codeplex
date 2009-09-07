@@ -13,15 +13,18 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using System.Collections.Generic;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
 
+using System;
+using System.Collections.Generic;
+using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-
-using IronPython.Runtime;
-
-using MSAst = Microsoft.Linq.Expressions;
 
 namespace IronPython.Compiler.Ast {
 
@@ -47,23 +50,23 @@ namespace IronPython.Compiler.Ast {
             if (nameExpr == null) return false;
 
             if (_args.Length == 0) {
-                if (nameExpr.Name == Symbols.Locals) return true;
-                if (nameExpr.Name == Symbols.Vars) return true;
-                if (nameExpr.Name == Symbols.Dir) return true;
+                if (nameExpr.Name == "locals") return true;
+                if (nameExpr.Name == "vars") return true;
+                if (nameExpr.Name == "dir") return true;
                 return false;
-            } else if (_args.Length == 1 && (nameExpr.Name == Symbols.Dir || nameExpr.Name == Symbols.Vars)) {
+            } else if (_args.Length == 1 && (nameExpr.Name == "dir" || nameExpr.Name == "vars")) {
                 if (_args[0].Name == "*" || _args[0].Name == "**") {
                     // could be splatting empty list or dict resulting in 0-param call which needs context
                     return true;
                 }
-            } else if (_args.Length == 2 && (nameExpr.Name == Symbols.Dir || nameExpr.Name == Symbols.Vars)) {
+            } else if (_args.Length == 2 && (nameExpr.Name == "dir" || nameExpr.Name == "vars")) {
                 if (_args[0].Name == "*" && _args[1].Name == "**") {
                     // could be splatting empty list and dict resulting in 0-param call which needs context
                     return true;
                 }
             } else {
-                if (nameExpr.Name == Symbols.Eval) return true;
-                if (nameExpr.Name == Symbols.ExecFile) return true;
+                if (nameExpr.Name == "eval") return true;
+                if (nameExpr.Name == "execfile") return true;
             }
             return false;
         }

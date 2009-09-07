@@ -13,13 +13,16 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 
-namespace Microsoft.Scripting.Utils {
+namespace System.Dynamic.Utils {
     // Miscellaneous helpers that don't belong anywhere else
     internal static class Helpers {
 

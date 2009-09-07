@@ -13,14 +13,20 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Microsoft.Linq.Expressions;
 using System.Runtime.Serialization;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Threading;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 

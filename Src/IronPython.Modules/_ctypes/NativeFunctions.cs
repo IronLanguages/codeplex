@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 

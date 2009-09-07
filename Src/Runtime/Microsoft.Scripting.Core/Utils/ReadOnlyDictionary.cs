@@ -12,17 +12,19 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
-
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 #if SILVERLIGHT
 using System.Core;
 #endif
 
-namespace Microsoft.Scripting.Utils {
+using System.Collections.Generic;
+
+namespace System.Dynamic.Utils {
 
     // Like ReadOnlyCollection<T>: wraps an IDictionary<K, V> in a read-only wrapper
     internal sealed class ReadOnlyDictionary<K, V> : IDictionary<K, V> {

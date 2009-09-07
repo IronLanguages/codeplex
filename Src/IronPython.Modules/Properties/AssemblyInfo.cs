@@ -12,12 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -59,6 +55,6 @@ using System.Security;
 [assembly: AllowPartiallyTrustedCallers]
 #endif
 
-#if CLR4
+#if !CLR2
 [assembly: SecurityRules(SecurityRuleSet.Level1)]
 #endif

@@ -13,8 +13,13 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using MSAst = Microsoft.Linq.Expressions;
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
+using System;
 
 namespace IronPython.Compiler.Ast {
     public class LambdaExpression : Expression {

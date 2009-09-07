@@ -13,17 +13,19 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Scripting;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
+using System.Dynamic;
 
 using Microsoft.Scripting.Actions;
 
-using Ast = Microsoft.Linq.Expressions.Expression;
 using Microsoft.Scripting.Runtime;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 
 namespace IronPython.Runtime.Binding {
     interface IFastSettable {

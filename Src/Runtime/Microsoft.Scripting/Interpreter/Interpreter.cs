@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
-using Microsoft.Linq.Expressions;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using System.Threading;
 
 using Microsoft.Scripting.Runtime;

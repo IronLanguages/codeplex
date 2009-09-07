@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // ICustomTypeDescriptor
 
-using System; using Microsoft;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using IronPython.Runtime.Types;

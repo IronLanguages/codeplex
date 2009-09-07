@@ -1,4 +1,4 @@
-using System; using Microsoft;
+using System;
 
 namespace System.Runtime.CompilerServices
 {

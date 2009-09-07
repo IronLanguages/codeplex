@@ -12,10 +12,8 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
-
-using Microsoft.Scripting;
+using System.Dynamic;
 
 namespace Microsoft.Scripting.Hosting {
 

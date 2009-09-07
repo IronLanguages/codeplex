@@ -12,13 +12,16 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
+using System.Dynamic.Utils;
 
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     /// <summary>
     /// Represents the binary dynamic operation at the call site, providing the binding semantic and the details about the operation.
     /// </summary>

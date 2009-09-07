@@ -12,8 +12,6 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
-
 
 namespace IronPython.Runtime.Exceptions {
     public interface IPythonException {

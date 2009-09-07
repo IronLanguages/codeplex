@@ -13,14 +13,12 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Microsoft.Runtime.CompilerServices;
-
 using Microsoft.Scripting.Debugging.CompilerServices;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Hosting.Providers;
@@ -195,10 +193,10 @@ namespace Microsoft.Scripting.Debugging {
             set {
                 if (_thrownException != null && value == null) {
                     _thrownException = null;
-                    GetLocalsScope().TryRemoveVariable(_exceptionVariableSymbol);
-                } else if (value != null && !GetLocalsScope().ContainsVariable(_exceptionVariableSymbol)) {
+                    GetLocalsScope().Remove(_exceptionVariableSymbol);
+                } else if (value != null && !GetLocalsScope().ContainsKey(_exceptionVariableSymbol)) {
                     _thrownException = value;
-                    GetLocalsScope().SetVariable(_exceptionVariableSymbol, _thrownException);
+                    GetLocalsScope()[_exceptionVariableSymbol] = _thrownException;
                 }
             }
         }
@@ -281,9 +279,9 @@ namespace Microsoft.Scripting.Debugging {
             ((IEnumerator)_generator).MoveNext();
         }
 
-        internal Scope GetLocalsScope() {
+        internal IAttributesCollection GetLocalsScope() {
             ScopeData scopeData = CurrentScopeData;
-            Scope scope = scopeData.Scope;
+            IAttributesCollection scope = scopeData.Scope;
             if (scope == null) {
                 Debug.Assert(_liftedLocals != null);
 
@@ -308,7 +306,7 @@ namespace Microsoft.Scripting.Debugging {
 
                 IRuntimeVariables scopedLocals = new ScopedRuntimeVariables(visibleLocals, _liftedLocals);
 
-                scope = new Scope(new LocalsDictionary(scopedLocals, visibleSymbols.ToArray()));
+                scope = new LocalsDictionary(scopedLocals, visibleSymbols.ToArray());
 
                 scopeData.Scope = scope;
             }
@@ -411,7 +409,7 @@ namespace Microsoft.Scripting.Debugging {
         private class ScopeData {
             public VariableInfo[] VarInfos;
             public VariableInfo[] VarInfosWithException;
-            public Scope Scope;
+            public IAttributesCollection Scope;
         }
     }
 }

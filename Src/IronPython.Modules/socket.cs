@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // System.NET
 
-using System; using Microsoft;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,7 +23,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Text;
 
 using Microsoft.Scripting.Actions;
@@ -33,6 +33,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 using BaseException = IronPython.Runtime.Exceptions.PythonExceptions.BaseException;

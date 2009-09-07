@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // Remoting
 
-using System; using Microsoft;
+using System;
 using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;

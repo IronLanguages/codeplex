@@ -15,7 +15,7 @@
 
 #if !SILVERLIGHT // ComObject
 
-using System; using Microsoft;
+using System;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Marshal = System.Runtime.InteropServices.Marshal;

@@ -367,7 +367,7 @@ def test_dir():
             else:
                 raise e
         
-        from Microsoft.Scripting import ExpandoObject
+        from System.Dynamic import ExpandoObject
         eo = ExpandoObject()
         eo.bill = 5
         Assert('bill' in dir(eo))

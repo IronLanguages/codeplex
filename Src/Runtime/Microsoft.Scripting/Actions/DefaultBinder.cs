@@ -13,11 +13,16 @@
  *
  * ***************************************************************************/
 
-using System; using Microsoft;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
+
+using System;
 using System.Collections.Generic;
-using Microsoft.Linq.Expressions;
 using System.Reflection;
-using Microsoft.Scripting;
+using System.Dynamic;
 using System.Text;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
@@ -26,7 +31,7 @@ using Microsoft.Scripting.Actions.Calls;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Linq.Expressions.Expression;
+    using Ast = Expression;
     
     /// <summary>
     /// Provides binding semantics for a language.  This include conversions as well as support

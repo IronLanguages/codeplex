@@ -12,15 +12,18 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if CLR2
+using Microsoft.Scripting.Ast;
+#else
+using System.Linq.Expressions;
+#endif
 
 using System.Diagnostics;
-using Microsoft.Scripting.Utils;
-using Microsoft.Linq.Expressions;
+using System.Dynamic.Utils;
 using System.Reflection;
 
-namespace Microsoft.Scripting {
+namespace System.Dynamic {
     /// <summary>
     /// Provides a simple class that can be inherited from to create an object with dynamic behavior
     /// at runtime.  Subclasses can override the various binder methods (GetMember, SetMember, Call, etc...)

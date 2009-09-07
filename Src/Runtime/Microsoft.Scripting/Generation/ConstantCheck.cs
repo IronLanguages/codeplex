@@ -12,11 +12,14 @@
  *
  *
  * ***************************************************************************/
-using System; using Microsoft;
 
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
 using System.Diagnostics;
-using Microsoft.Linq.Expressions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
