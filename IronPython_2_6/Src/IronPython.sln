@@ -1,0 +1,157 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPython", "IronPython\IronPython.csproj", "{95289EA9-5778-489D-AB48-F81F2CE2DA32}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPython.Modules", "IronPython.Modules\IronPython.Modules.csproj", "{155CE436-1669-4A48-8095-410F2430237F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonConsole", "IronPythonConsole\IronPythonConsole.csproj", "{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonTest", "IronPythonTest\IronPythonTest.csproj", "{B6B42537-07F8-4F6C-A99A-B155CAEB124E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindow", "IronPythonWindow\IronPythonWindow.csproj", "{81DA19C7-4FEC-47E7-981B-D9310D549F95}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Core", "Runtime\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj", "{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Silverlight", "Hosts\SilverLight\Microsoft.Scripting.SilverLight\Microsoft.Scripting.Silverlight.csproj", "{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chiron", "Hosts\SilverLight\Chiron\Chiron.csproj", "{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.ExtensionAttribute", "Runtime\Microsoft.Scripting.Core\Microsoft.Scripting.ExtensionAttribute.csproj", "{8B0F1074-750E-4D64-BF23-A1E0F54261E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonConsoleAny", "IronPythonConsoleAny\IronPythonConsoleAny.csproj", "{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindowAny", "IronPythonWindowAny\IronPythonWindowAny.csproj", "{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Debugging", "Runtime\Microsoft.Scripting.Debugging\Microsoft.Scripting.Debugging.csproj", "{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		FxCop|Any CPU = FxCop|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Silverlight Debug|Any CPU = Silverlight Debug|Any CPU
+		Silverlight Release|Any CPU = Silverlight Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{95289EA9-5778-489D-AB48-F81F2CE2DA32}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.FxCop|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.FxCop|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{155CE436-1669-4A48-8095-410F2430237F}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Release|Any CPU.Build.0 = Release|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Silverlight Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.FxCop|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.FxCop|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{B6B42537-07F8-4F6C-A99A-B155CAEB124E}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.FxCop|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.FxCop|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{81DA19C7-4FEC-47E7-981B-D9310D549F95}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.FxCop|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.FxCop|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}.Silverlight Release|Any CPU.Build.0 = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{8B0F1074-750E-4D64-BF23-A1E0F54261E5}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Silverlight Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1D861C5-D9D5-4CDA-968B-8275F5D9F6D2}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Silverlight Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F6F9AB3-9943-4316-BD4C-A10F580BC75C}.Silverlight Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.FxCop|Any CPU.ActiveCfg = Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.FxCop|Any CPU.Build.0 = Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
