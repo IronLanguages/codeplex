@@ -989,9 +989,10 @@ finally:
     dir('abc')
 
 ## Overriding __builtin__ method inconsistent with -X:LightweightScopes flag
-import __builtin__
-__builtin__.help = 10
-AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))
+if not is_lightweightscopes: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24586
+    import __builtin__
+    __builtin__.help = 10
+    AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))
 
 # Test that run time name lookup skips over class scopes
 # (because class variables aren't implicitly accessible inside member functions)

@@ -167,6 +167,8 @@ def test_imp_module():
     pf.close()
 
 def test_direct_module_creation():
+    if is_lightweightscopes: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24586
+        return
     import math
     
     for baseMod in math, sys:
@@ -977,6 +979,8 @@ def test_file_coding():
         nt.unlink('test_coding_2.py')
 
 def test_module_subtype():
+    if is_lightweightscopes: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24586
+        return
     class x(type(sys)):
         def __init__(self): self.baz = 100
         def __getattr__(self, name):
