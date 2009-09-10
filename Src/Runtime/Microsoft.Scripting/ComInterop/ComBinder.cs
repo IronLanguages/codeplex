@@ -124,7 +124,7 @@ namespace Microsoft.Scripting.ComInterop {
             ContractUtils.RequiresNotNull(instance, "instance");
             ContractUtils.RequiresNotNull(args, "args");
             
-            if (TryGetMetaObject(ref instance)) {
+            if (TryGetMetaObjectInvoke(ref instance)) {
                 result = instance.BindInvoke(binder, args);
                 return true;
             } else {
@@ -168,7 +168,7 @@ namespace Microsoft.Scripting.ComInterop {
             ContractUtils.RequiresNotNull(instance, "instance");
             ContractUtils.RequiresNotNull(args, "args");
 
-            if (TryGetMetaObject(ref instance)) {
+            if (TryGetMetaObjectInvoke(ref instance)) {
                 result = instance.BindGetIndex(binder, args);
                 return true;
             } else {
@@ -192,7 +192,7 @@ namespace Microsoft.Scripting.ComInterop {
             ContractUtils.RequiresNotNull(args, "args");
             ContractUtils.RequiresNotNull(value, "value");
 
-            if (TryGetMetaObject(ref instance)) {
+            if (TryGetMetaObjectInvoke(ref instance)) {
                 result = instance.BindSetIndex(binder, args, value);
                 return true;
             } else {
@@ -288,13 +288,23 @@ namespace Microsoft.Scripting.ComInterop {
                 return false;
             }
 
-            if (instance.Value is IPseudoComObject) {
-                instance = ((IPseudoComObject)instance.Value).GetMetaObject(instance.Expression);
+            if (IsComObject(instance.Value)) {
+                instance = new ComMetaObject(instance.Expression, instance.Restrictions, instance.Value);
                 return true;
             }
 
-            if (IsComObject(instance.Value)) {
-                instance = new ComMetaObject(instance.Expression, instance.Restrictions, instance.Value);
+            return false;
+        }
+
+        private static bool TryGetMetaObjectInvoke(ref DynamicMetaObject instance) {
+            // If we're already a COM MO don't make a new one
+            // (we do this to prevent recursion if we call Fallback from COM)
+            if (TryGetMetaObject(ref instance)) {
+                return true;
+            }
+
+            if (instance.Value is IPseudoComObject) {
+                instance = ((IPseudoComObject)instance.Value).GetMetaObject(instance.Expression);
                 return true;
             }
 

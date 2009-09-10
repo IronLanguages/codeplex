@@ -70,6 +70,10 @@ namespace Microsoft.Scripting.ComInterop {
                 return; // IDMOP
             }
 
+            if (handler is DispCallable) {
+                return;
+            }
+
             throw Error.UnsupportedHandlerType();
         }
 
