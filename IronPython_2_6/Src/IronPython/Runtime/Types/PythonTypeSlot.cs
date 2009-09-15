@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Types {
             if (TryGetValue(context, instance, dt, out res))
                 return res;
 
-            throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
+            throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, "__get__");
         }
     }
 }

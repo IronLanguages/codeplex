@@ -624,6 +624,13 @@ def test_missing_member_syntax_error_cp15428():
     lines = getTestOutput()[1]
     AreEqual(lines, ['  File "<stdin>", line 1\r\n', '    ".".\n', '\r\n', '        ^\r\n', "SyntaxError: syntax error\r\n", '\r\n'])
                     
+
+def test_a_comment_newline():
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}    # hi{ENTER}    pass{ENTER}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    lines = getTestOutput()[1]
+    AreEqual(lines, [])
     
 #------------------------------------------------------------------------------
 #--__main__

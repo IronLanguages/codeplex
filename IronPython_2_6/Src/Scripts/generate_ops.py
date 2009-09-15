@@ -90,12 +90,12 @@ class Operator(Symbol):
         return 'Operator(%s,%s,%s)' % (self.symbol, self.name, self.rname)
 
     def genOperatorTable_Mapping(self, cw):
-        cw.writeline("pyOp[\"__%s__\"] = Operators.%s;" % (self.name, self.title_name()))        
+        cw.writeline("pyOp[\"__%s__\"] = PythonOperationKind.%s;" % (self.name, self.title_name()))        
         
         if self.isCompare(): return
 
-        cw.writeline("pyOp[\"__r%s__\"] = Operators.Reverse%s;" % (self.name, self.title_name()))        
-        cw.writeline("pyOp[\"__i%s__\"] = Operators.InPlace%s;" % (self.name, self.title_name()))
+        cw.writeline("pyOp[\"__r%s__\"] = PythonOperationKind.Reverse%s;" % (self.name, self.title_name()))        
+        cw.writeline("pyOp[\"__i%s__\"] = PythonOperationKind.InPlace%s;" % (self.name, self.title_name()))
 
     def genOperatorReversal_Forward(self, cw):
         if self.isCompare(): return
@@ -137,20 +137,20 @@ class Operator(Symbol):
         cw.writeline('public const string InPlace%s = "InPlace%s";' % (self.title_name(), self.title_name()))
 
     def genOperatorToSymbol(self, cw): 
-        cw.writeline("case Operators.%s: return Symbols.Operator%s;" % (self.title_name(), self.title_name()))
+        cw.writeline("case Operators.%s: return \"__%s__\";" % (self.title_name(), self.name))
         
         if self.isCompare(): return
         
-        cw.writeline("case Operators.Reverse%s: return Symbols.OperatorReverse%s;" % (self.title_name(), self.title_name()))
-        cw.writeline("case Operators.InPlace%s: return Symbols.OperatorInPlace%s;" % (self.title_name(), self.title_name()))
+        cw.writeline("case Operators.Reverse%s: return \"__r%s__\";" % (self.title_name(), self.name))
+        cw.writeline("case Operators.InPlace%s: return \"__i%s__\";" % (self.title_name(), self.name))
 
     def genStringOperatorToSymbol(self, cw): 
-        cw.writeline("case StandardOperators.%s: return Symbols.Operator%s;" % (self.title_name(), self.title_name()))
+        cw.writeline("case PythonOperationKind.%s: return \"__%s__\";" % (self.title_name(), self.name))
         
         if self.isCompare(): return
         
-        cw.writeline("case OperatorStrings.Reverse%s: return Symbols.OperatorReverse%s;" % (self.title_name(), self.title_name()))
-        cw.writeline("case StandardOperators.InPlace%s: return Symbols.OperatorInPlace%s;" % (self.title_name(), self.title_name()))
+        cw.writeline("case PythonOperationKind.Reverse%s: return \"__r%s__\";" % (self.title_name(), self.name))
+        cw.writeline("case PythonOperationKind.InPlace%s: return \"__i%s__\";" % (self.title_name(), self.name))
 
     def genOldStyleOp(self, cw):
         if self.isCompare(): return
@@ -161,13 +161,13 @@ class Operator(Symbol):
         else:
             cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s([NotNull]OldInstance self, object other)" % self.title_name())
-        cw.writeline('object res = InvokeOne(self, other, Symbols.Operator%s);' % self.title_name())
+        cw.writeline('object res = InvokeOne(self, other, \"__%s__\");' % self.name)
         cw.writeline('if (res != NotImplementedType.Value) return res;')
 
         cw.writeline()
         cw.writeline("OldInstance otherOc = other as OldInstance;")
         cw.enter_block("if (otherOc != null)")
-        cw.writeline('return InvokeOne(other, self, Symbols.OperatorReverse%s);' % self.title_name())
+        cw.writeline('return InvokeOne(otherOc, self, \"__r%s__\");' % self.name)
         cw.exit_block() # end of otherOc != null        
         
         cw.writeline("return NotImplementedType.Value;")
@@ -180,51 +180,32 @@ class Operator(Symbol):
         else:
             cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s(object other, [NotNull]OldInstance self)" % self.title_name())
-        cw.writeline("return InvokeOne(self, other, Symbols.OperatorReverse%s);" % self.title_name())
+        cw.writeline("return InvokeOne(self, other, \"__r%s__\");" % self.name)
         cw.exit_block() # end method
         cw.writeline()
         
         cw.writeline('[return: MaybeNotImplemented]')
         cw.writeline('[SpecialName]')
         cw.enter_block("public object InPlace%s(object other)" % self.title_name())
-        cw.writeline("return InvokeOne(this, other, Symbols.OperatorInPlace%s);" % self.title_name())
+        cw.writeline("return InvokeOne(this, other, \"__i%s__\");" % self.name)
         cw.exit_block() # end method
         cw.writeline()
 
-    def genSymbolTableSymbols(self, cw):
-        def gen_one_symbol(titleName, name, op):
-            cw.writeline("private static SymbolId _Operator%s;" % (titleName,))
-            
-            cw.writeline("///<summary>SymbolId for '%s'</summary>" % (op, ))
-            cw.enter_block("public static SymbolId Operator%s" % (titleName, ))
-            cw.enter_block('get')
-            cw.writeline("if (_Operator%s == SymbolId.Empty) _Operator%s = MakeSymbolId(\"%s\");" % (titleName, titleName, op))
-            cw.writeline("return _Operator%s;" % (titleName,))
-            cw.exit_block()
-            cw.exit_block()
-
-        gen_one_symbol(self.title_name(), self.name, '__' + self.name + '__')
-        
-        if self.isCompare(): return
-        
-        gen_one_symbol('Reverse' + self.title_name(), self.rname, '__' + self.rname + '__')
-        gen_one_symbol('InPlace' + self.title_name(), self.name, '__i' + self.name + '__')
-
     def genWeakRefOperatorNames(self, cw):        
-        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(\"__%s__\", ProxyType);' % (self.name, self.name))
         
         if self.isCompare(): return
 
-        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.reverse_symbol_name()))
-        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(Symbols.%s, ProxyType);' % (self.name, self.inplace_symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(\"__r%s__\", ProxyType);' % (self.name, self.name))
+        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(\"__i%s__\", ProxyType);' % (self.name, self.name))
 
     def genWeakRefCallableProxyOperatorNames(self, cw):        
-        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __%s__ = new SlotWrapper(\"__%s__\", CallableProxyType);' % (self.name, self.name))
         
         if self.isCompare(): return
 
-        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.reverse_symbol_name()))
-        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(Symbols.%s, CallableProxyType);' % (self.name, self.inplace_symbol_name()))
+        cw.writeline('[SlotField] public static PythonTypeSlot __r%s__ = new SlotWrapper(\"__r%s__\", CallableProxyType);' % (self.name, self.name))
+        cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(\"__i%s__\", CallableProxyType);' % (self.name, self.name))
     
     def genConstantFolding(self, cw, type):
         if self.isCompare(): 
@@ -433,6 +414,7 @@ def tokens_generator(cw):
     cw.write("get { return kws; }")
     cw.exit_block()
 
+    cw.writeline('[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]')
     cw.enter_block("static Tokens()")
     for l in dict_init: cw.write(l)
     cw.exit_block()
@@ -474,11 +456,6 @@ MUL_EXTRA = """
         }
 """
 
-def gen_SymbolTable_ops_symbols(cw):
-    for op in ops:
-        if not isinstance(op, Operator): continue
-        op.genSymbolTableSymbols(cw)
-        
 def gen_OperatorTable(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
@@ -617,11 +594,9 @@ def main():
         ("Tokenize Ops", tokenize_generator),
         ("Token Kinds", tokenkinds_generator),
         ("Tokens", tokens_generator),
-        ("Symbols - Ops Symbols", gen_SymbolTable_ops_symbols),
         ("Table of Operators", gen_OperatorTable),
-        ("Table of Standard Operators", gen_OperatorStringTable),
         ("PythonOperator Mapping", gen_operatorMapping),
-        ("OperatorToSymbol", gen_OperatorToSymbol),
+        #("OperatorToSymbol", gen_OperatorToSymbol),
         ("StringOperatorToSymbol", gen_StringOperatorToSymbol),
         ("WeakRef Operators Initialization", weakref_operators),
         ("OldInstance Operators", oldinstance_operators),

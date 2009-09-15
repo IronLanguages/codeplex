@@ -241,7 +241,7 @@ namespace IronPython.Runtime.Binding {
                     call = Ast.Call(
                         typeof(PythonOps).GetMethod("OldClassSetNameHelper"),
                         self.Expression,
-                        AstUtils.Constant(SymbolTable.StringToId(name)),
+                        AstUtils.Constant(name),
                         valueExpr
                     );
                     break;
@@ -263,7 +263,7 @@ namespace IronPython.Runtime.Binding {
                     typeof(PythonOps).GetMethod("OldClassDeleteMember"),
                     AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                     self.Expression,
-                    AstUtils.Constant(SymbolTable.StringToId(member.Name))
+                    AstUtils.Constant(member.Name)
                 ),
                 self.Restrictions
             );
@@ -311,7 +311,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
                                     AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
                                     self.Expression,
-                                    AstUtils.Constant(SymbolTable.StringToId(memberName)),
+                                    AstUtils.Constant(memberName),
                                     tmp
                                 ),
                                 tmp,

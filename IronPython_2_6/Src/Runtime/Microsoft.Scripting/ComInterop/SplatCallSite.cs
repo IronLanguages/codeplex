@@ -22,6 +22,7 @@ using Microsoft.Scripting.Ast;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT
 namespace Microsoft.Scripting.ComInterop {

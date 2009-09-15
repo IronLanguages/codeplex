@@ -14,22 +14,24 @@
     <h1>
         IronPython 2.6</h1>
     <p>
-            IronPython is a new implementation of the Python programming language on .NET.&nbsp; The .NET Framework
-                is a managed programming model for Windows; Microsoft standardized part of it in&nbsp;<a href="http://www.ecma-international.org/">ECMA</a>
-            several years ago as the 
-		<a href="http://www.ecma-international.org/publications/standards/Ecma-335.htm">Common Language Infrastructure</a> and 
-		<a href="http://www.ecma-international.org/publications/standards/Ecma-334.htm">C# Language Specification</a>
+            IronPython is an implementation of the Python programming language on 
+            .NET.&nbsp; The .NET Framework is a managed programming model for 
+            Windows; Microsoft standardized part of it in&nbsp;
+            <a href="http://www.ecma-international.org/">ECMA</a> several years 
+            ago as the 
+            <a href="http://www.ecma-international.org/publications/standards/Ecma-335.htm">Common Language Infrastructure</a> and 
+		    <a href="http://www.ecma-international.org/publications/standards/Ecma-334.htm">C# Language Specification</a>
             standards.</p>
     <p>
-            IronPython is fast - up to 1.8x faster than Python-2.5 on the standard pystone benchmark.&nbsp; It supports an interactive interpreter
+            IronPython is fast - up to 1.7x faster than Python-2.6 on the standard 
+            pystone benchmark.&nbsp; It supports an interactive interpreter
             with fully dynamic compilation.&nbsp; It is well integrated with
             the rest of the framework and makes the whole .NET Framework class 
-			library easily available to Python
-            programmers.</p>
+			library easily available to Python programmers.</p>
 <p>
             You can get IronPython sources, binaries, and samples from
-			<a href="http://www.codeplex.com/ironpython">
-			www.codeplex.com/ironpython</a><span style="color: #000000">.&nbsp; 
+			<a href="http://www.codeplex.com/ironpython">www.codeplex.com/ironpython</a>
+			<span style="color: #000000">.&nbsp; 
 			You can also get news, file bugs, and generally interact with the 
 			IronPython team through this shared project site.&nbsp; There's a 
 			mailing list you can join for discussing issues and releases if you 
@@ -45,10 +47,9 @@
     IronPython 2.6 is suitable for building Python applications where you want 
 	to make use of .NET Framework and pure python modules. There are still some 
 	missing standard CPython libraries (See
-	<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> for details.), and there are some known issues 
-	with the IronPython implementation 
-	(see <a href="http://www.codeplex.com/ironpython">
-	www.codeplex.com/ironpython</a>).</p>
+	<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> 
+	for details.), and there are some known issues with the IronPython implementation 
+	(see <a href="http://www.codeplex.com/ironpython">www.codeplex.com/ironpython</a>).</p>
 <p>
     &nbsp;</p>
 <h2>
@@ -75,9 +76,8 @@ adding the IronPython installation directory to your PATH.&nbsp; To test the ins
 should launch the interactive interpreter as shown below:</p>
 <blockquote>
 	<pre>C:\IronPython&gt;ipy
-IronPython 2.0.0 on .NET 2.0.50727.3053
-
-Copyright (c) Microsoft Corporation. All rights reserved.
+IronPython 2.6 on .NET 2.0.50727.4927
+Type "help", "copyright", "credits" or "license" for more information.
 &gt;&gt;&gt; 2+2
 4</pre>
 </blockquote>
@@ -102,13 +102,13 @@ This simple example shows how you can start using WinForms from IronPython:
 
 <blockquote>
 	<pre>C:\IronPython&gt;ipy
-IronPython 2.0.0 on .NET 2.0.50727.3053
-Copyright (c) Microsoft Corporation. All rights reserved.
+IronPython 2.6 on .NET 2.0.50727.4927
+Type "help", "copyright", "credits" or "license" for more information.
 &gt;&gt;&gt; import clr
 &gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)
 &gt;&gt;&gt; import System.Windows.Forms as WinForms
 &gt;&gt;&gt; WinForms.MessageBox.Show(&quot;Hello&quot;, &quot;Hello World&quot;)
-OK
+System.Windows.Forms.DialogResult.OK
 </pre>
 </blockquote>
 <p>For more information on the clr.AddReference function, see the
@@ -120,37 +120,22 @@ which has many examples of using IronPython in various ways.</span></p>
     <p>
         If you downloaded the binaries from
 		<a href="http://www.codeplex.com/ironpython">www.codeplex.com/ironpython</a><span style="color: #000000">, 
-		you do not need to build it.&nbsp; </span>To compile IronPython from the source code, you can install either Visual
-        Studio 2005 or .NET Framework 2.0 SDK using one
-        of the following
-        links:</p>
-    <ul>
-        <li>
-		<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
-		.NET Framework 2.0 Software Development Kit (SDK)</a> -- you must install 
-		<a href="http://www.microsoft.com/Downloads/details.aspx?familyid=79BC3B77-E02C-4AD3-AACF-A7633F706BA5&displaylang=en">
-		Microsoft .NET Framework Version 2.0 Redistributable Package</a>&nbsp;prior 
-		to installing the SDK</li><li>
-		<a href="http://msdn.microsoft.com/vstudio">Visual Studio 2005
-            </a> </li>
-    </ul>
-<p>
-    IronPython can be built using <a href="http://msdn.microsoft.com/vstudio">Visual
-        Studio 2008</a> or
-	<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
-	.NET Framework 2.0 Software Development Kit (SDK)</a></p>
+		you do not need to build it.&nbsp; </span>To compile IronPython from the source code, you can use either 
+		<a href="http://www.microsoft.com/visualstudio">Visual Studio 2008</a>, 
+		<a href="http://www.microsoft.com/express/vcsharp/">Visual C# 2008 Express Edition</a> or MSBuild. </p>
     <h3>
-        Building using Visual Studio 2005</h3>
+        Building using Visual Studio 2008 or Visual C# 2008 Express Edition</h3>
+        
     <p>
-        Open IronPython.sln in the Visual Studio 2005 and build (from menu: Build-&gt;Build Solution).&nbsp; Set IronPythonConsole as your startup project
+        Open IronPython.sln in Visual Studio or Visual C# Express and build (from menu: Build-&gt;Build Solution).&nbsp; Set IronPythonConsole as your startup project
         in the Solution Explorer.</p>
     <h3>
-        Building using .NET Framework 2.0 Software Development Kit</h3>
+        Building using MSBuild</h3>
     <p>
-        .NET Framework 2.0 SDK comes with the C# compiler and Microsoft's msbuild.&nbsp; After installing the SDK, open the .NET Framework SDK command prompt, 
+        The .NET Framework v3.5 comes with Microsoft's C# compiler and MSBuild utility.&nbsp; After installing the framework, open up a command prompt, 
 		cd to the IronPython directory, and execute:</p>
     <blockquote>
-		<pre>msbuild IronPython.sln</pre>
+		<pre>c:\Windows\Microsoft.NET\Framework\v3.5\MSBuild.exe IronPython.sln</pre>
 </blockquote>
 <p>This will build IronPython.dll, IronPython.Modules.dll, Microsoft.Scripting.dll, Microsoft.Scripting.Core.dll, ipy.exe, and ipyw.exe.</p>
 

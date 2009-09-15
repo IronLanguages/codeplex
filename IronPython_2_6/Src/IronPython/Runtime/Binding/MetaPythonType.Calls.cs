@@ -61,7 +61,7 @@ namespace IronPython.Runtime.Binding {
                 if (pt.IsSystemType) {
                     return action.FallbackInvokeMember(this, args);
                 } else if (
-                    pt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(action.Name), out dummy) ||
+                    pt.TryResolveSlot(DefaultContext.DefaultCLS, action.Name, out dummy) ||
                     pt.IsOldClass) {
                     break;
                 }
@@ -274,8 +274,8 @@ namespace IronPython.Runtime.Binding {
         private void GetAdapters(ArgumentValues/*!*/ ai, DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, out NewAdapter/*!*/ newAdapter, out InitAdapter/*!*/ initAdapter) {
             PythonTypeSlot newInst, init;
 
-            Value.TryResolveSlot(PythonContext.GetPythonContext(call).SharedContext, Symbols.NewInst, out newInst);
-            Value.TryResolveSlot(PythonContext.GetPythonContext(call).SharedContext, Symbols.Init, out init);
+            Value.TryResolveSlot(PythonContext.GetPythonContext(call).SharedContext, "__new__", out newInst);
+            Value.TryResolveSlot(PythonContext.GetPythonContext(call).SharedContext, "__init__", out init);
 
             // these are never null because we always resolve to __new__ or __init__ somewhere.
             Assert.NotNull(newInst, init);
@@ -372,7 +372,7 @@ namespace IronPython.Runtime.Binding {
                         CodeContext,
                         AstUtils.Convert(Arguments.Self.Expression, typeof(PythonType)),
                         AstUtils.Constant(null),
-                        AstUtils.Constant(Symbols.NewInst)
+                        AstUtils.Constant("__new__")
                     )
                 );
             }
@@ -505,7 +505,7 @@ namespace IronPython.Runtime.Binding {
                         CodeContext,
                         Arguments.Self.Expression,
                         AstUtils.Constant(null),
-                        AstUtils.Constant(Symbols.NewInst)
+                        AstUtils.Constant("__new__")
                     )
                 );
             }
@@ -612,7 +612,7 @@ namespace IronPython.Runtime.Binding {
                     CodeContext,
                     Ast.Convert(Arguments.Self.Expression, typeof(PythonType)),
                     AstUtils.Convert(createExpr.Expression, typeof(object)),
-                    AstUtils.Constant(Symbols.Init)
+                    AstUtils.Constant("__init__")
                 );
 
                 return MakeDefaultInit(binder, createExpr, init);
@@ -696,19 +696,19 @@ namespace IronPython.Runtime.Binding {
             if (Value.IsSystemType) return false;
 
             PythonTypeSlot del;
-            bool hasDel = Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, Symbols.Unassign, out del);
+            bool hasDel = Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, "__del__", out del);
             return hasDel;
         }
 
         private bool HasDefaultNew(DynamicMetaObjectBinder/*!*/ action) {
             PythonTypeSlot newInst;
-            Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, Symbols.NewInst, out newInst);
+            Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, "__new__", out newInst);
             return newInst == InstanceOps.New;
         }
 
         private bool HasDefaultInit(DynamicMetaObjectBinder/*!*/ action) {
             PythonTypeSlot init;
-            Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, Symbols.Init, out init);
+            Value.TryResolveSlot(PythonContext.GetPythonContext(action).SharedContext, "__init__", out init);
             return init == InstanceOps.Init;
         }
 

@@ -13,9 +13,13 @@
  *
  * ***************************************************************************/
 
+#if CLR2
+namespace Microsoft.Scripting.Utils {
+#else
 namespace System {
+#endif
 
-    #if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT
 
     /// <summary>
     /// Encapsulates a method that has no parameters and returns a value of the type specified by the TResult parameter.

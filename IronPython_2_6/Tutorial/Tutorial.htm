@@ -121,41 +121,28 @@
 	<p class="Normal">The goal of this tutorial is to quickly
 	familiarize you with the IronPython console, and to show you how to make use of the extensive .NET libraries available.&nbsp;
 	This tutorial also shows you how to get started in more specialized areas
-	such as interoperating with COM, extending IronPython with C#, and embedding
-	IronPython.&nbsp; This tutorial is NOT meant to be an introduction to Python
+	such as interoperating with COM, extending IronPython with C#, and debugging IronPython with Visual Studio.&nbsp; This tutorial is NOT meant to be an introduction to Python
 	itself, and if you're looking for that, we recommend you start with the
 	tutorial at <a href="http://docs.python.org/tut/tut.html">www.python.org</a>
 	or the often recommended book <i>Learning Python</i> by Mark Lutz and David
-	Ascher.<br><br>
+	Ascher. We also highly recommend <i>IronPython in Action</i> by Michael Foord and Christian Muirhead.<br><br>
         Some of the exercises in this tutorial require prerequisites.&nbsp; The prerequisites to successfully complete the whole tutorial are:</p>
-	<ul type="disc">
-		<li class="Normal">Microsoft .NET Framework Version 2.0 Service Pack 1 (x86)
-		<ul type="circle">
-			<li class="Normal">Required to run IronPython.</li>
-			<li class="Normal">Download from
-			<a href="http://www.microsoft.com/downloads/details.aspx?familyid=79BC3B77-E02C-4AD3-AACF-A7633F706BA5&displaylang=en">
-			here</a>.</li>
-		</ul>
-		</li>
-	</ul>
 	<ul>
-		<li class="Normal">.NET Framework 2.0 Software Development Kit (SDK) (x86)
-		<ul type="circle">
-			<li class="Normal">Required for the COM interoperability, extending
-			and embedding tutorials.</li>
-			<li class="Normal">Download from
-			<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
-			here</a>.</li>
-		</ul>
-		</li>
-	</ul>
-	<ul>
-		<li class="Normal"><a name="WPF">Microsoft .NET Framework Version 3.5 Redistributable Package (x86)</a>
+		<li class="Normal">Microsoft .NET Framework Version 3.5 Service Pack 1
 		    <ul type="circle">
-			<li class="Normal">Required for &quot;Advanced IronPython&quot; and &quot;Embedding
-			IronPython&quot; tutorials.</li>
+			<li class="Normal">Required to run IronPython, COM Interoperability and the Windows Presentation Foudation portion of the &quot;Advanced IronPython&quot; tutorial.</li>
 			<li class="Normal">Download from
-			<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=333325fd-ae52-4e35-b531-508d977d32a6&DisplayLang=en">
+			<a href="http://www.microsoft.com/downloads/details.aspx?familyid=AB99342F-5D1A-413D-8319-81DA479AB0D7&displaylang=en">
+			here</a>.</li>
+		</ul>
+		</li>
+	</ul>
+	<ul>
+		<li class="Normal">Visual Studio 2008 with Service Pack 1 
+		    <ul type="circle">
+			<li class="Normal">Required for the &quot;Using Visual Studio to Edit .py Files and Debug Them&quot; tutorial.</li>
+			<li class="Normal">A trial edition of Visual Studio 2008 with Service Pack 1 can be downloaded from 
+			<a href="http://www.microsoft.com/visualstudio/try">
 			here</a>.</li>
 		</ul>
 		</li>
@@ -166,9 +153,9 @@
 			<li>Required for the &quot;Basic IronPython&quot; tutorial, exercise &quot;Loading .NET
 			Libraries&quot;.</li>
 			<li>Download Mapack from
-			<a href="http://www.aisto.com/roeder/dotnet/">here</a> (direct link
+			<a href="http://www.lutzroeder.com/dotnet/">here</a> (direct link
 			to the Mapack.zip download is
-			<a href="http://www.aisto.com/roeder/dotnet/Download.aspx?File=Mapack">
+			<a href="http://www.lutzroeder.com/dotnet/Download.aspx?File=Mapack">
 			here</a>).</li>
 			<li>Extract Mapack.dll from the zip file directly into the Tutorial
 			directory.</li>
@@ -176,11 +163,9 @@
 		</li>
 	</ul>
 	<p class="Normal">&nbsp;</p>
-	<p class="Body">Visual Studio 2005 can be used in place of the Microsoft .NET
-	Framework Version 2.0 and the .NET Framework 2.0 Software Development Kit (SDK).
-	Since Visual Studio 2005 installs both the .NET Framework 2.0 and the .NET Framework
-	SDK, there is no need to install those explicitly if you have Visual Studio
-	2005 available.</p>
+	<p class="Body">Visual Studio 2008 with Service Pack 1 automatically installs the Microsoft .NET
+	Framework Version 3.5 Service Pack 1. ince Visual Studio 2005 installs the .NET Framework 3.5 Serivce Pack 1, there is no need to install it explicitly if you have Visual Studio
+	2008 available.</p>
 	<p class="Body">This tutorial assumes that the IronPython distribution was uncompressed
 	into the directory C:\IronPython.&nbsp; Please note that your individual setup may
 	vary.</p>
@@ -229,8 +214,8 @@
 		the tutorial directory&quot;.</p>
 		</li>
 	</ol>
-	<p class="Code-Highlighted">IronPython 1.0 on .NET 2.0.50727.42<br />
-	Copyright (c) Microsoft Corporation. All rights reserved.</p>
+	<p class="Code-Highlighted">IronPython 2.6 on .NET 2.0.50727.4927<br />
+	Type "help", "copyright", "credits" or "license" for more information.</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; _</p>
 	<ol start="2">
 		<li>
@@ -452,7 +437,7 @@
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir(System.Environment)</p>
 	<p class="HiddenOutput">['CommandLine', 'CurrentDirectory', 'Equals', 'Exit', 'ExitCode', 'ExpandEnvironmentVariables', 'FailFast', 'GetCommandLineArgs', 'GetEnvironmentVariable', 'GetEnvironmentVariables', 'GetFolderPath', 'GetHashCode', 'GetLogicalDrives', 'GetType', 'HasShutdownStarted', 'MachineName', 'MemberwiseClone', 'NewLine', 'OSVersion', 'ProcessorCount', 'ReferenceEquals', 'SetEnvironmentVariable', 'SpecialFolder', 'StackTrace', 'SystemDirectory', 'TickCount', 'ToString', 'UserDomainName', 'UserInteractive', 'UserName', 'Version', 'WorkingSet', '__all__', '__class__', '__delattr__', '__doc__', '__format__', '__getattribute__', '__hash__', '__init__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__']</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.OSVersion</p>
-	<p class="Code-Highlighted">&lt;System.OperatingSystem object at 0x000000000000002B [Microsoft Windows NT 6.0.6000.0]</p>
+	<p class="Code-Highlighted">&lt;System.OperatingSystem object at 0x000000000000002B [Microsoft Windows NT 6.1.7600.0]</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.CommandLine</p>
 	<p class="Code-Highlighted">&#39;C:\\IronPython\\ipy.exe&#39;
 	<p class="LooseVerify">'"%MERLIN_ROOT%\\Bin\\Debug\\ipy.exe"'
@@ -2901,28 +2886,28 @@ list(set1-set2)</p>
 	from IronPython. You added the ability for IronPython to enumerate the class,
 	added an operator to it and support for delegate. The implementation was in
 	either C# or Visual Basic, or both.</p>
-<h1><a name="T7">Tutorial 6: Using Visual Studio to Edit .py Files and Debug
+<h1><a name="T7">Tutorial 6: Using Visual Studio 2008 to Edit .py Files and Debug
 Them</a></h1>
 	<p class="Body">There's very basic support for editing .py files in Visual
-	Studio (no coloring or expression completion), but you get .NET debugging support.&nbsp; This tutorial shows
-	you how to quickly set up Visual Studio to work on Python scripts in a
+	Studio 2008 (no coloring or expression completion), but you get .NET debugging support.&nbsp; This tutorial shows
+	you how to quickly set up Visual Studio 2008 to work on Python scripts in a
 	directory.</p>
 	<p class="Body">Estimated time to complete this tutorial: <b>5 minutes</b></p>
 	<p class="Body">The objective of this tutorial is to set up Visual Studio
-	for some basic tool support for debugging.</p>
+	    2008 for some basic tool support for debugging.</p>
 	<ul>
 		<li>
-		<p class="Body"><a href="#T6.1">Setting up Visual Studio for IronPython
+		<p class="Body"><a href="#T6.1">Setting up Visual Studio 2008 for IronPython
 		Debugging</a></p>
 		</li>
 	</ul>
-	<h2><a name="T6.1">Exercise 1: Setting up Visual Studio for IronPython
+	<h2><a name="T6.1">Exercise 1: Setting up Visual Studio 2008 for IronPython
 	Debugging</a></h2>
-	<p class="Body">In this exercise you will set up a Visual Studio solution
+	<p class="Body">In this exercise you will set up a Visual Studio 2008 solution
 	that you can use to edit .py files in a directory and debug them using the
-	Visual Studio .NET debugger.&nbsp; We will use the Tutorial directory as an
+	Visual Studio 2008 debugger.&nbsp; We will use the Tutorial directory as an
 	example, but you could save your solution anywhere.</p>
-	<h3><a name="T6.1.1">Task 1: Setting up Visual Studio for IronPython
+	<h3><a name="T6.1.1">Task 1: Setting up Visual Studio 2008 for IronPython
 	Debugging</a></h3>
 	<ol>
 		<li>
@@ -2944,7 +2929,7 @@ Them</a></h1>
 		<li>
 		<p class="Step">In the properties dialog, you will fill in two
 		fields, the Command Arguments and Working Directory.&nbsp; For the
-		Command Arguments, enter &quot;first.py&quot;.&nbsp; For the Working Directory,
+		Command Arguments, enter &quot;-D first.py&quot;.&nbsp; For the Working Directory,
 		enter the path to the Tutorial directory (c:\IronPython\Tutorial\ is
 		where we assume you have it).&nbsp; Click Apply and OK to confirm your
 		changes.</p>
@@ -2989,11 +2974,11 @@ files you developed while using this solution file.</p>
 	<p class="Body">In this tutorial you performed the following exercises.</p>
 	<ul>
 		<li>
-		<p class="Body"><a href="#T6.1">Setting up Visual Studio for IronPython
+		<p class="Body"><a href="#T6.1">Setting up Visual Studio 2008 for IronPython
 		Debugging</a></p>
 		</li>
 	</ul>
-	<p class="Normal">In this tutorial you set up Visual Studio to work on
+	<p class="Normal">In this tutorial you set up Visual Studio 2008 to work on
 	Python scripts in a directory and debug them.</p>
 
 </body>

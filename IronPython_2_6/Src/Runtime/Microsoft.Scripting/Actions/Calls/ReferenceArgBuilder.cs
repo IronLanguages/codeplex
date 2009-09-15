@@ -23,6 +23,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using RuntimeHelpers = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers;
 

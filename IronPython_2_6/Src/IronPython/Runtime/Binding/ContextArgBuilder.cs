@@ -25,6 +25,7 @@ using System.Reflection;
 using System;
 using System.Dynamic;
 using Microsoft.Scripting.Actions.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
 

@@ -21,7 +21,7 @@ if System.Environment.Version.Major >=4:
 else:
     clr.AddReference("Microsoft.Scripting.Core")
 
-clr.AddReference("Microsoft.Scripting")
+clr.AddReference("Microsoft.Dynamic")
 clr.AddReference("IronPython")
 
 from Microsoft.Scripting.Generation import Snippets

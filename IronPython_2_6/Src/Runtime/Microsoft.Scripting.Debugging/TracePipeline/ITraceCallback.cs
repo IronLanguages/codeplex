@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Debugging {
     public interface ITraceCallback {

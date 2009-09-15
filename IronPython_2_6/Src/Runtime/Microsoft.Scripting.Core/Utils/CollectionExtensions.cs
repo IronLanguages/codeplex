@@ -13,12 +13,15 @@
  *
  * ***************************************************************************/
 
+#if CLR2
+using Microsoft.Scripting.Utils;
+#else
+using System.Diagnostics.Contracts;
+#endif
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-#if !CLR2
-using System.Diagnostics.Contracts;
-#endif
 using System.Runtime.CompilerServices;
 
 namespace System.Dynamic.Utils {

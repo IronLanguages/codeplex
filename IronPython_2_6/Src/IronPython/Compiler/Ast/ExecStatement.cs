@@ -21,6 +21,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 using System.Diagnostics;
 using Microsoft.Scripting;
+using IronPython.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
@@ -69,7 +70,7 @@ namespace IronPython.Compiler.Ast {
                     AstGenerator.GetHelperMethod("QualifiedExec"),
                     ag.LocalContext, 
                     ag.TransformAsObject(_code), 
-                    ag.TransformAndDynamicConvert(_globals, typeof(IAttributesCollection)), 
+                    ag.TransformAndDynamicConvert(_globals, typeof(PythonDictionary)), 
                     ag.TransformOrConstantNull(_locals, typeof(object))
                 );
             }

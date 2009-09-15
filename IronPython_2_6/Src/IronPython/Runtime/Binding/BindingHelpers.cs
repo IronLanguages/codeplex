@@ -47,10 +47,10 @@ namespace IronPython.Runtime.Binding {
         /// 
         /// Succeeds if the MetaObject is a BuiltinFunction or BuiltinMethodDescriptor.
         /// </summary>
-        internal static bool TryGetStaticFunction(PythonContext/*!*/ state, SymbolId op, DynamicMetaObject/*!*/ mo, out BuiltinFunction function) {
+        internal static bool TryGetStaticFunction(PythonContext/*!*/ state, string op, DynamicMetaObject/*!*/ mo, out BuiltinFunction function) {
             PythonType type = MetaPythonObject.GetPythonType(mo);
             function = null;
-            if (op != SymbolId.Empty) {
+            if (!String.IsNullOrEmpty(op)) {
                 PythonTypeSlot xSlot;
                 object val;
                 if (type.TryResolveSlot(state.SharedContext, op, out xSlot) &&

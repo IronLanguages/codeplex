@@ -219,7 +219,7 @@ namespace IronPython.Runtime.Binding {
 
                 switch (ai.Kind) {
                     case ArgumentType.Dictionary:
-                        IAttributesCollection iac = (IAttributesCollection)args[i].Value;
+                        PythonDictionary iac = (PythonDictionary)args[i].Value;
                         List<string> argNames = new List<string>();
 
                         foreach (KeyValuePair<object, object> kvp in iac) {
@@ -229,9 +229,9 @@ namespace IronPython.Runtime.Binding {
 
                             metaArgs.Add(
                                 Expression.Call(
-                                    AstUtils.Convert(args[i].Expression, typeof(IAttributesCollection)),
-                                    typeof(IAttributesCollection).GetMethod("get_Item"),
-                                    AstUtils.Constant(SymbolTable.StringToId(key))
+                                    AstUtils.Convert(args[i].Expression, typeof(PythonDictionary)),
+                                    typeof(PythonDictionary).GetMethod("get_Item", new[] { typeof(object) }),
+                                    AstUtils.Constant(key)
                                 )
                             );
                         }
@@ -239,7 +239,7 @@ namespace IronPython.Runtime.Binding {
                         restrictions = restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(args[i].Expression, args[i].GetLimitType()));
                         splatKwArgTest = Expression.Call(
                             typeof(PythonOps).GetMethod("CheckDictionaryMembers"),
-                            AstUtils.Convert(args[i].Expression, typeof(IAttributesCollection)),
+                            AstUtils.Convert(args[i].Expression, typeof(PythonDictionary)),
                             AstUtils.Constant(argNames.ToArray())
                         );
                         break;
