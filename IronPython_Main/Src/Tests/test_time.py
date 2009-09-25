@@ -149,4 +149,9 @@ def test_gmtime():
 def test_localtime():
     AreEqual(time.mktime(time.localtime(0)), 0)
 
+def test_asctime():
+    AreEqual(time.asctime((2009, 9, 4, 14, 57, 11, 4, 247, 0)), 'Fri Sep 04 14:57:11 2009')
+    AreEqual(time.asctime((2009, 9, 4, 14, 57, 11, 4, 247, 1)), 'Fri Sep 04 14:57:11 2009')
+    AreEqual(time.asctime((2009, 9, 4, 14, 57, 11, 4, 247, -1)), 'Fri Sep 04 14:57:11 2009')
+
 run_test(__name__)

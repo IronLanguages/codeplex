@@ -16,6 +16,7 @@
 
 #if CLR2
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 #else
 using System.Linq.Expressions;
 #endif

@@ -632,6 +632,7 @@ def test_parser_recovery():
     import clr
     clr.AddReference('IronPython')
     clr.AddReference('Microsoft.Scripting')
+    clr.AddReference('Microsoft.Dynamic')
     
     from Microsoft.Scripting import (
         TextContentProvider, SourceCodeKind, SourceUnit, ErrorSink,  

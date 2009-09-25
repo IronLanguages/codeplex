@@ -1620,5 +1620,23 @@ def test_ctor_field_assign_conversions():
         
     AreEqual(ValueTypeWithFields(Y=myint(42)), res)
 
+def test_iterator_dispose():
+    # getting an enumerator from an enumerable should dispose the new enumerator
+    import clr
+    box = clr.StrongBox[bool]()
+    ietest = EnumerableTest(box)
+    for x in ietest:
+        pass
+        
+    AreEqual(box.Value, True)
+    
+    # enumerating on an enumerator shouldn't dispose the box
+    box = clr.StrongBox[bool]()
+    ietest = MyEnumerator(box)
+    for x in ietest:
+        pass
+        
+    AreEqual(box.Value, False)
+    
 run_test(__name__)
 

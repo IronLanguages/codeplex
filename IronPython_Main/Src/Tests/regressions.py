@@ -381,9 +381,13 @@ def test_conversions_cp19675():
 def test_type_delegate_conversion():
     import clr
     clr.AddReference('Microsoft.Scripting.Core')
-    import System
+    if is_net40:
+      from System import Func    
+    else:
+      from Microsoft.Scripting.Utils import Func    
+      
     class x(object): pass
-    ctor = System.Func[object](x)
+    ctor = Func[object](x)
     AreEqual(type(ctor()), x)
 
 

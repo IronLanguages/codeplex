@@ -19,6 +19,7 @@ import System
 
 sys.path.append(sys.exec_prefix)
 clr.AddReference("Microsoft.Scripting.dll")
+clr.AddReference("Microsoft.Dynamic.dll")
 if System.Environment.Version.Major >=4:
     clr.AddReference("System.Core")
 else:

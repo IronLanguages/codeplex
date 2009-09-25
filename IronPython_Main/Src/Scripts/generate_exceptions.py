@@ -200,11 +200,15 @@ def get_all_exceps(l, curHierarchy):
 
 ip = clr.LoadAssemblyByPartialName('ironpython')
 ms = clr.LoadAssemblyByPartialName('Microsoft.Scripting')
+md = clr.LoadAssemblyByPartialName('Microsoft.Dynamic')
 sysdll = clr.LoadAssemblyByPartialName('System')
 
 def get_type(name):
     if name.startswith('IronPython'):            return ip.GetType(name)
-    if name.startswith('Microsoft.Scripting'):   return ms.GetType(name)
+    if name.startswith('Microsoft.Scripting'):   
+        res = ms.GetType(name)
+        return res if res is not None else md.GetType(name)
+	
     if name.startswith('System.ComponentModel'): return sysdll.GetType(name)
     
     return System.Type.GetType(name)

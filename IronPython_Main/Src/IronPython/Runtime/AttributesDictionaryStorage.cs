@@ -41,10 +41,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Add(SymbolId key, object value) {
-            _data[key] = value;
-        }
-
         public override bool Contains(object key) {
             if (_data == null) return false;
 
@@ -54,10 +50,6 @@ namespace IronPython.Runtime {
             } else {
                 return _data.ContainsObjectKey(key);
             }
-        }
-
-        public override bool Contains(SymbolId key) {
-            return _data.ContainsKey(key);
         }
 
         public override bool Remove(object key) {
@@ -76,10 +68,6 @@ namespace IronPython.Runtime {
             }
 
             return _data.TryGetObjectValue(key, out value);
-        }
-
-        public override bool TryGetValue(SymbolId key, out object value) {
-            return _data.TryGetValue(key, out value);
         }
 
         public override int Count {

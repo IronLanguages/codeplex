@@ -23,6 +23,7 @@ using System.Runtime.CompilerServices;
 
 #if CLR2
 namespace Microsoft.Scripting.Ast.Compiler {
+    using Microsoft.Scripting.Utils;
 #else
 namespace System.Linq.Expressions.Compiler {
 #endif
