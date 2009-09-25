@@ -218,14 +218,15 @@ namespace Microsoft.Scripting {
             public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value) {
                 IScopeVariable variable = Value.GetVariable(binder.Name, binder.IgnoreCase);
 
+                var objExpression = Expression.Convert(value.Expression, typeof(object));
                 return new DynamicMetaObject(
                     Expression.Block(
                         Expression.Call(
                             Expression.Constant(variable),
                             variable.GetType().GetMethod("SetValue"),
-                            value.Expression
+                            objExpression
                         ),
-                        value.Expression
+                        objExpression
                     ),
                     BindingRestrictions.GetInstanceRestriction(Expression, Value)
                 );

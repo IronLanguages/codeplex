@@ -245,7 +245,7 @@ namespace IronPython.Compiler {
             return Expression.Call(
                 typeof(PythonOps).GetMethod(_isLocal ? "RawGetLocal" : "RawGetGlobal"),
                 _codeContextExpr,
-                Utils.Constant(SymbolTable.StringToId(_name))
+                Utils.Constant(_name)
             );
         }
 

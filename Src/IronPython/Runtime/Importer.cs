@@ -100,7 +100,7 @@ namespace IronPython.Runtime {
                         }
                     } else {
                         // subclass of module, it could have overridden __getattr__ or __getattribute__
-                        if (PythonOps.TryGetBoundAttr(context, scope, SymbolTable.StringToId(name), out ret)) {
+                        if (PythonOps.TryGetBoundAttr(context, scope, name, out ret)) {
                             return ret;
                         }
                     }
@@ -113,7 +113,7 @@ namespace IronPython.Runtime {
                 } else if ((pt = from as PythonType) != null) {
                     PythonTypeSlot pts;
                     object res;
-                    if (pt.TryResolveSlot(context, SymbolTable.StringToId(name), out pts) &&
+                    if (pt.TryResolveSlot(context, name, out pts) &&
                         pts.TryGetValue(context, null, pt, out res)) {
                         return res;
                     }
@@ -125,7 +125,7 @@ namespace IronPython.Runtime {
                 } else {
                     // This is too lax, for example it allows from module.class import member
                     object ret;
-                    if (PythonOps.TryGetBoundAttr(context, from, SymbolTable.StringToId(name), out ret)) {
+                    if (PythonOps.TryGetBoundAttr(context, from, name, out ret)) {
                         return ret;
                     }
                 }
@@ -183,9 +183,9 @@ namespace IronPython.Runtime {
                         object pathAttr, nameAttr;
                         if (pyGlobals._storage.TryGetName(out nameAttr) && nameAttr is string) {
                             if (pyGlobals._storage.TryGetPath(out pathAttr)) {
-                                ((IAttributesCollection)globals)[Symbols.Package] = nameAttr;
+                                pyGlobals["__package__"] = nameAttr;
                             } else {
-                                ((IAttributesCollection)globals)[Symbols.Package] = ((string)nameAttr).rpartition(".")[0];
+                                pyGlobals["__package__"] = ((string)nameAttr).rpartition(".")[0];
                             }
                         }
                     }
@@ -516,12 +516,12 @@ namespace IronPython.Runtime {
         /// First the find_module(fullName, path) is invoked to get a loader, then load_module(fullName) is invoked
         /// </summary>
         private static bool FindAndLoadModuleFromImporter(CodeContext/*!*/ context, object importer, string fullName, List path, out object ret) {
-            object find_module = PythonOps.GetBoundAttr(context, importer, SymbolTable.StringToId("find_module"));
+            object find_module = PythonOps.GetBoundAttr(context, importer, "find_module");
 
             PythonContext pycontext = PythonContext.GetContext(context);
             object loader = pycontext.Call(context, find_module, fullName, path);
             if (loader != null) {
-                object findMod = PythonOps.GetBoundAttr(context, loader, SymbolTable.StringToId("load_module"));
+                object findMod = PythonOps.GetBoundAttr(context, loader, "load_module");
                 ret = pycontext.Call(context, findMod, fullName);
                 return ret != null;
             }
@@ -618,18 +618,10 @@ namespace IronPython.Runtime {
         }
 
         private static object FindImportFunction(CodeContext/*!*/ context) {
-            object builtin, import;
-            if (!context.GlobalDict._storage.TryGetBuiltins(out builtin)) {
-                builtin = PythonContext.GetContext(context).BuiltinModuleInstance;
-            }
+            PythonDictionary builtins = context.GetBuiltinsDict() ?? PythonContext.GetContext(context).BuiltinModuleDict;
 
-            PythonModule scope = builtin as PythonModule;
-            if (scope != null && scope.__dict__._storage.TryGetImport(out import)) {
-                return import;
-            }
-
-            PythonDictionary dict = builtin as PythonDictionary;
-            if (dict != null && dict._storage.TryGetImport(out import)) {
+            object import;
+            if (builtins._storage.TryGetImport(out import)) {
                 return import;
             }
 
@@ -712,7 +704,7 @@ namespace IronPython.Runtime {
         internal static PythonModule ExecuteSourceUnit(PythonContext context, SourceUnit/*!*/ sourceUnit) {
             ScriptCode compiledCode = sourceUnit.Compile();
             Scope scope = compiledCode.CreateScope();
-            PythonModule res = ((PythonScopeExtension)context.EnsureScopeExtension(scope)).Module; ;
+            PythonModule res = ((PythonScopeExtension)context.EnsureScopeExtension(scope)).Module;
             compiledCode.Run(scope);
             return res;
         }

@@ -25,6 +25,7 @@ using System.Core;
 
 #if CLR2
 namespace Microsoft.Scripting.Ast {
+    using Microsoft.Scripting.Utils;
 #else
 namespace System.Linq.Expressions {
 #endif

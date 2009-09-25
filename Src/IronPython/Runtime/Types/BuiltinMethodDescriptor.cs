@@ -26,6 +26,7 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;

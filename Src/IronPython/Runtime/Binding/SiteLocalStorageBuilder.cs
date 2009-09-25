@@ -25,6 +25,7 @@ using System.Dynamic;
 using System.Reflection;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 using Microsoft.Scripting.Actions.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Binding {
     public sealed class SiteLocalStorageBuilder : ArgBuilder {

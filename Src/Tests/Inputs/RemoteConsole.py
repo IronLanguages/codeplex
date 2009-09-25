@@ -18,6 +18,7 @@ import sys
 clr.AddReference("IronPython")
 from IronPython.Runtime import PythonContext
 clr.AddReference("Microsoft.Scripting")
+clr.AddReference("Microsoft.Dynamic")
 from Microsoft.Scripting.Hosting.Shell.Remote import RemoteConsoleHost, ConsoleRestartManager
 from System.Reflection import Assembly
 from System.Diagnostics import Process

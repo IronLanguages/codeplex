@@ -24,6 +24,7 @@ using System.Dynamic;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 

@@ -1361,7 +1361,7 @@ def test_pickle():
 def test_zzz_cli_features():
     import System
     import clr
-    clr.AddReference('Microsoft.Scripting')
+    clr.AddReference('Microsoft.Dynamic')
     import Microsoft
     
     for testType in types:

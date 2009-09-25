@@ -405,7 +405,7 @@ namespace IronPython.Runtime.Binding {
                 return ((CallSite<Func<CallSite, string, IEnumerator>>)site).Update(site, value);
             }
 
-            return PythonOps.StringEnumerator(value);
+            return PythonOps.StringEnumerator(value).Key;
         }
 
         public IEnumerable BytesToIEnumerableConversion(CallSite site, Bytes value) {
@@ -424,8 +424,8 @@ namespace IronPython.Runtime.Binding {
             }
 
             return _context.PythonOptions.Python30 ?
-                (IEnumerator)PythonOps.BytesIntEnumerator(value) :
-                (IEnumerator)PythonOps.BytesEnumerator(value);
+                (IEnumerator)PythonOps.BytesIntEnumerator(value).Key :
+                (IEnumerator)PythonOps.BytesEnumerator(value).Key;
         }
 
         public IEnumerable ObjectToIEnumerableConversion(CallSite site, object value) {
@@ -445,11 +445,11 @@ namespace IronPython.Runtime.Binding {
         public IEnumerator ObjectToIEnumeratorConversion(CallSite site, object value) {
             if (value != null) {
                 if (value is string) {
-                    return PythonOps.StringEnumerator((string)value);
+                    return PythonOps.StringEnumerator((string)value).Key;
                 } else if (value.GetType() == typeof(Bytes)) {
                     return _context.PythonOptions.Python30 ?
-                        (IEnumerator)PythonOps.BytesIntEnumerator((Bytes)value) :
-                        (IEnumerator)PythonOps.BytesEnumerator((Bytes)value);
+                        (IEnumerator)PythonOps.BytesIntEnumerator((Bytes)value).Key :
+                        (IEnumerator)PythonOps.BytesEnumerator((Bytes)value).Key;
                 }
             }
 
@@ -692,9 +692,9 @@ namespace IronPython.Runtime.Binding {
             CodeContext context = pyContext.SharedContext;
             PythonTypeSlot pts;
 
-            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {
+            if (pt.TryResolveSlot(context, "__iter__", out pts)) {
                 return MakeIterRule(metaUserObject, "CreatePythonEnumerable");
-            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {
+            } else if (pt.TryResolveSlot(context, "__getitem__", out pts)) {
                 return MakeGetItemIterable(metaUserObject, pyContext, pts, "CreateItemEnumerable");
             }
 
@@ -708,7 +708,7 @@ namespace IronPython.Runtime.Binding {
             PythonTypeSlot pts;
 
 
-            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {
+            if (pt.TryResolveSlot(context, "__iter__", out pts)) {
                 ParameterExpression tmp = Ast.Parameter(typeof(object), "iterVal");
 
                 return new DynamicMetaObject(
@@ -737,7 +737,7 @@ namespace IronPython.Runtime.Binding {
                     ),
                     metaUserObject.Restrictions
                 );
-            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {
+            } else if (pt.TryResolveSlot(context, "__getitem__", out pts)) {
                 return MakeGetItemIterable(metaUserObject, state, pts, "CreateItemEnumerator");
             }
 

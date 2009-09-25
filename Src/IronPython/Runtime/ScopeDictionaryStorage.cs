@@ -47,17 +47,9 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Add(SymbolId key, object value) {
-            Add(SymbolTable.IdToString(key), value);
-        }
-
         public override bool Contains(object key) {
             object dummy;
             return TryGetValue(key, out dummy);
-        }
-
-        public override bool Contains(SymbolId key) {
-            return Contains(SymbolTable.IdToString(key));
         }
 
         public override bool Remove(object key) {
@@ -89,10 +81,6 @@ namespace IronPython.Runtime {
 
             value = null;
             return false;
-        }
-
-        public override bool TryGetValue(SymbolId key, out object value) {
-            return TryGetValue(SymbolTable.IdToString(key), out value);
         }
 
         public override int Count {

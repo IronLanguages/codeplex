@@ -41,6 +41,7 @@ using Microsoft.Scripting.Utils;
 using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Math;
 
+[assembly: ExtensionType(typeof(IronPythonTest.IFooable), typeof(IronPythonTest.FooableExtensions))]
 namespace IronPythonTest {
 #if !SILVERLIGHT
     class Common {
@@ -329,6 +330,23 @@ namespace IronPythonTest {
             });
         }
 
+        public static void ScenarioTryGetMember() {
+            var engine = Python.CreateEngine();
+            var str = ClrModule.GetPythonType(typeof(string));
+            object result;
+            AreEqual(engine.Operations.TryGetMember(str, "Equals", out result), true);
+            AreEqual(result.ToString(), "IronPython.Runtime.Types.BuiltinFunction");
+        }
+
+        public static void ScenarioInterfaceExtensions() {
+            var engine = Python.CreateEngine();
+            engine.Runtime.LoadAssembly(typeof(Fooable).Assembly);
+            ScriptSource src = engine.CreateScriptSourceFromString("x.Bar()");
+            ScriptScope scope = engine.CreateScope();
+            scope.SetVariable("x", new Fooable());
+            AreEqual((object)src.Execute(scope), "Bar Called");
+        }
+
         class MyInvokeMemberBinder : InvokeMemberBinder {
             public MyInvokeMemberBinder(string name, CallInfo callInfo)
                 : base(name, false, callInfo) {
@@ -472,6 +490,8 @@ namespace IronPythonTest {
         }
 
         public void ScenarioDlrInterop() {
+            string actionOfT = typeof(Action<>).FullName.Split('`')[0];
+
 #if !SILVERLIGHT
             ScriptScope scope = _env.CreateScope();
             ScriptSource src = _pe.CreateScriptSourceFromString(@"
@@ -482,7 +502,7 @@ from System.Windows.Forms import Control
 import System
 
 
-somecallable = System.Action[object](lambda : 'Delegate')
+somecallable = " + actionOfT + @"[object](lambda : 'Delegate')
 
 class control(Control):
     pass
@@ -1216,7 +1236,7 @@ k = KNew()", SourceCodeKind.Statements);
         }
 
         public void ScenarioCustomDictionary() {
-            IAttributesCollection customGlobals = new PythonDictionary(new StringDictionaryStorage(new CustomDictionary()));
+            PythonDictionary customGlobals = new PythonDictionary(new StringDictionaryStorage(new CustomDictionary()));
             
             ScriptScope customModule = _pe.Runtime.CreateScope(customGlobals);            
 
@@ -1871,4 +1891,19 @@ if r.sum != 110:
             }
         }
     }
+
+
+    public interface IFooable {
+    }
+
+    public class Fooable : IFooable {
+
+    }
+
+    public static class FooableExtensions {
+        public static string Bar(IFooable self) {
+            return "Bar Called";
+        }
+    }
+
 }

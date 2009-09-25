@@ -111,5 +111,93 @@ def test_itertools_islice_end():
     # we should still have the last value still present
     for x in it:
         AreEqual(x, (4,6))
+
+@skip("silverlight")
+def test_iterator_for():
+    """test various iterable objects with multiple incomplete iterations"""
+    def generator():
+        yield 0
+        yield 1
+    
+    from cStringIO import StringIO
+    strO = StringIO()
+    strO.write('abc\n')
+    strO.write('def')
+    strI = StringIO('abc\ndef')
+    
+    import sys
+    fi = sys.float_info
+    
+    d = {2:3, 3:4}        
+    l = [2, 3]
+    s = set([2, 3, 4])
+    
+    if not is_silverlight:
+        f = file('test_file.txt', 'w+')
+        f.write('abc\n')
+        f.write('def')
+        f.close()
+    
+        f = file('test_file.txt')
         
+        import nt    
+        stat = nt.stat(__file__)
+
+    class x(object):
+        abc = 2
+        bcd = 3
+        
+    dictproxy = x.__dict__
+    dictlist = list(x.__dict__)
+    
+    ba = bytearray(b'abc')
+    
+    try:
+                      # iterator,       first Value,    second Value
+        iterators = [
+                     # objects which when enumerated multiple times continue
+                     (generator(),      0,              1),
+                     (strI,             'abc\n',        'def'),
+                     (strO,             'abc\n',        'def'),
+                     
+                     # objects which when enumerated multiple times reset
+                     (xrange(10),       0,              0), 
+                     ([0, 1],           0,              0),
+                     ((0, 1),           0,              0),
+                     (fi,               fi[0],          fi[0]),
+                     (b'abc',           b'a',           b'a'),
+                     (ba,               ord(b'a'),      ord(b'a')),
+                     (u'abc',           u'a',           u'a'),
+                     (d,                list(d)[0],    list(d)[0]),
+                     (l,                l[0],          l[0]),
+                     (s,                list(s)[0],    list(s)[0]),
+                     (dictproxy,        dictlist[0],   dictlist[0]),
+                    ]
+        
+        if not is_silverlight:
+            iterators.append((f,                'abc\n',        'def'))
+            iterators.append((stat,             stat[0],        stat[0]))
+
+        for iterator, res0, res1 in iterators:
+            for x in iterator: 
+                AreEqual(x, res0)
+                break
+            for x in iterator:
+                AreEqual(x, res1)
+                break
+    finally:
+        f.close()
+        nt.unlink('test_file.txt')
+
+
+def test_iterator_closed_file():
+    cf = file(__file__)
+    cf.close()
+    
+    def f():
+        for x in cf: pass
+        
+    AssertError(ValueError, f)
+
+    
 run_test(__name__)

@@ -13,8 +13,13 @@
  *
  * ***************************************************************************/
 
+#if CLR2
+namespace Microsoft.Scripting.Utils {
+#else
 namespace System {
-    #if CLR2 || SILVERLIGHT
+#endif
+
+#if CLR2 || SILVERLIGHT
 
     /// <summary>
     /// Encapsulates a method that takes no parameters and does not return a value.

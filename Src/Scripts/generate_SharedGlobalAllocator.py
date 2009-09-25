@@ -49,7 +49,7 @@ def _gen_indexer(cw, name, n_types, isGeneric=False):
                      (i, name, i, "<T>" if isGeneric else ""))
         cw.write("")
         cw.case_label("default:")
-    cw.write("int len = index - %sStaticFields * %s%sTypes + 1;" % (storage_prefix, storage_prefix, name))
+    cw.write("int len = checked(index - %sStaticFields * %s%sTypes + 1);" % (storage_prefix, storage_prefix, name))
     cw.enter_block("if (%ss.Length < len)" % name)
     cw.write("int newLen = %ss.Length;" % name)
     cw.enter_block("while (newLen < len)")
@@ -73,10 +73,10 @@ def gen_static_storage(cw):
     
     cw.enter_block("public static class StorageData")
     cw.write("// Amount of data currently allocated")
-    cw.write("internal static int ContextCount = 0;")
-    cw.write("internal static int ConstantCount = 0;")
-    cw.write("internal static int SymbolCount = 0;")
-    cw.write("internal static int GlobalCount = 0;")
+    cw.write("internal static int ContextCount;")
+    cw.write("internal static int ConstantCount;")
+    cw.write("internal static int SymbolCount;")
+    cw.write("internal static int GlobalCount;")
     cw.write("")
     cw.write("// Number of static fields per storage type")
     cw.write("public const int StaticFields = %d;" % n_statics)
@@ -99,7 +99,6 @@ def gen_static_storage(cw):
     cw.write("// Indexing helpers")
     _gen_indexer(cw, "Context", n_context_types)
     _gen_indexer(cw, "Constant", n_constant_types)
-    _gen_indexer(cw, "Symbol", n_symbol_types)
     _gen_indexer(cw, "Global", n_global_types)
     cw.exit_block()
     
@@ -120,7 +119,7 @@ def gen_static_storage(cw):
 def gen_site_storage(cw):
     # Generate SiteStorage<T>
     cw.enter_block("public static class SiteStorage<T> where T : class")
-    cw.write("public static int SiteCount = 0;")
+    cw.write("public static int SiteCount;")
     cw.write("")
     cw.write("public static CallSite<T>[] Sites = new CallSite<T>[%d];" % n_fallback_slots)
     _gen_indexer(cw, "Site", n_site_types, True)

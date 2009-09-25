@@ -49,10 +49,7 @@ using System.Security;
 // by using the '*' as shown below:
 
 [assembly: NeutralResourcesLanguage("en-US")]
-#if !SILVERLIGHT
-[assembly: AssemblyFileVersion("2.6.0909.0")]
-[assembly: AssemblyInformationalVersion("2.6")]
-#endif
+
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 #if !CLR2
