@@ -235,8 +235,7 @@ def test_getsizeof():
 @skip("silverlight")
 def test_gettrace():
     '''TODO: revisit'''
-    if is_cpython: #CodePlex 19578
-        AreEqual(sys.gettrace(), None)
+    AreEqual(sys.gettrace(), None)
     
     def temp_func(*args, **kwargs):
         pass

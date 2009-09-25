@@ -133,7 +133,7 @@ def test_readonly():
     
     def f(): x[2] = 20
     AssertErrorWithMatch(TypeError, 
-        "'ReadOnlyIndexer' object is unsubscriptable",
+        "'ReadOnlyIndexer' object does not support item assignment",
         f)
 
 def test_writeonly():

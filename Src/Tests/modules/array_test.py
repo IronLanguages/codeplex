@@ -411,10 +411,8 @@ def test_array_tolist():
     pass
 
 def test_array_tostring():
-    '''
-    TODO
-    '''
-    pass
+    import array
+    AreEqual(array.array('u', u'abc').tostring(), 'a\x00b\x00c\x00')
 
 def test_array_tounicode():
     '''

@@ -1552,6 +1552,15 @@ def test_slots():
     
     class D1(C1, C2): pass
     
+    # name mangling, slots, and classes which start with __
+    class __NameStartsWithUnderscore(object):
+        __slots__ = [ '__a' ]
+        def __init__(self): self.__a = 'a'
+        def geta(self): return self.__a
+    
+    s = __NameStartsWithUnderscore()
+    AreEqual(s.geta(), 'a')
+    
 def test_slots11457():
     class COld:
         __slots__ = ['a']

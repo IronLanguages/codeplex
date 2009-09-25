@@ -233,4 +233,10 @@ def test_class_assign():
     x.prop = 42
     AreEqual(x.__dict__['prop'], 42)
 
+def test_assign():
+    x = property()
+    
+    for attr in ['__doc__', 'fdel', 'fget', 'fset']:
+        AssertErrorWithMessage(TypeError, "readonly attribute", lambda : setattr(x, attr, 'abc'))
+
 run_test(__name__)
