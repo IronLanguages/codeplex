@@ -167,7 +167,13 @@ def test_symbolid_caseinsensitive():
             AreEqual(insen, sens)
             AreEqual(insen.GetHashCode(), sens.GetHashCode())
     
-    
+
+def test_import_clr():
+    from IronPython.Hosting import Python
+    eng = Python.CreateEngine()
+    mod = Python.ImportModule(eng, 'clr')
+    Assert('ToString' not in eng.Operations.GetMemberNames(42))
+        
 run_test(__name__)
 
 

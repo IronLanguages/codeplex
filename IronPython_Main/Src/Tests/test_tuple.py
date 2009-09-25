@@ -195,5 +195,15 @@ def test_tuple_equality():
     a = x()
     AreEqual((a, ), (a, ))
 
+
+def test_index_error():
+    x = ()
+    def delindex(): del x[42]
+    def setindex(): x[42] = 42
+    
+    AssertErrorWithMessage(TypeError, "'tuple' object doesn't support item deletion", delindex)
+    AssertErrorWithMessage(TypeError, "'tuple' object does not support item assignment", setindex)
+
+    
 run_test(__name__)
 

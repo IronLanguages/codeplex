@@ -33,21 +33,24 @@ from Merlin.Testing.BaseClass import *
 EVENT_COUNT = 0
 
 #--TEST CASES------------------------------------------------------------------
-@disabled("Dev10 438718")
 def test_sanity_interface_impl():
     global EVENT_COUNT
     EVENT_COUNT = 0
     
     class PySubclass(IEvent10):
+        def __init__(self):
+            self.events = []
         def add_Act(self, value):
-            self.Act += value
+            self.events.append(value)
         def remove_Act(self, value):
-            self.Act -= value
+            self.events.remove(value)
         def call(self):
-            self.Act(1, 2)
+            for x in self.events:
+                x(1, 2)
     
     x = PySubclass()
     def f(x, y):
+        global EVENT_COUNT
         EVENT_COUNT += 1    
         print x, y
     

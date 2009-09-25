@@ -447,6 +447,12 @@ def gen_api(cw, ty):
     else:
         write_property(cw, ty, "numerator")
         write_property(cw, ty, "denominator", const="1")
+        
+        if ty.name != 'Int32':
+            cw.enter_block('public static string __hex__(%s value)' % (ty.name, ))
+            cw.write('return BigIntegerOps.__hex__(value);')        
+            cw.exit_block()
+        
             
 type_header = """\
 [StaticExtensionMethod]

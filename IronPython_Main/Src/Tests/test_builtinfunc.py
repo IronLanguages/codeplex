@@ -173,22 +173,16 @@ def test_map():
 def test_range():
     AreEqual(range(2, 5.0), [2,3,4])
     AreEqual(range(3, 10, 2.0), [3, 5, 7, 9])
-    if is_cpython:
-        AssertErrorWithMessage(TypeError, "range() integer end argument expected, got float.", 
-                               range, float(-2<<32))
-        AssertErrorWithMessage(TypeError, "range() integer end argument expected, got float.", 
-                               range, 0, float(-2<<32))
-        AssertErrorWithMessage(TypeError, "range() integer start argument expected, got float.", 
-                               range, float(-2<<32), 100)
-        AssertErrorWithMessage(TypeError, "range() integer step argument expected, got float.", 
-                               range, 0, 100, float(-2<<32))
-        AssertErrorWithMessage(TypeError, "range() integer start argument expected, got float.", 
-                               range, float(-2<<32), float(-2<<32), float(-2<<32))
-    else: #CodePlex 24249
-        AssertErrorWithPartialMessage(TypeError, " end ", range, float(-2<<32))
-        AssertErrorWithPartialMessage(TypeError, " end ", range, 0, float(-2<<32))
-        AssertErrorWithPartialMessage(TypeError, " start ", range, float(-2<<32), 100)
-        AssertErrorWithPartialMessage(TypeError, " step ", range, 0, 100, float(-2<<32))
+    AssertErrorWithMessage(TypeError, "range() integer end argument expected, got float.", 
+                           range, float(-2<<32))
+    AssertErrorWithMessage(TypeError, "range() integer end argument expected, got float.", 
+                           range, 0, float(-2<<32))
+    AssertErrorWithMessage(TypeError, "range() integer start argument expected, got float.", 
+                           range, float(-2<<32), 100)
+    AssertErrorWithMessage(TypeError, "range() integer step argument expected, got float.", 
+                           range, 0, 100, float(-2<<32))
+    AssertErrorWithMessage(TypeError, "range() integer start argument expected, got float.", 
+                           range, float(-2<<32), float(-2<<32), float(-2<<32))
 
 
 def test_sorted():
