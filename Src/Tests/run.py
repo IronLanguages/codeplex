@@ -233,13 +233,13 @@ def multireader(*streams):
 
 def run_one_command(*args):
     """runs a single command, exiting if it doesn't return 0, redirecting std out"""
-    #print 'running', ' '.join(args)
-    inp, out, err = nt.popen3(' '.join(args))
-    print ' '.join(args)
+    cmd_line = '"' + executable + '" '.join(args)
+    inp, out, err = nt.popen3(cmd_line)
+    print cmd_line
     output, err = multireader(out, err)
     res = out.close()
     if res:
-        print '%d running %s failed' % (res, ' '.join(args))
+        print '%d running %s failed' % (res, cmd_line)
         print 'output was', output
         print 'err', err
     return output, err, res
@@ -249,7 +249,7 @@ def runTestSlow(test_name, mode):
     Helper function runs a test as a separate process.
     '''
     #run the actual test
-    output, errors, ec = run_one_command(executable, mode, test_name)
+    output, errors, ec = run_one_command(mode, test_name)
 
     return ec, errors
 

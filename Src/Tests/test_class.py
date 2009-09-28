@@ -661,7 +661,7 @@ def test_call_type_call():
     call_mapper[KNewArgsKwargs] = lambda: [type(KNewArgsKwargs()).__call__(KNewArgsKwargs())]
 
     
-    for K in call_mapper.keys():
+    for K in call_mapper.keys():        
         for ret_val in call_mapper[K]():
             AreEqual(ret_val, 2)
 
@@ -3587,7 +3587,7 @@ def test_new_init_error_combinations():
     temp = X1()
     temp = X2()
     for args in [(42,), 
-                 #(None,), #CP19585
+                 (None,), #CP19585
                  (42, 43), ("abc",), 
                     ]:
         X1.args = args

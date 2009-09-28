@@ -172,10 +172,8 @@ def test_meta_attrs():
 
     AreEqual(x(C, None), 42)
     
-    # IronPython incorrectly allows this because of MethodWrappers
-    if not (is_cli or is_silverlight):
-        AssertErrorWithMessage(TypeError, "can't apply this __setattr__ to type object", C.__setattr__, C, "__str__", "foo")
-        AssertErrorWithMessage(TypeError, "can't apply this __delattr__ to type object", C.__delattr__, C, "__str__")
+    AssertErrorWithMessage(TypeError, "can't apply this __setattr__ to type object", C.__setattr__, C, "__str__", "foo")
+    AssertErrorWithMessage(TypeError, "can't apply this __delattr__ to type object", C.__delattr__, C, "__str__")
     
     s = "hello"
     
