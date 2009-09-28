@@ -126,15 +126,15 @@ break"""
     
 def test_assignment_to_none():
     expected = [   
-        ("assignment to None", "None", 16, FatalError),        
+        ("assignment to None", "None", 80, FatalError),        
     ]
     actual = compile_file("None = 42")        
     AreEqual(expected, actual)
 
 def test_multiple_erroneous_statements():
     expected = [
-        ("assignment to None", "None", 16, FatalError),
-        ("assignment to None", "None", 16, FatalError),
+        ("assignment to None", "None", 80, FatalError),
+        ("assignment to None", "None", 80, FatalError),
     ]
     code = """\
 None = 2
@@ -182,7 +182,7 @@ def foo():
     
 def test_all_together():        
     expected = [   
-        ('assignment to None', 'None', 16,FatalError),
+        ('assignment to None', 'None', 80,FatalError),
         ("unexpected token '}'", "}", 16, FatalError),
         ("unexpected token '}'", "}", 16, FatalError),
     ]        

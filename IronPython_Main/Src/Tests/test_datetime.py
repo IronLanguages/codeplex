@@ -1116,12 +1116,25 @@ def test_pickle():
     nowstr = cPickle.dumps(now)
     AreEqual(now, cPickle.loads(nowstr))
 
-@disabled("CodePlex 18666")
+@skip("silverlight")
 def test_datetime_datetime_pickled_by_cpy():
+    import cPickle
     with open(r"pickles\cp18666.pickle", "rb") as f:
         expected_dt    = datetime.datetime(2009, 8, 6, 8, 42, 38, 196000)
         pickled_cpy_dt = cPickle.load(f)
         AreEqual(expected_dt, pickled_cpy_dt)
+
+    expected_dt    = datetime.datetime(2009, 8, 6, 8, 42, 38, 196000, mytzinfo())
+    pickled_cpy_dt = cPickle.loads("cdatetime\ndatetime\np1\n(S'\\x07\\xd9\\x01\\x02\\x03\\x04\\x05\\x00\\x00\\x06'\nc" + __name__ + "\nmytzinfo\np2\n(tRp3\ntRp4\n.")
+    AreEqual(expected_dt.tzinfo, pickled_cpy_dt.tzinfo)
+
+class mytzinfo(datetime.tzinfo):
+    def __repr__(self): return 'hello'
+    def __eq__(self, other): 
+        return type(other) == type(self)
+
+def test_datetime_repr():
+    AreEqual(repr(datetime.datetime(2009, 1, 2, 3, 4, 5, 6, mytzinfo())), "datetime.datetime(2009, 1, 2, 3, 4, 5, 6, tzinfo=hello)")
 
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
