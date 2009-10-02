@@ -3633,6 +3633,14 @@ def test_oldstyle_splat_dict():
     
     AreEqual(type(C(*E())), type(C()))
     
-    
+
+def test_get_dict_once():
+    class x(object): pass
+
+    class y(x): pass
+
+    Assert('__dict__' in x.__dict__)
+    Assert('__dict__' not in y.__dict__)
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

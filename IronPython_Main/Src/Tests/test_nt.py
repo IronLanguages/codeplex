@@ -1027,6 +1027,13 @@ def test_cp16413():
 def test__getfullpathname():
     AreEqual(nt._getfullpathname('.'), nt.getcwd())
     AreEqual(nt._getfullpathname('<bad>'), path_combine(nt.getcwd(), '<bad>'))
+    AreEqual(nt._getfullpathname('bad:'), path_combine(nt.getcwd(), 'bad:'))
+    AreEqual(nt._getfullpathname(':bad:'), path_combine(nt.getcwd(), ':bad:'))
+    AreEqual(nt._getfullpathname('::'), '::\\')
+    AreEqual(nt._getfullpathname('1:'), '1:\\')
+    AreEqual(nt._getfullpathname('1:a'), '1:\\a')
+    AreEqual(nt._getfullpathname('1::'), '1:\\:')
+    AreEqual(nt._getfullpathname('1:\\'), '1:\\')
     
 def test__getfullpathname_neg():
     for bad in [None, 0, 34, -12345L, 3.14, object, test__getfullpathname]:
