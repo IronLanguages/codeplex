@@ -1173,7 +1173,101 @@ def test_imp_load_dynamic():
         finally:
             nt.unlink(_x_mod)        
 
+def test_override_dict():
+    class M(type(sys)):
+        @property
+        def __dict__(self):
+            return 'not a dict'
+        @__dict__.setter
+        def __dict__(self, value):
+            global setCalled
+            setCalled = True
     
+    a = M('foo')
+    AreEqual(a.__dict__, 'not a dict')
+    a.__dict__ = 42
+    AreEqual(setCalled, True)
+    
+    class MyDesc(object):
+        def __get__(self, instance, context):
+            return 'abc'
+    
+    class M(type(sys)):
+        __dict__ = MyDesc()
+    
+    a = M('foo')
+    AreEqual(a.__dict__, 'abc')
+    
+    # instance members won't be found
+    class M(type(sys)): pass
+    
+    a = M('foo')
+    a.__dict__['__dict__'] = 42
+    AreEqual(type(a.__dict__), dict)    
+    
+    AreEqual(a.__getattribute__('__dict__'), a.__dict__)
+    
+    class M(type(sys)):
+        def baz(self):
+            return 'hello'
+        @property
+        def foo(self): 
+            return 'hello'
+        @foo.setter
+        def foo(self, value):
+            self.bar = value
+        @foo.deleter
+        def foo(self):
+            del self.bar
+    
+    a = M('hello')        
+    AreEqual(a.__getattribute__('baz'), a.baz)
+    AreEqual(a.baz(), 'hello')
+    
+    a.__setattr__('foo', 42)
+    AreEqual(a.__dict__['bar'], 42)
+    
+    a.__delattr__('foo')
+    Assert('bar' not in a.__dict__)
+    
+    # mix-in an old-style class
+    class old_class:
+        def old_method(self):
+            return 42
+        @property
+        def old_prop(self):
+            return 'abc'
+        @old_prop.setter
+        def old_prop(self, value):
+            self.op = value
+        @old_prop.deleter
+        def old_prop(self):
+            del self.op
+            
+    M.__bases__ += (old_class, )
+    AreEqual(a.old_method(), 42)
+    
+    a.__setattr__('old_prop', 42)
+    AreEqual(a.__dict__['op'], 42)
+    
+    a.__delattr__('old_prop')
+    Assert('op' not in a.__dict__)
+
+    # change the class
+    class M2(type(sys)): pass
+    a.__setattr__('__class__', M2)
+    AreEqual(type(a), M2)
+    AssertErrorWithMessage(TypeError, "readonly attribute", a.__setattr__, '__dict__', int)
+    AssertErrorWithMessage(TypeError, "readonly attribute", a.__delattr__, '__dict__')
+    
+    # __setattr__/__delattr__ no non-derived type
+    m = type(sys)('foo')
+    AssertErrorWithMessage(TypeError, "__class__ assignment: only for heap types", m.__setattr__, '__class__', int)
+    AssertErrorWithMessage(TypeError, "readonly attribute", m.__setattr__, '__dict__', int)
+    AssertErrorWithMessage(TypeError, "can't delete __class__ attribute", m.__delattr__, '__class__')
+    AssertErrorWithMessage(TypeError, "readonly attribute", m.__delattr__, '__dict__')
+    
+
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:
