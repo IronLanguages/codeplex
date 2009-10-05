@@ -661,7 +661,7 @@ def test_call_type_call():
     call_mapper[KNewArgsKwargs] = lambda: [type(KNewArgsKwargs()).__call__(KNewArgsKwargs())]
 
     
-    for K in call_mapper.keys():
+    for K in call_mapper.keys():        
         for ret_val in call_mapper[K]():
             AreEqual(ret_val, 2)
 
@@ -1551,6 +1551,15 @@ def test_slots():
         __slots__ = ['a']    
     
     class D1(C1, C2): pass
+    
+    # name mangling, slots, and classes which start with __
+    class __NameStartsWithUnderscore(object):
+        __slots__ = [ '__a' ]
+        def __init__(self): self.__a = 'a'
+        def geta(self): return self.__a
+    
+    s = __NameStartsWithUnderscore()
+    AreEqual(s.geta(), 'a')
     
 def test_slots11457():
     class COld:
@@ -3578,7 +3587,7 @@ def test_new_init_error_combinations():
     temp = X1()
     temp = X2()
     for args in [(42,), 
-                 #(None,), #CP19585
+                 (None,), #CP19585
                  (42, 43), ("abc",), 
                     ]:
         X1.args = args
@@ -3624,6 +3633,14 @@ def test_oldstyle_splat_dict():
     
     AreEqual(type(C(*E())), type(C()))
     
-    
+
+def test_get_dict_once():
+    class x(object): pass
+
+    class y(x): pass
+
+    Assert('__dict__' in x.__dict__)
+    Assert('__dict__' not in y.__dict__)
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

@@ -411,10 +411,8 @@ def test_array_tolist():
     pass
 
 def test_array_tostring():
-    '''
-    TODO
-    '''
-    pass
+    import array
+    AreEqual(array.array('u', u'abc').tostring(), 'a\x00b\x00c\x00')
 
 def test_array_tounicode():
     '''
@@ -492,18 +490,15 @@ def test_coverage():
     #--Postive
     a = array.array('b', 'a')
     for i in [  0L, 1L, 2L, 3L, 32766L, 32767L, 32768L, 65534L, 65535L, 65536L, 
-                #456720545L, #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24314
+                456720545L, #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24314
                 ]:
         AreEqual(i,
                  len(i*a))
-        if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24314
-            AreEqual(i,
-                     len(a*i))
+        AreEqual(i, len(a*i))
     
     #--Negative
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=9350#
-        AssertError(OverflowError, lambda: 4567206470L*a)
-        AssertError(OverflowError, lambda: a*4567206470L)
+    AssertError(OverflowError, lambda: 4567206470L*a)
+    AssertError(OverflowError, lambda: a*4567206470L)
     AssertError(MemoryError,   lambda: 2147483646L*a)
     AssertError(MemoryError,   lambda: a*2147483646L)
     

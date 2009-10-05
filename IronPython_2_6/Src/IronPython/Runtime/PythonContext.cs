@@ -111,6 +111,7 @@ namespace IronPython.Runtime {
         private CallSite<Func<CallSite, CodeContext, object, object, object>> _callSite1;
         private CallSite<Func<CallSite, CodeContext, object, object, object, object>> _callSite2;
         private CallSite<Func<CallSite, CodeContext, object, object[], IDictionary<object, object>, object>> _callDictSite;
+        private CallSite<Func<CallSite, CodeContext, object, object, object, object>> _callDictSiteLooselyTyped;
         private CallSite<Func<CallSite, CodeContext, object, string, PythonDictionary, PythonDictionary, PythonTuple, int, object>> _importSite;
         private CallSite<Func<CallSite, CodeContext, object, string, PythonDictionary, PythonDictionary, PythonTuple, object>> _oldImportSite;
         private CallSite<Func<CallSite, object, bool>> _isCallableSite;
@@ -184,12 +185,17 @@ namespace IronPython.Runtime {
         // tracing / in-proc debugging support
         private Debugging.CompilerServices.DebugContext _debugContext;
         private Debugging.ITracePipeline _tracePipeline;
-        private Stack<PythonTracebackListener> _tracebackListeners;
+        
+        [ThreadStatic]
+        private static Stack<PythonTracebackListener> _tracebackListeners;
+        private static int _tracingThreads;
+
         internal FunctionCode.CodeList _allCodes;
         internal readonly object _codeCleanupLock = new object(), _codeUpdateLock = new object();
         internal int _codeCount, _nextCodeCleanup = 200;
         private int _recursionLimit;
-        private bool _enableTracing;
+        [ThreadStatic]
+        private static bool _enableTracing;
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
@@ -316,14 +322,24 @@ namespace IronPython.Runtime {
 
         internal bool EnableTracing {
             get {
-                return _enableTracing || PythonOptions.Tracing;
+                return _tracingThreads > 0 || PythonOptions.Tracing;
             }
             set {
                 lock (_codeUpdateLock) {
                     bool oldEnableTracing = _enableTracing;
                     _enableTracing = value;
 
-                    if (oldEnableTracing != _enableTracing) {
+                    bool flip = false;
+                    if (value && !oldEnableTracing) {
+                        flip = _tracingThreads++ == 0;
+                    }else if(!value && oldEnableTracing) {
+                        flip = _tracingThreads++ != 0;
+                        if (flip) {
+                            _tracePipeline.TraceCallback = null;
+                        }
+                    }
+
+                    if (flip) {
                         // recursion setting has changed, we need to update all of our
                         // function codes to enforce or un-enforce recursion.
                         FunctionCode.UpdateAllCode(this);
@@ -331,7 +347,7 @@ namespace IronPython.Runtime {
                 }
             }
         }
-
+        
         internal TopNamespaceTracker TopNamespace {
             get {
                 return _topNamespace;
@@ -1839,8 +1855,8 @@ namespace IronPython.Runtime {
 
         #region Object Operations
 
-        public override ConvertBinder/*!*/ CreateConvertBinder(Type/*!*/ toType, bool explicitCast) {
-            return CompatConvert(toType, explicitCast);
+        public override ConvertBinder/*!*/ CreateConvertBinder(Type/*!*/ toType, bool? explicitCast) {
+            return CompatConvert(toType, explicitCast ?? false);
         }
 
         public override DeleteMemberBinder/*!*/ CreateDeleteMemberBinder(string/*!*/ name, bool ignoreCase) {
@@ -2573,6 +2589,24 @@ namespace IronPython.Runtime {
         internal CallSite<Func<CallSite, CodeContext, object, object[], IDictionary<object, object>, object>> MakeKeywordSplatSite() {
             return CallSite<Func<CallSite, CodeContext, object, object[], IDictionary<object, object>, object>>.Create(Binders.InvokeKeywords(this));
         }
+
+
+        internal object CallWithKeywords(object func, object args, object dict) {
+            if (_callDictSiteLooselyTyped == null) {
+                Interlocked.CompareExchange(
+                    ref _callDictSiteLooselyTyped,
+                    MakeKeywordSplatSiteLooselyTyped(),
+                    null
+                );
+            }
+
+            return _callDictSiteLooselyTyped.Target(_callDictSiteLooselyTyped, SharedContext, func, args, dict);
+        }
+
+        internal CallSite<Func<CallSite, CodeContext, object, object, object, object>> MakeKeywordSplatSiteLooselyTyped() {
+            return CallSite<Func<CallSite, CodeContext, object, object, object, object>>.Create(Binders.InvokeKeywords(this));
+        }
+
 
         internal CallSite<Func<CallSite, CodeContext, object, string, PythonDictionary, PythonDictionary, PythonTuple, int, object>> ImportSite {
             get {
@@ -3662,8 +3696,14 @@ namespace IronPython.Runtime {
 
         #region Tracing
 
-        internal PythonTracebackListener TracebackListener {
-            get { return _tracebackListeners.Peek(); }
+        internal static PythonTracebackListener TracebackListener {
+            get {
+                if (_tracebackListeners == null) {
+                    return null;
+                }
+
+                return _tracebackListeners.Peek(); 
+            }
         }
 
         internal Debugging.CompilerServices.DebugContext DebugContext {
@@ -3675,16 +3715,19 @@ namespace IronPython.Runtime {
         }
 
         internal void EnsureDebugContext() {
-            if (_debugContext == null || _tracePipeline == null || _tracebackListeners == null) {
+            if (_debugContext == null || _tracePipeline == null) {
                 lock(this) {
                     if (_debugContext == null) {
                         _debugContext = Debugging.CompilerServices.DebugContext.CreateInstance();
                         _tracePipeline = Debugging.TracePipeline.CreateInstance(_debugContext);
-                        _tracebackListeners = new Stack<PythonTracebackListener>();
-                        // push the default listener
-                        _tracebackListeners.Push(new PythonTracebackListener(this));
                     }                    
                 }
+            }
+
+            if (_tracebackListeners == null) {
+                _tracebackListeners = new Stack<PythonTracebackListener>();
+                // push the default listener
+                _tracebackListeners.Push(new PythonTracebackListener(this));
             }
         }
 
@@ -3704,7 +3747,6 @@ namespace IronPython.Runtime {
         internal void UnregisterTracebackHandler() {
             Debug.Assert(_tracePipeline != null);  // ensure debug context should have been called
 
-            _tracePipeline.TraceCallback = null;
             EnableTracing = false;
         }
 

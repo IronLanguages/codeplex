@@ -187,6 +187,7 @@
       <HintPath>$(SilverlightPath)\System.Core.dll</HintPath>
       <Aliases>systemcore</Aliases>
     </Reference>
+    <Reference Include="System.Numerics" Condition=" '$(TargetFrameworkVersion)' == 'v4.0' " />
     <Reference Include="System.Data" Condition=" '$(SilverlightBuild)' != 'true' " />
     <Reference Include="System.Xml" Condition=" '$(SilverlightBuild)' != 'true' " />
   </ItemGroup>
@@ -199,11 +200,11 @@
       <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
       <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Runtime\Microsoft.Dynamic\Microsoft.Scripting.csproj">
+    <ProjectReference Include="..\Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{02FF0909-F5AD-48CF-A86A-345E721B7E40}</Project>
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Runtime\Microsoft.Scripting\Microsoft.Dynamic.csproj">
+    <ProjectReference Include="..\Runtime\Microsoft.Dynamic\Microsoft.Dynamic.csproj">
       <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
       <Name>Microsoft.Dynamic</Name>
     </ProjectReference>

@@ -874,6 +874,7 @@ namespace IronPython.Runtime.Operations {
             return CallWithContext(context, func, allArgs.GetObjectArray());
         }
 
+        [Obsolete("Use ObjectOpertaions instead")]
         public static object CallWithArgsTupleAndKeywordDictAndContext(CodeContext/*!*/ context, object func, object[] args, string[] names, object argsTuple, object kwDict) {
             IDictionary kws = kwDict as IDictionary;
             if (kws == null && kwDict != null) throw PythonOps.TypeError("argument after ** must be a dictionary");
@@ -2297,9 +2298,9 @@ namespace IronPython.Runtime.Operations {
             return new List(list);
         }
 
-        public static PythonTuple GetOrCopyParamsTuple(object input) {
+        public static PythonTuple GetOrCopyParamsTuple(PythonFunction function, object input) {
             if (input == null) {
-                throw PythonOps.TypeError("argument after * must be a sequence, not NoneType");
+                throw PythonOps.TypeError("{0}() argument after * must be a sequence, not NoneType", function.func_name);
             } else if (input.GetType() == typeof(PythonTuple)) {
                 return (PythonTuple)input;
             }
@@ -3914,7 +3915,11 @@ namespace IronPython.Runtime.Operations {
                     return new TabException(message, sourceUnit, span, errorCode, Severity.FatalError);
 
                 default:
-                    return new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
+                    var res = new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
+                    if ((errorCode & ErrorCodes.NoCaret) != 0) {
+                        res.Data[PythonContext._syntaxErrorNoCaret] = ScriptingRuntimeHelpers.True;
+                    }
+                    return res;
             }
         }
 
@@ -4161,21 +4166,19 @@ namespace IronPython.Runtime.Operations {
             return buffer.ToString().MakeByteArray();
         }
 
-        public static bool ModuleGetMember(PythonModule module, string name, out object res) {
-            return module.__dict__.TryGetValue(name, out res) && res != Uninitialized.Instance;
-        }
+        public static bool ModuleTryGetMember(CodeContext context, PythonModule module, string name, out object res) {
+            object value = module.GetAttributeNoThrow(context, name);
+            if (value != OperationFailed.Value) {
+                res = value;
+                return true;
+            }
 
-        public static object ModuleSetMember(PythonModule module, string name, object value) {
-            Debug.Assert(value != Uninitialized.Instance);
-            return module.__dict__[name] = value;
-        }
-
-        public static bool ModuleDeleteMember(PythonModule module, string name) {
-            return module.__dict__.Remove(name);
+            res = null;
+            return false;
         }
 
         internal static void ScopeSetMember(CodeContext context, Scope scope, string name, object value) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 scopeStorage.SetValue(name, false, value);
                 return;
@@ -4185,7 +4188,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object ScopeGetMember(CodeContext context, Scope scope, string name) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 return scopeStorage.GetValue(name, false);
             }
@@ -4194,7 +4197,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool ScopeTryGetMember(CodeContext context, Scope scope, string name, out object value) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 return scopeStorage.TryGetValue(name, false, out value);
             }
@@ -4203,7 +4206,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool ScopeContainsMember(CodeContext context, Scope scope, string name) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 return scopeStorage.HasValue(name, false);
             }
@@ -4212,7 +4215,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static bool ScopeDeleteMember(CodeContext context, Scope scope, string name) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 return scopeStorage.DeleteValue(name, false);
             }
@@ -4223,7 +4226,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static IList<object> ScopeGetMemberNames(CodeContext context, Scope scope) {
-            ScopeStorage scopeStorage = scope.Storage as ScopeStorage;
+            ScopeStorage scopeStorage = ((object)scope.Storage) as ScopeStorage;
             if (scopeStorage != null) {
                 List<object> res = new List<object>();
 

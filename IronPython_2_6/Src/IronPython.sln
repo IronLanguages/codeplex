@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindow", "IronPyt
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Core", "Runtime\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Dynamic", "Runtime\Microsoft.Scripting\Microsoft.Dynamic.csproj", "{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Dynamic", "Runtime\Microsoft.Dynamic\Microsoft.Dynamic.csproj", "{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Silverlight", "Hosts\SilverLight\Microsoft.Scripting.SilverLight\Microsoft.Scripting.Silverlight.csproj", "{C86A7A7B-3086-4136-9B56-17E8DCB38C8D}"
 EndProject
@@ -27,7 +27,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindowAny", "Iron
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Debugging", "Runtime\Microsoft.Scripting.Debugging\Microsoft.Scripting.Debugging.csproj", "{ED82A346-1CD9-4CB0-9C00-4CDD4CF577CF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "Runtime\Microsoft.Dynamic\Microsoft.Scripting.csproj", "{02FF0909-F5AD-48CF-A86A-345E721B7E40}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj", "{02FF0909-F5AD-48CF-A86A-345E721B7E40}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

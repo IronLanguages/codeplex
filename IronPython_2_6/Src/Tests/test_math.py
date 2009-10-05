@@ -511,6 +511,18 @@ def test_float_26():
         AssertError(excep, float.fromhex, error)
     
 
+def test_float_subclass():
+    global calledCount
+    calledCount = 0
+    class MyFloat(float):
+        def __float__(self):
+            global calledCount
+            calledCount += 1
+            return 42
+
+    AssertErrorWithMessage(TypeError, "__float__ returned non-float (type int)", float, MyFloat(1.1))
+    AreEqual(calledCount, 1)
+    
 def test_integer_ratio():
     int_ratio_tests = [ (2.5, (5, 2)), (1.3, (5854679515581645L, 4503599627370496L))]
     

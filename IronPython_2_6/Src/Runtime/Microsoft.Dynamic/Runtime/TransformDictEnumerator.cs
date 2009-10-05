@@ -20,10 +20,8 @@ namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Exposes a IDictionary&lt;SymbolId, object&gt; as a IDictionary&lt;object, object&lt;
     /// </summary>
-    class TransformDictionaryEnumerator : CheckedDictionaryEnumerator {
+    public class TransformDictionaryEnumerator : CheckedDictionaryEnumerator {
         private IEnumerator<KeyValuePair<SymbolId, object>> _backing;
-        private const int ObjectKeysId = -2;
-        internal static readonly SymbolId ObjectKeys = new SymbolId(ObjectKeysId);
 
         public TransformDictionaryEnumerator(IDictionary<SymbolId, object> backing) {
             _backing = backing.GetEnumerator();
@@ -39,7 +37,7 @@ namespace Microsoft.Scripting.Runtime {
 
         protected override bool DoMoveNext() {
             bool result = _backing.MoveNext();
-            if (result && _backing.Current.Key == ObjectKeys) {
+            if (result && _backing.Current.Key == CustomSymbolDictionary.ObjectKeys) {
                 result = MoveNext();
             }
             return result;

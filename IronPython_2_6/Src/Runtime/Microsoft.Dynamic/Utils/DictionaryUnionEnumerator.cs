@@ -20,7 +20,7 @@ namespace Microsoft.Scripting.Utils {
     /// <summary>
     /// Presents a flat enumerable view of multiple dictionaries
     /// </summary>
-    class DictionaryUnionEnumerator : CheckedDictionaryEnumerator {
+    public class DictionaryUnionEnumerator : CheckedDictionaryEnumerator {
         private IList<IDictionaryEnumerator> _enums;
         private int _current = 0;
 

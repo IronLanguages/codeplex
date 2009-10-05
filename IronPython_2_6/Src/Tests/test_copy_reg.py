@@ -192,6 +192,9 @@ def test_extension_cache():
 
 #_reconstructor
 def test_reconstructor():
+    obj = copy_reg._reconstructor(object, object, None)   
+    Assert(type(obj) is object)
+
     #set,get, the value is a random int
     rand = _random.Random()
     value = rand.getrandbits(8)
@@ -213,7 +216,6 @@ def test_reconstructor():
     result = copy_reg._reconstructor
     Assert(result == value3,
            "set or get of the attribute failed!")
-   
    
 #pickle
 def test_pickle():
@@ -282,5 +284,5 @@ def test_pickle_complex():
     AssertError(AttributeError,copy_reg.pickle_complex,"myargu")
     obj2 = myCustom2()
     AssertError(AttributeError,copy_reg.pickle_complex,obj2)
-           
+
 run_test(__name__)

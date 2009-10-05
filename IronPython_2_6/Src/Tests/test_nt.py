@@ -751,11 +751,9 @@ def test_stat_result():
     AssertError(TypeError, lambda: x + x)
     
     #> (list/object)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(nt.stat_result(range(10)) > None)
+    Assert(nt.stat_result(range(10)) > None)
     Assert(nt.stat_result(range(10)) > 1)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(nt.stat_result(range(10)) > range(10))
+    Assert(nt.stat_result(range(10)) > range(10))
     Assert(nt.stat_result([1 for x in range(10)]) > nt.stat_result(range(10)))
     Assert(not nt.stat_result(range(10)) > nt.stat_result(range(10)))
     Assert(not nt.stat_result(range(10)) > nt.stat_result(range(11)))
@@ -763,21 +761,17 @@ def test_stat_result():
     Assert(not nt.stat_result(range(11)) > nt.stat_result(range(10)))
     
     #< (list/object)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(not nt.stat_result(range(10)) < None)
+    Assert(not nt.stat_result(range(10)) < None)
     Assert(not nt.stat_result(range(10)) < 1)
     Assert(not nt.stat_result(range(10)) < range(10))
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(not nt.stat_result([1 for x in range(10)]) < nt.stat_result(range(10)))
+    Assert(not nt.stat_result([1 for x in range(10)]) < nt.stat_result(range(10)))
     Assert(not nt.stat_result(range(10)) < nt.stat_result(range(10)))
     Assert(not nt.stat_result(range(10)) < nt.stat_result(range(11)))
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(nt.stat_result(range(10)) < nt.stat_result([1 for x in range(10)]))
+    Assert(nt.stat_result(range(10)) < nt.stat_result([1 for x in range(10)]))
     Assert(not nt.stat_result(range(11)) < nt.stat_result(range(10)))
     
     #>= (list/object)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(nt.stat_result(range(10)) >= None)
+    Assert(nt.stat_result(range(10)) >= None)
     Assert(nt.stat_result(range(10)) >= 1)
     Assert(nt.stat_result(range(10)) >= range(10))
     Assert(nt.stat_result([1 for x in range(10)]) >= nt.stat_result(range(10)))
@@ -787,17 +781,13 @@ def test_stat_result():
     Assert(nt.stat_result(range(11)) >= nt.stat_result(range(10)))
     
     #<= (list/object)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(not nt.stat_result(range(10)) <= None)
+    Assert(not nt.stat_result(range(10)) <= None)
     Assert(not nt.stat_result(range(10)) <= 1)
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(not nt.stat_result(range(10)) <= range(10))
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(not nt.stat_result([1 for x in range(10)]) <= nt.stat_result(range(10)))
+    Assert(not nt.stat_result(range(10)) <= range(10))
+    Assert(not nt.stat_result([1 for x in range(10)]) <= nt.stat_result(range(10)))
     Assert(nt.stat_result(range(10)) <= nt.stat_result(range(10)))
     Assert(nt.stat_result(range(10)) <= nt.stat_result(range(11)))
-    if is_cpython: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24293
-        Assert(nt.stat_result(range(10)) <= nt.stat_result([1 for x in range(10)]))
+    Assert(nt.stat_result(range(10)) <= nt.stat_result([1 for x in range(10)]))
     Assert(nt.stat_result(range(11)) <= nt.stat_result(range(10)))
     
     #* (size/stat_result)
@@ -867,14 +857,8 @@ def test_stat_result():
     x = nt.stat_result(range(10))
     AreEqual(x.__add__(()), tuple(x))
     AreEqual(x.__add__((1,2,3)), tuple(x) + (1, 2, 3))
-    if is_cpython:#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24295
-        AssertError(TypeError, lambda: x.__add__(3))
-    else:
-        x.__add__(3)
-    if is_cpython:#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24296
-        AssertError(TypeError, lambda: x.__add__(None))
-    else:
-        AssertError(SystemError, lambda: x.__add__(None))
+    AssertError(TypeError, lambda: x.__add__(3))
+    AssertError(TypeError, lambda: x.__add__(None))
     
     #Remove
     x = nt.stat_result(range(10))
@@ -1043,6 +1027,13 @@ def test_cp16413():
 def test__getfullpathname():
     AreEqual(nt._getfullpathname('.'), nt.getcwd())
     AreEqual(nt._getfullpathname('<bad>'), path_combine(nt.getcwd(), '<bad>'))
+    AreEqual(nt._getfullpathname('bad:'), path_combine(nt.getcwd(), 'bad:'))
+    AreEqual(nt._getfullpathname(':bad:'), path_combine(nt.getcwd(), ':bad:'))
+    AreEqual(nt._getfullpathname('::'), '::\\')
+    AreEqual(nt._getfullpathname('1:'), '1:\\')
+    AreEqual(nt._getfullpathname('1:a'), '1:\\a')
+    AreEqual(nt._getfullpathname('1::'), '1:\\:')
+    AreEqual(nt._getfullpathname('1:\\'), '1:\\')
     
 def test__getfullpathname_neg():
     for bad in [None, 0, 34, -12345L, 3.14, object, test__getfullpathname]:

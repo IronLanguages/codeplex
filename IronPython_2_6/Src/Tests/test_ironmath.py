@@ -190,7 +190,7 @@ def test_byte_conversions():
 
 def test_dword_conversions():
     def CheckDwordConversions(bigint, dwords):
-        SequencesAreEqual(bigint.GetBits(), dwords)
+        SequencesAreEqual(bigint.GetWords(), dwords)
         if bigint == BigInteger.Zero:
             AreEqual(
                 IronPythonTest.System_Scripting_Math.CreateBigInteger(

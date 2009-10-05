@@ -330,9 +330,7 @@ def test_coverage():
                         [('d',),
                          [[],[],[],[],[],[],[],[],[],[]],
                          [0,0,0,0,0,0,0,0,0,0]],
-                        ]
 
-    broken_cases = [
                         #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24303
                         [('u',u'z'),
                          [[u'z'],[u'a'],[u'\u6261'],[u'\u6261'],[u'\u6261'],[u'\u6261'],[u'\u6261'],[u'\u6261'],[u'\u6261'],[u'\u6261']],
@@ -438,29 +436,6 @@ def test_coverage():
         
         #cleanup
         for f in f_list: 
-            f.close()
-        for i in xrange(len(f_list)):
-            os.remove(TEMP_READINTO_NAME % i)
-
-    #Cases working correctly under CPython only. We'll run them under IP, but
-    #with no verification.
-    for a_params, a_expected, f_expected in broken_cases:
-        f_list = fileio_helper()
-        
-        for i in xrange(len(f_list)):
-            a = array.array(*a_params)
-            f = f_list[i]
-            
-            if is_cpython:
-                AreEqual(f.readinto(a),
-                        f_expected[i])
-                AreEqual(a.tolist(),
-                        a_expected[i])
-            else:
-                temp = f.readinto(a)
-                
-        #cleanup
-        for f in f_list:
             f.close()
         for i in xrange(len(f_list)):
             os.remove(TEMP_READINTO_NAME % i)
