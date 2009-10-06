@@ -195,11 +195,38 @@ def test_api_version():
     # api_version
     AreEqual(sys.api_version, 0)
 
-@skip("win32")
+@skip("silverlight")
 def test_settrace():
     """TODO: now that sys.settrace has been implemented this test case needs to be fully revisited"""
     # settrace
     Assert(hasattr(sys, 'settrace'))
+    
+    global traces
+    traces = []
+    def f(frame, kind, info):
+        traces.append(('f', kind, frame.f_code.co_name))
+        return g
+
+    def g(frame, kind, info):
+        traces.append(('g', kind, frame.f_code.co_name))
+        return g_ret
+
+    g_ret = g
+    def x():
+        print 'hello'
+        print 'next'
+
+    sys.settrace(f)
+    x()
+    sys.settrace(None)
+    AreEqual(traces, [('f', 'call', 'x'), ('g', 'line', 'x'), ('g', 'line', 'x'), ('g', 'return', 'x')])
+
+    traces = []
+    g_ret = f
+    sys.settrace(f)
+    x()
+    sys.settrace(None)
+    AreEqual(traces, [('f', 'call', 'x'), ('g', 'line', 'x'), ('f', 'line', 'x'), ('g', 'return', 'x')])
 
 @skip("win32")
 def test_getrefcount():
