@@ -1267,6 +1267,24 @@ def test_override_dict():
     AssertErrorWithMessage(TypeError, "can't delete __class__ attribute", m.__delattr__, '__class__')
     AssertErrorWithMessage(TypeError, "readonly attribute", m.__delattr__, '__dict__')
     
+@skip("silverlight")
+def test_ximp_load_module():
+    mod = imp.new_module('my_module_test')
+    mod.__file__ = 'does_not_exist.py'
+    sys.modules['my_module_test'] = mod
+    
+    f = file('test.py', 'w+')
+    f.write('x = 42')
+    f.close()
+    
+    with file('test.py') as inp_file:
+        imp.load_module('my_module_test', inp_file, 'does_not_exist.py', ('', 'U', 1))
+        
+    import nt
+    nt.unlink('test.py')
+        
+    AreEqual(mod.x, 42)
+    
 
 #------------------------------------------------------------------------------
 run_test(__name__)

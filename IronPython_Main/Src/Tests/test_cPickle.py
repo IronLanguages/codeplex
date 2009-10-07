@@ -916,4 +916,20 @@ def test_carriage_return_round_trip():
     import cPickle
     AreEqual(cPickle.loads(cPickle.dumps('\r\n')), '\r\n')
 
+def test_metaclass_mixed_new_old_style():
+    class mc(type): pass
+    
+    class mo(object): __metaclass__ = mc
+    
+    class c:
+        def f(self): pass
+    
+    c.of = c.f
+
+    global d
+    class d(c, mo): pass
+    
+    import cPickle
+    AreEqual(type(cPickle.loads(cPickle.dumps(d()))), d)
+
 run_test(__name__)
