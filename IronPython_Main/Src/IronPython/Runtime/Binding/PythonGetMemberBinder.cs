@@ -126,6 +126,7 @@ namespace IronPython.Runtime.Binding {
                     switch (Name) {
                         case "__str__":
                         case "__repr__":
+                        case "__doc__":
                             // need to return the built in method descriptor for these...
                             break;
                         case "__file__":
