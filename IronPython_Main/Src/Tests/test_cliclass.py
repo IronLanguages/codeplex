@@ -1655,6 +1655,11 @@ def test_scope_getvariable():
     scope = Python.CreateEngine().CreateScope()
     var = scope.GetVariable('foo')
     AreEqual(type(var), ScopeVariable)
-        
+
+def test_weird_compare():
+    a, b = WithCompare(), WithCompare()
+    AreEqual(cmp(a, b), cmp(id(a), id(b)))
+    Assert('__cmp__' not in WithCompare.__dict__)
+
 run_test(__name__)
 
