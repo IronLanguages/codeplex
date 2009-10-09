@@ -307,6 +307,8 @@ namespace IronPython.Runtime.Types {
                                         // doesn't define it on object we need to filter it out.  
                                         res = FilterObjectEquality(res);
                                     }
+
+                                    res = FilterAlternateMethods(opInfo, res);
                                 }
 
                                 if (res.Count > 0) {
@@ -325,6 +327,30 @@ namespace IronPython.Runtime.Types {
                 }
 
                 return MemberGroup.EmptyGroup;
+            }
+
+            /// <summary>
+            /// Filters alternative methods out that don't match the expected signature and therefore
+            /// are just sharing a common method name.
+            /// </summary>
+            private static MemberGroup FilterAlternateMethods(OperatorMapping opInfo, MemberGroup res) {
+                if (res.Count > 0 && opInfo.AlternateExpectedType != null) {
+                    List<MemberTracker> matchingMethods = new List<MemberTracker>();
+                    for (int i = 0; i < res.Count; i++) {
+                        MemberTracker mt = res[i];
+                        if (mt.MemberType == TrackerTypes.Method &&
+                            ((MethodTracker)mt).Method.ReturnType == opInfo.AlternateExpectedType) {
+                            matchingMethods.Add(mt);
+                        }
+                    }
+
+                    if (matchingMethods.Count == 0) {
+                        res = MemberGroup.EmptyGroup;
+                    } else {
+                        res = new MemberGroup(matchingMethods.ToArray());
+                    }
+                }
+                return res;
             }
 
             /// <summary>
