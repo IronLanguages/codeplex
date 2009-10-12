@@ -133,8 +133,10 @@ def gen_run_method(cw, n, is_void):
     if n > 0:
         cw.write('frame.BoxLocals();')
     
-    if is_void: cw.write('_interpreter.Run(frame);')
-    else: cw.write('return (TRet)_interpreter.Run(frame);')
+    cw.write('_interpreter.Run(frame);')
+    if not is_void: 
+        cw.write('return (TRet)frame.Pop();')
+        
     cw.exit_block()
     cw.write('')
     

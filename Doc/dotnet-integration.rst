@@ -360,7 +360,7 @@ as::
 
    Enumerable.Any(list, lambda x : x < 2)
 
-[#]_ System.Core.dll is part of .NET 3.0 and higher.
+.. [#] System.Core.dll is part of .NET 3.0 and higher.
 
 -----------------------------------------------------------------------------
 `ref` and `out` parameters
@@ -790,7 +790,7 @@ the arguments::
    args = System.Array[object](["another string"])
    getHashCode2 = clr.GetClrType(StringComparer).GetMethod("GetHashCode")
    
-   # Used Reflection instead of using a statically-typed language to call the two overloads
+   # Use Reflection to simulate a call to the different overloads from another .NET language
    getHashCode1.Invoke(comparer, None) # prints "Object.GetHashCode() called"
    getHashCode1.Invoke(comparer, args)  # prints "StringComparer.GetHashCode() called"
 
@@ -825,7 +825,7 @@ the `Value` property::
        # Other methods of IDictionary not overriden for brevity
    
    d = MyDictionary()
-   # Used Reflection instead of using a statically-typed language
+   # Use Reflection to simulate a call from another .NET language
    tryGetValue = clr.GetClrType(StrFloatDictionary).GetMethod("TryGetValue")
    for key in ("yes", "no"):
        args = System.Array[object]([key, 0.0])
@@ -836,6 +836,32 @@ the `Value` property::
 Generic methods
 ------------------------------------------------------------------------------
 
+When you override a generic method, the type parameters get passed in as 
+arguments. Consider the following generic method declaration::
+
+   // csc /t:library /out:foo.dll foo.cs
+   public interface IFoo {
+       void Foo<T1, T2>(T2 arg);
+   }
+
+The following code overrides the generic method `Foo`::
+
+   import clr
+   clr.AddReference("foo.dll")
+   import System
+   import IFoo
+
+   class MyFoo(IFoo):
+       def Foo(self, t2, T1, T2):
+           print t2, T1, T2 # prints : "100.1 <type 'str'> <type 'float'>"
+   
+   foo = MyFoo()
+   
+   # Use Reflection to simulate a call from another .NET language
+   type_params = System.Array[System.Type]([str, float])
+   foo_of_str_float = clr.GetClrType(IFoo).GetMethod("Foo").MakeGenericMethod(type_params)
+   args = System.Array[object]([100.1])
+   foo_of_str_float.Invoke(foo, args)
 
 ==============================================================================
 Overriding properties
@@ -862,13 +888,14 @@ getter or setter .NET method::
    
    c = MyCollection()
    getCount = clr.GetClrType(StringCollection).GetProperty("Count").GetGetMethod()
-   # Used Reflection instead of using a statically-typed language
+   # Use Reflection to simulate a call from another .NET language
    print getCount.Invoke(c, None) # prints 100
 
 ==============================================================================
 Overiding events
 ==============================================================================
 
+To override events,
     class PySubclass(IEvent10):
         def __init__(self):
             self.events = []
@@ -920,7 +947,7 @@ field called `.dict` [#]_ ::
 
 Also See :ref: "Type-system unification (type and System.Type)"
 
-[#]_ These field names are implementation details, and could change.
+.. [#] These field names are implementation details, and could change.
 
 ==============================================================================
 __clrtype__
@@ -983,6 +1010,7 @@ Integration with Python features
 * __doc__ uses XML comments
 
 
+
 ==============================================================================
 Mapping between .NET concepts and Python concepts
 ==============================================================================
@@ -1008,10 +1036,214 @@ Iformattable -> __format__
 Idictionary<T, K> / Icollection<T> / Ilist / Idictionary / Ienumerable / IEnumerator / Ienumerable<T> Ienumerator<T> -> __contains__
 op_Addition, etc… -> __add__
 
+------------------------------------------------------------------------------
+Equality and hashing
+------------------------------------------------------------------------------
+
+**TODO** - This is currently just copied from IronRuby, and is known to be incorrect
+
+Object equality and hashing are fundamental properties of objects. The Python 
+API for comparing and hashing objects is __eq__ (and __ne__) and __hash__ 
+respectively. The CLR APIs are System.Object.Equals and System.Object.GetHashCode 
+respectively. IronPython does an automatic mapping between the two concepts 
+so that Python objects can be compared and hashed from non-Python .NET code,
+and __eq__ and __hash__ are available in Python code for non-Python objects
+as well. 
+
+When Python code calls __eq__ and __hash__ 
+
+* If the object is a Python object, the default implementations of __eq__ and 
+  __hash__ get called. The default implementations call System.Object.ReferenceEquals 
+  and System.Runtime.CompileServices.RuntimeHelpers.GetHashCode respectively. 
+
+* If the object is a CLR object, System.Object.Equals and System.Object.GetHashCode 
+  respectively get called on the .NET object. 
+
+* If the object is a Python subclass object inheriting from a CLR class, the CLR's 
+  class's implementation of System.Object.Equals and System.Object.GetHashCode 
+  will get called if the Python subclass does not define __eq__ and __hash__. 
+  If the Python subclass defines __eq__ and __hash__, those will be called instead. 
+
+When static MSIL code calls System.Object.Equals and System.Object.GetHashCode 
+
+* If the object is a Python objects, the Python object will direct the call to 
+  __eq__ and __hash__. If the Python object has implementations for these methods, 
+  they will be called. Otherwise, the default implementation mentioned above gets called. 
+
+* If the object is a Python subclass object inheriting from a CLR class,  
+  the CLR's class's implementation of System.Object.Equals and 
+  System.Object.GetHashCode will get called if the Python subclass does not define 
+  __eq__ and __hash__. If the Python subclass defines __eq__ and __hash__, 
+  those will be called instead. 
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Hashing of mutable objects 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The CLR expects that System.Object.GetHashCode always returns the same value 
+for a given object. If this invariant is not maintained, using the object as 
+a key in a System.Collections.Generic.Dictionary<K,V> will misbehave. 
+Python allows __hash__ to return different results, and relies on the user to 
+deal with the scenario of using the object as a key in a Hash. The mapping above 
+between the Python and CLR concepts of equality and hashing means that CLR code 
+that deals with Python objects has to be aware of the issue. If static MSIL 
+code uses a Python object as a the key in a Dictionary<K,V>, unexpected 
+behavior might happen. 
+
+To reduce the chances of this happenning when using common Python types, 
+IronPython does not map __hash__ to GetHashCode for Array and Hash. For other 
+Python classes, the user can provide separate implementations for __eq__ 
+and Equals, and __hash__ and GetHashCode if the Python class is mutable 
+but also needs to be usable as a key in a Dictionary<K,V>. 
+
+==============================================================================
+LINQ
+==============================================================================
+
+* LINQ-to-objects
+
+  Python's List comprehension provides similar functionality
+
+* DLinq
+  Currently not supported
+
+------------------------------------------------------------------------------
+Feature by feature comparison
+------------------------------------------------------------------------------
+
+LINQ consists of a number of features, and IronPython has differing levels of
+support for the different features:
+
+* Lambda  - Python has lambdas
+* Anonymous types - Python has tuples
+* Extension methods - IronPython does not support extension methods
+* Generic method type parameter inference - supported
+* Expression trees - Not supported. This is the main reason DLinq does not work.
 
 *******************************************************************************
 OleAutomation and COM interop 
 *******************************************************************************
+
+IronPython supports accessing OleAutomation objects (COM objects which support
+dispinterfaces). 
+
+IronPython does not support the `win32ole` library, but Python code using 
+`win32ole` can run on IronPython with just a few modifications.
+
+==============================================================================
+Creating a COM object
+==============================================================================
+
+Different languages have different ways to create a COM object. VBScript and 
+VBA have a method called CreateObject to create an OleAut object. JScript
+has a method called TODO. There are multiple ways of doing the same in IronPython. 
+
+1. The first approach is to use ``System.Type.GetTypeFromProgID`` and
+   ``System.Type.Activator.CreateInstance``. This method works with any
+   registered COM object::
+
+      import System
+      t = System.Type.GetTypeFromProgID("Excel.Application")
+      excel = System.Activator.CreateInstance(t)
+      wb = excel.Workbooks.Add()
+
+2. The second approach is to use ``clr.AddReferenceToTypeLibrary`` to load 
+   the type library (if it is available) of the COM object. The advantage
+   is that you can use the type library to access other named values
+   like constants::
+
+      import System
+      excelTypeLibGuid = System.Guid("00020813-0000-0000-C000-000000000046")
+      import clr
+      clr.AddReferenceToTypeLibrary(excelTypeLibGuid)
+      from Excel import Application>>> excel = Application()
+      wb = excel.Workbooks.Add()
+
+3. Finally, you can also use the ``interop assembly``. This can be generated
+   using the ``tlbimp.exe <http://todo>``_ tool. The only advantage of this
+   approach was that this was the approach recommeded for IronPython 1. If
+   you have code using this approach that you developed for IronPython 1,
+   it will continue to work::
+
+      import clr
+      clr.AddReference("Microsoft.Office.Interop.Excel")
+      from Microsoft.Office.Interop.Excel import Application
+      excel = Excel()
+      wb = excel.Workbooks.Add()
+
+==============================================================================
+Using COM objects
+==============================================================================
+
+One you have access to a COM object, it can be used like any other objects.
+Properties, methods, default indexers and events all work as expected.
+
+------------------------------------------------------------------------------
+Properties
+------------------------------------------------------------------------------
+
+There is one important detail worth pointing out. IronPython tries to use the 
+type library of the OleAut object if it can be found, in order to do name 
+resolution while accessing methods or properties. The reason for this is 
+that the IDispatch interface does not make much of a distinction between 
+properties and method calls. This is because of Visual Basic 6 semantics 
+where "excel.Quit" and "excel.Quit()" have the exact same semantics. However, 
+IronPython has a strong distinction between properties and methods, and 
+methods are first class objects. For IronPython to know whether 
+"excel.Quit" should invoke the method Quit, or just return a callable 
+object, it needs to inspect the typelib. If a typelib is not available, 
+IronPython assumes that it is a method. So if a OleAut object has a property 
+called "prop" but it has no typelib, you would need to write 
+"p = obj.prop()" in IronPython to read the property value. 
+
+------------------------------------------------------------------------------
+Methods with `out` parameters
+------------------------------------------------------------------------------
+
+Calling a method with "out" (or in-out) parameters requires explicitly 
+passing in an instance of "clr.Reference", if you want to get the updated 
+value from the method call. Note that COM methods with out parameters are 
+not considered Automation-friendly [#]_. JScript does not support out parameters 
+at all. If you do run into a COM component which has out parameters, 
+having to use "clr.Reference" is a reasonable workaround::
+
+   clr
+   from System import Type, Activator
+   command_type = Type.GetTypeFromProgID("ADODB.Command")
+   command = Activator.CreateInstance(command_type)
+   records_affected = clr.Reference[int]()
+   command.Execute(records_affected, parameters, options)
+   print records_affected.Value
+
+Another workaround is to leverage the inteorp assembly by using the 
+unbound class instance method syntax of 
+"outParamAsReturnValue = InteropAssemblyNamespace.IComInterface(comObject)". 
+
+.. [#] Note that the Office APIs in particular do have "VARIANT*" parameters, 
+       but these methods 
+       do not update the value of the VARIANT. The only reason they were defined 
+       with "VARIANT*" parameters was for performance since passing a pointer to 
+       a VARIANT is faster than pushing all the 4 DWORDs of the VARIANT onto the 
+       stack. So you can just treat such parameters as "in" parameters.
+
+==============================================================================
+Accessing the type library
+==============================================================================
+
+The type library has names of constants. You can use
+``clr.AddReferenceToTypeLibrary`` to load the type library.
+
+==============================================================================
+Non-automation COM objects
+==============================================================================
+
+IronPython does not fully support COM objects which do not support 
+dispinterfaces since they appear likey :ref: proxy objects [#]_.
+You can use the unbound class method syntax to access them.
+
+.. [#] This was supported in IronPython 1, but the support was dropped in 
+       version 2.
 
 *******************************************************************************
 Miscellaneous
@@ -1062,7 +1294,7 @@ For example, by default, object' does not have the `System.Object` method called
 
    >>> hasattr(object, "__hash__")
    True
-   >>> hasattr(object, "__hash__")
+   >>> hasattr(object, "GetHashCode")
    False
 
 However, once you do `import clr`, `object` has both `__hash__` as well as
@@ -1071,8 +1303,8 @@ However, once you do `import clr`, `object` has both `__hash__` as well as
    >>> import clr
    >>> hasattr(object, "__hash__")
    True
-   >>> hasattr(object, "__hash__")
-   False
+   >>> hasattr(object, "GetHashCode")
+   True
 
 *******************************************************************************
 Reference documentation
