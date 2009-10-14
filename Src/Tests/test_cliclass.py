@@ -486,6 +486,16 @@ def test_type_descs():
     
     x = test.GetProperties(a)
     Assert(x.Count > 0)
+    
+    # Ensure GetProperties checks the attribute dictionary
+    a = foo()
+    a.abc = 42
+    x = test.GetProperties(a)
+    for prop in x:
+        if prop.Name == 'abc':
+            break
+    else:
+        AssertUnreachable()
 
 #silverlight does not support System.Char.Parse
 @skip("silverlight")

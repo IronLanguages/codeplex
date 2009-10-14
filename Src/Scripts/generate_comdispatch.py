@@ -131,6 +131,16 @@ class VariantType:
             cw.exit_block()
             cw.write('')
 
+    def write_ConvertByrefToPtr_Outer(self, cw, transparent):
+        if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType and self.variantType != "ERROR":
+            if not transparent: gen_exposed_code_security(cw)
+            cw.write('[SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]')
+            cw.write("public static IntPtr Convert%sByrefToPtr(ref %s value) { return _Convert%sByrefToPtr(ref value); }" % (self.unmanagedRepresentationType, self.unmanagedRepresentationType, self.unmanagedRepresentationType))
+
+    def write_ConvertByrefToPtrDelegates(self, cw):
+        if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType and self.variantType != "ERROR":
+            cw.write("private static readonly ConvertByrefToPtrDelegate<%s> _Convert%sByrefToPtr = (ConvertByrefToPtrDelegate<%s>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<%s>), _ConvertByrefToPtr.MakeGenericMethod(typeof(%s)));" % (5 * (self.unmanagedRepresentationType,)))
+
 def gen_exposed_code_security(cw):
     cw.write("#if CLR2")
     cw.write("[PermissionSet(SecurityAction.LinkDemand, Unrestricted = true)]")
@@ -316,11 +326,19 @@ def gen_IsPrimitiveType(cw):
 def gen_ConvertByrefToPtr(transparent):
     def gen_ConvertByrefToPtr(cw):
         for variantType in variantTypes:
-            variantType.write_ConvertByrefToPtr(cw, transparent)
+            if transparent:
+                variantType.write_ConvertByrefToPtr_Outer(cw, transparent)
+            else:
+                variantType.write_ConvertByrefToPtr(cw, transparent)
     return gen_ConvertByrefToPtr
+
+def gen_ConvertByrefToPtrDelegates(cw):
+    for variantType in variantTypes:
+        variantType.write_ConvertByrefToPtrDelegates(cw)
 
 def main():
     return generate(
+        ("Convert ByRef Delegates", gen_ConvertByrefToPtrDelegates),
         ("Outer Managed To COM Primitive Type Map", gen_ManagedToComPrimitiveTypes),
         ("Outer Variant union types", gen_UnionTypes),
         ("Outer Variant ToObject", gen_ToObject),
