@@ -281,7 +281,21 @@ AreEqual(x, 7)
 """
 exec s
 
-AssertError(SyntaxError, compile, "def f(a):\n\treturn a\n\t", "", "single")
+if is_cpython:
+    # this seems to be a CPython bug, Guido says:
+    #   I usually append some extra newlines before passing a string to compile(). That's the usual work-around. 
+    #   There's probably a subtle bug in the tokenizer when reading from a string -- if you find it, 
+    #   please upload a patch to the tracker!
+    # http://mail.python.org/pipermail/python-dev/2009-May/089793.html
+    AssertError(SyntaxError, compile, "def f(a):\n\treturn a\n\t", "", "single")
+
+AssertError(SyntaxError, compile, "def f(a):\n\treturn a\n\t", "", "single", 0x200)
+# should work
+s = "def f():\n\treturn 3"
+compile(s, "<string>", "single")
+
+AssertError(SyntaxError, compile, s, "<string>", "single", 0x200)
+
 
 # Assignment to None and constant
 

@@ -1136,5 +1136,18 @@ def test_builtin_types_that_implement_format():
     else:
         AreEqual(formatTypes, ['float', 'int', 'long', 'object', 'str', 'unicode'])
     
-    
+
+def test_computed_format():
+    AreEqual("|{0:10}|".format("a"), "|a         |")
+    AreEqual("|{0:*^10}|".format("a"), "|****a*****|")
+    AreEqual("|{0:*^{1}}|".format("a", 10), "|****a*****|")
+    AreEqual("{0:*{2}10}".format("a", "*", "^", "10"), "****a*****")
+    AreEqual("{0:{1}^{3}}".format("a", "*", "^", "10"), "****a*****")
+    AreEqual("{0:{1}{2}{3}}".format("a", "*", "^", "10"), "****a*****")
+    AreEqual("{0:{1}*^{2}}".format("a", "", "10"), "****a*****")
+
+def test_none_format():
+    AreEqual("{0} {1}".format(None, 10), "None 10")
+    AreEqual("{0}".format(None), 'None')
+
 run_test(__name__)

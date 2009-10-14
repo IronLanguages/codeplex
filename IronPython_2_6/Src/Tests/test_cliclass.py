@@ -1637,6 +1637,29 @@ def test_iterator_dispose():
         pass
         
     AreEqual(box.Value, False)
+
+def test_system_doc():
+    try:
+        # may or may not get documentation depending on XML files availability
+        x = System.__doc__
+    except:
+        AssertUnreachable()
+
+def test_scope_getvariable():
+    import clr
+    clr.AddReference('IronPython')
+    clr.AddReference('Microsoft.Scripting')
+    from IronPython.Hosting import Python
+    from Microsoft.Scripting import ScopeVariable
     
+    scope = Python.CreateEngine().CreateScope()
+    var = scope.GetVariable('foo')
+    AreEqual(type(var), ScopeVariable)
+
+def test_weird_compare():
+    a, b = WithCompare(), WithCompare()
+    AreEqual(cmp(a, b), cmp(id(a), id(b)))
+    Assert('__cmp__' not in WithCompare.__dict__)
+
 run_test(__name__)
 

@@ -10,7 +10,6 @@
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>System.Scripting</RootNamespace>
     <AssemblyName>Microsoft.Scripting.Core</AssemblyName>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.Core.XML</DocumentationFile>
@@ -19,7 +18,7 @@
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
-    <SilverlightPath Condition="'$(SilverlightPath)' == ''">$(ProgramFiles)\Microsoft Silverlight\3.0.40818.0</SilverlightPath>
+    <SilverlightPath Condition="'$(SilverlightPath)' == ''">$(ProgramFiles)\Microsoft Silverlight\3.0.40818.0\</SilverlightPath>
     <BaseAddress>855638016</BaseAddress>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
   </PropertyGroup>

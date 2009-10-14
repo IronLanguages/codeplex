@@ -1425,4 +1425,9 @@ def test_enumerator_conversions():
         AssertError(TypeError, cd.ObjectEnumerator, seq)
         AssertError(TypeError, cd.NonGenericEnumerator, seq)
 
+def test_property_conversions():
+    d = Dispatch()
+    d.P01 = 2.0
+    AreEqual(d.P01, 2.0)
+
 run_test(__name__)
