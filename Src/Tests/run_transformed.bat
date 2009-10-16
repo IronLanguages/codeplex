@@ -1,8 +1,6 @@
 @echo OFF
 setlocal EnableDelayedExpansion
 
-set IRONPYTHONPATH=%IRONPYTHONPATH%;C:\Workspaces\Merlin\External.LCA_RESTRICTED\Languages\IronPython\26\Lib
-
 IF EXIST Failed_Testcases (
     RMDIR /s /q Failed_Testcases
 )
