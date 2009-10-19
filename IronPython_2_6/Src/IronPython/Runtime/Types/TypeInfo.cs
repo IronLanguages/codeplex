@@ -552,6 +552,10 @@ namespace IronPython.Runtime.Types {
                 // The operator resolver maps standard .NET operator methods into Python operator
                 // methods
                 new OperatorResolver(),
+
+                // Runs after operator resolver to map default members to __getitem__/__setitem__
+                new OneOffResolver("__getitem__", GetItemResolver),
+                new OneOffResolver("__setitem__", SetItemResolver),
                 
                 // Runs after operator resolver to map __ne__ -> !__eq__
                 new OneOffResolver("__ne__", FallbackInequalityResolver),
@@ -627,6 +631,32 @@ namespace IronPython.Runtime.Types {
             }
         }
         private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/> _BigIntegerResolver;
+
+        /// <summary>
+        /// Provides a resolution for __getitem__
+        /// </summary>
+        private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/>/*!*/ GetItemResolver {
+            get {
+                if (_GetItemResolver == null) {
+                    _GetItemResolver = MakeIndexerResolver(false);
+                }
+                return _GetItemResolver;
+            }
+        }
+        private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/> _GetItemResolver;
+
+        /// <summary>
+        /// Provides a resolution for __setitem__
+        /// </summary>
+        private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/>/*!*/ SetItemResolver {
+            get {
+                if (_SetItemResolver == null) {
+                    _SetItemResolver = MakeIndexerResolver(true);
+                }
+                return _SetItemResolver;
+            }
+        }
+        private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/> _SetItemResolver;
 
         #endregion
 
@@ -1460,7 +1490,7 @@ namespace IronPython.Runtime.Types {
             MethodInfo cast = null;
             ParameterInfo[] castParams = null;
             foreach (Type t in binder.GetContributingTypes(fromType)) {
-                foreach (string castName in CastNames) {
+                foreach (string castName in GetCastNames(fromType, toTypes[0])) {
                     foreach (MemberInfo member in t.GetMember(castName)) {
                         MethodInfo method;
                         ParameterInfo[] methodParams;
@@ -1517,13 +1547,13 @@ namespace IronPython.Runtime.Types {
 
             return cast;
         }
-        private static string[] _CastNames;
-        private static string[] CastNames {
-            get {
-                if (_CastNames != null) return _CastNames;
-                _CastNames = new string[] { "op_Implicit", "op_Explicit" };
-                return _CastNames;
+
+        private static readonly string[] CastNames = new[] { "op_Implicit", "op_Explicit" };
+        private static string[] GetCastNames(Type fromType, Type toType) {
+            if (PythonBinder.IsPythonType(fromType)) {
+                return CastNames;
             }
+            return new[] { "op_Implicit", "op_Explicit", "ConvertTo" + toType.Name };
         }
 
         /// <summary>
@@ -1537,6 +1567,38 @@ namespace IronPython.Runtime.Types {
                     return new MemberGroup(tracker);
                 }
                 return MemberGroup.EmptyGroup;
+            };
+        }
+
+        /// <summary>
+        /// Helper for creating __getitem__/__setitem__ resolvers
+        /// </summary>
+        /// <param name="set">false for a getter, true for a setter</param>
+        private static Func<MemberBinder/*!*/, Type/*!*/, MemberGroup/*!*/>/*!*/ MakeIndexerResolver(bool set) {
+            return delegate(MemberBinder/*!*/ binder, Type/*!*/ type) {
+                List<MemberInfo> members = null;
+
+                foreach (MemberInfo member in type.GetDefaultMembers()) {
+                    PropertyInfo property = member as PropertyInfo;
+                    if (property != null) {
+                        MethodInfo accessor;
+                        if (!set) {
+                            accessor = property.GetGetMethod();
+                        } else {
+                            accessor = property.GetSetMethod();
+                        }
+                        if (accessor != null) {
+                            members = members ?? new List<MemberInfo>();
+                            members.Add(accessor);
+                        }
+                    }
+                }
+
+                if (members == null) {
+                    return MemberGroup.EmptyGroup;
+                } else {
+                    return new MemberGroup(members.ToArray());
+                }
             };
         }
 

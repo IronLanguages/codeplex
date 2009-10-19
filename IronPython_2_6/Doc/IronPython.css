@@ -81,7 +81,70 @@ p.Body
 	font-size:11.0pt;
 	font-family:Verdana;
 	}
+p.BodyNote
+	{margin-top:6.0pt;
+	margin-right:.75in;
+	margin-bottom:6.0pt;
+	margin-left:.75in;
+	line-height:-116%;
+	font-size:11.0pt;
+	font-family:Verdana;
+	background:#ffc080}
+p.SyntaxNote
+	{margin-top:6.0pt;
+	margin-right:.75in;
+	margin-bottom:6.0pt;
+	margin-left:.75in;
+	line-height:-116%;
+	font-size:11.0pt;
+	font-family:Verdana;
+	background:#80c0ff}
 p.TypedExample
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	line-height:150%;
+	font-size:10.0pt;
+	font-family:Verdana;
+	font-weight:bold}
+p.UserExample
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	line-height:150%;
+	font-size:10.0pt;
+	font-family:Verdana;
+	font-weight:bold}
+p.UserCode
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	line-height:150%;
+	font-size:10.0pt;
+	font-family:Verdana;
+	font-weight:bold}
+p.ExceptionExample
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	line-height:150%;
+	font-size:10.0pt;
+	font-family:Verdana;
+	font-weight:bold}
+p.DosCommand
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	line-height:150%;
+	font-size:10.0pt;
+	font-family:Verdana;
+	font-weight:bold}
+p.DosExample
 	{margin-top:0in;
 	margin-right:0in;
 	margin-bottom:3.0pt;
@@ -127,6 +190,15 @@ p.Code-Background
 	font-size:10.0pt;
 	font-family:"Courier New"
 	}
+p.NoVerify-Background
+	{margin-top:0;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:0;
+	font-size:10.0pt;
+	font-family:"Courier New"
+	}
 p.Title1
 	{margin-bottom:.0001pt;
 	font-size:36.0pt;
@@ -145,7 +217,10 @@ p.CopyrightText
 	{margin-bottom:.0001pt;
 	font-size:10.0pt;
 	font-family:Verdana;
-	margin-left:0in; margin-right:0in; margin-top:0in}
+	margin-left:0in;
+	margin-right:0in;
+	margin-top:0in
+	}
 p.ExerciseList
 	{margin-top:0in;
 	margin-right:0in;
@@ -177,6 +252,27 @@ p.Code-Highlighted
 	background:#E6E6E6;
 	font-size:10.0pt;
 	font-family:"Courier New"
+	}
+p.NoVerify-Highlighted
+	{margin-top:0;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:0;
+	background:#E6E6E6;
+	font-size:10.0pt;
+	font-family:"Courier New"
+	}
+p.CodeSample
+	{margin-top:0;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:0;
+	color:blue;
+	font-size:10.0pt;
+	font-family:"Courier New";
+	font-weight:bold
 	}
 p.Stepnonumbering
 	{margin-top:0;

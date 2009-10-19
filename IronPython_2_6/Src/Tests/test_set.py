@@ -225,5 +225,19 @@ def test_singleton():
     x = frozenset([1, 2, 3])
     AreEqual(x is frozenset(x), True)
 
+@skip("silverlight") # no random
+def test_iteration_no_mutation_bad_hash():
+    """create a set w/ objects with a bad hash and enumerate through it.  No exceptions should be thrown"""
+       
+    import random
+    class c(object):
+        def __hash__(self):
+                return int(random.random()*200)
+     
+    l = [c() for i in xrange(1000)]
+    b = set(l)
+    for x in b:
+        pass
+
 #--MAIN------------------------------------------------------------------------    
 run_test(__name__)

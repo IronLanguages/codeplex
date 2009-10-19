@@ -486,6 +486,16 @@ def test_type_descs():
     
     x = test.GetProperties(a)
     Assert(x.Count > 0)
+    
+    # Ensure GetProperties checks the attribute dictionary
+    a = foo()
+    a.abc = 42
+    x = test.GetProperties(a)
+    for prop in x:
+        if prop.Name == 'abc':
+            break
+    else:
+        AssertUnreachable()
 
 #silverlight does not support System.Char.Parse
 @skip("silverlight")
@@ -1660,6 +1670,16 @@ def test_weird_compare():
     a, b = WithCompare(), WithCompare()
     AreEqual(cmp(a, b), cmp(id(a), id(b)))
     Assert('__cmp__' not in WithCompare.__dict__)
+
+@skip("silverlight")
+def test_load_ruby():
+    sys.path.append(path_combine(testpath.public_testdir, r'XLang'))
+    rubyfile = clr.Use('some_ruby_file')
+    AreEqual(rubyfile.f(), 42)
+    
+def test_convert_int64_to_float():
+    AreEqual(float(System.Int64(42)), 42.0)
+    AreEqual(type(float(System.Int64(42))), float)
 
 run_test(__name__)
 

@@ -1,8 +1,6 @@
 @echo off
 setlocal
 
-set IRONPYTHONPATH=%IRONPYTHONPATH%;%Merlin_root%\..\External.LCA_RESTRICTED\Languages\IronPython\26\Lib
-
 %MERLIN_ROOT%\Bin\Debug\ipy Failed_Testcases\g_%1.py > Failed_Testcases\g_%1_ipy_out.txt 2>&1
 %MERLIN_ROOT%\..\External.LCA_RESTRICTED\Languages\IronPython\26\Python.exe Failed_Testcases\g_%1.py > Failed_Testcases\g_%1_cpy_out.txt 2>&1
 

@@ -805,7 +805,45 @@ function test-negmodes($pyexe)
 	echo "TBD"
 	
 }
+
+###############################################################################
+function test-nostdlib($pyexe)
+{
+	echo "Testing (Iron)Python without use of the standard library"
+	echo ""
+
+	#--Nuke %IRONPYTHONPATH%
+	$ORIG_IPYPATH = $env:IRONPYTHONPATH
+	$env:IRONPYTHONPATH = ""
 	
+	#--Make sure the standard library really isn't available
+	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
+	$output = [string](&"$pyexe" -c "import os" 2>&1)
+	$ErrorActionPreference = "stop"
+	
+	if (! $output.EndsWith("No module named os")) {
+		show-failure "Failed: $output";
+	}
+	
+	#--Simply re-use existing tests
+	test-pymodes $pyexe
+	
+	$env:IRONPYTHONPATH="$global:TEST_DIR"
+	test-dlrmodes $pyexe
+	
+	#--Restore %IRONPYTHONPATH%
+	$env:IRONPYTHONPATH = $ORIG_IPYPATH
+}
+
+###############################################################################
+function test-regressions($pyexe)
+{
+	echo "Testing regressions..."
+	echo ""
+
+	hello-helper $pyexe "-D" "-X:FullFrames" "-X:Tracing" "-X:TabCompletion"
+}
+
 ###############################################################################
 
 
@@ -820,7 +858,7 @@ echo "---------------------------------------------------------------------"
 test-setup
 
 
-$tests = @("test-pymodes", "test-dlrmodes", "test-relatedpy", "test-nonsensemodes", "test-negmodes")
+$tests = @("test-pymodes", "test-dlrmodes", "test-relatedpy", "test-nonsensemodes", "test-negmodes", "test-nostdlib", "test-regressions")
 foreach ($exe_test in $tests)
 {
 	echo "---------------------------------------------------------------------"
@@ -829,7 +867,7 @@ foreach ($exe_test in $tests)
 }
 
 
-#CPython 2.5 is a special case
+#CPython 2.6 is a special case
 echo "---------------------------------------------------------------------"
 test-pymodes $env:MERLIN_ROOT\..\External.LCA_RESTRICTED\Languages\IronPython\26\python.exe
 

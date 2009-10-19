@@ -996,6 +996,32 @@ def test_from_import_publishes_in_package_relative_self():
         nt.unlink(_f_foo_py)
         nt.unlink(_f_init)
 
+@skip("silverlight")
+def test_multiple_relative_imports_and_package():
+    try:
+        mod_backup = dict(sys.modules)
+        print testpath.public_testdir
+        _f_dir      = path_combine(testpath.public_testdir, 'test_dir5')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_foo_py   = path_combine(_f_dir, 'foo5.py')
+        _f_bar_py   = path_combine(_f_dir, 'bar5.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'from .foo5 import x\nfrom .bar5 import y')
+        write_to_file(_f_foo_py, 'x = 42')
+        write_to_file(_f_bar_py, 'y = 42')
+
+        import test_dir5
+        AreEqual(test_dir5.x, 42)
+        AreEqual(test_dir5.y, 42)
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_foo_py)
+        nt.unlink(_f_bar_py)
+        nt.unlink(_f_init)
+
 run_test(__name__)
 
 # remove all test files

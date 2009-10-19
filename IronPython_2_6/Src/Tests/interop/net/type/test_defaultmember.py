@@ -29,7 +29,7 @@ def test_vb_scenarios():
     '''vb supported scenarios '''
     x = ClassWithOverloadDefaultIndexer()
    
-    for i in range(3):  
+    for i in range(3):
         #x[i] = 2 * i
         #AreEqual(x[i], 2 * i)
     
@@ -85,20 +85,36 @@ def test_vb_scenarios():
 def test_cs_scenarios():
     x = ClassWithItem()
     AssertError(TypeError, lambda: x[1])
-    
     x.Item = 2
     AreEqual(x.Item, 2)
-
+    
     x = ClassWithset_Item()
     def f(): x[10] = 20
     AssertError(TypeError, f)
     x.set_Item(3)
     Flag.Check(3)
     
-    # 
+    x = ClassWithget_Item()
+    def f(): return x[10]
+    AssertError(TypeError, f)
+    AreEqual(x[10, 20], 30)
+    AssertError(TypeError, x.get_Item, 10)
+    AreEqual(x.get_Item(10, 20), 30)
     
     # try other types
     x = ClassWithDefaultMemberCtor(1)
+
+def test_cp_19510():
+    """Test indexing on .NET classes with default members"""
+    import clr
+    clr.AddReference("System.Xml")
+    import System.Xml
     
+    doc = System.Xml.XmlDocument()
+    doc.LoadXml('<tag attr="value">Data</tag>')
+    root = doc.SelectSingleNode("tag")
+    
+    AreEqual(root.Attributes["attr"].Name, "attr")
+
 run_test(__name__)
 
