@@ -103,6 +103,7 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(**{'arg': 3}))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'other'", lambda: f(**{'other': 4}))
     
+    # public void M203([ParamDictionaryAttribute] IAttributesCollection arg) { Flag.Set(arg.Count); }
     f = o.M203
     f()
     AssertErrorWithMessage(TypeError, "M203() takes no arguments (1 given)", lambda: f(1))
