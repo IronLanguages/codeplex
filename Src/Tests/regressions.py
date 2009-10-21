@@ -406,6 +406,32 @@ def test_module_alias_cp19656():
         nt.unlink(stuff_mod)
         nt.unlink(check_mod)
 
+def test_cp24691():
+    import os
+    pwd = os.getcwd()
+    AreEqual(os.path.abspath("bad:"),
+             os.getcwd() + "\\bad:")
+
+def test_cp24690():
+    import errno
+    AreEqual(errno.errorcode[2],
+             "ENOENT")
+
+def test_cp24692():
+    import errno, nt, stat
+    dir_name = "cp24692_testdir"
+    try:
+        nt.mkdir(dir_name)
+        nt.chmod(dir_name, stat.S_IREAD)
+        try:
+            nt.rmdir(dir_name)
+        except WindowsError, e:
+            pass
+        AreEqual(e.errno, errno.EACCES)
+    finally:
+        nt.chmod(dir_name, stat.S_IWRITE)
+        nt.rmdir(dir_name)
+
 #------------------------------------------------------------------------------
 #--General coverage.  These need to be extended.
 def test_xxsubtype_bench():
