@@ -469,5 +469,21 @@ def test_not___len___cp_24129():
     AreEqual(not c, False)
 
 #------------------------------------------------------------------------------
+# This is not a regression, but need to find the right place to move this test to
+
+class MyException(IOError):
+    def __str__(self):
+        return "MyException is a user sub-type of IOError"
+
+@skip("win32")
+def test_clr_exception_has_non_trivial_exception_message():
+    import System
+    try:
+        raise MyException
+    except System.Exception as e:
+        pass
+    AreEqual(e.Message, "Python Exception: MyException")
+
+#------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

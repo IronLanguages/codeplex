@@ -12,7 +12,7 @@ Loading .NET assemblies
 ********************************************************************************
 
 The smallest unit of distribution of functionality in .NET is an `assembly
-<http://msdn.microsoft.com/en-us/library/ms973231.aspx>` _
+<http://msdn.microsoft.com/en-us/library/ms973231.aspx>`_
 which usually corresponds to a single file with the `.dll` file extension. The 
 assembly is available either in the installation folder of the application, or 
 in the `GAC (Global assembly cache)
@@ -748,7 +748,8 @@ Accessing .NET events
 
 \.NET events are exposed as objects with __iadd__ and __isub__ methods which
 allows using `+=` and `-=` to subscribe and unsubscribe from the event. The
-following code shows how to subscribe a Python function to an event using `+=` ::
+following code shows how to subscribe a Python function to an event using `+=`,
+and unsubscribe using `-=` ::
 
    >>> from System.IO import FileSystemWatcher
    >>> watcher = FileSystemWatcher(".")
@@ -759,10 +760,11 @@ following code shows how to subscribe a Python function to an event using `+=` :
    >>> import time
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
+   >>> watcher.Created -= callback
    >>>
    >>> # cleanup
    >>> import os
-   >>> f.close(); os.remove("test.txt"); watcher.EnableRaisingEvents = False
+   >>> f.close(); os.remove("test.txt")
 
 You can also subscribe using a bound method::
 
@@ -775,19 +777,15 @@ You can also subscribe using a bound method::
    >>> watcher.EnableRaisingEvents = True
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
+   >>> watcher.Created -= o.callback
    >>>
    >>> # cleanup
-   >>> f.close(); os.remove("test.txt"); watcher.EnableRaisingEvents = False
+   >>> f.close(); os.remove("test.txt")
 
-The code above cannot unsubscribe from the event using `-=`. The reason is
-that when you subscribe a function or a bound method to an event, IronPython 
-wraps the function or bound method in a `System.Delegate 
+You can also explicitly create a `delegate
 <http://msdn.microsoft.com/en-us/library/system.delegate.aspx>`_
-instance. When you unsubscribe from the event, IronPython creates a wrapper
-`System.Delegate` instance again, but one which will not compare as equal
-to the one created while subscribing to the event. The solution to this is to
-explicitly create a delegate object and use that to subscribe and unsubscribe
-from the event::
+instance to subscribe to the event. Otherwise, IronPython automatically
+does it for you. [#]_::
 
    >>> watcher = FileSystemWatcher(".")
    >>> def callback(sender, event_args):
@@ -799,11 +797,19 @@ from the event::
    >>> import time
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
-   >>> watcher.Created -= delegate # Unsubscribe
+   >>> watcher.Created -= delegate
    >>>
    >>> # cleanup
    >>> f.close(); os.remove("test.txt")
 
+.. [#]
+
+   The only advantage to creating an explicit delegate is that it is uses less
+   memory. You should consider it if you subscribe to lots of events, and 
+   notice excessive `System.WeakReference
+   <http://msdn.microsoft.com/en-us/library/system.weakreference.aspx>`_
+   objects.
+   
 ================================================================================
 Special .NET types
 ================================================================================
@@ -1697,7 +1703,7 @@ features accessible:
   
     * Overloads(t1 [, t2...])
 
-* 'type` objects
+* `type` objects
 
   * instance method
   
@@ -1721,37 +1727,48 @@ where explicitly mentioned):
     
 * Types inheriting from a .NET class or interface
 
-  ========================================================= ========================================================================
-  .NET sub-type                                             Synthesized Python method(s)
-  ========================================================= ========================================================================
-  System.Object                                             all methods of `object` (eg. __class__, __str__, __hash__, __setattr__)
-  System.IDisposable                                        __enter__, __exit__
-  System.Collections.IEnumerator                            next
-  System.Collections.ICollection                            __len__
-  System.Collections.Generic.ICollection<T>
-  System.Collections.IEnumerable                            __iter__
-  System.Collections.Generic.IEnumerable<T>
-  System.Collections.IEnumerator
-  System.Collections.Generic.IEnumerator<T>
-  System.IFormattable                                       __format__
-  System.Collections.IDictionary                            __contains__
-  System.Collections.Generic.IDictionary<TKey, TValue>
-  System.Collections.Generic.ICollection<T>
-  System.Collections.Generic.IList<T>
-  System.Collections.IEnumerable
-  System.Collections.Generic.IEnumerable<T>
-  System.Collections.IEnumerator
-  System.Collections.Generic.IEnumerator<T>
-  System.Array                                              Class method : Indexing of the type object
-  
-                                                            Class method : __new__(l) where l is IList<T> (or supports __getitem__?)
-  
-                                                            __getitem__, __setitem__, __slice__
-  System.Delegate                                           Class method : __new__(type, function_or_bound_method)
-                                                            
-                                                            __call__
-  System.Enum                                               __or__ **TODO** ?
-  ========================================================= ========================================================================
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | .NET base-type                                         | Synthesized Python method(s)                                          |
+  +========================================================+=======================================================================+
+  | System.Object                                          | all methods of `object` eg. __class__, __str__, __hash__, __setattr__ |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.IDisposable                                     | __enter__, __exit__                                                   |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IEnumerator                         | next                                                                  |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.ICollection                         | __len__                                                               |
+  | System.Collections.Generic.ICollection<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IEnumerable                         | __iter__                                                              |
+  | System.Collections.Generic.IEnumerable<T>              |                                                                       |
+  | System.Collections.IEnumerator                         |                                                                       |
+  | System.Collections.Generic.IEnumerator<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.IFormattable                                    | __format__                                                            |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IDictionary                         | __contains__                                                          |
+  | System.Collections.Generic.IDictionary<TKey, TValue>   |                                                                       |
+  | System.Collections.Generic.ICollection<T>              |                                                                       |
+  | System.Collections.Generic.IList<T>                    |                                                                       |
+  | System.Collections.IEnumerable                         |                                                                       |
+  | System.Collections.Generic.IEnumerable<T>              |                                                                       |
+  | System.Collections.IEnumerator                         |                                                                       |
+  | System.Collections.Generic.IEnumerator<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Array                                           | * Class methods:                                                      |
+  |                                                        |                                                                       |
+  |                                                        |   * Indexing of the type object with a type object to access a        |
+  |                                                        |     specific array type                                               |
+  |                                                        |   * __new__(l) where l is IList<T> (or supports __getitem__?)         |
+  |                                                        |                                                                       |
+  |                                                        | * __getitem__, __setitem__, __slice__                                 |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Delegate                                        | * Class method : __new__(type, function_or_bound_method)              |
+  |                                                        |                                                                       |
+  |                                                        | * __call__                                                            |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Enum                                            | __or__ **TODO** ?                                                     |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
 
 * Types with a .NET operator method name
 
@@ -1905,39 +1922,6 @@ override::
 
    There is some inconsistency in handling of __str__ that is tracked by
    http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24973
-
-================================================================================
-LINQ
-================================================================================
-
-Language-integrated Query (LINQ) is a set of features that was added in 
-.NET 3.5. Since it is a scenario rather than a specific feature, we will
-first compare which of the scenarios work with IronPython:
-
-* LINQ-to-objects
-
-  Python's list comprehension provides similar functionality, and is more
-  Pythonic. Hence, it is recommended to use list comprehension itself.
-
-* DLinq - This is currently not supported.
-
---------------------------------------------------------------------------------
-Feature by feature comparison
---------------------------------------------------------------------------------
-
-LINQ consists of a number of language and .NET features, and IronPython has 
-differing levels of support for the different features:
-
-* C# and VB.NET lambda function - Python supports lambda functions already.
-
-* Anonymous types - Python has tuples which can be used like anonymous types.
-
-* Extension methods - See :ref:
-
-* Generic method type parameter inference - See :ref:
-
-* Expression trees - This is not supported. This is the main reason DLinq 
-  does not work.
 
 ********************************************************************************
 OleAutomation and COM interop 
@@ -2184,6 +2168,39 @@ However, once you do `import clr`, `object` has both `__hash__` as well as
    True
    >>> hasattr(object, "GetHashCode")
    True
+
+================================================================================
+LINQ
+================================================================================
+
+Language-integrated Query (LINQ) is a set of features that was added in 
+.NET 3.5. Since it is a scenario rather than a specific feature, we will
+first compare which of the scenarios work with IronPython:
+
+* LINQ-to-objects
+
+  Python's list comprehension provides similar functionality, and is more
+  Pythonic. Hence, it is recommended to use list comprehension itself.
+
+* DLinq - This is currently not supported.
+
+--------------------------------------------------------------------------------
+Feature by feature comparison
+--------------------------------------------------------------------------------
+
+LINQ consists of a number of language and .NET features, and IronPython has 
+differing levels of support for the different features:
+
+* C# and VB.NET lambda function - Python supports lambda functions already.
+
+* Anonymous types - Python has tuples which can be used like anonymous types.
+
+* Extension methods - See :ref:
+
+* Generic method type parameter inference - See :ref:
+
+* Expression trees - This is not supported. This is the main reason DLinq 
+  does not work.
 
 ********************************************************************************
 Appendix - Type conversion rules
