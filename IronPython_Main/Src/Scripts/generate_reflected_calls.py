@@ -82,25 +82,25 @@ def gen_fast_creation(cw):
     cw.write('/// and Activator.CreateInstance) to create the types.  It does this through')
     cw.write('/// calling a series of generic methods picking up each strong type of the')
     cw.write('/// signature along the way.  When it runs out of types it news up the ')
-    cw.write('/// appropriate ReflectedCaller with the strong-types that have been built up.')
+    cw.write('/// appropriate CallInstruction with the strong-types that have been built up.')
     cw.write('/// ')
     cw.write('/// One relaxation is that for return types which are non-primitive types')
     cw.write('/// we can fallback to object due to relaxed delegates.')
     cw.write('/// </summary>')
     for i in xrange(MAX_ARGS):        
-        cw.enter_block('private static ReflectedCaller FastCreate%s(MethodInfo target, ParameterInfo[] pi)' % get_type_params(i))
+        cw.enter_block('private static CallInstruction FastCreate%s(MethodInfo target, ParameterInfo[] pi)' % get_type_params(i))
         
         cw.write('Type t = TryGetParameterOrReturnType(target, pi, %d);' % (i, ))
         cw.enter_block('if (t == null)')
         
         typeArgs = ', '.join(get_type_names(i))
         if i == 0:           
-            cw.write('return new ActionHelper(target);')           
+            cw.write('return new ActionCallInstruction(target);')           
         else:
             cw.enter_block('if (target.ReturnType == typeof(void))')
-            cw.write('return new ActionHelper<%s>(target);' % (typeArgs, ))
+            cw.write('return new ActionCallInstruction<%s>(target);' % (typeArgs, ))
             cw.exit_block()
-            cw.write('return new InvokeHelper<%s>(target);' % (typeArgs, ))
+            cw.write('return new FuncCallInstruction<%s>(target);' % (typeArgs, ))
         cw.exit_block()
         
         cw.write('')
@@ -112,7 +112,7 @@ def gen_fast_creation(cw):
             cw.write('Debug.Assert(pi.Length == %d);' % (MAX_ARGS-1))
             cw.write('if (t.IsValueType) goto default;')
             cw.write('')
-            cw.write('return new InvokeHelper<%s>(target);' % (', '.join(get_type_names(i) + ['Object']), ) )
+            cw.write('return new FuncCallInstruction<%s>(target);' % (', '.join(get_type_names(i) + ['Object']), ) )
         else:
             cw.enter_block('if (t != typeof(object) && (IndexIsNotReturnType(%d, target, pi) || t.IsValueType))' % (i, ))
             cw.write("// if we're on the return type relaxed delegates makes it ok to use object")
@@ -123,7 +123,7 @@ def gen_fast_creation(cw):
         
         for typeName in TYPE_CODE_TYPES:
             if i == MAX_ARGS-1:
-                cw.write('case TypeCode.%s: return new InvokeHelper<%s>(target);' % (typeName, ', '.join(get_type_names(i) + [typeName])))
+                cw.write('case TypeCode.%s: return new FuncCallInstruction<%s>(target);' % (typeName, ', '.join(get_type_names(i) + [typeName])))
             else:
                 cw.write('case TypeCode.%s: return FastCreate<%s>(target, pi);' % (typeName, ', '.join(get_type_names(i) + [typeName])))
 
@@ -140,9 +140,9 @@ def get_get_helper_type(cw):
     
     for i in xrange(MAX_HELPERS):
         if i == 0:
-            cw.write('case %d: t = typeof(ActionHelper); break;' % (i, ))
+            cw.write('case %d: t = typeof(ActionCallInstruction); break;' % (i, ))
         else:
-            cw.write('case %d: t = typeof(ActionHelper<%s>).MakeGenericType(arrTypes); break;' % (i, ','*(i-1)))
+            cw.write('case %d: t = typeof(ActionCallInstruction<%s>).MakeGenericType(arrTypes); break;' % (i, ','*(i-1)))
     cw.write('default: throw new InvalidOperationException();')
     
     cw.exit_block() # switch
@@ -151,7 +151,7 @@ def get_get_helper_type(cw):
     cw.enter_block('switch (arrTypes.Length)')
     
     for i in xrange(1, MAX_HELPERS+1):
-        cw.write('case %d: t = typeof(InvokeHelper<%s>).MakeGenericType(arrTypes); break;' % (i, ','*(i-1)) )
+        cw.write('case %d: t = typeof(FuncCallInstruction<%s>).MakeGenericType(arrTypes); break;' % (i, ','*(i-1)) )
     cw.write('default: throw new InvalidOperationException();')
         
     cw.exit_block() # switch
@@ -160,8 +160,8 @@ def get_get_helper_type(cw):
     cw.write('return t;')
     cw.exit_block() # method
     
-def gen_reflected_caller(cw):
-    cw.enter_block('public partial class ReflectedCaller')
+def gen_call_instruction(cw):
+    cw.enter_block('public partial class CallInstruction')
 
     cw.write('private const int MaxHelpers = ' + str(MAX_HELPERS) + ';')
     cw.write('private const int MaxArgs = ' + str(MAX_ARGS) + ';')
@@ -178,49 +178,88 @@ def gen_reflected_caller(cw):
     cw.write('')
 
 def gen_action_helper(cw, i):
-    if i ==0:
-        cw.enter_block('sealed class ActionHelper : ReflectedCaller')
-        cw.write('private Action _target;')
+    if i == 0:
+        cw.enter_block('internal sealed class ActionCallInstruction : CallInstruction')
+        cw.write('private readonly Action _target;')
     else:
-        cw.enter_block('sealed class ActionHelper<%s> : ReflectedCaller' % (', '.join(get_type_names(i)))) 
-        cw.write('private Action<%s> _target;' % (', '.join(get_type_names(i))))
+        cw.enter_block('internal sealed class ActionCallInstruction<%s> : CallInstruction' % (', '.join(get_type_names(i)))) 
+        cw.write('private readonly Action<%s> _target;' % (', '.join(get_type_names(i))))
+    
+    # properties
+    cw.write('public override MethodInfo Info { get { return _target.Method; } }')
+    cw.write('public override int ArgumentCount { get { return %d; } }' % (i))
     cw.write('')
-    cw.enter_block('public ActionHelper(MethodInfo target)')
+    
+    # ctor
+    cw.enter_block('public ActionCallInstruction(MethodInfo target)')
     cw.write('_target = (Action%s)Delegate.CreateDelegate(typeof(Action%s), target);' % (get_type_params(i), get_type_params(i)))
     cw.exit_block()
     cw.write('')
+    
+    # invoke
     cw.enter_block('public override object Invoke(%s)' % (', '.join(get_object_args(i)), ))       
     cw.write('_target(%s);' % (', '.join(get_cast_args(i)), ))
     cw.write('return null;')
     cw.exit_block()
+    cw.write('')
+    
+    # run
+    cw.enter_block('public override int Run(InterpretedFrame frame)')
+    gen_load_interpreted_arguments(cw, i)
+    cw.write('_target(%s);' % (', '.join(get_cast_args(i)), ))
+    cw.write('return +1;')
+    cw.exit_block()
+    
     cw.exit_block()
     cw.write('')
+
+def gen_invoke_helper(cw, i):
+    cw.enter_block('internal sealed class FuncCallInstruction<%s> : CallInstruction' % (', '.join(get_invoke_type_names(i))))
+    cw.write('private readonly Func<%s> _target;' % (', '.join(get_invoke_type_names(i))))
+    
+    # properties
+    cw.write('public override MethodInfo Info { get { return _target.Method; } }')
+    cw.write('public override int ArgumentCount { get { return %d; } }' % (i - 1))
+    cw.write('')
+    
+    # ctor
+    cw.enter_block('public FuncCallInstruction(MethodInfo target)')
+    cw.write('_target = (Func<%s>)Delegate.CreateDelegate(typeof(Func<%s>), target);' % ((', '.join(get_invoke_type_names(i)), )*2))
+    cw.exit_block()
+    cw.write('')
+    
+    # invoke    
+    cw.enter_block('public override object Invoke(%s)' % (', '.join(get_object_args(i-1)), ))       
+    cw.write('return _target(%s);' % (', '.join(get_cast_args(i-1)), ))
+    cw.exit_block()
+    cw.write('')
+    
+    # run
+    cw.enter_block('public override int Run(InterpretedFrame frame)')
+    gen_load_interpreted_arguments(cw, i - 1)
+    cw.write('frame.Push(_target(%s));' % (', '.join(get_cast_args(i-1)), ))
+    cw.write('return +1;')
+    cw.exit_block()
+    
+    cw.exit_block()
+    cw.write('')
+
+def gen_load_interpreted_arguments(cw, i):
+    if i > 0:
+        cw.write('int firstArgStackIndex = (frame.StackIndex -= %d);' % i)        
+        for j in xrange(0, i):
+            cw.write('object arg%d = frame.Data[firstArgStackIndex + %d];' % (j, j))
 
 def gen_action_helpers(cw):
     for i in xrange(MAX_HELPERS):
         gen_action_helper(cw, i)
-        
-def gen_invoke_helper(cw, i):
-    cw.enter_block('sealed class InvokeHelper<%s> : ReflectedCaller' % (', '.join(get_invoke_type_names(i))))
-    cw.write('private Func<%s> _target;' % (', '.join(get_invoke_type_names(i))))
-    cw.write('')
-    cw.enter_block('public InvokeHelper(MethodInfo target)')
-    cw.write('_target = (Func<%s>)Delegate.CreateDelegate(typeof(Func<%s>), target);' % ((', '.join(get_invoke_type_names(i)), )*2))
-    cw.exit_block()
 
-    cw.write('')
-    cw.enter_block('public override object Invoke(%s)' % (', '.join(get_object_args(i-1)), ))       
-    cw.write('return _target(%s);' % (', '.join(get_cast_args(i-1)), ))
-    cw.exit_block()
-    cw.exit_block()
-    cw.write('')
-    
 def gen_invoke_helpers(cw):
     for i in xrange(1, MAX_HELPERS+1):
         gen_invoke_helper(cw, i)
         
 def gen_slow_caller(cw):
-    cw.enter_block('sealed partial class SlowReflectedCaller : ReflectedCaller')
+    cw.enter_block('internal sealed partial class MethodInfoCallInstruction : CallInstruction')
      
     for i in xrange(MAX_ARGS):
         cw.enter_block('public override object Invoke(%s)' % (', '.join(get_object_args(i)), ))
@@ -230,7 +269,7 @@ def gen_slow_caller(cw):
     cw.exit_block()
     
 def gen_all(cw):
-    gen_reflected_caller(cw)
+    gen_call_instruction(cw)
     gen_action_helpers(cw)
     gen_invoke_helpers(cw)
     gen_slow_caller(cw)
