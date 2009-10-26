@@ -1130,3 +1130,15 @@ def f():
   return res
 
 AreEqual(f(), [(10, {'a':10}), {}])
+
+X = (42, 43)
+class Y:
+    def outer_f(self):
+        def f((a,b)=X):     
+            return a, b
+        return f
+        
+
+a = Y()
+AreEqual(a.outer_f()(), (42, 43))
+

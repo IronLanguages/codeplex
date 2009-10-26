@@ -951,9 +951,27 @@ def test_open():
         tempfilename = "temp.txt"
         fd = nt.open(tempfilename,256,1)
         nt.close(fd)
-    finally:
+        
         nt.unlink('temp.txt')
     
+        f = nt.open('temp.txt', nt.O_TEMPORARY | nt.O_CREAT)
+        nt.close(f)
+        AssertError(OSError, nt.stat, 'temp.txt')
+    
+        # TODO: These tests should probably test more functionality regarding O_SEQUENTIAL/O_RANDOM
+        f = nt.open('temp.txt', nt.O_TEMPORARY | nt.O_CREAT | nt.O_SEQUENTIAL | nt.O_RDWR)
+        nt.close(f)
+        AssertError(OSError, nt.stat, 'temp.txt')
+        
+        f = nt.open('temp.txt', nt.O_TEMPORARY | nt.O_CREAT | nt.O_RANDOM | nt.O_RDWR)
+        nt.close(f)
+        AssertError(OSError, nt.stat, 'temp.txt')
+    finally:
+        try:    
+            # should fail if the file doesn't exist
+            nt.unlink('temp.txt')
+        except: 
+            pass
 
 def test_system_minimal():
     Assert(hasattr(nt, "system"))
