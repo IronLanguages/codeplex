@@ -1402,6 +1402,25 @@ The following code overrides the generic method `Convert`::
    However, with generic methods, one of the type parameters may only be used
    as the return type. In that case, there is no way to determine the type
    paramter.
+ 
+--------------------------------------------------------------------------------
+Calling from Python
+--------------------------------------------------------------------------------
+
+When you call a method from Python, and the method overrides a .NET method
+from a base type, the call is performed as a regular Python call. The arguments
+do not undergo conversion, and neither are they modified in any way like
+being wrapped with :ref:`clr.Reference`. Thus, the call may need to be written
+differently than if the method was overriden by another language. For example,
+trying to call TryGetValue on the MyDictionary type from the 
+:ref:`overriding-ref-args` section as shown below results in a TypeError,
+whereas a similar call works with 
+`System.Collections.Generic.Dictionary[str, float]`::
+
+   >>> result, value = d.TryGetValue("yes")
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: TryGetValue() takes exactly 3 arguments (2 given)
 
 ================================================================================
 Overriding properties
