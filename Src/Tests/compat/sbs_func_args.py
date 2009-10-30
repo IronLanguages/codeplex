@@ -21,6 +21,8 @@ def f2(arg0, arg1, arg2=6, arg3=7): return "same## %s %s %s %s" % (arg0, arg1, a
 def f3(arg0, arg1, arg2, *arg3): return "same## %s %s %s %s" % (arg0, arg1, arg2, arg3)
 
 if is_cli: 
+    from iptest.process_util import run_csc 
+    run_csc("/nologo /target:library /out:sbs_library.dll sbs_library.cs")
     import clr
     clr.AddReference("sbs_library")
     from SbsTest import C
