@@ -1271,7 +1271,7 @@ def test_override_dict():
     AssertErrorWithMessage(TypeError, "can't delete __class__ attribute", m.__delattr__, '__class__')
     AssertErrorWithMessage(TypeError, "readonly attribute", m.__delattr__, '__dict__')
     
-@skip("silverlight")
+@skip("silverlight win32") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25110
 def test_ximp_load_module():
     mod = imp.new_module('my_module_test')
     mod.__file__ = 'does_not_exist.py'
