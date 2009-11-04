@@ -173,7 +173,35 @@ def test_import_clr():
     eng = Python.CreateEngine()
     mod = Python.ImportModule(eng, 'clr')
     Assert('ToString' not in eng.Operations.GetMemberNames(42))
-        
+
+@skip("silverlight")
+def test_cp6703():
+    import clr
+    clr.AddReference("IronPython")
+    import IronPython
+    pe = IronPython.Hosting.Python.CreateEngine()
+    
+    stuff = '''
+import System
+a = 2
+globals()["b"] = None
+globals().Add("c", "blah")
+joe = System.Collections.Generic.KeyValuePair[object,object]("d", int(3))
+globals().Add(joe)
+count = 0
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("b", None)): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("c", "blah")): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", int(3))): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", 3)): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", "3")): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("a", 2)): count += 1
+'''
+    s = pe.CreateScope()
+    pe.Execute(stuff, s)
+    AreEqual(s.count, 6)
+    
+
+#--MAIN------------------------------------------------------------------------        
 run_test(__name__)
 
 

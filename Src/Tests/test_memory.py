@@ -17,8 +17,9 @@ from iptest.assert_util import *
 skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
 
-from Microsoft.Scripting.Generation import Snippets
 import clr
+clr.AddReference("Microsoft.Dynamic")
+from Microsoft.Scripting.Generation import Snippets
 import gc
 skipMemoryCheck = Snippets.Shared.SaveSnippets or clr.GetCurrentRuntime().Configuration.DebugMode
 

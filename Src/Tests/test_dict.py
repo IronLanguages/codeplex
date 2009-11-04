@@ -908,16 +908,15 @@ def test_stdtypes_dict():
 
 @skip("silverlight")
 def test_main_dict():
-    if not is_interpreted():  #this actually works under Interpreted mode - just not using the special setup from test_ipye.py
-        import __main__
-        #just make sure this doesn't throw...
-        t_list = []
-        for w in __main__.__dict__: t_list.append(w)
-        
-        t_list.sort()
-        g_list = globals().keys()
-        g_list.sort()
-        AreEqual(t_list, g_list)
+    import __main__
+    #just make sure this doesn't throw...
+    t_list = []
+    for w in __main__.__dict__: t_list.append(w)
+    
+    t_list.sort()
+    g_list = globals().keys()
+    g_list.sort()
+    AreEqual(t_list, g_list)
     
 
 def test_update():

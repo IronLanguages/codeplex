@@ -97,5 +97,14 @@ def test_static_indexer():
     i.SetValue(array([2]), 20)
     AreEqual(i.GetValue(array([200])), 222)
 
+def test_overloaded_indexer():
+    x = ClassWithOverloadedIndexers()
+    x.Init()
+    
+    AreEqual(x.PropertyName[6], 6)
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=3740
+    AreEqual([y for y in x.PropertyName],
+             range(10)) #should be [2]?
 
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

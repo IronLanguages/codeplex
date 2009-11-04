@@ -562,5 +562,20 @@ def test_lookup_encodings():
         # if we don't have encodings then this will fail so
         # make sure we're failing because we don't have encodings
         AssertError(ImportError, __import__, 'encodings')
-        
+
+@skip("silverlight cli") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=1019
+def test_cp1019():
+    #--Test that bogus encodings fail properly
+    t_in, t_out, t_err = nt.popen3(sys.executable + " " + nt.getcwd() + r"\encoded_files\cp1019.py")
+    t_err_lines = t_err.readlines()
+    t_out_lines = t_out.readlines()
+    t_err.close()
+    t_out.close()
+    t_in.close()
+    
+    AreEqual(len(t_out_lines), 0)
+    Assert(t_err_lines[0].startswith("  File"))
+    Assert(t_err_lines[1].startswith("SyntaxError: encoding problem: with BOM"))
+
+#--MAIN------------------------------------------------------------------------        
 run_test(__name__)

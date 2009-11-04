@@ -48,6 +48,8 @@ import System
 import clr
 import nt, os
 
+clr.AddReference("Microsoft.Dynamic")
+
 #--GLOBALS---------------------------------------------------------------------
 TYPE_COUNTER = 0
 
