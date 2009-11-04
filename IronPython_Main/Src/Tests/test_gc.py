@@ -195,7 +195,7 @@ def test_debug_stats():
     AreEqual(62,gc.DEBUG_LEAK)
  
 
-@disabled("CodePlex Work Item 8202")
+@skip("cli", "silverlight") #CodePlex Work Item 8202
 def test_get_debug():
     state = [0,gc.DEBUG_STATS,gc.DEBUG_COLLECTABLE,gc.DEBUG_UNCOLLECTABLE,gc.DEBUG_INSTANCES,gc.DEBUG_OBJECTS,gc.DEBUG_SAVEALL,gc.DEBUG_LEAK]
     result = gc.get_debug()

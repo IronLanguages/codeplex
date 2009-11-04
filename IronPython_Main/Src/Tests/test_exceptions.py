@@ -941,6 +941,7 @@ def test_raise_inside_str():
 def test_exception_doc():
     # should be accessible, CPython and IronPython have different strings though.
     Exception().__doc__
+    Exception("abc").__doc__
 
 def test_repr_not_called():
     """__repr__ shouldn't be called when message is a tuple w/ multiple args"""

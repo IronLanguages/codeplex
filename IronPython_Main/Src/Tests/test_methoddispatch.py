@@ -235,7 +235,7 @@ def test_types():
     
         # MakeArrayType and MakeByRefType are SecurityCritical and thus cannot be called via reflection in silverlight,
         # so disable these in interpreted mode.
-        if not (is_silverlight and is_interpreted()):
+        if not (is_silverlight):
             # Select using Array type
             arrtype = System.Type.MakeArrayType(type)
             select = BindTest.Bind.Overloads[arrtype]

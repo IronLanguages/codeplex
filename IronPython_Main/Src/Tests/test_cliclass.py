@@ -274,7 +274,7 @@ def test_generic_TypeGroup():
     
     # IsAssignableFrom is SecurityCritical and thus cannot be called via reflection in silverlight,
     # so disable this in interpreted mode.
-    if not (is_silverlight and is_interpreted()):
+    if not (is_silverlight):
         # converstion to Type
         Assert(System.Type.IsAssignableFrom(System.IComparable, int))
         AssertError(TypeError, System.Type.IsAssignableFrom, object, genericTypes)
@@ -304,8 +304,7 @@ def test_generic_TypeGroup():
     # Test constructor
     if not is_silverlight:
         # GetType is SecurityCritical; can't call via reflection on silverlight
-        if not is_interpreted():
-            AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
+        AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
         
         # GetGenericTypeDefinition is SecuritySafe, can't call on Silverlight.
         AreEqual(System.EventHandler[System.EventArgs](handler).GetType().GetGenericTypeDefinition(), System.Type.GetType("System.EventHandler`1"))

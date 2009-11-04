@@ -13,8 +13,12 @@
 #
 #####################################################################################
 
+from sys import exit, path
+orig_syspath = [x.lower() for x in path]
 from iptest.assert_util import *
-from sys import exit
+IP_DIR = sys.prefix
+DLLS_DIR = IP_DIR + "\\DLLs"
+Assert(DLLS_DIR.lower() in orig_syspath)
 
 skiptest("win32")
 skiptest("silverlight")
@@ -29,8 +33,6 @@ from System.CodeDom.Compiler   import CompilerParameters
 #--GLOBALS
 
 ORIG_DIR = testpath.public_testdir
-IP_DIR = sys.prefix
-DLLS_DIR = IP_DIR + "\\DLLs"
 PROVIDER = CSharpCodeProvider()
 
 #------------------

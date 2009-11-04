@@ -53,6 +53,28 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
         Assert('Help on Array[str] object' in x)
         if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24508
             Assert('Clear(...)' in x)
+
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=4190
+    from System.IO import MemoryStream
+    try:
+        sys.stdout = stdout_reader() 
+        help(MemoryStream.Write)
+        x_class = sys.stdout.text
+    finally:
+        sys.stdout = sys.__stdout__
+
+    try:
+        sys.stdout = stdout_reader() 
+        help(MemoryStream().Write)
+        x_instance = sys.stdout.text
+    finally:
+        sys.stdout = sys.__stdout__        
+
+    if not is_silverlight:        
+        AreEqual(x_class, x_instance.replace("built-in function Write", "method_descriptor"))
+    else:
+        AreEqual(x_class.replace(" |", "|"), 
+                 x_instance.replace("built-in function", "method-descriptor").replace(" |", "|"))
         
 def test_module():
     import time

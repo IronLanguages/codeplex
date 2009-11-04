@@ -700,12 +700,6 @@ function test-dlrmodes($dlrexe)
 	exceptiondetail-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
-	## -X:Interpret
-	echo ""
-	echo "-X:Interpret needs more coverage"
-	hello-helper $dlrexe "-X:Interpret"
-	
-	#------------------------------------------------------------------------------
 	## -X:MaxRecursion
 	echo ""
 	echo "Testing -X:MaxRecursion ..."
@@ -768,17 +762,12 @@ function test-relatedpy($pyexe)
 	exceptiondetail-helper $pyexe "-X:ShowClrExceptions"
 	showclrexceptions-helper $pyexe "-X:ExceptionDetail"
 	
-	#-X:Interpret, -O, -OO
-	echo ""
-	echo "Testing -X:Interpret, -O, -OO ..."
-	hello-helper $pyexe "-X:Interpret" -O -OO
-	
 	echo "Testing compatible IronPython modes together ..."
 	if (! $global:IS_DEBUG) {
 		$host.ui.write("-X:AssembliesDir unsupported with non-debug builds")
 	}
 	else {
-		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:LightweightScopes" "-X:MaxRecursion" 10 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
+		hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:LightweightScopes" "-X:MaxRecursion" 10 "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:TabCompletion"
 	}
 }
 	
@@ -840,8 +829,15 @@ function test-regressions($pyexe)
 {
 	echo "Testing regressions..."
 	echo ""
-
+	set-alias pyexe $pyexe
+    
 	hello-helper $pyexe "-D" "-X:FullFrames" "-X:Tracing" "-X:TabCompletion"
+	
+	hello-helper $pyexe "-D" "-S" "-X:FullFrames" "-X:ColorfulConsole" "-X:EnableProfiler"
+	pyexe "-D" "-S" "-X:FullFrames" "-X:ColorfulConsole" "-X:EnableProfiler" "-c" "import random"
+	if (! $?) {
+		show-failure "Failed: pyexe -D -S -X:FullFrames -X:ColorfulConsole -X:EnableProfiler -c 'import random'"
+	}
 }
 
 ###############################################################################
