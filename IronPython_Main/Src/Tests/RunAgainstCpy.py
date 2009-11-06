@@ -52,10 +52,6 @@ os.environ.update({ "pythonpath" : sys.exec_prefix + r"\lib;" + rowan_bin})
 #tests we do not wish to run. These should be in the "Tests" directory
 EXCLUDE_LIST = ["test_fuzz_parser.py"]
 
-#For some reason test_math is taking extraordinary amounts of time to run
-#under CPython 2.5.  For now, this is just disabled.
-EXCLUDE_LIST.append("test_math.py")
-
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
 #These WILL be run.
 EXTRA_INCLUDE_LIST = ["regressions.py"]

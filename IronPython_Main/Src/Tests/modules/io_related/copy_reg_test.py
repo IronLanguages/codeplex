@@ -189,33 +189,36 @@ def test_extension_cache():
     if  copy_reg._extension_cache.has_key('cache1') or copy_reg._extension_cache.has_key('cache2'):
         Fail("The method clear_extension_cache did not work correctly ")
 
-
 #_reconstructor
 def test_reconstructor():
-    obj = copy_reg._reconstructor(object, object, None)   
-    Assert(type(obj) is object)
+    reconstructor_copy = copy_reg._reconstructor
+    try:
+        obj = copy_reg._reconstructor(object, object, None)   
+        Assert(type(obj) is object)
 
-    #set,get, the value is a random int
-    rand = _random.Random()
-    value = rand.getrandbits(8)
-    copy_reg._reconstructor = value
-    result = copy_reg._reconstructor
-    Assert(result == value,
-           "set or get of the attribute failed!")
+        #set,get, the value is a random int
+        rand = _random.Random()
+        value = rand.getrandbits(8)
+        copy_reg._reconstructor = value
+        result = copy_reg._reconstructor
+        Assert(result == value,
+               "set or get of the attribute failed!")
     
-    #the value is a string
-    value2 = "value2"
-    copy_reg._reconstructor = value2
-    result = copy_reg._reconstructor
-    Assert(result == value2,
-           "set or get of the attribute failed!")
+        #the value is a string
+        value2 = "value2"
+        copy_reg._reconstructor = value2
+        result = copy_reg._reconstructor
+        Assert(result == value2,
+               "set or get of the attribute failed!")
     
-    #the value is a custom type object
-    value3 = testclass()
-    copy_reg._reconstructor = value3
-    result = copy_reg._reconstructor
-    Assert(result == value3,
-           "set or get of the attribute failed!")
+        #the value is a custom type object
+        value3 = testclass()
+        copy_reg._reconstructor = value3
+        result = copy_reg._reconstructor
+        Assert(result == value3,
+               "set or get of the attribute failed!")
+    finally:               
+        copy_reg._reconstructor = reconstructor_copy
    
 #pickle
 def test_pickle():
@@ -236,7 +239,6 @@ def test_pickle():
     AssertError(TypeError,copy_reg.pickle,testclass,func)
     func = _random.Random()
     AssertError(TypeError,copy_reg.pickle,testclass,func)
-    
     
 #dispatch_table
 def test_dispatch_table():
@@ -272,7 +274,6 @@ def test_dispatch_table():
     temp ={}
     copy_reg.dispatch_table = temp
     AreEqual(temp,copy_reg.dispatch_table)
-
 
 #pickle_complex
 def test_pickle_complex():

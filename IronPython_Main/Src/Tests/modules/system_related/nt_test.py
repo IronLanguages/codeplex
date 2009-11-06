@@ -192,10 +192,10 @@ def test_fdopen():
         result.close()
          
     # The file descriptor is not valid
-    AssertError(OSError,nt.fdopen,3)
+    AssertError(OSError,nt.fdopen,3000)
     AssertError(OSError,nt.fdopen,-1)
-    AssertError(OSError,nt.fdopen,3, "w")
-    AssertError(OSError,nt.fdopen,3, "w", 1024)
+    AssertError(OSError,nt.fdopen,3000, "w")
+    AssertError(OSError,nt.fdopen,3000, "w", 1024)
     
     # The file mode does not exist
     AssertError(ValueError,nt.fdopen,0,"p")
@@ -232,7 +232,7 @@ def test_fstat():
     AreEqual(10, len(nt.fstat(2)))
     
     # invalid file descriptor
-    AssertError(OSError,nt.fstat,3)
+    AssertError(OSError,nt.fstat,3000)
     AssertError(OSError,nt.fstat,-1)
 
 def test_chmod():
