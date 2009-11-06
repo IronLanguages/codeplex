@@ -265,7 +265,8 @@ def test_other():
     
     # cpython tries to compute this, takes a long time to finish
     if is_cli or is_silverlight:
-        AssertError(ValueError, (lambda: 10 ** 735293857239475))
+        y = 735293857239475
+        AssertError(ValueError, (lambda: 10 ** y))
 
     Assert(2 ** 3.0 == 8.0)
     Assert(2.0 ** 3 == 8.0)
@@ -529,4 +530,5 @@ def test_integer_ratio():
     for flt, res in int_ratio_tests:
         AreEqual(flt.as_integer_ratio(), res)
 
+#------------------------------------------------------------------------------
 run_test(__name__)

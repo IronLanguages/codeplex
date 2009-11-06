@@ -276,6 +276,7 @@ def test_gettrace():
 
 testDelGetFrame = "Test_GetFrame" in sys.argv
 if testDelGetFrame:
+    print 'Calling test_getframe()...'
     test_getframe()
 else:
     run_test(__name__)
@@ -285,5 +286,6 @@ else:
         AreEqual(0, launch_ironpython_changing_extensions(__file__, ["-X:FullFrames"], [], ("Test_GetFrame",)))
     elif sys.platform == "win32":
         print 'running test_getframe on cpython'
-        testDelGetFrame = True
-        test_getframe()
+        import subprocess
+        subprocess.check_call([sys.executable, __file__, "Test_GetFrame"])
+        
