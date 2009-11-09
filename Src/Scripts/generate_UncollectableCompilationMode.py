@@ -165,7 +165,6 @@ def gen_dynamic(cw):
         cw.exit_block()
         cw.write("")
         cw.write("SiteInfo si = info.NextSite(binder);")
-        cw.write("_sites.Add(si);")
         cw.write("")
         cw.write("return MakeDynamicExpression(binder, si.Expression, "
                  "info.TargetField, info.InvokeMethod, %s);" %

@@ -113,7 +113,7 @@ namespace IronPython.Runtime {
         /// Looks up a global variable.  If the variable is not defined in the
         /// global scope then built-ins is consulted.
         /// </summary>
-        internal bool TryLookupGlobal(string name, out object value) {
+        internal bool TryLookupBuiltin(string name, out object value) {
             object builtins;
             if (!GlobalDict.TryGetValue("__builtins__", out builtins)) {
                 value = null;

@@ -166,11 +166,6 @@ namespace Microsoft.Scripting.Interpreter {
 
         private readonly Stack<ParameterExpression> _exceptionForRethrowStack = new Stack<ParameterExpression>();
 
-        // Used for visiting the reduced form of IInstructionProvider nodes, so
-        // we can properly close over variables that the adaptive compiler will
-        // need later.
-        private ParameterVisitor _paramVisitor;
-
         // Set to true to force compiliation of this lambda.
         // This disables the interpreter for this lambda. We still need to
         // walk it, however, to resolve variables closed over from the parent
@@ -1294,18 +1289,6 @@ namespace Microsoft.Scripting.Interpreter {
             var instructionProvider = expr as IInstructionProvider;
             if (instructionProvider != null) {
                 instructionProvider.AddInstructions(this);
-
-                // we need to walk the reduced expression in case it has any closure 
-                // variables that we'd need to track when we actually turn around and 
-                // compile it
-                if (expr.CanReduce) {
-                    if (_paramVisitor == null) {
-                        // We create a lot of these if there are many reducible
-                        // nodes, so cache it.
-                        _paramVisitor = new ParameterVisitor(this);
-                    }
-                    _paramVisitor.Visit(expr.Reduce());
-                }
                 return;
             }
 
