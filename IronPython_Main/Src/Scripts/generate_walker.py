@@ -42,7 +42,7 @@ def get_ast(assembly, roots):
         if node.IsAbstract: continue
 
         for root in roots:
-            if inherits(node, root):
+            if inherits(node, root) and node.IsPublic: 
                 sets[root].add(node.Name)
                 break
 

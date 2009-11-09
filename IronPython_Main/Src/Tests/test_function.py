@@ -1182,6 +1182,13 @@ def test_exec_funccode_filename():
     exec "def x(): pass" in mod.__dict__
     AreEqual(mod.x.func_code.co_filename, '<string>')
 
+
+# defined globally because unqualified exec isn't allowed in
+# a nested function.
+def unqualified_exec():
+    print x
+    exec ""
+
 def test_func_code_variables():
     def CompareCodeVars(code, varnames, names, freevars, cellvars):
         AreEqual(code.co_varnames, varnames)
@@ -1274,5 +1281,6 @@ def test_func_code_variables():
     CompareCodeVars(f.func_code, ('a', 'g'), (), (), ('a', ))    
     CompareCodeVars(f(42).func_code, (), (), ('a', ), ())
         
+    AreEqual(unqualified_exec.func_code.co_names, ('x', ))
 
 run_test(__name__)

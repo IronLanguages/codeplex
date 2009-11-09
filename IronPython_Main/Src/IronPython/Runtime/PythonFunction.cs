@@ -256,6 +256,9 @@ namespace IronPython.Runtime {
             get { return func_code.ArgNames; }
         }
 
+        /// <summary>
+        /// The parent CodeContext in which this function was declared.
+        /// </summary>
         internal CodeContext Context {
             get {
                 return _context;
