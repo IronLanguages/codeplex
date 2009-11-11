@@ -204,11 +204,7 @@ def gen_action_helper(cw, i):
     cw.write('')
     
     # run
-    cw.enter_block('public override int Run(InterpretedFrame frame)')
-    gen_load_interpreted_arguments(cw, i)
-    cw.write('_target(%s);' % (', '.join(get_cast_args(i)), ))
-    cw.write('return +1;')
-    cw.exit_block()
+    gen_interpreted_run(cw, i, False)
     
     cw.exit_block()
     cw.write('')
@@ -235,20 +231,31 @@ def gen_invoke_helper(cw, i):
     cw.write('')
     
     # run
-    cw.enter_block('public override int Run(InterpretedFrame frame)')
-    gen_load_interpreted_arguments(cw, i - 1)
-    cw.write('frame.Push(_target(%s));' % (', '.join(get_cast_args(i-1)), ))
-    cw.write('return +1;')
-    cw.exit_block()
+    gen_interpreted_run(cw, i - 1, True)
     
     cw.exit_block()
     cw.write('')
 
-def gen_load_interpreted_arguments(cw, i):
-    if i > 0:
-        cw.write('int firstArgStackIndex = (frame.StackIndex -= %d);' % i)        
-        for j in xrange(0, i):
-            cw.write('object arg%d = frame.Data[firstArgStackIndex + %d];' % (j, j))
+def gen_interpreted_run(cw, n, isFunc):
+    cw.enter_block('public override int Run(InterpretedFrame frame)')
+    
+    args = ''
+    for i in xrange(0, n):
+        if i > 0: args += ', '
+        args += '(T%d)frame.Data[frame.StackIndex - %d]' % (i, n - i)
+    
+    if isFunc:
+        call = 'frame.Data[frame.StackIndex - %d] = _target(%s);' % (n, args)
+        si = n - 1
+    else:
+        call = '_target(%s);' % args
+        si = n
+    
+    cw.write(call)
+    cw.write('frame.StackIndex -= %d;' % si)
+    cw.write('return 1;')
+    
+    cw.exit_block()
 
 def gen_action_helpers(cw):
     for i in xrange(MAX_HELPERS):

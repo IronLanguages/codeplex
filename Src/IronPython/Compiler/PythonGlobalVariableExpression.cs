@@ -124,7 +124,7 @@ namespace IronPython.Compiler {
         #region IInstructionProvider Members
 
         public void AddInstructions(LightCompiler compiler) {
-            compiler.AddInstruction(new PythonGlobalInstruction(_global));
+            compiler.Instructions.Emit(new PythonGlobalInstruction(_global));
         }
 
         #endregion
@@ -206,7 +206,7 @@ namespace IronPython.Compiler {
 
         public void AddInstructions(LightCompiler compiler) {
             compiler.Compile(_value);
-            compiler.AddInstruction(new PythonSetGlobalInstruction(_global.Global));
+            compiler.Instructions.Emit(new PythonSetGlobalInstruction(_global.Global));
         }
 
         #endregion
@@ -357,7 +357,7 @@ namespace IronPython.Compiler {
 
         void IInstructionProvider.AddInstructions(LightCompiler compiler) {
             compiler.Compile(_codeContextExpr);
-            compiler.AddInstruction(new LookupGlobalInstruction(_name, _isLocal));
+            compiler.Instructions.Emit(new LookupGlobalInstruction(_name, _isLocal));
         }
 
         #endregion

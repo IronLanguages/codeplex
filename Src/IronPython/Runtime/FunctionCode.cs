@@ -698,6 +698,7 @@ namespace IronPython.Runtime {
                 ).Reduce(
                     _lambda.ShouldInterpret,
                     _lambda.EmitDebugSymbols,
+                    context.Options.CompilationThreshold,
                     Code.Parameters,
                     x => (Expression<Func<MutableTuple, object>>)context.DebugContext.TransformLambda(x, debugInfo)
                 ),
@@ -716,7 +717,11 @@ namespace IronPython.Runtime {
             if ((Flags & FunctionAttributes.Generator) == 0) {
                 finalCode = Code;
             } else {
-                finalCode = Code.ToGenerator(_lambda.ShouldInterpret, _lambda.EmitDebugSymbols);
+                finalCode = Code.ToGenerator(
+                    _lambda.ShouldInterpret, 
+                    _lambda.EmitDebugSymbols, 
+                    _lambda.GlobalParent.PyContext.Options.CompilationThreshold
+                );
             }
             return finalCode;
         }
@@ -725,7 +730,9 @@ namespace IronPython.Runtime {
             if (_lambda.EmitDebugSymbols) {
                 return CompilerHelpers.CompileToMethod(code, DebugInfoGenerator.CreatePdbGenerator(), true);
             } else if (_lambda.ShouldInterpret) {
-                Delegate result = CompilerHelpers.LightCompile(code, _lambda is Compiler.Ast.FunctionDefinition);
+                Delegate result = CompilerHelpers.LightCompile(code, _lambda is Compiler.Ast.FunctionDefinition,
+                    _lambda.GlobalParent.PyContext.Options.CompilationThreshold
+                );
 
                 // If the adaptive compiler decides to compile this function, we
                 // want to store the new compiled target. This saves us from going

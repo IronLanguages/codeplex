@@ -368,7 +368,7 @@ namespace IronPython.Compiler.Ast {
                         AstUtils.Constant(null, typeof(object[])) :
                         (MSAst.Expression)Ast.NewArrayInit(typeof(object), defaults),
                     IsGenerator ?
-                        (MSAst.Expression)new PythonGeneratorExpression(code) :
+                        (MSAst.Expression)new PythonGeneratorExpression(code, GlobalParent.PyContext.Options.CompilationThreshold) :
                         (MSAst.Expression)code
                 );
             } else {
@@ -435,10 +435,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            compiler.AddInstruction(new FunctionDefinitionInstruction(globalContext, this, defaultCount, globalName));
+            compiler.Instructions.Emit(new FunctionDefinitionInstruction(globalContext, this, defaultCount, globalName));
         }
 
         private static void CompileAssignment(LightCompiler compiler, MSAst.Expression variable, Action<LightCompiler> compileValue) {
+            var instructions = compiler.Instructions;
+
             ClosureExpression closure = variable as ClosureExpression;
             if (closure != null) {
                 compiler.Compile(closure.ClosureCell);
@@ -446,31 +448,30 @@ namespace IronPython.Compiler.Ast {
             LookupGlobalVariable lookup = variable as LookupGlobalVariable;
             if (lookup != null) {
                 compiler.Compile(lookup.CodeContext);
-                compiler.AddInstruction(Instruction.Push(lookup.Name));
+                instructions.EmitLoad(lookup.Name);
             }
 
             compileValue(compiler);
 
             if (closure != null) {
-                compiler.AddInstruction(new FieldAssignInstruction(ClosureExpression._cellField));
+                instructions.EmitStoreField(ClosureExpression._cellField);
                 return;
             }
             if (lookup != null) {
-                compiler.AddInstruction(Instruction.Call(typeof(PythonOps).GetMethod(lookup.IsLocal ? "SetLocal" : "SetGlobal")));
+                instructions.EmitCall(typeof(PythonOps).GetMethod(lookup.IsLocal ? "SetLocal" : "SetGlobal"));
                 return;
             }
 
             MSAst.ParameterExpression functionValueParam = variable as MSAst.ParameterExpression;
             if (functionValueParam != null) {
-                compiler.AddInstruction(Instruction.SetLocal(compiler.GetVariableIndex(functionValueParam)));
-                compiler.AddInstruction(Instruction.Pop());
+                instructions.EmitStoreLocal(compiler.GetVariableIndex(functionValueParam));
                 return;
             }
 
             var globalVar = variable as PythonGlobalVariableExpression;
             if (globalVar != null) {
-                compiler.AddInstruction(new PythonSetGlobalInstruction(globalVar.Global));
-                compiler.AddInstruction(Instruction.Pop());
+                instructions.Emit(new PythonSetGlobalInstruction(globalVar.Global));
+                instructions.EmitPop();
                 return;
             }
             Debug.Assert(false, "Unsupported variable type for light compiling function");

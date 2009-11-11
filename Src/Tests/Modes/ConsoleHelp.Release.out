@@ -22,6 +22,7 @@ Options:
  -x                       Skip first line of the source
  -X:AutoIndent            Enable auto-indenting in the REPL loop
  -X:ColorfulConsole       Enable ColorfulConsole
+ -X:CompilationThreshold  The number of iterations before the interpreter starts compiling
  -X:Debug                 Enable application debugging (preferred over -D)
  -X:EnableProfiler        Enables profiling support in the compiler
  -X:ExceptionDetail       Enable ExceptionDetail mode

@@ -153,6 +153,7 @@
     <Compile Include="Runtime\AttributesDictionaryStorage.cs" />
     <Compile Include="Runtime\Binding\IComConvertible.cs" />
     <Compile Include="Runtime\CodeContext.cs" />
+    <Compile Include="Runtime\CollectionDebugView.cs" />
     <Compile Include="Runtime\DontMapIEnumerableToIterAttribute.cs" />
     <Compile Include="Compiler\UncollectableCompilationMode.cs" />
     <Compile Include="Runtime\Binding\ContextArgBuilder.cs" />
@@ -175,6 +176,7 @@
     <Compile Include="Runtime\ModuleContext.cs" />
     <Compile Include="Runtime\ModuleGlobalCache.cs" />
     <Compile Include="Runtime\ModuleOptions.cs" />
+    <Compile Include="Runtime\ObjectDebugView.cs" />
     <Compile Include="Runtime\Profiler.cs" />
     <Compile Include="Compiler\CompilationMode.cs" />
     <Compile Include="Compiler\Ast\AugmentedAssignStatement.cs" />
