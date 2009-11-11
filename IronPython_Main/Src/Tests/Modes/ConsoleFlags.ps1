@@ -606,6 +606,14 @@ function noadaptivecompilation-helper
 	if(! "$stuff".Contains("Microsoft.Scripting.Interpreter")) {show-failure "Failed (1): $stuff"; }
 }
 
+function compilationthreshold-helper {
+	set-alias dlrexe $args[0]
+	$dlrexe = $args[0]
+
+	#--Sanity
+	hello-helper $dlrexe "-X:CompilationThreshold" 1000
+}
+
 function showclrexceptions-helper
 {
 	set-alias dlrexe $args[0]
@@ -729,6 +737,13 @@ function test-dlrmodes($dlrexe)
 	echo "Testing -X:NoAdaptiveCompilation ..."
 	
 	noadaptivecompilation-helper $dlrexe
+	
+	#------------------------------------------------------------------------------
+	## -X:CompilationThreshold
+	echo ""
+	echo "Testing -X:CompilationThreshold ..."
+	
+	compilationthreshold-helper $dlrexe
 }
 
 ###############################################################################

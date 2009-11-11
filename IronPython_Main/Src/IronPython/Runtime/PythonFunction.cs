@@ -42,7 +42,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Created for a user-defined function.  
     /// </summary>
-    [PythonType("function"), DontMapGetMemberNamesToDir]
+    [PythonType("function"), DontMapGetMemberNamesToDir, DebuggerDisplay("function {__name__} in {__module__}")]
     public sealed partial class PythonFunction : PythonTypeSlot, IWeakReferenceable, IPythonMembersList, IDynamicMetaObjectProvider, ICodeFormattable, Binding.IFastInvokable {
         private readonly CodeContext/*!*/ _context;     // the creating code context of the function
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]

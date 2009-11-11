@@ -22,6 +22,7 @@ Options:
  -x                                     Skip first line of the source
  -X:AssembliesDir <dir>                 Set the directory for saving generated assemblies [debug only]
  -X:AutoIndent                          Enable auto-indenting in the REPL loop
+ -X:CompilationThreshold                The number of iterations before the interpreter starts compiling
  -X:ColorfulConsole                     Enable ColorfulConsole
  -X:Debug                               Enable application debugging (preferred over -D)
  -X:EnableProfiler                      Enables profiling support in the compiler

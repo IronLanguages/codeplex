@@ -4158,10 +4158,10 @@ namespace IronPython.Runtime.Operations {
             return stack;
         }
 
-        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable) {
+        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable, int compilationThreshold) {
             return Expression.Lambda(
                 code.Type,
-                new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, code.Parameters, x => x),
+                new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, compilationThreshold, code.Parameters, x => x),
                 code.Name,
                 code.Parameters
             );
