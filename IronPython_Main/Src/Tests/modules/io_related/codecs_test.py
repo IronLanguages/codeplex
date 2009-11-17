@@ -360,6 +360,11 @@ def test_charmap_encode():
     
     AreEqual(codecs.charmap_encode("", "strict", {}),
              ('', 0))
+
+    charmap = dict([ (ord(c), c.upper()) for c in "abcdefgh"])
+    AreEqual(codecs.charmap_encode(u"abc", "strict", charmap),
+             ('ABC', 3))
+
                  
     if not is_silverlight:
         #Sanity Negative

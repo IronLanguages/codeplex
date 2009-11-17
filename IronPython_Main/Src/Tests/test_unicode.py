@@ -62,4 +62,9 @@ def test_ignore():
     AreEqual(unicode('\xff', 'ascii', 'ignore'), '')
     AreEqual(unicode('a\xffb\xffc\xff', 'ascii', 'ignore'), 'abc')
 
+def test_cp19005():
+    foo = u'\xef\xbb\xbf'
+    AreEqual(repr(foo), r"u'\xef\xbb\xbf'")
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

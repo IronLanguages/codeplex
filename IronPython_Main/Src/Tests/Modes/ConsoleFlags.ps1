@@ -30,6 +30,18 @@ if ($Host.Version.Major -eq 1) {
 	$field2 = $consoleHost.GetType().GetField("standardErrorWriter", $bindingFlags)
 	$field2.SetValue($consoleHost, [Console]::Out)
 }
+elseif ($Host.Version.Major -eq 2) {
+	$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetField" 
+	$objectRef = $host.GetType().GetField("externalHostRef", $bindingFlags).GetValue($host) 
+	$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetProperty" 
+	$consoleHost = $objectRef.GetType().GetProperty("Value", $bindingFlags).GetValue($objectRef, @()) 
+	[void] $consoleHost.GetType().GetProperty("IsStandardOutputRedirected", $bindingFlags).GetValue($consoleHost, @()) 
+	$bindingFlags = [Reflection.BindingFlags] "Instance,NonPublic,GetField" 
+	$field = $consoleHost.GetType().GetField("standardOutputWriter", $bindingFlags) 
+	$field.SetValue($consoleHost, [Console]::Out)
+	$field2 = $consoleHost.GetType().GetField("standardErrorWriter", $bindingFlags)
+	$field2.SetValue($consoleHost, [Console]::Out)
+}
 #ENDHACK
 
 $old_ErrorActionPreference = $ErrorActionPreference
@@ -70,6 +82,10 @@ function show-failure ()
 
 	$host.ui.writeerrorline($msg) }
 	echo ""
+}
+
+function remove-ws {
+	return $args[0].Replace(" ", "")
 }
 
 function test-setup
@@ -496,7 +512,8 @@ function exceptiondetail-helper
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	$ErrorActionPreference = "stop"
-	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
+	$stuff = remove-ws "$stuff"
+	if (! "$stuff".Contains("OverflowError:System.FormatException:formatmessage--->System.Exception:clrmessage")) 
 	{
 		show-failure "Failed: $stuff"; 
 	}
@@ -544,8 +561,8 @@ function maxrecursion-helper
 		$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 		$stuff = dlrexe "-X:MaxRecursion" $x_param $args[1..$args.Length] $global:RECURSION $script_param 2>&1
 		$ErrorActionPreference = "stop"
-		$stuff = "$stuff.ErrorDetails"
-		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
+		$stuff = remove-ws "$stuff.ErrorDetails"
+		if (!$stuff.Contains("maximumrecursiondepthexceeded")) {show-failure "Failed: $stuff"; }
 	}
 	
 	foreach ($i in @(-2, -1, 0, 1, 8, 9))
@@ -624,8 +641,9 @@ function showclrexceptions-helper
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *; hwExcept()" 2>&1
 	$ErrorActionPreference = "stop"
-	if(! "$stuff".Contains("Hello World Exception")) {show-failure "Failed (1): $stuff"; }
-	if(! "$stuff".Contains("CLR Exception:")) {show-failure "Failed (2): $stuff"; }
+	$stuff = remove-ws "$stuff"
+	if(! $stuff.Contains("HelloWorldException")) {show-failure "Failed (1): $stuff"; }
+	if(! $stuff.Contains("CLRException:")) {show-failure "Failed (2): $stuff"; }
 	
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
@@ -634,8 +652,9 @@ function showclrexceptions-helper
 	{
 		show-failure "Failed: $stuff"; 
 	}
-	if (! "$stuff".Contains("CLR Exception:")) { show-failure "Failed (3): $stuff";  }
-	if (! "$stuff".Contains("OverflowException")) { show-failure "Failed (4): $stuff";  }
+	$stuff = remove-ws "$stuff"
+	if (! $stuff.Contains("CLRException:")) { show-failure "Failed (3): $stuff";  }
+	if (! $stuff.Contains("OverflowException")) { show-failure "Failed (4): $stuff";  }
 }
 
 function mta-helper

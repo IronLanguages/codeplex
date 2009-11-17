@@ -929,7 +929,6 @@ def test_write():
 
 # open test
 def test_open():
-    # bug 19310 
     file('temp.txt', 'w+').close()
     try:
         fd = nt.open('temp.txt', nt.O_WRONLY | nt.O_CREAT)
@@ -946,7 +945,6 @@ def test_open():
             fd = nt.open('temp.txt', nt.O_RDWR | flag)
             nt.close(fd)
 
-        # BUG 8784
         # sanity test
         tempfilename = "temp.txt"
         fd = nt.open(tempfilename,256,1)

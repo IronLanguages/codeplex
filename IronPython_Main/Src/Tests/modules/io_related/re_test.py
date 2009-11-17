@@ -138,8 +138,7 @@ def test_sanity_re():
     exc = re.error("some args")
     
     #purge
-    #CodePlex Work Item 6277
-    #re.purge()
+    re.purge()
     
     
 def test_sanity_re_pattern():
