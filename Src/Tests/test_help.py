@@ -75,6 +75,15 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
     else:
         AreEqual(x_class.replace(" |", "|"), 
                  x_instance.replace("built-in function", "method-descriptor").replace(" |", "|"))
+
+    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=11883
+    AreEqual(dir(System).count('Action'), 1)
+    try:
+        sys.stdout = stdout_reader() 
+        help(System.Action)
+    finally:
+        sys.stdout = sys.__stdout__     
+    AreEqual(dir(System).count('Action'), 1)
         
 def test_module():
     import time

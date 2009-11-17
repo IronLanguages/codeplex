@@ -219,6 +219,12 @@ def test_get_set_locale():
 def test_cp17819():
     import xml.sax
     AreEqual(xml.sax._false, 0)
+
+@runonly("win32")
+def test_cp20162():
+    import collections
+    AssertErrorWithMessage(TypeError, "deque() takes at most 2 arguments (3 given)",
+                           collections.deque, 'abc', 2, 2)
     
 ##MAIN#########################################################################
 run_test(__name__)

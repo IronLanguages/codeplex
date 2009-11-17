@@ -468,6 +468,45 @@ def test_not___len___cp_24129():
     print bool(c)
     AreEqual(not c, False)
 
+@skip("win32")
+def test_cp18912():
+    import __future__
+    feature = __future__.__dict__['with_statement']
+    x = compile('x=1', 'ignored', 'exec', feature.compiler_flag)
+
+def test_cp19789():
+    class A:
+        a = 1
+    
+    class B(object):
+        b = 2
+    
+    class C(A, B):
+        pass
+    
+    AreEqual(dir(A),
+             ['__doc__', '__module__', 'a'])
+    Assert('b' in dir(B))
+    Assert('a' in dir(C) and 'b' in dir(C))
+
+def test_cp24573():
+    def f(a=None):
+        pass
+        
+    AssertErrorWithMessage(TypeError, "f() got multiple values for keyword argument 'a'",
+                           lambda: f(1, a=3))
+
+@skip("win32")
+def test_cp24802():
+    import clr
+    clr.AddReference('System.Drawing')
+    import System
+    p = System.Drawing.Pen(System.Drawing.Color.Blue)
+    p.Width = System.Single(3.14)
+    AreEqual(p.Width, System.Single(3.14))
+    p.Width = 4.0
+    AreEqual(p.Width, 4.0)
+
 #------------------------------------------------------------------------------
 # This is not a regression, but need to find the right place to move this test to
 

@@ -138,8 +138,7 @@ def test_newlines():
     for lines in getTestOutput():
         AreEqual(removePrompts(lines), [])
 
-@disabled("CodePlex Work Item 12403")
-def test_string_exception():
+def test_cp12403():
     '''
     An exception thrown should appear in stderr.
     '''
@@ -147,14 +146,12 @@ def test_string_exception():
     superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
     
 
-    superConsole.SendKeys('raise "Some string exception"{ENTER}')
-    print "CodePlex Work Item 12403"
+    superConsole.SendKeys('raise Exception{(}"Some string exception"{)}{ENTER}')
     expected = [
-                "warning: DeprecationWarning: raising a string exception is deprecated",
                 "Traceback (most recent call last):",
-                "  File ", #CodePlex Work Item 12403
-                "Some string exception",
-                "", #CodePlex Work Item 12401
+                '  File "<stdin>", line 1, in <module>',
+                "Exception: Some string exception",
+                "",
                 ]
 
     #verification
@@ -167,7 +164,6 @@ def test_string_exception():
     for i in xrange(len(errlines)):
         Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))
     
-
 def test_unique_prefix_completion():
     '''
     Ensure that an attribute with a prefix unique to the dictionary is
