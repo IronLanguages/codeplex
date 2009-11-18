@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         /// <param name="name">name of the language</param>
         /// <returns>configuration information for the language</returns>
-        private DynamicLanguageInfo GetLanguageByName(string name) {
+        public DynamicLanguageInfo GetLanguageByName(string name) {
             foreach (var lang in Languages)
                 foreach (var n in lang.Names)
                     if (n.ToLower() == name.ToLower())
@@ -98,7 +98,7 @@ namespace Microsoft.Scripting.Silverlight {
             var downloadQueue = new List<DynamicLanguageInfo>();
             foreach(var used in LanguagesUsed) {
                 var lang = GetLanguageByName(used.Key);
-                if (used.Value && lang != null) {
+                if (used.Value && lang != null && lang.External != null) {
                     downloadQueue.Add(lang);
                 }
             }
@@ -197,7 +197,7 @@ namespace Microsoft.Scripting.Silverlight {
                     dl.Languages.Add(new DynamicLanguageInfo(
                         attribute.Names,
                         attribute.LanguageContextType.AssemblyQualifiedName,
-                        new string[] { assembly.FullName },
+                        new string[] { assembly.ManifestModule.ToString() },
                         attribute.FileExtensions,
                         null
                     ));

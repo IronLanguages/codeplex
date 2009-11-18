@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Silverlight {
                 // Fetch innerHTML if inline, or the downloaded file otherwise
                 xaml = src == string.Empty ? 
                     (string) xamlScriptTag.GetProperty("innerHTML") :
-                    BrowserPAL.PAL.VirtualFilesystem.GetFileContents(new Uri((string)src, UriKind.RelativeOrAbsolute));
+                    BrowserPAL.PAL.VirtualFilesystem.GetFileContents(DynamicApplication.MakeUri(src));
 
                 // Rewrite the XAML to remove CDATA or <?xml line
                 var r = new StringReader(xaml);
@@ -57,20 +57,8 @@ namespace Microsoft.Scripting.Silverlight {
                 }
                 xaml = w.ToString();
 
-                // Find the root XAML node, create the corresponding Control 
-                // object, and set the RootVisual with the XAML string.
-                XmlReader reader = XmlReader.Create(new StringReader(xaml));
-                reader.MoveToContent();
-                if (reader.NodeType == XmlNodeType.Element) {
-                    var aqn = typeof(System.Windows.Controls.UserControl).AssemblyQualifiedName;
-                    var type = Type.GetType(
-                        string.Format("System.Windows.Controls.{0}, {1}", reader.Name, aqn.Substring(aqn.IndexOf(',') + 1))
-                    );
-                    if(type != null) {
-                        var root = (UIElement) type.GetConstructor(new Type[] { }).Invoke(new object[] { });
-                        DynamicApplication.Current.LoadRootVisual(root, xaml, false);
-                    }
-                }
+                // set the RootVisual
+                DynamicApplication.Current.LoadRootVisualFromString(xaml);
             };
 
             // If src is set, download the src and invoke onComplete when the
@@ -79,7 +67,7 @@ namespace Microsoft.Scripting.Silverlight {
                 onComplete.Invoke();
             } else {
                 ((HttpVirtualFilesystem)HttpPAL.PAL.VirtualFilesystem).
-                    DownloadAndCache(new List<Uri>(){ new Uri((string)src, UriKind.RelativeOrAbsolute) }, onComplete);
+                    DownloadAndCache(new List<Uri>(){ DynamicApplication.MakeUri((string)src) }, onComplete);
             }
         }
     }

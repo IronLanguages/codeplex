@@ -107,14 +107,25 @@ namespace Microsoft.Scripting.Silverlight {
             }
 
             ScriptEngine engine = null;
-            if (DynamicApplication.Current.Engine == null || DynamicApplication.Current.Engine.Engine == null) {
-                throw new Exception("Use the Show(engine, scope) overload; a default engine was not found");
+            if (DynamicApplication.Current.Engine != null) {
+                engine = DynamicApplication.Current.Engine.Engine;    
             }
-            engine = DynamicApplication.Current.Engine.Engine;
+            if (engine == null) {
+                var langCfg = DynamicApplication.Current.LanguagesConfig;
+                if (langCfg.LanguagesUsed.Count < 1) {
+                    throw new Exception("Use the Show(engine, scope) overload, since there are no languages used");
+                }
+                foreach(var lang in langCfg.LanguagesUsed) {
+                    if (lang.Value) {
+                        engine = langCfg.GetEngine(lang.Key);
+                        break;
+                    }
+                }
+            }
 
             ScriptScope scope = DynamicApplication.Current.Engine.EntryPointScope;
             if (scope == null) {
-                scope = engine.CreateScope();
+                scope = DynamicApplication.Current.Engine.CreateScope();
             }
 
             return Show(engine, scope);
@@ -148,7 +159,7 @@ namespace Microsoft.Scripting.Silverlight {
 
             Window.Current.AddPanel(engine.Setup.Names[0] + " Console", replDiv);
             Window.Current.Initialize();
-            
+
             repl.Start();
             return repl;
         }
@@ -408,19 +419,7 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         /// <param name="e"></param>
         private void HandleException(Exception e) {
-            _outputBuffer.WriteLine(string.Format("{0}: {1}", e.GetType(), e.Message));
-            var dfs = Microsoft.Scripting.Runtime.ScriptingRuntimeHelpers.GetDynamicStackFrames(e);
-            if(dfs == null || dfs.Length == 0) {
-                _outputBuffer.WriteLine(e.StackTrace != null ? e.StackTrace : e.ToString());
-            } else {
-                foreach(var frame in dfs) { 
-                    _outputBuffer.WriteLine("  at {0} in {1}, line {2}",
-                        frame.GetMethodName(),
-                        frame.GetFileName() != null ? frame.GetFileName() : null,
-                        frame.GetFileLineNumber()
-                    );
-                }
-            }
+            _outputBuffer.WriteLine(_engine.GetService<ExceptionOperations>().FormatException(e));
         }
 
         /// <summary>

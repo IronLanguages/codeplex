@@ -33,6 +33,7 @@ namespace Microsoft.Scripting.Silverlight {
     /// </summary>
     public class DynamicEngine {
 
+        #region Properties
         /// <summary>
         /// Avaliable languages
         /// </summary>
@@ -59,7 +60,13 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         public ScriptScope EntryPointScope { get; private set; }
 
+        /// <summary>
+        /// true while the entry-point is running, false otherwise
+        /// </summary>
+        internal bool RunningEntryPoint { get; set; }
+        #endregion
 
+        #region implementation
         /// <summary>
         /// Finds the avaliable languages, initializes the ScriptRuntime, 
         /// and initializes the entry-points ScriptScope.
@@ -70,35 +77,62 @@ namespace Microsoft.Scripting.Silverlight {
         /// Initializes the languages, ScriptRuntime, and entry-point ScriptScope.
         /// </summary>
         public DynamicEngine(DynamicLanguageConfig langConfig) {
+            RunningEntryPoint = false;
             if (langConfig == null) {
-                InitializeLangConfig();
+                LangConfig = InitializeLangConfig();
             } else {
                 LangConfig = langConfig;
             }
-            InitializeRuntime(Settings.Debug);
-            InitializeScope();
+            Runtime = CreateRuntime(Settings.Debug, LangConfig);
+            Runtime.LoadAssembly(GetType().Assembly);
+            LangConfig.Runtime = Runtime;
+            RuntimeSetup = Runtime.Setup;
+            EntryPointScope = CreateScope(Runtime);
+        }
+
+        /// <summary>
+        /// Run a script. Get's the contents from the script's path, uses the
+        /// script's file extension to find the corresponding ScriptEngine,
+        /// setting the "Engine" property, and execute the script against the
+        /// entry point scope as a file.
+        /// </summary>
+        /// <param name="entryPoint">path to the script</param>
+        public void Run(string entryPoint) {
+            if (entryPoint != null) {
+                var vfs = ((BrowserPAL)Runtime.Host.PlatformAdaptationLayer).VirtualFilesystem;
+                string code = vfs.GetFileContents(entryPoint);
+                Engine = Runtime.GetEngineByFileExtension(Path.GetExtension(entryPoint));
+                ScriptSource sourceCode = Engine.CreateScriptSourceFromString(code, entryPoint, SourceCodeKind.File);
+                RunningEntryPoint = true;
+                sourceCode.Compile(new ErrorFormatter.Sink()).Execute(EntryPointScope);
+                RunningEntryPoint = false;
+            }
         }
 
         /// <summary>
         /// Initializes the language config
         /// </summary>
-        private void InitializeLangConfig() {
-            if (DynamicApplication.Current == null) {
-                LangConfig = CreateLangConfig();
-            } else {
-                LangConfig = DynamicApplication.Current.LanguagesConfig;
-            }
+        private static DynamicLanguageConfig InitializeLangConfig() {
+            return DynamicApplication.Current == null ?
+                CreateLangConfig() :
+                DynamicApplication.Current.LanguagesConfig;
         }
 
         /// <summary>
-        /// Initializes the entry-point scope, adding any convenience 
-        /// globals and modules.
+        /// Create a new language config
         /// </summary>
-        private void InitializeScope() {
-            EntryPointScope = Runtime.CreateScope();
-            EntryPointScope.SetVariable("document", new DynamicHtmlDocument());
-            EntryPointScope.SetVariable("window", new DynamicHtmlObject(HtmlPage.Window));
-            EntryPointScope.SetVariable("me", DynamicApplication.Current.RootVisual);
+        private static DynamicLanguageConfig CreateLangConfig() {
+            return DynamicLanguageConfig.Create(new DynamicAppManifest().Assemblies);
+        }
+        #endregion
+
+        #region Public Hosting API
+        #region CreateRuntimeSetup
+        /// <summary>
+        /// Create a ScriptRuntimeSetup for generating optimized (non-debuggable) code.
+        /// </summary>
+        public static ScriptRuntimeSetup CreateRuntimeSetup() {
+            return CreateRuntimeSetup(false);
         }
 
         /// <summary>
@@ -124,60 +158,61 @@ namespace Microsoft.Scripting.Silverlight {
             setup.DebugMode = debugMode;
             return setup;
         }
+        #endregion
 
-        /// <summary>
-        /// Create a ScriptRuntimeSetup for generating optimized (non-debuggable) code.
-        /// </summary>
-        public static ScriptRuntimeSetup CreateRuntimeSetup() {
-            return CreateRuntimeSetup(false);
+        #region CreateRuntime
+        public static ScriptRuntime CreateRuntime() {
+            return CreateRuntimeHelper(CreateRuntimeSetup());
         }
 
-        /// <summary>
-        /// Create a new language config
-        /// </summary>
-        private static DynamicLanguageConfig CreateLangConfig() {
-            return DynamicLanguageConfig.Create(new DynamicAppManifest().Assemblies);
+        public static ScriptRuntime CreateRuntime(bool debugMode) {
+            return CreateRuntimeHelper(CreateRuntimeSetup(debugMode));
+        }
+
+        public static ScriptRuntime CreateRuntime(bool debugMode, DynamicLanguageConfig langConfig) {
+            return CreateRuntimeHelper(CreateRuntimeSetup(debugMode, langConfig));
         }
 
         /// <summary>
         /// Load default references into the runtime, including this assembly
         /// and a select set of platform assemblies.
         /// </summary>
-        private void LoadDefaultAssemblies() {
-            Runtime.LoadAssembly(GetType().Assembly);
+        /// <param name="runtime">Pre-initialized ScriptRuntime to load assemblies into.</param>
+        public static void LoadDefaultAssemblies(ScriptRuntime runtime) {
             foreach (string name in new string[] { "mscorlib", "System", "System.Windows", "System.Windows.Browser", "System.Net" }) {
-                Runtime.LoadAssembly(Runtime.Host.PlatformAdaptationLayer.LoadAssembly(name));
+                runtime.LoadAssembly(runtime.Host.PlatformAdaptationLayer.LoadAssembly(name));
             }
         }
 
-        /// <summary>
-        /// Initialize the ScriptRuntime, and load any default assemblies into it.
-        /// Also sets the language config's Runtime property.
-        /// </summary>
-        /// <param name="debugMode">Should this runtime generate debuggable code?</param>
-        private void InitializeRuntime(bool debugMode) {
-            RuntimeSetup = CreateRuntimeSetup(debugMode, LangConfig);
-            Runtime = new ScriptRuntime(RuntimeSetup);
-            LangConfig.Runtime = Runtime;
-            LoadDefaultAssemblies();
+        private static ScriptRuntime CreateRuntimeHelper(ScriptRuntimeSetup setup) {
+            var runtime = new ScriptRuntime(setup);
+            LoadDefaultAssemblies(runtime);
+            return runtime;
         }
+        #endregion
 
+        #region CreateScope
         /// <summary>
-        /// Run a script. Get's the contents from the script's path, uses the
-        /// script's file extension to find the corresponding ScriptEngine,
-        /// setting the "Engine" property, and execute the script against the
-        /// entry point scope as a file.
+        /// Creates a new scope, adding any convenience globals and modules.
         /// </summary>
-        /// <param name="entryPoint">path to the script</param>
-        public void Run(string entryPoint) {
-            if (Settings.EntryPoint != null) {
-                var vfs = ((BrowserPAL) Runtime.Host.PlatformAdaptationLayer).VirtualFilesystem;
-                string code = vfs.GetFileContents(entryPoint);
-                Engine = Runtime.GetEngineByFileExtension(Path.GetExtension(Settings.EntryPoint));
-
-                ScriptSource sourceCode = Engine.CreateScriptSourceFromString(code, entryPoint, SourceCodeKind.File);
-                sourceCode.Compile(new ErrorFormatter.Sink()).Execute(EntryPointScope);
+        public static ScriptScope CreateScope(ScriptRuntime runtime) {
+            var scope = runtime.CreateScope();
+            scope.SetVariable("document", HtmlPage.Document);
+            scope.SetVariable("window", HtmlPage.Window);
+            if (DynamicApplication.Current != null) {
+                scope.SetVariable("me", DynamicApplication.Current.RootVisual);
+                scope.SetVariable("xaml", DynamicApplication.Current.RootVisual);
             }
+            return scope;
         }
+
+        /// <summary>
+        /// Creates a new scope, adding any convenience globals and modules.
+        /// </summary>
+        public ScriptScope CreateScope() {
+            return CreateScope(Runtime);
+        }
+        #endregion
+        #endregion
     }
 }
