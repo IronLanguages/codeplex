@@ -71,20 +71,24 @@ def test_infinite():
     AreEqual(repr(-1.0e340j),'-inf*j')
 
 # Test must sort alphabetically ahead of other uses of the deprecated functions
+@skip("silverlight")
 def test_deprecations():
-    w = warning_trapper()
-    a = 3j
-    b = 5j
-    c = 2j
-    x = a // 4
-    x = b % c
-    x = divmod(b, a)
-    m = w.finish()
-    
-    #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21921
-    #AreEqual(len(m), 3)
-    #for msg in m:
-    #    AreEqual(msg.category, DeprecationWarning)
-    #    AreEqual(msg.message, 'complex divmod(), // and % are deprecated')
+    if is_cpython:
+        expected_num = 3
+    else:
+        expected_num = 1
 
+    with stderr_trapper() as trapper:
+        a = 3j
+        b = 5j
+        c = 2j
+        x = a // 4
+        x = b % c
+        x = divmod(b, a)
+    m = trapper.messages[0:6:2]
+    m = [x.split(": ", 1)[1] for x in m]
+    expected = ['DeprecationWarning: complex divmod(), // and % are deprecated'] * expected_num
+    AreEqual(m, expected)
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

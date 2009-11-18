@@ -1022,6 +1022,8 @@ def test_multiple_relative_imports_and_package():
         nt.unlink(_f_bar_py)
         nt.unlink(_f_init)
 
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
 
 # remove all test files
