@@ -21,12 +21,6 @@ from iptest.assert_util import *
 skiptest("silverlight")
 
 import _warnings
-try:
-    import warnings
-    WARNINGS_PRESENT = True
-except:
-    WARNINGS_PRESENT = False
-
 from iptest.assert_util import stderr_trapper as output_trapper
 
 #--GLOBALS---------------------------------------------------------------------
@@ -81,13 +75,10 @@ def test_sanity():
         
         #No point in going further if the number of lines is not what we expect
         nlines = len([x for x in temp_messages if not x.startswith("  ")])
-        if WARNINGS_PRESENT: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24299
-            AreEqual(nlines, len(EXPECTED))
+        AreEqual(nlines, len(EXPECTED))
         
         # match lines
         for line in temp_messages:
-            if not WARNINGS_PRESENT:
-                break #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24299
             if line.startswith("  "):
                 continue
             temp = EXPECTED.pop(0).rstrip()
@@ -147,8 +138,3 @@ def test_warnings_showwarning():
 
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
-if WARNINGS_PRESENT and is_cli:
-   print "Relaunching IronPython, ignoring the value of %IRONPYTHONPATH% this time..."
-   from iptest.process_util import launch_ironpython_changing_extensions
-   AreEqual(launch_ironpython_changing_extensions(__file__, add=["-E"]), 
-            0) 

@@ -201,6 +201,12 @@ if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("a"
     AreEqual(s.count, 6)
     
 
+def test_cp20594():
+    import IronPython
+    AreEqual(IronPython.Runtime.PythonContext.GetIronPythonAssembly("IronPython").split(",", 1)[1],
+             IronPython.Runtime.PythonContext.GetIronPythonAssembly("IronPython.Modules").split(",", 1)[1])
+            
+
 #--MAIN------------------------------------------------------------------------        
 run_test(__name__)
 

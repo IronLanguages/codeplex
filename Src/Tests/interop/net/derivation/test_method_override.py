@@ -440,6 +440,14 @@ def test_super():
     x = C()
     AreEqual(x.m210(), 514)
 
+def test_super_protected():
+    class KNet(Class215d):
+        def m215(self):
+            return super(KNet, self).m215()
+
+    k = KNet()
+    AreEqual(k.m215(), 215)
+
 # incomplete...
 def test_long_hierarchy():
     class C(CType11): pass

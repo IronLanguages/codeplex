@@ -472,13 +472,13 @@ def test_escape():
     
 # From the docs: "^" matches only at the start of the string, or in MULTILINE mode also immediately
 # following a newline.
-# bug 827
-#m = re.compile("a").match("ba", 1)  # succeed
-#AreEqual('a', m.group(0))
+m = re.compile("a").match("ba", 1)  # succeed
+AreEqual('a', m.group(0))
+# bug 23668
 #AreEqual(re.compile("^a").search("ba", 1), None)   # fails; 'a' not at start
 #AreEqual(re.compile("^a").search("\na", 1), None)  # fails; 'a' not at start
-#m = re.compile("^a", re.M).search("\na", 1)        # succeed (multiline)
-#AreEqual('a', m.group(0))
+m = re.compile("^a", re.M).search("\na", 1)        # succeed (multiline)
+AreEqual('a', m.group(0))
 
 # bug 938
 #AreEqual(re.compile("^a", re.M).search("ba", 1), None) # fails; no preceding \n

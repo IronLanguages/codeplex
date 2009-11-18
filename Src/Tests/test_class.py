@@ -3642,5 +3642,33 @@ def test_get_dict_once():
     Assert('__dict__' in x.__dict__)
     Assert('__dict__' not in y.__dict__)
 
+def test_cp22832():
+    class KOld:
+        KOldStuff = 3
+    
+    class KNew(object, KOld):
+        pass
+        
+    Assert("KOldStuff" in dir(KNew))
+
+@skip("silverlight")
+def test_cp23564():
+    global A
+    A = 0
+    
+    class K1(object):
+        def __del__(self):
+            global A
+            A = 1
+    
+    class K2(K1):
+        pass
+        
+    k = K2()
+    k.__class__ = K1
+    del k
+    force_gc()
+    AreEqual(A, 1)
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
