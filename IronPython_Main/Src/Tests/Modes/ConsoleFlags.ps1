@@ -648,11 +648,11 @@ function showclrexceptions-helper
 	$ErrorActionPreference = "continue" #The invocation below sends output to stderr
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	$ErrorActionPreference = "stop"
-	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
+	$stuff = remove-ws "$stuff"
+	if (! $stuff.Contains("OverflowError:System.FormatException:formatmessage--->System.Exception:clrmessage")) 
 	{
 		show-failure "Failed: $stuff"; 
 	}
-	$stuff = remove-ws "$stuff"
 	if (! $stuff.Contains("CLRException:")) { show-failure "Failed (3): $stuff";  }
 	if (! $stuff.Contains("OverflowException")) { show-failure "Failed (4): $stuff";  }
 }
