@@ -1814,7 +1814,7 @@ Registering self.on_Clear to handle Clear.Click</p>
         </li>
     </ol>
     <p class="DOSCommand">tlbimp %SystemRoot%\msagent\agentsvr.exe</p><br />
-    <p class="Code-Highlighted">C:\IronPython\Tutorial&gt;tlbimp %SystemRoot%\msagent\agentsvr.exe<br />
+    <p class="NoVerify-Highlighted">C:\IronPython\Tutorial&gt;tlbimp %SystemRoot%\msagent\agentsvr.exe<br />
     Microsoft (R) .NET Framework Type Library to Assembly Converter 2.0.50727.42<br />
     Copyright (C) Microsoft Corporation.&nbsp; All rights reserved.<br />
     <br>
@@ -1852,9 +1852,9 @@ Registering self.on_Clear to handle Clear.Click</p>
         add a reference to the AgentServerObjects.dll:</p>
         </li>
     </ol>
-    <p class="TypedExample">import clr</p>
+    <p class="UserExample">import clr</p>
     <p class="Code-Background"></p>
-    <p class="TypedExample">clr.AddReferenceToFile(&quot;AgentServerObjects.dll&quot;)</p>
+    <p class="UserExample">clr.AddReferenceToFile(&quot;AgentServerObjects.dll&quot;)</p>
     <p class="Code-Background"></p>
     <ol start="3">
         <li>
@@ -1862,23 +1862,23 @@ Registering self.on_Clear to handle Clear.Click</p>
         and explore the contents using dir():</p>
         </li>
     </ol>
-    <p class="TypedExample">from AgentServerObjects import *</p>
+    <p class="UserExample">from AgentServerObjects import *</p>
     <p class="Code-Background"></p>
-    <p class="TypedExample">dir()</p>
-    <p class="HiddenOutput">['AgentServer', 'AgentServerClass', 'IAgent', 'IAgentAudioOutputProperties', 'IAgentAudioOutputPropertiesEx', 'IAgentBalloon', 'IAgentBalloonEx', 'IAgentCharacter', 'IAgentCharacterEx', 'IAgentCommand', 'IAgentCommandEx', 'IAgentCommandWindow', 'IAgentCommands', 'IAgentCommandsEx', 'IAgentEx', 'IAgentNotifySink', 'IAgentNotifySinkEx', 'IAgentPropertySheet', 'IAgentSpeechInputProperties', 'IAgentUserInput', '__builtins__', '__doc__', '__name__', 'clr']
-    </p>
+    <p class="UserExample">dir()</p>
+    <!-- <p class="HiddenOutput">['AgentServer', 'AgentServerClass', 'IAgent', 'IAgentAudioOutputProperties', 'IAgentAudioOutputPropertiesEx', 'IAgentBalloon', 'IAgentBalloonEx', 'IAgentCharacter', 'IAgentCharacterEx', 'IAgentCommand', 'IAgentCommandEx', 'IAgentCommandWindow', 'IAgentCommands', 'IAgentCommandsEx', 'IAgentEx', 'IAgentNotifySink', 'IAgentNotifySinkEx', 'IAgentPropertySheet', 'IAgentSpeechInputProperties', 'IAgentUserInput', '__builtins__', '__doc__', '__name__', 'clr']
+    </p> -->
     <ol start="4">
         <li>
         <p class="Step">Create instance of the AgentServerClass and explore its
         contents:</p>
         </li>
     </ol>
-    <p class="TypedExample">a = AgentServerClass()</p>
-    <p class="TypedExample">dir(a)</p>
+    <p class="UserExample">a = AgentServerClass()</p>
+    <p class="UserExample">dir(a)</p>
     <p class="Stepnonumbering">The output in the console window will be:</p>
-    <p class="Code-Highlighted">&gt;&gt;&gt; a = AgentServerClass()<br />
+    <p class="NoVerify-Highlighted">&gt;&gt;&gt; a = AgentServerClass()<br />
     &gt;&gt;&gt; dir(a)</p>
-    <p class="Code-Background">['CreateObjRef','Equals','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','MemberwiseClone','ReferenceEquals','Register','ShowDefaultCharacterProperties','ToString','Unload','Unregister','__class__','__delattr__','__doc__','__format__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__', '__sizeof__', '__str__', '__subclasshook__']</p>
+    <p class="NoVerify-Background">['CreateObjRef','Equals','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','MemberwiseClone','ReferenceEquals','Register','ShowDefaultCharacterProperties','ToString','Unload','Unregister','__class__','__delattr__','__doc__','__format__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__', '__sizeof__', '__str__', '__subclasshook__']</p>
     <ol start="5">
         <li>
         <p class="Step">Load &quot;Merlin the Wizard&quot; character. (The character data
@@ -1887,12 +1887,12 @@ Registering self.on_Clear to handle Clear.Click</p>
     first value is the actual character ID. Capture the character id in the variable:</p>
         </li>
     </ol>
-    <p class="TypedExample">cid = clr.Reference[int]()</p>
-    <p class="Code-Background"></p>
-    <p class="TypedExample">reqid = clr.Reference[int]()</p>
-    <p class="Code-Background"></p>
-    <p class="TypedExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
-    <p class="Code-Background"></p>
+    <p class="UserExample">cid = clr.Reference[int]()</p>
+    <p class="NoVerify-Background"></p>
+    <p class="UserExample">reqid = clr.Reference[int]()</p>
+    <p class="NoVerify-Background"></p>
+    <p class="UserExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
+    <p class="NoVerify-Background"></p>
     <ol start="6">
         <li>
         <p class="Step">Call GetCharacter method on the AgentServerClass instance
@@ -1900,18 +1900,14 @@ Registering self.on_Clear to handle Clear.Click</p>
         IronPython Tutorial:</p>
         </li>
     </ol>
-    <p class="TypedExample">from System.Runtime.InteropServices import DispatchWrapper, UnknownWrapper</p>
-    <p class="TypedExample">c = clr.StrongBox[object](DispatchWrapper(None))</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">a.GetCharacter(cid.Value, c)</p>
-    <p class="HiddenOutput"></p>
-    <p class="Code-Background"></p>
-    <p class="TypedExample">character = c.Value.WrappedObject</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">character.Show(0, reqid)</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
-    <p class="HiddenOutput"></p>
+    <p class="UserExample">from System.Runtime.InteropServices import DispatchWrapper, UnknownWrapper</p>
+    <p class="UserExample">c = clr.StrongBox[object](DispatchWrapper(None))</p>
+    <p class="UserExample">a.GetCharacter(cid.Value, c)</p>
+    <p class="NoVerify-Background"></p>
+    <p class="UserExample">character = c.Value.WrappedObject</p>
+    <p class="UserExample">character.Show(0, reqid)</p>
+    <p class="UserExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
+    
     <ol start="7">
         <li>
         <p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of
@@ -1919,88 +1915,13 @@ Registering self.on_Clear to handle Clear.Click</p>
         &quot;Read&quot;, by calling the Play method:</p>
         </li>
     </ol>
-    <p class="TypedExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">character.GetAnimationNames(enum)</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">animations = enum.Value.WrappedObject</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">for n in animations: print n</p>
-    <p class="HiddenOutput">RestPose<br>
-Blink<br>
-Idle2_2<br>
-Idle2_1<br>
-Idle1_1<br>
-Idle1_3<br>
-Idle1_2<br>
-Idle1_4<br>
-Greet<br>
-Idle3_1<br>
-GestureUp<br>
-GestureDown<br>
-GestureLeft<br>
-GestureRight<br>
-Show<br>
-Hide<br>
-Hearing_4<br>
-Hearing_1<br>
-Hearing_2<br>
-Hearing_3<br>
-Alert<br>
-Explain<br>
-Processing<br>
-Thinking<br>
-Searching<br>
-Acknowledge<br>
-Wave<br>
-DontRecognize<br>
-Uncertain<br>
-Decline<br>
-Sad<br>
-StopListening<br>
-GetAttention<br>
-GetAttentionReturn<br>
-Idle3_2<br>
-Surprised<br>
-Congratulate_2<br>
-Reading<br>
-Announce<br>
-Read<br>
-ReadReturn<br>
-Writing<br>
-Write<br>
-WriteReturn<br>
-Congratulate<br>
-Confused<br>
-Suggest<br>
-MoveRight<br>
-MoveLeft<br>
-MoveUp<br>
-MoveDown<br>
-StartListening<br>
-WriteContinued<br>
-DoMagic1<br>
-DoMagic2<br>
-LookDown<br>
-LookDownBlink<br>
-LookDownReturn<br>
-LookLeft<br>
-LookLeftBlink<br>
-LookLeftReturn<br>
-LookRight<br>
-LookRightBlink<br>
-LookRightReturn<br>
-LookUp<br>
-LookUpBlink<br>
-LookUpReturn<br>
-ReadContinued<br>
-Pleased<br>
-GetAttentionContinued<br>
-Process<br>
-Search<br>
-Think<br></p>
-    <p class="TypedExample">character.Play(&quot;Read&quot;, reqid)</p>
-    <p class="HiddenOutput"></p>
+    <p class="UserExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
+    <p class="UserExample">character.GetAnimationNames(enum)</p>
+    <p class="UserExample">animations = enum.Value.WrappedObject</p>
+    <p class="UserExample">for n in animations: print n</p>
+    
+    
+    <p class="UserExample">character.Play(&quot;Read&quot;, reqid)</p>
     <ol start="8">
         <li>
         <p class="Step">(Optional) To call a series of animations, we could call character.Play(animation_name, reqid)
@@ -2008,26 +1929,20 @@ Think<br></p>
         name:</p>
         </li>
     </ol>
-    <p class="TypedExample">character.GetAnimationNames(enum)</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">animations = enum.Value.WrappedObject</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">for n in animations: globals()[n] = lambda name=n: character.Play(name, reqid)</p>
-    <p class="HiddenOutput"></p>
+    <p class="UserExample">character.GetAnimationNames(enum)</p>
+    <p class="UserExample">animations = enum.Value.WrappedObject</p>
+    <p class="UserExample">for n in animations: globals()[n] = lambda name=n: character.Play(name, reqid)</p>
     <p class="Stepnonumbering">At this point we can have Merlin play animations
     simply by calling a function from global namespace:</p>
-    <p class="TypedExample">Congratulate()</p>
-    <p class="HiddenOutput"></p>
-    <p class="Code-Background"></p>
+    <p class="UserExample">Congratulate()</p>
+    <p class="NoVerify-Background"></p>
     <ol start="9">
         <li>
         <p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
         </li>
     </ol>
-    <p class="TypedExample">character.StopAll(0)</p>
-    <p class="HiddenOutput"></p>
-    <p class="TypedExample">character.Hide(0, reqid)</p>
-    <p class="HiddenOutput"></p>
+    <p class="UserExample">character.StopAll(0)</p>
+    <p class="UserExample">character.Hide(0, reqid)</p>
     <h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
     <p class="Body">In this exercise you will create an instance of Microsoft
     Word and use it to check word spellings.</p>
