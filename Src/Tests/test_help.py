@@ -468,4 +468,15 @@ def test_paramrefs():
     print x
     # TODO: Assert(x.find("A System.DateTime equivalent to the date and time contained in s.") != -1)
 
+@skip("silverlight") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=20236#
+def test_type():        
+    sys.stdout = stdout_reader()
+    help(type)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+        
+    Assert("CodeContext" not in x)
+    Assert(x.count("type(") > 1)
+    
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
