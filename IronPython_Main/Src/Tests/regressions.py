@@ -523,6 +523,38 @@ def test_clr_exception_has_non_trivial_exception_message():
         pass
     AreEqual(e.Message, "Python Exception: MyException")
 
+def test_cp23822():
+    from copy import deepcopy
+    def F():
+        a = 4
+        class C:
+            field=7
+            def G(self):
+                print a
+                b = 4
+                return deepcopy(locals().keys())
+        
+        c = C()
+        return c.G()
+    
+    temp_list = F()
+    temp_list.sort()
+    AreEqual(temp_list, ['a', 'b', 'deepcopy', 'self'])
+    
+def test_cp23823():
+    from copy import deepcopy
+    def f():
+        a = 10
+        def g1():
+            print a
+            return deepcopy(locals().keys())
+        def g2():
+            return deepcopy(locals().keys())
+        return (g1(), g2())
+    
+    AreEqual(f(), (['a', 'deepcopy'], ['deepcopy']))
+
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

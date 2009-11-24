@@ -463,7 +463,8 @@ def test_file_encodings():
                     "w")
             f.write("# coding: %s" % (coding))
             f.close()
-            __import__(temp_mod_name)
+            if temp_mod_name not in ["test_encoding_uTf!!!8"]: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=20302
+                __import__(temp_mod_name)
             nt.remove(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py")
             
     finally:
@@ -581,6 +582,14 @@ def test_cp1019():
     AreEqual(len(t_out_lines), 0)
     Assert(t_err_lines[0].startswith("  File"))
     Assert(t_err_lines[1].startswith("SyntaxError: encoding problem: with BOM"))
+
+@skip("silverlight")
+def test_cp20302():
+    import _codecs
+    for encoding in ip_supported_encodings:
+        if encoding.lower() in ['cp1252']: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=20302
+            continue
+        temp = _codecs.lookup(encoding)
 
 #--MAIN------------------------------------------------------------------------        
 run_test(__name__)

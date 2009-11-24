@@ -234,6 +234,11 @@ def test_cp20603():
     for root, files, dirs in os.walk(''):
         for f in files:
             temp = os.path.join(root, f)
+
+def test_cp21929():
+    import os
+    AreEqual(os.listdir(""),
+             os.listdir(os.getcwd()))
     
 ##MAIN#########################################################################
 run_test(__name__)
