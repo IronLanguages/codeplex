@@ -24,16 +24,17 @@ def SortTypesByNamespace(types):
     for t in types:
         # We ignore nested types. They will be loaded when the containing type is loaded
         # t.DeclaringType is failing on Silverlight (DDB 76340)
-        if not System.Type.get_DeclaringType(t) == None:
+        t = clr.GetClrType(t)
+        if t.DeclaringType:
             continue
 
-        namespace = System.Type.get_Namespace(t)
+        namespace = t.Namespace
         if not typesByNamespace.has_key(namespace):
             # This is the first type we are seeing from this namespace
             typesByNamespace[namespace] = []
 
         # t.Name is failing on Silverlight (DDB 76340)
-        typeName = System.Reflection.MemberInfo.get_Name(t)
+        typeName = t.Name
         typesByNamespace[namespace].append(typeName)
         
     for namespace in typesByNamespace.keys():
@@ -58,39 +59,6 @@ def LoadAssembly(assemName):
         return clr.LoadAssemblyByPartialName(assemName)
         
     return System.Reflection.Assembly.ReflectionOnlyLoadFrom(assemName)
-
-# The assembly names in Whidbey and Orcas are the same, even though the Orcas platform assemblies
-# have new types. Hence, we need to deal with such types specially
-
-def PrintOrcasTypes(cw, assem):
-    cw.write('    TypeName [] orcasTypes = {')
-
-    assemName = assem.GetName().Name
-    
-    if assemName == "mscorlib":
-        cw.write('        new TypeName("System", "DateTimeOffset"),')
-        cw.write('        new TypeName("System", "GCCollectionMode"),')
-        cw.write('        new TypeName("System.Runtime", "GCLatencyMode"),')
-    elif assemName == "System":
-        cw.write('        new TypeName("System.ComponentModel.Design.Serialization", "IDesignerLoaderHost2"),')
-        cw.write('        new TypeName("System.ComponentModel", "INotifyPropertyChanging"),')
-        cw.write('        new TypeName("System.ComponentModel", "PropertyChangingEventArgs"),')
-        cw.write('        new TypeName("System.ComponentModel", "PropertyChangingEventHandler"),')
-        cw.write('        new TypeName("System.Configuration", "IdnElement"),')
-        cw.write('        new TypeName("System.Configuration", "IriParsingElement"),')
-        cw.write('        new TypeName("System.Configuration", "UriSection"),')
-        cw.write('        new TypeName("System.Net.Sockets", "SendPacketsElement"),')
-        cw.write('        new TypeName("System.Net.Sockets", "SocketAsyncEventArgs"),')
-        cw.write('        new TypeName("System.Net.Sockets", "SocketAsyncOperation"),')
-        cw.write('        new TypeName("System", "UriIdnScope"),')
-    elif assemName == "System.Windows.Forms":
-        cw.write('        new TypeName("System.Windows.Forms", "FileDialogCustomPlace"),')
-        cw.write('        new TypeName("System.Windows.Forms", "FileDialogCustomPlacesCollection"),')
-    elif assemName == "System.Xml":
-        cw.write('        new TypeName("System.Xml.Serialization.Configuration", "RootedPathValidator"),')
-
-    cw.write('    };')
-    cw.write('')
 
 # Get all public non-nested types in the assembly and list their names
 
@@ -122,9 +90,7 @@ def PrintTypeNames(cw, assemName):
         cw.write('')
     cw.write('    };')
     
-    PrintOrcasTypes(cw, assem)
-    
-    cw.write('    return GetTypeNames(namespaces, types, orcasTypes);')
+    cw.write('    return GetTypeNames(namespaces, types);')
     cw.write('}')
     cw.write('')
 
@@ -138,15 +104,14 @@ def do_generate(cw):
         PrintTypeNames(cw, assemName)
 
 def GetGeneratorList():
-    is_orcas = System.Type.GetType("System.Object").Assembly.GetType("System.DateTimeOffset", False) != None
-    if is_orcas:
-        print "Skipping generate_AssemblyTypeNames on Orcas"
-        return []
-    elif  'checkonly' in sys.argv:
+    if 'checkonly' in sys.argv:
         # skip checking - even if we're out of date (new types added) the code still does the right thing.
         # If we are out of date then we shouldn't fail tests.
         print "Skipping generate_AssemblyTypeNames in check only mode"
         return []
+    
+    if System.Environment.Version.Major == 4:
+        return [("Well-known assembly type names (CLR 4)", do_generate)]
     else:
         return [("Well-known assembly type names", do_generate)]
 
