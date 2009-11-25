@@ -106,34 +106,6 @@ def test_warn_explicit():
 
 
 ##############################################################################
-@disabled("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24300")
-def test_warnings_showwarning():
-    '''
-    8/12/2009: this test function appears to have been silently broken for some 
-               time.  Moved it from python26.py and disabled it properly.
-    '''
-    from System.IO import StringWriter
-    
-    class string_file(file):
-        def __init__(self):
-            self.buf = None
-        def write(self, s):
-            Assert(issubclass(type(s), str))
-            self.buf = s
-        def __repr__(self):
-            return self.buf if self.buf else self.buf.__repr__()
-
-    sw = StringWriter()
-    sf = string_file()
-    
-    _warnings.showwarning("testwarning", RuntimeWarning, "some_file.py", 666, sw, "# this is a line of code")
-    _warnings.showwarning("testwarning", SyntaxWarning, "other_file.py", 42, sf, "# another line of code")
-    
-    AreEqual(sw.ToString(), "some_file.py:666: RuntimeWarning: testwarning\n  # this is a line of code\n")
-    AreEqual(sf.__repr__(), "other_file.py:42: SyntaxWarning: testwarning\n  # another line of code\n")
-    
-    sw.Close()
-    sf.close()
 
 
 #--MAIN------------------------------------------------------------------------

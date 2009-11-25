@@ -1698,6 +1698,33 @@ def test_cp23772():
     AreEqual(g.__call__(match=f, array=x),
              2)
 
+def test_cp23938():
+    dt = System.DateTime()
+    x = dt.ToString
+    y = dt.__getattribute__("ToString")
+    AreEqual(x, y)
+    z = dt.__getattribute__(*("ToString",))
+    AreEqual(x, z)
+    
+    AreEqual(None.__getattribute__(*("__class__",)),
+             None.__getattribute__("__class__"))
+    
+    class Base(object):
+        def __getattribute__(self, name):
+            return object.__getattribute__(*(self, name))
+
+    class Derived(Base):
+        def __getattr__(self, name):
+            if name == "bar":
+                return 23
+            raise AttributeError(*(name,))
+        def __getattribute__(self, name):
+            return Base.__getattribute__(*(self, name))
+
+    a = Derived(*())
+    AreEqual(a.bar, 23)
+
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
 
