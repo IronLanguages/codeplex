@@ -42,7 +42,10 @@ def pass_for_read_protected(x):
     x.protected_static_method
     #x.protected_static_property  # bug 370438
     #x.protected_static_event     # bug 370432
-    x.protected_static_nestedclass
+    if str(x).startswith("<C1 object") or str(x).startswith("<C2 object"):
+        print "Skipping (http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24106)..."
+    else:
+        x.protected_static_nestedclass
     
 def throw_for_read_protected(x):
     AssertError(AttributeError, lambda: x.protected_static_field)
@@ -110,6 +113,7 @@ def test_access_outside():
 
     for x in [C1, C2, C1(), C2()]:
         all_read(x)
+        pass_for_read_protected(x)
         
         # extra methods
         AssertError(AttributeError, lambda: x.get_private_static_property)
@@ -198,5 +202,6 @@ def test_reflected_type():
         Assert('protected_instance_field' in dir(x))
         AssertError(TypeError, lambda : x.protected_instance_field)
 
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
 
