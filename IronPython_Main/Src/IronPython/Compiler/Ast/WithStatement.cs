@@ -116,7 +116,6 @@ namespace IronPython.Compiler.Ast {
                 MakeAssignment(
                     exit,
                     GlobalParent.Get(
-                        typeof(object),
                         "__exit__",
                         manager
                     )
@@ -133,10 +132,9 @@ namespace IronPython.Compiler.Ast {
                     MakeAssignment(
                         value,
                         Parent.Invoke(
-                            typeof(object),
                             new CallSignature(0),
+                            Parent.LocalContext,
                             GlobalParent.Get(
-                                typeof(object),
                                 "__enter__",
                                 manager
                             )
@@ -289,8 +287,8 @@ namespace IronPython.Compiler.Ast {
                 typeof(bool),
                 ConversionResultKind.ExplicitCast,
                 Parent.Invoke(
-                    typeof(object),
                     new CallSignature(ArgumentType.List),
+                    Parent.LocalContext,
                     exit,
                     Ast.Call(
                         AstMethods.GetExceptionInfoLocal,
