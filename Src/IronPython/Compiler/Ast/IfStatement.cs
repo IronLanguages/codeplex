@@ -19,21 +19,16 @@ using MSAst = System.Linq.Expressions;
 using MSAst = Microsoft.Scripting.Ast;
 #endif
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Interpreter;
-
-using IronPython.Runtime;
-
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
-    public class IfStatement : Statement, IInstructionProvider {
+    public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
         private readonly Statement _else;
 
@@ -51,19 +46,6 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override MSAst.Expression Reduce() {
-            return ReduceWorker(true);
-        }
-
-        #region IInstructionProvider Members
-
-        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
-            // optimizing bool conversions does no good in the light compiler
-            compiler.Compile(ReduceWorker(false));
-        }
-
-        #endregion
-
-        private MSAst.Expression ReduceWorker(bool optimizeDynamicConvert) {
             MSAst.Expression result;
 
             if (_else != null) {
@@ -79,9 +61,7 @@ namespace IronPython.Compiler.Ast {
 
                 result = GlobalParent.AddDebugInfoAndVoid(
                     Ast.Condition(
-                        optimizeDynamicConvert ?
-                            TransformAndDynamicConvert(ist.Test, typeof(bool)) :
-                            GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
+                        TransformAndDynamicConvert(ist.Test, typeof(bool)),
                         TransformMaybeSingleLineSuite(ist.Body, ist.Test.Start),
                         result
                     ),

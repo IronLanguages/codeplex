@@ -472,8 +472,11 @@ def test_other_concern():
     AssertError(OverflowError, target.M200[System.Byte], 300)
     AssertError(OverflowError, target.M200[int], 12345678901234)
     
-    # calling an Out param on non-byref
-    AreEqual(target.M222(), 0)
+    # We should ignore Out attribute on non-byref.
+    # It's used in native interop scenarios to designate a buffer (StringBUilder, arrays, etc.) 
+    # the caller allocates, passes to the method and expects the callee to populate it with data.
+    AssertError(TypeError, target.M222)
+    AreEqual(target.M222(0), None)
     AreEqual(Flag.Value, 222)
     
     # what does means when passing in None

@@ -24,18 +24,16 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
 
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
-    
-    public partial class BinaryExpression : Expression, IInstructionProvider {
+
+    public partial class BinaryExpression : Expression {
         private readonly Expression _left, _right;
         private readonly PythonOperator _op;
 
@@ -162,64 +160,6 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        #region IInstructionProvider Members
-
-        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
-            switch (_op) {
-                case PythonOperator.Is:
-                    compiler.Compile(_left);
-                    compiler.Compile(_right);
-                    compiler.Instructions.Emit(IsInstruction.Instance);
-                    break;
-                case PythonOperator.IsNot:
-                    compiler.Compile(_left);
-                    compiler.Compile(_right);
-                    compiler.Instructions.Emit(IsNotInstruction.Instance);
-                    break;
-                default:
-                    compiler.Compile(Reduce());
-                    break;
-            }
-        }
-
-        abstract class BinaryInstruction : Instruction {
-            public override int ConsumedStack {
-                get {
-                    return 2;
-                }
-            }
-
-            public override int ProducedStack {
-                get {
-                    return 1;
-                }
-            }
-        }
-
-        class IsInstruction : BinaryInstruction {
-            public static readonly IsInstruction Instance = new IsInstruction();
-
-            public override int Run(InterpretedFrame frame) {
-                // it�s okay to pop the args in this order due to commutativity of referential equality
-                frame.Push(PythonOps.Is(frame.Pop(), frame.Pop()));
-                return +1;
-            }
-        }
-
-
-        class IsNotInstruction : BinaryInstruction {
-            public static readonly IsNotInstruction Instance = new IsNotInstruction();
-
-            public override int Run(InterpretedFrame frame) {
-                // it�s okay to pop the args in this order due to commutativity of referential equality
-                frame.Push(PythonOps.IsNot(frame.Pop(), frame.Pop()));
-                return +1;
-            }
-        }
-
-
-
-        #endregion
 
         internal override string CheckAssign() {
             return "can't assign to operator";
@@ -388,6 +328,6 @@ namespace IronPython.Compiler.Ast {
                 }
                 return true;
             }
-        }        
+        }
     }
 }

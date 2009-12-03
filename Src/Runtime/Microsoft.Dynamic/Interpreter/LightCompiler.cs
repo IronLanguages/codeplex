@@ -1061,7 +1061,7 @@ namespace Microsoft.Scripting.Interpreter {
 
             //TODO support pass by reference and lots of other fancy stuff;
             // force compilation for now:
-            if (!CollectionUtils.TrueForAll(parameters, (p) => !p.IsByRefParameter())) {
+            if (!CollectionUtils.TrueForAll(parameters, (p) => !p.ParameterType.IsByRef)) {
                 _forceCompile = true;
             }
 

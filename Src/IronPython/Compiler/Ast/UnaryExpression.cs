@@ -50,6 +50,7 @@ namespace IronPython.Compiler.Ast {
         public override MSAst.Expression Reduce() {
             MSAst.Expression res;
             if (Op == PythonOperator.Not) {
+
                 res = GlobalParent.Operation(typeof(object), PythonOperationKind.NotRetObject, _expression);
             } else {
                 res = GlobalParent.Operation(

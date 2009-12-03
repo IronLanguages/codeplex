@@ -22,7 +22,7 @@ using Microsoft.Scripting.Ast;
 using System;
 using System.Reflection;
 
-using Microsoft.Scripting.Interpreter;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -85,65 +85,9 @@ namespace IronPython.Compiler {
         /// </summary>
         public Expression/*!*/ Create() {
             if (OriginalParameter != null) {
-                return Expression.Assign(_closureCell, Expression.Call(Ast.AstMethods.MakeClosureCellWithValue, OriginalParameter));
+                return Expression.Assign(_closureCell, Expression.Call(typeof(PythonOps).GetMethod("MakeClosureCellWithValue"), OriginalParameter));
             }
-            return Expression.Assign(_closureCell, MakeClosureCellExpression.Instance);
-        }
-
-        class MakeClosureCellExpression : Expression, IInstructionProvider {
-            private static readonly Expression _call = Expression.Call(Ast.AstMethods.MakeClosureCell);
-            public static readonly MakeClosureCellExpression Instance = new MakeClosureCellExpression();
-
-            public override bool CanReduce {
-                get {
-                    return true;
-                }
-            }
-
-            public override ExpressionType NodeType {
-                get {
-                    return ExpressionType.Extension;
-                }
-            }
-
-            public override Type Type {
-                get {
-                    return typeof(ClosureCell);
-                }
-            }
-
-            public override Expression Reduce() {
-                return _call;
-            }
-
-            #region IInstructionProvider Members
-
-            public void AddInstructions(LightCompiler compiler) {
-                compiler.Instructions.Emit(MakeClosureCellInstruction.Instance);
-            }
-
-            #endregion
-
-            class MakeClosureCellInstruction : Instruction {
-                public static readonly MakeClosureCellInstruction Instance = new MakeClosureCellInstruction();
-
-                public override int ProducedStack {
-                    get {
-                        return 1;
-                    }
-                }
-
-                public override int ConsumedStack {
-                    get {
-                        return 0;
-                    }
-                }
-
-                public override int Run(InterpretedFrame frame) {
-                    frame.Push(PythonOps.MakeClosureCell());
-                    return +1;
-                }
-            }
+            return Expression.Assign(_closureCell, Expression.Call(typeof(PythonOps).GetMethod("MakeClosureCell")));
         }
 
         #endregion

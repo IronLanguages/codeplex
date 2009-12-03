@@ -55,7 +55,7 @@ namespace IronPython.Compiler.Ast {
         private static int _classId;
 
         private static MSAst.ParameterExpression _parentContextParam = Ast.Parameter(typeof(CodeContext), "$parentContext");
-        private static MSAst.Expression _tupleExpression = MSAst.Expression.Call(AstMethods.GetClosureTupleFromContext, _parentContextParam);
+        private static MSAst.Expression _tupleExpression = MSAst.Expression.Call(typeof(PythonOps).GetMethod("GetClosureTupleFromContext"), _parentContextParam);
 
         public ClassDefinition(string name, Expression[] bases, Statement body) {
             ContractUtils.RequiresNotNull(body, "body");
@@ -160,9 +160,8 @@ namespace IronPython.Compiler.Ast {
             return null;
         }
         
-        public override MSAst.Expression Reduce() {
-            var codeObj = GetOrMakeFunctionCode();
-            var funcCode = GlobalParent.Constant(codeObj);
+        public override MSAst.Expression Reduce() {            
+            var funcCode = GlobalParent.Constant(GetOrMakeFunctionCode());
             FuncCodeExpr = funcCode;
 
             MSAst.Expression lambda;
@@ -170,12 +169,6 @@ namespace IronPython.Compiler.Ast {
                 lambda = GetLambda();
             } else {
                 lambda = Ast.Convert(funcCode, typeof(object));
-                ThreadPool.QueueUserWorkItem((x) => {
-                    // class defs are almost always run, so start 
-                    // compiling the code now so it might be ready
-                    // when we actually go and execute it
-                    codeObj.UpdateDelegate(PyContext, true);
-                });
             }
 
             MSAst.Expression classDef = Ast.Call(
@@ -206,7 +199,7 @@ namespace IronPython.Compiler.Ast {
             locals.Add(LocalCodeContextVariable);
             locals.Add(PythonAst._globalContext);
 
-            init.Add(Ast.Assign(PythonAst._globalContext, new GetGlobalContextExpression(_parentContextParam)));
+            init.Add(Ast.Assign(PythonAst._globalContext, Ast.Call(typeof(PythonOps).GetMethod("GetGlobalContext"), _parentContextParam)));
 
             GlobalParent.PrepareScope(locals, init);
 
