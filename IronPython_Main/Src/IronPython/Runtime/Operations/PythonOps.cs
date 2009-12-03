@@ -1260,9 +1260,7 @@ namespace IronPython.Runtime.Operations {
             Func<CodeContext, CodeContext> func = body as Func<CodeContext, CodeContext>;
             if (func == null) {
                 FunctionCode code = (FunctionCode)body;
-                if (code.Target == null) {
-                    code.UpdateDelegate(context.LanguageContext, true);
-                }
+                code.UpdateDelegate(context.LanguageContext, true);
                 return (Func<CodeContext, CodeContext>)code.Target;
             }
             return func;

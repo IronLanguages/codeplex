@@ -49,9 +49,9 @@ namespace IronPython.Compiler.Ast {
 
         public override MSAst.Expression Reduce() {
             if (IsSlice) {
-                return GlobalParent.GetSlice(GetActionArgumentsForGetOrDelete());
+                return GlobalParent.GetSlice(typeof(object), GetActionArgumentsForGetOrDelete());
             }
-            return GlobalParent.GetIndex(GetActionArgumentsForGetOrDelete());
+            return GlobalParent.GetIndex(typeof(object), GetActionArgumentsForGetOrDelete());
         }
 
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete() {
@@ -105,9 +105,9 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.Expression index;
             if (IsSlice) {
-                index = GlobalParent.SetSlice(GetActionArgumentsForSet(right));
+                index = GlobalParent.SetSlice(typeof(object), GetActionArgumentsForSet(right));
             } else {
-                index = GlobalParent.SetIndex(GetActionArgumentsForSet(right));
+                index = GlobalParent.SetIndex(typeof(object), GetActionArgumentsForSet(right));
             }
 
             return GlobalParent.AddDebugInfoAndVoid(index, Span);
@@ -116,9 +116,9 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression TransformDelete() {
             MSAst.Expression index;
             if (IsSlice) {
-                index = GlobalParent.DeleteSlice(GetActionArgumentsForGetOrDelete());
+                index = GlobalParent.DeleteSlice(typeof(object), GetActionArgumentsForGetOrDelete());
             } else {
-                index = GlobalParent.DeleteIndex(GetActionArgumentsForGetOrDelete());
+                index = GlobalParent.DeleteIndex(typeof(void), GetActionArgumentsForGetOrDelete());
             }
 
             return GlobalParent.AddDebugInfoAndVoid(index, Span);

@@ -20,13 +20,11 @@ using MSAst = Microsoft.Scripting.Ast;
 #endif
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Interpreter;
-
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
 
-    public class WhileStatement : Statement, ILoopStatement, IInstructionProvider {
+    public class WhileStatement : Statement, ILoopStatement {
         // Marks the end of the condition of the while loop
         private SourceLocation _header;
         private readonly Expression _test;
@@ -81,19 +79,6 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override MSAst.Expression Reduce() {
-            return ReduceWorker(true);
-        }
-
-        #region IInstructionProvider Members
-
-        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
-            // optimizing bool conversions does no good in the light compiler
-            compiler.Compile(ReduceWorker(false));
-        }
-
-        #endregion
-
-        private MSAst.Expression ReduceWorker(bool optimizeDynamicConvert) {
             // Only the body is "in the loop" for the purposes of break/continue
             // The "else" clause is outside
 
@@ -128,12 +113,10 @@ namespace IronPython.Compiler.Ast {
 
             return AstUtils.While(
                 GlobalParent.AddDebugInfo(
-                    optimizeDynamicConvert ?
-                        TransformAndDynamicConvert(_test, typeof(bool)) :
-                        GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, _test),
+                    TransformAndDynamicConvert(_test, typeof(bool)),
                     Header
                 ),
-                _body,
+                _body, 
                 _else,
                 _break,
                 _continue

@@ -169,7 +169,7 @@ namespace IronPython.Compiler.Ast {
                 init,
                 Ast.TryFinally(
                     ls,
-                    Ast.Call(AstMethods.ForLoopDispose, enumerator)
+                    Ast.Call(typeof(PythonOps).GetMethod("ForLoopDispose"), enumerator)
                 )
             );
         }

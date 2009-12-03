@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Runtime {
         private readonly string _typeName;
 
         internal TypeName(Type type) {
-            Debug.Assert(!ReflectionUtils.IsNested(type));
+            Debug.Assert(!type.IsNested());
             _namespace = type.Namespace;
             _typeName = type.Name;
         }
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Runtime {
 
         static IEnumerable<TypeName> GetTypeNames(Type[] types) {
             foreach (Type t in types) {
-                if (ReflectionUtils.IsNested(t)) continue;
+                if (t.IsNested()) continue;
                 TypeName typeName = new TypeName(t);
                 yield return typeName;
             }
