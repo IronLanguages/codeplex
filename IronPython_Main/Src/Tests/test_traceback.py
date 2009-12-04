@@ -191,7 +191,7 @@ def generator_throw_after_yield():
     _raise_exception()
 
 LINE220 = 194
-
+@disabled('CodePlex 25428')
 def test_throw_while_yield():
     try:
         for x in generator_throw_while_yield():

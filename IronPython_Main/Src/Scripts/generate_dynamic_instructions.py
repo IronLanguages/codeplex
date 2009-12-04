@@ -137,10 +137,9 @@ def gen_run_method(cw, n, is_void):
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
     
-    if n > 0:
-        cw.write('frame.BoxLocals();')
+    cw.write('var current = frame.Enter();')
+    cw.write('try { _interpreter.Run(frame); } finally { frame.Leave(current); }')
     
-    cw.write('_interpreter.Run(frame);')
     if not is_void: 
         cw.write('return (TRet)frame.Pop();')
         
