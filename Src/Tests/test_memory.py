@@ -85,12 +85,15 @@ t_list = [
         "def f():pass\nclass C:pass\nf()",
     ]
 
-expectedMem = 12000
+# account for adaptive compilation
+expectedMem = 18000
+
 if is_cli64:
     expectedMem = int(expectedMem*1.25)
 
 for code in t_list:    
     baseMem = evalTest(10)
+    
     usedMax = max(expectedMem, 4*baseMem)
     if not skipMemoryCheck:
         for repetitions in [100, 500]:
