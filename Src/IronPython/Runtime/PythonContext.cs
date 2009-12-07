@@ -222,7 +222,7 @@ namespace IronPython.Runtime {
             PythonDictionary defaultScope = new PythonDictionary();
             ModuleContext modContext = new ModuleContext(defaultScope, this);
             _defaultContext = modContext.GlobalContext;
-            PythonBinder binder = new PythonBinder(manager, this, _defaultContext);
+            PythonBinder binder = new PythonBinder(this, _defaultContext);
             _sharedOverloadResolverFactory = new PythonOverloadResolverFactory(binder, Expression.Constant(_defaultContext));
             _binder = binder;
 
