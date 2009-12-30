@@ -101,7 +101,8 @@ from System.Management.Instrumentation import *
 from System.Media import *
 from System.Messaging import *
 from System.Messaging.Design import *
-from System.Net import *
+#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25806
+#from System.Net import *
 from System.Net.Cache import *
 from System.Net.Configuration import *
 from System.Net.Mail import *
