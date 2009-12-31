@@ -66,6 +66,8 @@ EXTRA_INCLUDE_LIST = [x.lower() for x in EXTRA_INCLUDE_LIST]
 #Test Packages
 PKG_LIST = [ "modules"]
 
+BAIL_ON_FIRST_FAIL = True
+
 #------------------------------------------------------------------------------
 
 #get a list of all test_*.py files in the CWD
@@ -91,13 +93,16 @@ for test_name in test_list:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = subprocess.call(sys.executable + " " + test_name,
+    ec = subprocess.call(sys.executable + " -B " + test_name,
                          env=os.environ,
                          shell=True)
     
     #if it fails, add it to the list
     if ec!=0:
         failed_tests.append(test_name + "; Exit Code=" + str(ec))
+        if BAIL_ON_FIRST_FAIL:
+            print "%s failed!" % test_name
+            break
     print
 
 #------------------------------------------------------------------------------
@@ -106,7 +111,7 @@ for test_name in PKG_LIST:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = subprocess.call(sys.executable + " harness.py " + test_name,
+    ec = subprocess.call(sys.executable + " -B harness.py " + test_name,
                          env=os.environ)
     
     #if it fails, add it to the list
