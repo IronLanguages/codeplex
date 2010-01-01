@@ -86,7 +86,7 @@ t_list = [
     ]
 
 # account for adaptive compilation
-expectedMem = 20000
+expectedMem = 24000
 
 if is_cli64:
     expectedMem = int(expectedMem*1.25)
