@@ -1423,7 +1423,7 @@ def test_ienumerable__getiter__():
 
 def test_overload_functions():
     for x in min.Overloads.Functions:
-        Assert(x.__doc__.startswith('object min('))
+        Assert(x.__doc__.startswith('min('))
         Assert(x.__doc__.find('CodeContext') == -1)
     # multiple accesses should return the same object
     AreEqual(

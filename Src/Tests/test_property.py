@@ -102,7 +102,8 @@ def test_reflected_extension_property_ops():
                 ]
     
     for stuff, typename, returnType, propName in t_list:
-        Assert(stuff.__doc__.startswith("Get: " + returnType + " " + propName + "(" + typename + " self)" + newline), stuff.__doc__)
+        expected = "Get: " + propName + "(" + typename + " self) -> " + returnType + newline
+        Assert(stuff.__doc__.startswith(expected), stuff.__doc__)
                 
                 
 def test_class_doc():

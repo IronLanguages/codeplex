@@ -42,7 +42,7 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
     x = sys.stdout.text
         
     sys.stdout = sys.__stdout__
-    Assert(x.find('str Format(str format, object arg0)') != -1)
+    Assert(x.find('Format(str format, object arg0) -> str') != -1)
     
     sys.stdout = stdout_reader()
     help('u.u'.Split('u'))
