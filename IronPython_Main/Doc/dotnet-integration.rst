@@ -1609,16 +1609,52 @@ method, the user is required to define a .NET type with a .NET method marked
 with `DllImportAttribute 
 <http://msdn.microsoft.com/en-us/library/system.runtime.interopservices.dllimportattribute.aspx>`_
 , and where the signature of the .NET method exactly describes the target platform method.
+Similarly, Windows Communication Foundation (WCF) requires an interface to be
+marked with `ServiceContractAttribute
+<http://msdn.microsoft.com/en-us/library/system.servicemodel.servicecontractattribute.aspx>`_
+to indicate that it defines a service contract.
 
 Starting with IronPython 2.6, IronPython supports a low-level hook which 
 allows customization of the .NET type corresponding to a Python class. If the 
 metaclass of a Python class has an attribute called `__clrtype__`, the 
 attribute is called to generate a .NET type. This allows the user to control
-the the details of the generated .NET type. However, this is a low-level hook, 
-and the user is expected to build on top of it. 
+the the details of the generated .NET type:: 
 
-The ClrType sample available in the IronPython website shows how to build on 
-top of the __clrtype__ hook.
+    >>> import clr
+    >>> import clrtype
+    >>> 
+    >>> class Point(object):
+    ...     __metaclass__ = clrtype.ClrClass
+    ... 
+    ...     def __init__(self, x, y):
+    ...         self.x = x
+    ...         self.y = y
+    ... 
+    ...     @property
+    ...     @clrtype.accepts()
+    ...     @clrtype.returns(int)
+    ...     def X(self): return self.x
+    ... 
+    ...     @property
+    ...     @clrtype.accepts()
+    ...     @clrtype.returns(int)
+    ...     def Y(self): return self.y
+    ... 
+    >>> p = Point(10, 20)
+    >>> # Use Reflection to simulate a call from another .NET language
+    >>> p.GetType().GetProperty("X").GetGetMethod().Invoke(p, None)
+    10
+
+Note that the .NET type is generated at runtime, and will not exist in an 
+assembly on disk. As a result, it is not possible to write C# or VB.Net code
+that references that type.
+
+The `ClrType sample
+<http://ironpython.codeplex.com/Release/ProjectReleases.aspx?ReleaseId=12482#DownloadId=96609>`_
+shows how to build on top of the __clrtype__ hook to support declaring
+strongly-typed classes and methods, how to use CustomAttributes, etc.
+In the future, the sample is expected to become a fully supported 
+IronPython module.
 
 ********************************************************************************
 Accessing Python code from other .NET code
@@ -2214,9 +2250,9 @@ differing levels of support for the different features:
 
 * Anonymous types - Python has tuples which can be used like anonymous types.
 
-* Extension methods - See :ref:
+* Extension methods - See :ref:`extension-methods`
 
-* Generic method type parameter inference - See :ref:
+* Generic method type parameter inference - See :ref:`generic-method-type-parameter-inference`
 
 * Expression trees - This is not supported. This is the main reason DLinq 
   does not work.
