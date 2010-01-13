@@ -61,17 +61,18 @@ def test_bigint():
 
 
 
-    AreEqual(BigInteger(-0).ToBoolean(p) , False )
-    AreEqual(BigInteger(-1212321.3213).ToBoolean(p) , True )
-    AreEqual(BigInteger(1212321384892342394723947L).ToBoolean(p) , True )
+    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894
+        AreEqual(BigInteger(-0).ToBoolean(p) , False )
+        AreEqual(BigInteger(-1212321.3213).ToBoolean(p) , True )
+        AreEqual(BigInteger(1212321384892342394723947L).ToBoolean(p) , True )
     
-    AreEqual(BigInteger(0L).ToChar(p) , Char.MinValue)
-    AreEqual(BigInteger(65L).ToChar(p) , IConvertible.ToChar('A', p))
-    AreEqual(BigInteger(0xffff).ToChar(p) , Char.MaxValue)
-    AssertError(OverflowError, BigInteger(-1).ToChar, p)
+        AreEqual(BigInteger(0L).ToChar(p) , Char.MinValue)
+        AreEqual(BigInteger(65L).ToChar(p) , IConvertible.ToChar('A', p))
+        AreEqual(BigInteger(0xffff).ToChar(p) , Char.MaxValue)
+        AssertError(OverflowError, BigInteger(-1).ToChar, p)
     
-    AreEqual(BigInteger(100).ToDouble(p) , 100.0)
-    AreEqual(BigInteger(BigInteger(100).ToDouble(p)).ToSingle(p) , BigInteger(100.1213123).ToFloat())
+        AreEqual(BigInteger(100).ToDouble(p) , 100.0)
+        AreEqual(BigInteger(BigInteger(100).ToDouble(p)).ToSingle(p) , BigInteger(100.1213123).ToFloat())
     
     Assert(BigInteger(100) != 100.32)
     AreEqual(BigInteger(100) , 100.0)
@@ -80,6 +81,9 @@ def test_bigint():
     AreEqual(100.0 , BigInteger(100) )
 
 def test_big_1():
+    if is_net40:
+        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894"
+        return
     for (a, m, t,x) in [
                         (7, "ToSByte",  SByte,2),
                         (8, "ToByte",   Byte, 0),
@@ -187,8 +191,10 @@ def test_byte_conversions():
     CheckByteConversions(BigInteger(0x0706050403020100), [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
     CheckByteConversions(BigInteger(0x080706050403020100), [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
 
-
 def test_dword_conversions():
+    if is_net40:
+        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25899"
+        return
     def CheckDwordConversions(bigint, dwords):
         SequencesAreEqual(bigint.GetWords(), dwords)
         if bigint == BigInteger.Zero:

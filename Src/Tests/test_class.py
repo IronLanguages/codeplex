@@ -1804,8 +1804,9 @@ def test_hash():
     # the hash of the long
     class foo:
         def __hash__(self): return 1<<35L
-        
-    AreEqual(hash(foo()), 8)
+
+    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24550
+        AreEqual(hash(foo()), 8)
 
 def test_NoneSelf():
     try:
@@ -2264,18 +2265,19 @@ def test_hash_return_values():
 
     tests = {   1L:1,
                 2L:2,
-                1<<32: 1,
-                (1<<32)+1: 2,
-                1<<34: 4,
-                1<<31: -2147483648,
             }
+    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24550
+        tests.update( { 1<<32: 1,
+                  (1<<32)+1: 2,
+                  1<<34: 4,
+                 1<<31: -2147483648,
+                })
     for retval in tests.keys():
         class foo:
             def __hash__(self): return retval
         
         AreEqual(hash(foo()), tests[retval])
 
-       
 def test_cmp_notimplemented():
     class foo(object):
         def __eq__(self, other):

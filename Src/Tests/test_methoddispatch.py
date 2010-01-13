@@ -1093,7 +1093,7 @@ def test_function():
     AreEqual(type(BindTest.ReturnTest('char')), System.Char)
     AreEqual(type(BindTest.ReturnTest('null')), type(None))
     AreEqual(type(BindTest.ReturnTest('object')), object)
-    if not is_silverlight:
+    if not is_silverlight and not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25897
         Assert(repr(BindTest.ReturnTest("com")).startswith('<System.__ComObject'))
 
 #####################################################################
