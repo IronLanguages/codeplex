@@ -36,8 +36,6 @@ et = IronPythonTest.EngineTest()
 multipleexecskips = [ ]
 for s in dir(et):
     if s.startswith("Scenario"):
-        if is_net40 and s in ["ScenarioPartialTrust"]: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24085
-            continue
         if s in multipleexecskips:
             exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
         else :

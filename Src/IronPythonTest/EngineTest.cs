@@ -1644,12 +1644,20 @@ instOC = TestOC()
 #if !SILVERLIGHT
         public void ScenarioPartialTrust() {
             // basic check of running a host in partial trust
+            
             AppDomainSetup info = new AppDomainSetup();
             info.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
             info.ApplicationName = "Test";
+            
             Evidence evidence = new Evidence();
             evidence.AddHost(new Zone(SecurityZone.Internet));
+
+#if !CLR2
+            System.Security.PermissionSet permSet = SecurityManager.GetStandardSandbox(evidence);
+            AppDomain newDomain = AppDomain.CreateDomain("test", evidence, info, permSet, null);
+#else
             AppDomain newDomain = AppDomain.CreateDomain("test", evidence, info);
+#endif
             
             // create runtime in partial trust...
             ScriptRuntime runtime = Python.CreateRuntime(newDomain);

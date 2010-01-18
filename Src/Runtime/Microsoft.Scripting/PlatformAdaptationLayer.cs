@@ -380,7 +380,15 @@ namespace Microsoft.Scripting {
 
         public virtual void SetEnvironmentVariable(string key, string value) {
 #if !SILVERLIGHT
-            Environment.SetEnvironmentVariable(key, value);
+            if (value != null && String.IsNullOrEmpty(value)) { // Keep FxCop rule CA1820 happy
+                // System.Environment.SetEnvironmentVariable interprets an empty value string as 
+                // deleting the environment variable. So we use the native SetEnvironmentVariable 
+                // function here which allows setting of the value to an empty string.
+                // This will require high trust and will fail in sandboxed environments
+                Utils.NativeMethods.SetEnvironmentVariable(key, value);
+            } else {
+                Environment.SetEnvironmentVariable(key, value);
+            }
 #else
             throw new NotImplementedException();
 #endif
