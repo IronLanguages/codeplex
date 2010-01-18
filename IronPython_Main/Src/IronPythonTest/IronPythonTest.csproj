@@ -82,6 +82,7 @@
     <Compile Include="DefaultParams.cs" />
     <Compile Include="DelegateTest.cs" />
     <Compile Include="DeTest.cs" />
+    <Compile Include="DynamicRegressions.cs" />
     <Compile Include="MemberMappingTests.cs" />
     <Compile Include="Stress\Engine.cs" />
     <Compile Include="EngineTest.cs" />
