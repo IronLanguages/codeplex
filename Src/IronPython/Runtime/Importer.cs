@@ -902,7 +902,7 @@ namespace IronPython.Runtime {
 
             try {
                 string file = Path.GetFileName(path);
-                string[] files = isDir ? pal.GetDirectories(dir, file) : pal.GetFiles(dir, file);
+                string[] files = pal.GetFileSystemEntries(dir, file, !isDir, isDir);
 
                 if (files.Length != 1 || Path.GetFileName(files[0]) != file) {
                     return null;

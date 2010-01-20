@@ -13,7 +13,7 @@
     <AssemblyName>Microsoft.Dynamic</AssemblyName>
     <WarningsNotAsErrors>1685,618,649</WarningsNotAsErrors>
     <NoWarn>1591</NoWarn>
-<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
@@ -28,7 +28,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\fxcop\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\fxcop\</OutputPath>
     <DefineConstants>TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -40,7 +40,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Dynamic.xml</DocumentationFile>
     <DefineConstants>DEBUG;TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -51,7 +51,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Dynamic.xml</DocumentationFile>
     <DefineConstants>TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -61,7 +61,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT;CLR2;$(SignedSym)</DefineConstants>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>full</DebugType>
@@ -76,7 +76,7 @@
     <SilverlightPath Condition="'$(SilverlightPath)' == ''">$(Silverlight3Path)</SilverlightPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;CLR2;$(SignedSym)</DefineConstants>
 <DocumentationFile>$(OutputPath)\Microsoft.Dynamic.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -93,7 +93,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Dynamic.xml</DocumentationFile>
     <DefineConstants>DEBUG;TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -105,7 +105,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'V4 Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Dynamic.xml</DocumentationFile>
     <DefineConstants>TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -118,7 +118,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -137,7 +137,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -198,6 +198,7 @@
     <Compile Include="Ast\FlowControlRewriter.cs" />
     <Compile Include="Ast\SourceFileInformation.cs" />
     <Compile Include="Ast\SkipInterpretExpression.cs" />
+    <Compile Include="Ast\LightDynamicExpression.cs" />
     <Compile Include="Ast\Utils.cs" />
     <Compile Include="Ast\VariableDictionaryExpression.cs" />
     <Compile Include="Ast\NewArrayExpression.cs" />
@@ -275,6 +276,7 @@
     <Compile Include="Interpreter\Instructions\CallInstruction.Generated.cs" />
     <Compile Include="Interpreter\Instructions\ControlFlowInstructions.cs" />
     <Compile Include="Interpreter\Instructions\DivInstruction.cs" />
+    <Compile Include="Interpreter\Instructions\DynamicSplatInstruction.cs" />
     <Compile Include="Interpreter\Instructions\EqualInstruction.cs" />
     <Compile Include="Interpreter\Instructions\FieldOperations.cs" />
     <Compile Include="Interpreter\Instructions\GreaterThanInstruction.cs" />
@@ -286,6 +288,7 @@
     <Compile Include="Interpreter\Instructions\NumericConvertInstruction.cs" />
     <Compile Include="Interpreter\Instructions\StackOperations.cs" />
     <Compile Include="Interpreter\Instructions\TypeOperations.cs" />
+    <Compile Include="Interpreter\ILightCallSiteBinder.cs" />
     <Compile Include="Interpreter\LightDelegateCreator.cs" />
     <Compile Include="Interpreter\LightLambda.Generated.cs" />
     <Compile Include="Interpreter\Interpreter.cs" />
@@ -302,6 +305,7 @@
     <Compile Include="Interpreter\LastFaultingLineExpression.cs" />
     <Compile Include="Math\BigIntegerV2.cs" />
     <Compile Include="Math\BigIntegerV4.cs" />
+    <Compile Include="Runtime\ArgumentArray.cs" />
     <Compile Include="Runtime\BindingRestrictionsHelpers.cs" />
     <Compile Include="Runtime\DynamicDelegateCreator.cs" />
     <Compile Include="Runtime\DynamicNull.cs" />

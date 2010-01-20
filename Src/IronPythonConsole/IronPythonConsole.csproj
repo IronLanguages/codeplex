@@ -13,7 +13,7 @@
     <AssemblyName>ipy</AssemblyName>
     <ApplicationIcon>ipy.ico</ApplicationIcon>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
-<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <SignedDir Condition="'$(SignAssembly)' == 'true'">Signed</SignedDir>
@@ -27,7 +27,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <DefineConstants>TRACE;DEBUG;$(SignedSym);CLR2</DefineConstants>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -36,7 +36,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;$(SignedSym);CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -46,7 +46,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\fxcop\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\fxcop\</OutputPath>
     <DefineConstants>TRACE;$(SignedSym);CODE_ANALYSIS;CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -58,7 +58,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <DefineConstants>TRACE;DEBUG;CLR4;$(SignedSym)</DefineConstants>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -69,7 +69,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'V4 Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>

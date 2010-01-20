@@ -546,7 +546,7 @@ namespace IronPython.Compiler.Ast {
         
         internal MSAst.Expression/*!*/ Operation(Type/*!*/ resultType, PythonOperationKind operation, MSAst.Expression arg0) {
             if (resultType == typeof(object)) {
-                return new LazyDynamicExpression(
+                return new PythonDynamicExpression1(
                     Binders.UnaryOperationBinder(
                         PyContext,
                         operation
@@ -568,7 +568,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.Expression/*!*/ Operation(Type/*!*/ resultType, PythonOperationKind operation, MSAst.Expression arg0, MSAst.Expression arg1) {
             if (resultType == typeof(object)) {
-                return new LazyDynamicExpression(
+                return new PythonDynamicExpression2(
                     Binders.BinaryOperationBinder(
                         PyContext,
                         operation
@@ -590,7 +590,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression/*!*/ Set(string/*!*/ name, MSAst.Expression/*!*/ target, MSAst.Expression/*!*/ value) {
-            return new LazyDynamicExpression(
+            return new PythonDynamicExpression2(
                 PyContext.SetMember(
                     name
                 ),
@@ -616,57 +616,57 @@ namespace IronPython.Compiler.Ast {
         }
 
 
-        internal MSAst.Expression/*!*/ GetIndex(MSAst.Expression/*!*/[]/*!*/ expression) {
-            return new LazyDynamicExpression(
+        internal MSAst.Expression/*!*/ GetIndex(MSAst.Expression/*!*/[]/*!*/ expressions) {
+            return new PythonDynamicExpressionN(
                 PyContext.GetIndex(
-                    expression.Length
+                    expressions.Length
                 ),
                 CompilationMode,
-                expression
+                expressions
             );
         }
 
-        internal MSAst.Expression/*!*/ GetSlice(MSAst.Expression/*!*/[]/*!*/ expression) {
-            return new LazyDynamicExpression(
+        internal MSAst.Expression/*!*/ GetSlice(MSAst.Expression/*!*/[]/*!*/ expressions) {
+            return new PythonDynamicExpressionN(
                 PyContext.GetSlice,
                 CompilationMode,
-                expression
+                expressions
             );
         }
 
-        internal MSAst.Expression/*!*/ SetIndex(MSAst.Expression/*!*/[]/*!*/ expression) {
-            return new LazyDynamicExpression(
+        internal MSAst.Expression/*!*/ SetIndex(MSAst.Expression/*!*/[]/*!*/ expressions) {
+            return new PythonDynamicExpressionN(
                 PyContext.SetIndex(
-                    expression.Length - 1
+                    expressions.Length - 1
                 ),
                 CompilationMode,
-                expression
+                expressions
             );           
         }
 
-        internal MSAst.Expression/*!*/ SetSlice(MSAst.Expression/*!*/[]/*!*/ expression) {
-            return new LazyDynamicExpression(
+        internal MSAst.Expression/*!*/ SetSlice(MSAst.Expression/*!*/[]/*!*/ expressions) {
+            return new PythonDynamicExpressionN(
                 PyContext.SetSliceBinder,
                 CompilationMode,
-                expression
+                expressions
             );            
         }
 
-        internal MSAst.Expression/*!*/ DeleteIndex(MSAst.Expression/*!*/[]/*!*/ expression) {           
+        internal MSAst.Expression/*!*/ DeleteIndex(MSAst.Expression/*!*/[]/*!*/ expressions) {           
             return CompilationMode.Dynamic(
                 PyContext.DeleteIndex(
-                    expression.Length
+                    expressions.Length
                 ),
                 typeof(void),
-                expression
+                expressions
             );
         }
 
-        internal MSAst.Expression/*!*/ DeleteSlice(MSAst.Expression/*!*/[]/*!*/ expression) {
-            return new LazyDynamicExpression(
+        internal MSAst.Expression/*!*/ DeleteSlice(MSAst.Expression/*!*/[]/*!*/ expressions) {
+            return new PythonDynamicExpressionN(
                 PyContext.DeleteSlice,
                 CompilationMode,
-                expression
+                expressions
             );            
         }
 
