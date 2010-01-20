@@ -99,7 +99,10 @@ def gen_types(cw):
         cw.write('case %d: genericType = typeof(DynamicInstruction<%s>); break;' %
                   (i+1, ''.join([',']*i)))
                   
-    
+def gen_untyped(cw):
+    for i in xrange(MAX_TYPES):
+        cw.write('case %d: return DynamicInstruction<%s>.Factory(binder);' % 
+                  (i, ', '.join(['object']*(i+1))))
     
 def gen_instructions(cw):
     for i in xrange(MAX_TYPES):
@@ -179,6 +182,7 @@ def main():
         ("LightLambda Run Methods", gen_run_methods),
         ("Dynamic Instructions", gen_instructions),
         ("Dynamic Instruction Types", gen_types),
+        ("Untyped Dynamic Instructions", gen_untyped),
     )
 
 if __name__ == "__main__":

@@ -13,13 +13,22 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Runtime.InteropServices;
+#if !CLR2
+using System.Linq.Expressions;
+#else
+using Microsoft.Scripting.Ast;
+#endif
 
-namespace Microsoft.Scripting.Utils {
-    internal static class NativeMethods {
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError=true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool SetEnvironmentVariable(string name, string value);
+using System;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+using System.Reflection;
+using Microsoft.Scripting.Interpreter;
+using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+
+namespace Microsoft.Scripting.Interpreter {
+    public interface ILightCallSiteBinder {
+        bool AcceptsArgumentArray { get; }
     }
 }

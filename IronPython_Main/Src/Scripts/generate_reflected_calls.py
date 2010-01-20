@@ -33,7 +33,7 @@ def get_type_names(i):
     if i == 1: return ['T0']
     return ['T' + str(x) for x in xrange(i)]    
 
-def get_invoke_type_names(i):
+def get_func_type_names(i):
     return get_type_names(i - 1) + ['TRet']
 
 def get_cast_args(i):
@@ -42,6 +42,10 @@ def get_cast_args(i):
 def get_type_params(i):
     if i == 0: return ''
     return '<' + ', '.join(get_type_names(i)) + '>'
+
+def get_func_type_params(i):
+    if i == 0: return ''
+    return '<' + ', '.join(get_func_type_names(i)) + '>'
     
 def gen_invoke_instance(cw):
     cw.enter_block('public virtual object InvokeInstance(object instance, params object[] args)')
@@ -159,7 +163,20 @@ def get_get_helper_type(cw):
     
     cw.write('return t;')
     cw.exit_block() # method
-    
+
+def get_explicit_caching(cw): 
+    for delegate, type_params_maker, s in [('Func', get_func_type_params, 1), ('Action', get_type_params, 0)]:
+        for i in xrange(MAX_HELPERS):
+            type_params = type_params_maker(s + i)
+            cw.enter_block('public static MethodInfo Cache%s%s(%s%s method)' % (delegate, type_params, delegate, type_params))
+            cw.write('var info = method.Method;')
+            cw.enter_block('lock (_cache)')
+            cw.write('_cache[info] = new %sCallInstruction%s(method);' % (delegate, type_params))            
+            cw.exit_block()
+            cw.write('return info;')            
+            cw.exit_block()
+            cw.write('')
+
 def gen_call_instruction(cw):
     cw.enter_block('public partial class CallInstruction')
 
@@ -173,26 +190,31 @@ def gen_call_instruction(cw):
         
     gen_fast_creation(cw)
     get_get_helper_type(cw)
+    get_explicit_caching(cw)
     
     cw.exit_block()
     cw.write('')
 
-def gen_action_helper(cw, i):
-    if i == 0:
-        cw.enter_block('internal sealed class ActionCallInstruction : CallInstruction')
-        cw.write('private readonly Action _target;')
-    else:
-        cw.enter_block('internal sealed class ActionCallInstruction<%s> : CallInstruction' % (', '.join(get_type_names(i)))) 
-        cw.write('private readonly Action<%s> _target;' % (', '.join(get_type_names(i))))
+def gen_action_call_instruction(cw, i):
+    type_params = get_type_params(i)
+
+    cw.enter_block('internal sealed class ActionCallInstruction%s : CallInstruction' % type_params) 
+    cw.write('private readonly Action%s _target;' % type_params)
     
     # properties
     cw.write('public override MethodInfo Info { get { return _target.Method; } }')
     cw.write('public override int ArgumentCount { get { return %d; } }' % (i))
     cw.write('')
     
-    # ctor
+    # ctor(delegate)
+    cw.enter_block('public ActionCallInstruction(Action%s target)' % type_params)
+    cw.write('_target = target;')
+    cw.exit_block()
+    cw.write('')
+    
+    # ctor(info)
     cw.enter_block('public ActionCallInstruction(MethodInfo target)')
-    cw.write('_target = (Action%s)Delegate.CreateDelegate(typeof(Action%s), target);' % (get_type_params(i), get_type_params(i)))
+    cw.write('_target = (Action%s)Delegate.CreateDelegate(typeof(Action%s), target);' % (type_params, type_params))
     cw.exit_block()
     cw.write('')
     
@@ -209,18 +231,26 @@ def gen_action_helper(cw, i):
     cw.exit_block()
     cw.write('')
 
-def gen_invoke_helper(cw, i):
-    cw.enter_block('internal sealed class FuncCallInstruction<%s> : CallInstruction' % (', '.join(get_invoke_type_names(i))))
-    cw.write('private readonly Func<%s> _target;' % (', '.join(get_invoke_type_names(i))))
+def gen_func_call_instruction(cw, i):
+    type_params = get_func_type_params(i)
+
+    cw.enter_block('internal sealed class FuncCallInstruction%s : CallInstruction' % type_params)
+    cw.write('private readonly Func%s _target;' % type_params)
     
     # properties
     cw.write('public override MethodInfo Info { get { return _target.Method; } }')
     cw.write('public override int ArgumentCount { get { return %d; } }' % (i - 1))
     cw.write('')
     
-    # ctor
+    # ctor(delegate)
+    cw.enter_block('public FuncCallInstruction(Func%s target)' % type_params)
+    cw.write('_target = target;')
+    cw.exit_block()
+    cw.write('')
+    
+    # ctor(info)
     cw.enter_block('public FuncCallInstruction(MethodInfo target)')
-    cw.write('_target = (Func<%s>)Delegate.CreateDelegate(typeof(Func<%s>), target);' % ((', '.join(get_invoke_type_names(i)), )*2))
+    cw.write('_target = (Func%s)Delegate.CreateDelegate(typeof(Func%s), target);' % (type_params, type_params))
     cw.exit_block()
     cw.write('')
     
@@ -257,13 +287,13 @@ def gen_interpreted_run(cw, n, isFunc):
     
     cw.exit_block()
 
-def gen_action_helpers(cw):
+def gen_action_call_instructions(cw):
     for i in xrange(MAX_HELPERS):
-        gen_action_helper(cw, i)
+        gen_action_call_instruction(cw, i)
 
-def gen_invoke_helpers(cw):
+def gen_func_call_instructions(cw):
     for i in xrange(1, MAX_HELPERS+1):
-        gen_invoke_helper(cw, i)
+        gen_func_call_instruction(cw, i)
         
 def gen_slow_caller(cw):
     cw.enter_block('internal sealed partial class MethodInfoCallInstruction : CallInstruction')
@@ -277,8 +307,8 @@ def gen_slow_caller(cw):
     
 def gen_all(cw):
     gen_call_instruction(cw)
-    gen_action_helpers(cw)
-    gen_invoke_helpers(cw)
+    gen_action_call_instructions(cw)
+    gen_func_call_instructions(cw)
     gen_slow_caller(cw)
 
 def main():
