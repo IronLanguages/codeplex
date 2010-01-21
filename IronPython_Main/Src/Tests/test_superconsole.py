@@ -627,7 +627,42 @@ def test_a_comment_newline():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     lines = getTestOutput()[1]
     AreEqual(lines, [])
+
+def test_aa_redirect_stdout():
+    # CodePlex 25861, we should be able to return to the
+    # REPL w/ output redirected.  If this doesn't work we
+    # get an exception which fails the test.    
+    f = file('test_superconsole_input.py', 'w')
+    f.write("""
+import sys
+
+class _StreamLog(object):
+    def __init__(self, ostream):
+        self.ostream = ostream
     
+    def write(self, *args):
+        self.ostream.write("{")
+        self.ostream.write(*args)
+        self.ostream.write("}")
+    
+    def flush(self):
+        self.ostream.flush()
+
+sys.stderr = _StreamLog(sys.stderr)
+sys.stdout = _StreamLog(sys.stdout)
+
+""")
+    f.close()
+    try:
+        superConsole.SendKeys('import test_superconsole_input{ENTER}')
+        lines = getTestOutput()[0]
+        superConsole.SendKeys('import sys{ENTER}')
+        superConsole.SendKeys('sys.stdout = sys.__stdout__{ENTER}')
+        superConsole.SendKeys('sys.stderr = sys.__stderr__{ENTER}')
+        
+    finally:
+        nt.unlink('test_superconsole_input.py')
+
 #------------------------------------------------------------------------------
 #--__main__
 

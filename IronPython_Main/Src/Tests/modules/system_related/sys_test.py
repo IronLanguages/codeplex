@@ -189,6 +189,51 @@ def test_getframe():
     
     AreEqual(method_id, found_id)
 
+    # verify thread safety of sys.settrace
+    import thread
+    import time
+    global done
+    done = 0
+    lock = thread.allocate_lock()
+    def starter(events):
+        def tracer(*args):
+            events.append(args[1])
+            return tracer
+        def f1(): time.sleep(.25)
+        def f2(): time.sleep(1)
+        def f3(): time.sleep(.5)
+        
+        def test_thread():
+            global done
+            sys.settrace(tracer)
+            f1()
+            sys.settrace(None)
+            f2()
+            sys.settrace(tracer)
+            f3()
+            with lock: done += 1
+            
+        thread.start_new_thread(test_thread, ())
+    
+    lists = []
+    for i in xrange(10):
+        cur_list = []
+        starter(cur_list)
+        lists.append(cur_list)
+    
+    while done != 10:
+       pass    
+    for i in xrange(1, 10):
+        AreEqual(lists[i-1], lists[i])
+
+    # verify we report <module> for top-level code
+    frame = sys._getframe()
+    outer_frame = frame.f_back
+    while outer_frame is not None:
+        frame = outer_frame
+        outer_frame = frame.f_back
+    AreEqual(frame.f_code.co_name, "<module>")
+
 
 @skip("win32")
 def test_api_version():

@@ -229,7 +229,7 @@ def test_latin_1_encode():
         AreEqual('abc'.encode(x), 'abc')
         
 
-@skip('silverlight', "multiple_execute")
+@skip("multiple_execute")
 def test_lookup_error():
     '''
     '''
