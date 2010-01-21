@@ -119,7 +119,7 @@ namespace IronPython.Compiler.Ast {
 
         public override string Name {
             get {
-                return _name;
+                return "<module>";
             }
         }
 
@@ -699,10 +699,12 @@ namespace IronPython.Compiler.Ast {
         internal class RewrittenBodyStatement : Statement {
             private readonly MSAst.Expression _body;
             private readonly string _doc;
+            private readonly Statement _originalBody;
 
             public RewrittenBodyStatement(Statement originalBody, MSAst.Expression body) {
                 _body = body;
                 _doc = originalBody.Documentation;
+                _originalBody = originalBody;
             }
 
             public override MSAst.Expression Reduce() {
@@ -716,7 +718,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             public override void Walk(PythonWalker walker) {
-                throw new NotImplementedException();
+                _originalBody.Walk(walker);
             }
         }
 
@@ -811,10 +813,10 @@ namespace IronPython.Compiler.Ast {
                 if (_mode == CompilationMode.Lookup) {
                     return NameForExec;
                 }
-                if (Name.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0) {
-                    return "module " + Name;
+                if (_name.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0) {
+                    return "module " + _name;
                 } else {
-                    return "module " + System.IO.Path.GetFileNameWithoutExtension(Name);
+                    return "module " + System.IO.Path.GetFileNameWithoutExtension(_name);
                 }
             }
         }

@@ -660,13 +660,7 @@ namespace IronPython.Runtime {
                 return pc.ClrModule;
             }
 
-            PythonModule mod = pc.CreateBuiltinModule(name);
-            if (mod != null) {
-                pc.PublishModule(name, mod);
-                return mod;
-            }
-
-            return null;
+            return pc.GetBuiltinModule(name);
         }
 
         private static object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {

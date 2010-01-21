@@ -1283,4 +1283,11 @@ def test_func_code_variables():
         
     AreEqual(unqualified_exec.func_code.co_names, ('x', ))
 
+def test_delattr():
+    def f(): pass
+    f.abc = 42
+    del f.abc
+    def g(): f.abc
+    AssertError(AttributeError, g)
+   
 run_test(__name__)
