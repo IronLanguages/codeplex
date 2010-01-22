@@ -391,6 +391,9 @@ def test_interface_types_typerror():
     - mIFontDisp 
     - mIPictureDisp
     '''
+    if is_net40:
+        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=26000"
+        return
     test_cases = shallow_copy(NON_NUMBER_VALUES)
     test_cases = [x for x in test_cases if type(x)!=object and type(x)!=KOld and type(x)!=KNew]
     
