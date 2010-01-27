@@ -17,8 +17,9 @@ from iptest.assert_util import *
 skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
 
-from Microsoft.Scripting.Generation import Snippets
 import clr
+clr.AddReference("Microsoft.Dynamic")
+from Microsoft.Scripting.Generation import Snippets
 import gc
 skipMemoryCheck = Snippets.Shared.SaveSnippets or clr.GetCurrentRuntime().Configuration.DebugMode
 
@@ -84,12 +85,15 @@ t_list = [
         "def f():pass\nclass C:pass\nf()",
     ]
 
-expectedMem = 12000
+# account for adaptive compilation
+expectedMem = 24000
+
 if is_cli64:
     expectedMem = int(expectedMem*1.25)
 
 for code in t_list:    
     baseMem = evalTest(10)
+    
     usedMax = max(expectedMem, 4*baseMem)
     if not skipMemoryCheck:
         for repetitions in [100, 500]:

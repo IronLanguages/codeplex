@@ -54,36 +54,43 @@ def gen_instruction(cw, n):
   
     cw.enter_block('internal class DynamicInstruction<%s> : Instruction' % class_type_params)
     cw.write('private CallSite<%s> _site;' % func_type)
+    cw.write('')    
     cw.enter_block('public static Instruction Factory(CallSiteBinder binder)')
     cw.write('return new DynamicInstruction<%s>(CallSite<%s>.Create(binder));' % (class_type_params, func_type))
     cw.exit_block()
+    cw.write('')
     
     cw.enter_block('private DynamicInstruction(CallSite<%s> site)' % func_type)
-    cw.write('this._site = site;')
+    cw.write('_site = site;')
     cw.exit_block()
+    cw.write('')
     
     cw.write('public override int ProducedStack { get { return 1; } }')
     cw.write('public override int ConsumedStack { get { return %d; } }' % n)
+    cw.write('')
     
-    cw.enter_block('public override int Run(InterpretedFrame frame)')
-    args = get_args(n)
-    for arg in args[::-1]:
-        cw.write('object %s = frame.Pop();' % arg)
-    
-        
-    args = ['_site'] + get_cast_args(n)
-    cw.write('frame.Push(_site.Target(')
-    
-    for arg in args[:-1]:
-        cw.write('    ' + arg + ',')
-    cw.write('    ' + args[-1]+'));')
-        
-    cw.write('return +1;')
-    cw.exit_block()
-    
+    gen_interpreted_run(cw, n)
+    cw.write('')
     cw.enter_block('public override string ToString()')
     cw.write('return "Dynamic(" + _site.Binder.ToString() + ")";')
     cw.exit_block()
+    
+    cw.exit_block()
+    cw.write('')
+    
+def gen_interpreted_run(cw, n):
+    cw.enter_block('public override int Run(InterpretedFrame frame)')
+    
+    args = '_site'
+    for i in xrange(0, n):
+        args += ', (T%d)frame.Data[frame.StackIndex - %d]' % (i, n - i)
+    
+    cw.write('frame.Data[frame.StackIndex - %d] = _site.Target(%s);' % (n, args))\
+    
+    if n != 1:
+        cw.write('frame.StackIndex -= %d;' % (n - 1))
+    
+    cw.write('return 1;')
     
     cw.exit_block()
     
@@ -92,7 +99,10 @@ def gen_types(cw):
         cw.write('case %d: genericType = typeof(DynamicInstruction<%s>); break;' %
                   (i+1, ''.join([',']*i)))
                   
-    
+def gen_untyped(cw):
+    for i in xrange(MAX_TYPES):
+        cw.write('case %d: return DynamicInstruction<%s>.Factory(binder);' % 
+                  (i, ', '.join(['object']*(i+1))))
     
 def gen_instructions(cw):
     for i in xrange(MAX_TYPES):
@@ -130,10 +140,9 @@ def gen_run_method(cw, n, is_void):
     for i in xrange(n):
         cw.write('frame.Data[%d] = arg%d;' % (i,i))
     
-    if n > 0:
-        cw.write('frame.BoxLocals();')
+    cw.write('var current = frame.Enter();')
+    cw.write('try { _interpreter.Run(frame); } finally { frame.Leave(current); }')
     
-    cw.write('_interpreter.Run(frame);')
     if not is_void: 
         cw.write('return (TRet)frame.Pop();')
         
@@ -173,6 +182,7 @@ def main():
         ("LightLambda Run Methods", gen_run_methods),
         ("Dynamic Instructions", gen_instructions),
         ("Dynamic Instruction Types", gen_types),
+        ("Untyped Dynamic Instructions", gen_untyped),
     )
 
 if __name__ == "__main__":

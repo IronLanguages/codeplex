@@ -235,7 +235,7 @@ def test_types():
     
         # MakeArrayType and MakeByRefType are SecurityCritical and thus cannot be called via reflection in silverlight,
         # so disable these in interpreted mode.
-        if not (is_silverlight and is_interpreted()):
+        if not (is_silverlight):
             # Select using Array type
             arrtype = System.Type.MakeArrayType(type)
             select = BindTest.Bind.Overloads[arrtype]
@@ -1093,7 +1093,7 @@ def test_function():
     AreEqual(type(BindTest.ReturnTest('char')), System.Char)
     AreEqual(type(BindTest.ReturnTest('null')), type(None))
     AreEqual(type(BindTest.ReturnTest('object')), object)
-    if not is_silverlight:
+    if not is_silverlight and not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25897
         Assert(repr(BindTest.ReturnTest("com")).startswith('<System.__ComObject'))
 
 #####################################################################
@@ -1330,7 +1330,7 @@ def test_multicall_generator():
     AreEqual(x[0], 10)
     AreEqual(x[1], a)
     # doc for this method should have the out & ref params as return values
-    AreEqual(a.M98.__doc__, '(int, Dispatch) M98(self, str a, str b, str c, str d, Dispatch di)')
+    AreEqual(a.M98.__doc__, 'M98(self, str a, str b, str c, str d, Dispatch di) -> (int, Dispatch)')
     
     #DDB 76340
     if not is_silverlight:

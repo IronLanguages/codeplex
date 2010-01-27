@@ -138,8 +138,7 @@ def test_newlines():
     for lines in getTestOutput():
         AreEqual(removePrompts(lines), [])
 
-@disabled("CodePlex Work Item 12403")
-def test_string_exception():
+def test_cp12403():
     '''
     An exception thrown should appear in stderr.
     '''
@@ -147,14 +146,12 @@ def test_string_exception():
     superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
     
 
-    superConsole.SendKeys('raise "Some string exception"{ENTER}')
-    print "CodePlex Work Item 12403"
+    superConsole.SendKeys('raise Exception{(}"Some string exception"{)}{ENTER}')
     expected = [
-                "warning: DeprecationWarning: raising a string exception is deprecated",
                 "Traceback (most recent call last):",
-                "  File ", #CodePlex Work Item 12403
-                "Some string exception",
-                "", #CodePlex Work Item 12401
+                '  File "<stdin>", line 1, in <module>',
+                "Exception: Some string exception",
+                "",
                 ]
 
     #verification
@@ -167,7 +164,6 @@ def test_string_exception():
     for i in xrange(len(errlines)):
         Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))
     
-
 def test_unique_prefix_completion():
     '''
     Ensure that an attribute with a prefix unique to the dictionary is
@@ -631,7 +627,42 @@ def test_a_comment_newline():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     lines = getTestOutput()[1]
     AreEqual(lines, [])
+
+def test_aa_redirect_stdout():
+    # CodePlex 25861, we should be able to return to the
+    # REPL w/ output redirected.  If this doesn't work we
+    # get an exception which fails the test.    
+    f = file('test_superconsole_input.py', 'w')
+    f.write("""
+import sys
+
+class _StreamLog(object):
+    def __init__(self, ostream):
+        self.ostream = ostream
     
+    def write(self, *args):
+        self.ostream.write("{")
+        self.ostream.write(*args)
+        self.ostream.write("}")
+    
+    def flush(self):
+        self.ostream.flush()
+
+sys.stderr = _StreamLog(sys.stderr)
+sys.stdout = _StreamLog(sys.stdout)
+
+""")
+    f.close()
+    try:
+        superConsole.SendKeys('import test_superconsole_input{ENTER}')
+        lines = getTestOutput()[0]
+        superConsole.SendKeys('import sys{ENTER}')
+        superConsole.SendKeys('sys.stdout = sys.__stdout__{ENTER}')
+        superConsole.SendKeys('sys.stderr = sys.__stderr__{ENTER}')
+        
+    finally:
+        nt.unlink('test_superconsole_input.py')
+
 #------------------------------------------------------------------------------
 #--__main__
 

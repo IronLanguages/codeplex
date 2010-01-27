@@ -27,6 +27,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System.Threading;
 
 namespace Microsoft.Scripting.Interpreter {
 
@@ -46,16 +47,18 @@ namespace Microsoft.Scripting.Interpreter {
         // Adaptive compilation support
         private readonly LightDelegateCreator _delegateCreator;
         private Delegate _compiled;
+        private int _compilationThreshold;
 
         /// <summary>
         /// Provides notification that the LightLambda has been compiled.
         /// </summary>
         public event EventHandler<LightLambdaCompileEventArgs> Compile;
 
-        internal LightLambda(LightDelegateCreator delegateCreator, StrongBox<object>[] closure) {
+        internal LightLambda(LightDelegateCreator delegateCreator, StrongBox<object>[] closure, int compilationThreshold) {
             _delegateCreator = delegateCreator;
             _closure = closure;
             _interpreter = delegateCreator.Interpreter;
+            _compilationThreshold = compilationThreshold;
         }
 
         private static MethodInfo GetRunMethodOrFastCtor(Type delegateType, out Func<LightLambda, Delegate> fastCtor) {
@@ -119,6 +122,8 @@ namespace Microsoft.Scripting.Interpreter {
 
         //TODO enable sharing of these custom delegates
         private Delegate CreateCustomDelegate(Type delegateType) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Synchronously compiling a custom delegate");
+
             var method = delegateType.GetMethod("Invoke");
             var paramInfos = method.GetParameters();
             var parameters = new ParameterExpression[paramInfos.Length];
@@ -136,7 +141,6 @@ namespace Microsoft.Scripting.Interpreter {
             var lambda = Expression.Lambda(delegateType, body, parameters);
             return lambda.Compile();
         }
-
 
         internal Delegate MakeDelegate(Type delegateType) {            
             Func<LightLambda, Delegate> fastCtor;
@@ -162,7 +166,27 @@ namespace Microsoft.Scripting.Interpreter {
 
                 return true;
             }
-            _delegateCreator.UpdateExecutionCount();
+
+            // Don't lock here, it's a frequently hit path.
+            //
+            // There could be multiple threads racing, but that is okay.
+            // Two bad things can happen:
+            //   * We miss decrements (some thread sets the counter forward)
+            //   * We might enter the "if" branch more than once.
+            //
+            // The first is okay, it just means we take longer to compile.
+            // The second we explicitly guard against inside of Compile().
+            //
+            // We can't miss 0. The first thread that writes -1 must have read 0 and hence start compilation.
+            if (unchecked(_compilationThreshold--) == 0) {
+                if (_interpreter.CompileSynchronously) {
+                    _delegateCreator.Compile(null);
+                } else {
+                    // Kick off the compile on another thread so this one can keep going
+                    ThreadPool.QueueUserWorkItem(_delegateCreator.Compile, null);
+                }
+            }
+
             return false;
         }
 
@@ -180,10 +204,14 @@ namespace Microsoft.Scripting.Interpreter {
             var frame = MakeFrame();
             frame.Data[0] = arg0;
             frame.Data[1] = arg1;
-            frame.BoxLocals();
-            _interpreter.Run(frame);
-            arg0 = (T0)frame.Data[0];
-            arg1 = (T1)frame.Data[1];
+            var currentFrame = frame.Enter();
+            try {
+                _interpreter.Run(frame);
+            } finally {
+                frame.Leave(currentFrame);
+                arg0 = (T0)frame.Data[0];
+                arg1 = (T1)frame.Data[1];
+            }
         }
 
         
@@ -196,8 +224,12 @@ namespace Microsoft.Scripting.Interpreter {
             for (int i = 0; i < arguments.Length; i++) {
                 frame.Data[i] = arguments[i];
             }
-            frame.BoxLocals();
-            _interpreter.Run(frame);
+            var currentFrame = frame.Enter();
+            try {
+                _interpreter.Run(frame);
+            } finally {
+                frame.Leave(currentFrame);
+            }
             return frame.Pop();
         }
     }

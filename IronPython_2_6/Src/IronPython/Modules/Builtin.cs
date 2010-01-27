@@ -521,10 +521,6 @@ namespace IronPython.Modules {
             code.Call(execScope);
         }
 
-        private static FunctionCode GetFunctionCode(PythonContext pc, SourceUnit sourceUnit, PythonCompilerOptions options) {
-            return ((RunnableScriptCode)pc.CompilePythonCode(Compiler.CompilationMode.Lookup, sourceUnit, options, ThrowingErrorSink.Default)).GetFunctionCode();
-        }
-
         public static PythonType file {
             get {
                 return DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
@@ -1604,10 +1600,12 @@ namespace IronPython.Modules {
             }
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(int stop) {
             return rangeWorker(stop);
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(BigInteger stop) {
             return rangeWorker(stop);
         }
@@ -1633,10 +1631,12 @@ namespace IronPython.Modules {
             throw PythonOps.OverflowError("too many items in the range");
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(int start, int stop) {
             return rangeWorker(start, stop);
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(BigInteger start, BigInteger stop) {
             return rangeWorker(start, stop);
         }
@@ -1671,10 +1671,12 @@ namespace IronPython.Modules {
             throw PythonOps.OverflowError("too many items in the range");
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(int start, int stop, int step) {
             return rangeWorker(start, stop, step);
         }
 
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(BigInteger start, BigInteger stop, BigInteger step) {
             return rangeWorker(start, stop, step);
         }
@@ -1731,6 +1733,7 @@ namespace IronPython.Modules {
         /// 
         /// The method binder would usally report an OverflowError in this case.
         /// </summary>
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(CodeContext/*!*/ context, double stop) {
             PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "range: integer argument expected, got float");
             return range(GetRangeAsInt(stop, "end"));
@@ -1741,6 +1744,7 @@ namespace IronPython.Modules {
         /// 
         /// The method binder would usally report an OverflowError in this case.
         /// </summary>
+        [return: SequenceTypeInfo(typeof(int))]
         public static List range(CodeContext/*!*/ context, double start, double stop, [DefaultParameterValue(1.0)]double step) {
             PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "range: integer argument expected, got float");
             return range(GetRangeAsInt(start, "start"), GetRangeAsInt(stop, "end"), GetRangeAsInt(step, "step"));
@@ -2054,6 +2058,7 @@ namespace IronPython.Modules {
             // optimized module (exec, compile)
             pco.Module &= ~ModuleOptions.Optimized;
             pco.Module |= ModuleOptions.Interpret;
+            pco.CompilationMode = CompilationMode.Lookup;
             return pco;
         }
 

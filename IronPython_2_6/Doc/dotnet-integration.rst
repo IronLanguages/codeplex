@@ -12,7 +12,7 @@ Loading .NET assemblies
 ********************************************************************************
 
 The smallest unit of distribution of functionality in .NET is an `assembly
-<http://msdn.microsoft.com/en-us/library/ms973231.aspx>` _
+<http://msdn.microsoft.com/en-us/library/ms973231.aspx>`_
 which usually corresponds to a single file with the `.dll` file extension. The 
 assembly is available either in the installation folder of the application, or 
 in the `GAC (Global assembly cache)
@@ -211,28 +211,80 @@ and also `System.EventHandler<TEventArgs>
           'EventHandler`1'
 
 --------------------------------------------------------------------------------
-Importing .NET methods from a type
+Accessing nested types
+--------------------------------------------------------------------------------
+
+Nested types are exposed as attributes of the outer class::
+
+   >>> from System.Environment import SpecialFolder
+   >>> SpecialFolder
+   <type 'SpecialFolder'>
+
+--------------------------------------------------------------------------------
+Importing .NET members from a type
 --------------------------------------------------------------------------------
 
 \.NET types are exposed as Python classes. Like Python classes, you usually
-cannot import the attributes of .NET types::
+cannot import *all* the attributes of .NET types using 
+``from <name> import *``::
 
-   >>> from System.AppDomain import *
+   >>> from System.Guid import *
    Traceback (most recent call last):
      File "<stdin>", line 1, in <module>
-   ImportError: no module named AppDomain
+   ImportError: no module named Guid
 
-However, some .NET types only have static methods, and are comparable to
+You can import specific members, both static and instance::
+
+   >>> from System.Guid import NewGuid, ToByteArray
+   >>> g = NewGuid()
+   >>> ToByteArray(g) #doctest: +ELLIPSIS
+   Array[Byte](...
+
+Note that if you import a static property, you will import the value
+when the `import` executes, not a named object to be evaluated
+on every use as you might mistakenly expect::
+
+   >>> from System.DateTime import Now
+   >>> Now #doctest: +ELLIPSIS
+   <System.DateTime object at ...>
+   >>> # Let's make it even more obvious that "Now" is evaluated only once
+   >>> a_second_ago = Now
+   >>> import time
+   >>> time.sleep(1)
+   >>> a_second_ago is Now
+   True
+   >>> a_second_ago is System.DateTime.Now
+   False
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Importing all .NET members from a static type
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some .NET types only have static methods, and are comparable to
 namespaces. `C#` refers to them as `static classes 
 <http://msdn.microsoft.com/en-us/library/79b3xss3(VS.80).aspx>`_
 , and requires such classes to have only static methods. IronPython allows you 
-to import the attributes of such `static classes`. `System.Environment 
+to import all the static methods of such `static classes`. `System.Environment 
 <http://msdn.microsoft.com/en-us/library/system.environment.aspx>`_ 
 is an example of a static class::
 
-   >>> from System.Environment import OSVersion
-   >>> OSVersion.Platform
-   System.PlatformID.Win32NT
+   >>> from System.Environment import *
+   >>> Exit is System.Environment.Exit
+   True
+
+Nested types are also imported::
+
+   >>> SpecialFolder is System.Environment.SpecialFolder
+   True
+
+However, properties are not imported::
+
+   >>> OSVersion
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   NameError: name 'OSVersion' is not defined
+   >>> System.Environment.OSVersion #doctest: +ELLIPSIS
+   <System.OperatingSystem object at ...>
 
 --------------------------------------------------------------------------------
 Type-system unification (`type` and `System.Type`)
@@ -241,16 +293,19 @@ Type-system unification (`type` and `System.Type`)
 \.NET represents types using `System.Type 
 <http://msdn.microsoft.com/en-us/library/system.type.aspx>`_.
 However, when you access a .NET type in Python code, you get a Python 
-:ref:`type` object. This allows a unified (Pythonic) view of both Python and 
-.NET types. For example, :ref:`isinstance` works with .NET types as well::
+:ref:`type` object [#]_::
 
    >>> from System.Collections import BitArray
    >>> ba = BitArray(5)
-   >>> isinstance(ba, BitArray)
+   >>> isinstance(type(ba), type)
    True
 
-Note that the .NET types behave like builtin types (like :ref:`list`), and are
-immutable. i.e. you cannot add or delete descriptors from .NET types.
+This allows a unified (Pythonic) view of both Python and .NET types. For example, 
+:ref:`isinstance` works with .NET types as well::
+
+   >>> from System.Collections import BitArray
+   >>> isinstance(ba, BitArray)
+   True
 
 If need to get the `System.Type` instance for the .NET type, you need to use
 :ref:`clr.GetClrType`. Conversely, you can use :ref:`clr.GetPythonType` to get
@@ -263,6 +318,36 @@ methods are exposed as instances of :ref:`method`::
    <type 'method_descriptor'>
    >>> type(ba.Xor)
    <type 'builtin_function_or_method'>
+
+.. [#]
+
+   Note that the Python type corresponding to a .NET type is a sub-type of
+   :ref:`type`::
+   
+      >>> isinstance(type(ba), type)
+      True
+      >>> type(ba) is type
+      False
+   
+   This is an implementation detail.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Similarity with builtin types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+\.NET types behave like builtin types (like :ref:`list`), and are
+immutable. i.e. you cannot add or delete descriptors from .NET types::
+
+   >>> del list.append
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   AttributeError: cannot delete attribute 'append' of builtin type 'list'
+   >>>
+   >>> import System
+   >>> del System.DateTime.ToByteArray
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: can't set attributes of built-in/extension type 'DateTime'
 
 ================================================================================
 Instantiating .NET types
@@ -482,6 +567,15 @@ Invoking static .NET methods is similar to invoking Python static methods::
 
    >>> System.GC.Collect()
 
+Like Python static methods, the .NET static method can be accessed as an
+attribute of sub-types as well::
+
+   >>> System.Object.ReferenceEquals is System.GC.ReferenceEquals
+   True
+
+**TODO** What happens if the sub-type has a static method with the same name
+but a different signature? Are both overloads available or not?
+
 --------------------------------------------------------------------------------
 Invoking generic methods
 --------------------------------------------------------------------------------
@@ -513,6 +607,8 @@ as::
 
    >>> Enumerable.Any(list, lambda x : x < 2)
    True
+
+See :ref:`appendix` for the detailed rules.
 
 .. [#] System.Core.dll is part of .NET 3.0 and higher.
 
@@ -652,7 +748,8 @@ Accessing .NET events
 
 \.NET events are exposed as objects with __iadd__ and __isub__ methods which
 allows using `+=` and `-=` to subscribe and unsubscribe from the event. The
-following code shows how to subscribe a Python function to an event using `+=` ::
+following code shows how to subscribe a Python function to an event using `+=`,
+and unsubscribe using `-=` ::
 
    >>> from System.IO import FileSystemWatcher
    >>> watcher = FileSystemWatcher(".")
@@ -663,10 +760,11 @@ following code shows how to subscribe a Python function to an event using `+=` :
    >>> import time
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
+   >>> watcher.Created -= callback
    >>>
    >>> # cleanup
    >>> import os
-   >>> f.close(); os.remove("test.txt"); watcher.EnableRaisingEvents = False
+   >>> f.close(); os.remove("test.txt")
 
 You can also subscribe using a bound method::
 
@@ -679,19 +777,15 @@ You can also subscribe using a bound method::
    >>> watcher.EnableRaisingEvents = True
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
+   >>> watcher.Created -= o.callback
    >>>
    >>> # cleanup
-   >>> f.close(); os.remove("test.txt"); watcher.EnableRaisingEvents = False
+   >>> f.close(); os.remove("test.txt")
 
-The code above cannot unsubscribe from the event using `-=`. The reason is
-that when you subscribe a function or a bound method to an event, IronPython 
-wraps the function or bound method in a `System.Delegate 
+You can also explicitly create a `delegate
 <http://msdn.microsoft.com/en-us/library/system.delegate.aspx>`_
-instance. When you unsubscribe from the event, IronPython creates a wrapper
-`System.Delegate` instance again, but one which will not compare as equal
-to the one created while subscribing to the event. The solution to this is to
-explicitly create a delegate object and use that to subscribe and unsubscribe
-from the event::
+instance to subscribe to the event. Otherwise, IronPython automatically
+does it for you. [#]_::
 
    >>> watcher = FileSystemWatcher(".")
    >>> def callback(sender, event_args):
@@ -703,11 +797,19 @@ from the event::
    >>> import time
    >>> f = open("test.txt", "w+"); time.sleep(1)
    Created test.txt
-   >>> watcher.Created -= delegate # Unsubscribe
+   >>> watcher.Created -= delegate
    >>>
    >>> # cleanup
    >>> f.close(); os.remove("test.txt")
 
+.. [#]
+
+   The only advantage to creating an explicit delegate is that it is uses less
+   memory. You should consider it if you subscribe to lots of events, and 
+   notice excessive `System.WeakReference
+   <http://msdn.microsoft.com/en-us/library/system.weakreference.aspx>`_
+   objects.
+   
 ================================================================================
 Special .NET types
 ================================================================================
@@ -831,6 +933,24 @@ has excecuted `import clr`)::
    >>> type(e.clsException)
    <type 'DivideByZeroException'>
 
+IronPython is also able to access the Python exception object corresponding
+to a .NET exception object [#]_, thought this is not exposed to the user [#]_.
+
+.. [#]
+
+   The Python exception object corresponding to a .NET exception object is 
+   accessible (to the IronPython runtime) via the `System.Exception.Data` 
+   property. Note that this is an implementation detail
+   and subject to change::
+
+      >>> e.clsException.Data["PythonExceptionInfo"] #doctest: +ELLIPSIS
+      <IronPython.Runtime.Exceptions.PythonExceptions+ExceptionDataWrapper object at ...>
+
+.. [#] 
+
+   ... except via the DLR Hosting API 
+   `ScriptEngine.GetService<ExceptionOperations>().GetExceptionMessage`
+
 =========================== ======================================= =============================================
 Python exception            .NET exception
 --------------------------- -------------------------------------------------------------------------------------
@@ -916,6 +1036,34 @@ a Python exception::
    <type 'exceptions.ZeroDivisionError'>
    >>> e2.clsException is e1
    True
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+User-defined exceptions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Python user-defined exceptions get mapped to `System.Exception`. If non-Python code
+catches a Python user-defined exception, it will be an instance of 
+`System.Exception`, and will not be able to access the exception details::
+
+   >>> # since "Exception" might be System.Exception after "from System import *"
+   >>> if "Exception" in globals(): del Exception
+   >>> class MyException(Exception):
+   ...     def __init__(self, value):
+   ...         self.value = value
+   ...     def __str__(self):
+   ...         return repr(self.value)
+   >>> try:
+   ...     raise MyException("some message")
+   ... except System.Exception as e:
+   ...     pass
+   >>> clr.GetClrType(type(e)).FullName
+   'System.Exception'
+   >>> e.Message
+   'Python Exception: MyException'
+
+In this case, the non-Python code can use the
+`ScriptEngine.GetService<ExceptionOperations>().GetExceptionMessage` DLR Hosting
+API to get the exception message.
 
 --------------------------------------------------------------------------------
 Enumerations
@@ -1254,6 +1402,25 @@ The following code overrides the generic method `Convert`::
    However, with generic methods, one of the type parameters may only be used
    as the return type. In that case, there is no way to determine the type
    paramter.
+ 
+--------------------------------------------------------------------------------
+Calling from Python
+--------------------------------------------------------------------------------
+
+When you call a method from Python, and the method overrides a .NET method
+from a base type, the call is performed as a regular Python call. The arguments
+do not undergo conversion, and neither are they modified in any way like
+being wrapped with :ref:`clr.Reference`. Thus, the call may need to be written
+differently than if the method was overriden by another language. For example,
+trying to call TryGetValue on the MyDictionary type from the 
+:ref:`overriding-ref-args` section as shown below results in a TypeError,
+whereas a similar call works with 
+`System.Collections.Generic.Dictionary[str, float]`::
+
+   >>> result, value = d.TryGetValue("yes")
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: TryGetValue() takes exactly 3 arguments (2 given)
 
 ================================================================================
 Overriding properties
@@ -1265,13 +1432,20 @@ and `set_<PropertyName>`. However, .NET itself does not require any
 specific naming pattern for these methods, and the names are stored in the
 the metadata associated with the property definition. The names can be 
 accessed using the `GetGetMethod` and `GetSetMethods` of the
-`System.Reflection.PropertyInfo` class. Overriding a virtual property
-requires defining a Python method with the same names as the underlying
-getter or setter .NET method::
+`System.Reflection.PropertyInfo` class::
 
    >>> import clr
    >>> import System
    >>> StringCollection = System.Collections.Generic.ICollection[str]
+   >>> prop_info = clr.GetClrType(StringCollection).GetProperty("Count")
+   >>> prop_info.GetGetMethod().Name
+   'get_Count'
+   >>> prop_info.GetSetMethod() # None because this is a read-only property
+   >>>
+
+Overriding a virtual property requires defining a Python method with the same 
+names as the underlying getter or setter .NET method::
+
    >>> 
    >>> class MyCollection(StringCollection):
    ...    def get_Count(self):
@@ -1279,9 +1453,8 @@ getter or setter .NET method::
    ...    # Other methods of ICollection not overriden for brevity
    >>> 
    >>> c = MyCollection()
-   >>> getCount = clr.GetClrType(StringCollection).GetProperty("Count").GetGetMethod()
    >>> # Use Reflection to simulate a call from another .NET language
-   >>> getCount.Invoke(c, None)
+   >>> prop_info.GetGetMethod().Invoke(c, None)
    100
 
 ================================================================================
@@ -1320,7 +1493,10 @@ methods::
    >>> c = MyComponent()
    >>> def callback(sender, event_args):
    ...     print event_args
-   >>> c.Disposed += callback
+   >>> args = System.Array[object]((System.EventHandler(callback),))
+   >>> # Use Reflection to simulate a call from another .NET language
+   >>> event_info.GetAddMethod().Invoke(c, args)
+   >>>
    >>> c.Dispose() #doctest: +ELLIPSIS
    <System.EventArgs object at ... [System.EventArgs]>
 
@@ -1357,19 +1533,26 @@ based on the arguments it receives::
 Accessing protected members of base types
 ================================================================================
 
-IronPython *does* allow Python sub-types to access protected members of .NET base
-types. However, 
-
-Python does not enforce any accessibility rules. Also, methods can be added
-and removed dynamically from a class. Hence, IronPython does not attempt
-to guard access to `protected` members of .NET sub-types. Instead, it always
-makes the protected members available just like public members. The code
-below is able to access `MemberwiseClone
+Normally, IronPython does not allow access to protected members (unless you
+are using :ref:`private-binding`). For example, accessing `MemberwiseClone
 <http://msdn.microsoft.com/en-us/library/system.object.memberwiseclone.aspx>`_
-even though it is a protected method::
+causes a TypeError since it is a protected method::
 
    >>> import clr
    >>> import System
+   >>> o = System.Object()
+   >>> o.MemberwiseClone()
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: cannot access protected member MemberwiseClone without a python subclass of object
+   
+IronPython *does* allow Python sub-types to access protected members of .NET 
+base types. However, Python does not enforce any accessibility rules. Also, 
+methods can be added and removed dynamically from a class. Hence, IronPython 
+does not attempt to guard access to `protected` members of .NET sub-types. 
+Instead, it always makes the protected members available just like public 
+members::
+
    >>> class MyClass(System.Object):
    ...     pass
    >>> o = MyClass()
@@ -1426,16 +1609,52 @@ method, the user is required to define a .NET type with a .NET method marked
 with `DllImportAttribute 
 <http://msdn.microsoft.com/en-us/library/system.runtime.interopservices.dllimportattribute.aspx>`_
 , and where the signature of the .NET method exactly describes the target platform method.
+Similarly, Windows Communication Foundation (WCF) requires an interface to be
+marked with `ServiceContractAttribute
+<http://msdn.microsoft.com/en-us/library/system.servicemodel.servicecontractattribute.aspx>`_
+to indicate that it defines a service contract.
 
 Starting with IronPython 2.6, IronPython supports a low-level hook which 
 allows customization of the .NET type corresponding to a Python class. If the 
 metaclass of a Python class has an attribute called `__clrtype__`, the 
 attribute is called to generate a .NET type. This allows the user to control
-the the details of the generated .NET type. However, this is a low-level hook, 
-and the user is expected to build on top of it. 
+the the details of the generated .NET type:: 
 
-The ClrType sample available in the IronPython website shows how to build on 
-top of the __clrtype__ hook.
+    >>> import clr
+    >>> import clrtype
+    >>> 
+    >>> class Point(object):
+    ...     __metaclass__ = clrtype.ClrClass
+    ... 
+    ...     def __init__(self, x, y):
+    ...         self.x = x
+    ...         self.y = y
+    ... 
+    ...     @property
+    ...     @clrtype.accepts()
+    ...     @clrtype.returns(int)
+    ...     def X(self): return self.x
+    ... 
+    ...     @property
+    ...     @clrtype.accepts()
+    ...     @clrtype.returns(int)
+    ...     def Y(self): return self.y
+    ... 
+    >>> p = Point(10, 20)
+    >>> # Use Reflection to simulate a call from another .NET language
+    >>> p.GetType().GetProperty("X").GetGetMethod().Invoke(p, None)
+    10
+
+Note that the .NET type is generated at runtime, and will not exist in an 
+assembly on disk. As a result, it is not possible to write C# or VB.Net code
+that references that type.
+
+The `ClrType sample
+<http://ironpython.codeplex.com/Release/ProjectReleases.aspx?ReleaseId=12482#DownloadId=96609>`_
+shows how to build on top of the __clrtype__ hook to support declaring
+strongly-typed classes and methods, how to use CustomAttributes, etc.
+In the future, the sample is expected to become a fully supported 
+IronPython module.
 
 ********************************************************************************
 Accessing Python code from other .NET code
@@ -1517,7 +1736,14 @@ Integration of Python and .NET features
             to the bit.
 
   * If XML comment files are not available, IronPython generates documentation
-    by reflecting on the type or member.
+    by reflecting on the type or member::
+    
+       >>> help(System.Collections.Generic.List.Enumerator.Current) #doctest: +NORMALIZE_WHITESPACE
+       Help on getset descriptor System.Collections.Generic in mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089.Enumerator.Current:
+       <BLANKLINE>
+       Current
+           Get: T Current(self)
+
 
 ================================================================================
 Extensions to Python types
@@ -1532,7 +1758,7 @@ features accessible:
   
     * Overloads(t1 [, t2...])
 
-* 'type` objects
+* `type` objects
 
   * instance method
   
@@ -1556,36 +1782,48 @@ where explicitly mentioned):
     
 * Types inheriting from a .NET class or interface
 
-  ========================================================= ========================================================================
-  .NET sub-type                                             Synthesized Python method(s)
-  ========================================================= ========================================================================
-  System.IDisposable                                        __enter__, __exit__
-  System.Collections.IEnumerator                            next
-  System.Collections.ICollection                            __len__
-  System.Collections.Generic.ICollection<T>
-  System.Collections.IEnumerable                            __iter__
-  System.Collections.Generic.IEnumerable<T>
-  System.Collections.IEnumerator
-  System.Collections.Generic.IEnumerator<T>
-  System.IFormattable                                       __format__
-  System.Collections.IDictionary                            __contains__
-  System.Collections.Generic.IDictionary<TKey, TValue>
-  System.Collections.Generic.ICollection<T>
-  System.Collections.Generic.IList<T>
-  System.Collections.IEnumerable
-  System.Collections.Generic.IEnumerable<T>
-  System.Collections.IEnumerator
-  System.Collections.Generic.IEnumerator<T>
-  System.Array                                              Class method : Indexing of the type object
-  
-                                                            Class method : __new__(l) where l is IList<T> (or supports __getitem__?)
-  
-                                                            __getitem__, __setitem__, __slice__
-  System.Delegate                                           Class method : __new__(type, function_or_bound_method)
-                                                            
-                                                            __call__
-  System.Enum                                               __or__ **TODO** ?
-  ========================================================= ========================================================================
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | .NET base-type                                         | Synthesized Python method(s)                                          |
+  +========================================================+=======================================================================+
+  | System.Object                                          | all methods of `object` eg. __class__, __str__, __hash__, __setattr__ |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.IDisposable                                     | __enter__, __exit__                                                   |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IEnumerator                         | next                                                                  |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.ICollection                         | __len__                                                               |
+  | System.Collections.Generic.ICollection<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IEnumerable                         | __iter__                                                              |
+  | System.Collections.Generic.IEnumerable<T>              |                                                                       |
+  | System.Collections.IEnumerator                         |                                                                       |
+  | System.Collections.Generic.IEnumerator<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.IFormattable                                    | __format__                                                            |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Collections.IDictionary                         | __contains__                                                          |
+  | System.Collections.Generic.IDictionary<TKey, TValue>   |                                                                       |
+  | System.Collections.Generic.ICollection<T>              |                                                                       |
+  | System.Collections.Generic.IList<T>                    |                                                                       |
+  | System.Collections.IEnumerable                         |                                                                       |
+  | System.Collections.Generic.IEnumerable<T>              |                                                                       |
+  | System.Collections.IEnumerator                         |                                                                       |
+  | System.Collections.Generic.IEnumerator<T>              |                                                                       |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Array                                           | * Class methods:                                                      |
+  |                                                        |                                                                       |
+  |                                                        |   * Indexing of the type object with a type object to access a        |
+  |                                                        |     specific array type                                               |
+  |                                                        |   * __new__(l) where l is IList<T> (or supports __getitem__?)         |
+  |                                                        |                                                                       |
+  |                                                        | * __getitem__, __setitem__, __slice__                                 |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Delegate                                        | * Class method : __new__(type, function_or_bound_method)              |
+  |                                                        |                                                                       |
+  |                                                        | * __call__                                                            |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
+  | System.Enum                                            | __or__ **TODO** ?                                                     |
+  +--------------------------------------------------------+-----------------------------------------------------------------------+
 
 * Types with a .NET operator method name
 
@@ -1664,37 +1902,81 @@ and Equals, and __hash__ and GetHashCode if the Python class is mutable
 but also needs to be usable as a key in a Dictionary<K,V>. 
 
 ================================================================================
-LINQ
+System.Object.ToString, __repr__ and __str__
 ================================================================================
 
-Language-integrated Query (LINQ) is a set of features that was added in 
-.NET 3.5. Since it is a scenario rather than a specific feature, we will
-first compare which of the scenarios work with IronPython:
-
-* LINQ-to-objects
-
-  Python's list comprehension provides similar functionality, and is more
-  Pythonic. Hence, it is recommended to use list comprehension itself.
-
-* DLinq - This is currently not supported.
-
 --------------------------------------------------------------------------------
-Feature by feature comparison
+ToString on Python objects
 --------------------------------------------------------------------------------
 
-LINQ consists of a number of language and .NET features, and IronPython has 
-differing levels of support for the different features:
+Calling ToString on Python objects calls the default System.Object.ToString
+implementation, even if the Python type defines `__str__`::
 
-* C# and VB.NET lambda function - Python supports lambda functions already.
+   >>> class MyClass(object):
+   ...     def __str__(self):
+   ...         return "__str__ result"
+   >>> o = MyClass()
+   >>> # Use Reflection to simulate a call from another .NET language
+   >>> o.GetType().GetMethod("ToString").Invoke(o, None) #doctest: +ELLIPSIS
+   'IronPython.NewTypes.System.Object_...'
 
-* Anonymous types - Python has tuples which can be used like anonymous types.
+--------------------------------------------------------------------------------
+__repr__/__str__ on .NET objects
+--------------------------------------------------------------------------------
 
-* Extension methods - See :ref:
+All Python user types have `__repr__` and `__str__`::
 
-* Generic method type parameter inference - See :ref:
+   >>> class MyClass(object):
+   ...     pass
+   >>> o = MyClass()
+   >>> o.__repr__() #doctest: +ELLIPSIS
+   '<MyClass object at ...>'
+   >>> o.__str__() #doctest: +ELLIPSIS
+   'IronPython.NewTypes.System.Object_...'
+   >>> str(o) #doctest: +ELLIPSIS
+   '<MyClass object at ...>'
 
-* Expression trees - This is not supported. This is the main reason DLinq 
-  does not work.
+For .NET types which do not override ToString, IronPython provides `__repr__` and
+`__str__` methods which behave similar to those of Python user types [#]_::
+
+   >>> from System.Collections import BitArray
+   >>> ba = BitArray(5)
+   >>> ba.ToString() # BitArray inherts System.Object.ToString()
+   'System.Collections.BitArray'
+   >>> ba.__repr__() #doctest: +ELLIPSIS
+   '<System.Collections.BitArray object at ... [System.Collections.BitArray]>'
+   >>> ba.__str__() #doctest: +ELLIPSIS
+   '<System.Collections.BitArray object at ... [System.Collections.BitArray]>'
+
+For .NET types which *do* override ToString, IronPython includes the result of
+ToString in `__repr__`, and maps ToString directly to `__str__`::
+
+   >>> e = System.Exception()
+   >>> e.ToString()
+   "System.Exception: Exception of type 'System.Exception' was thrown."
+   >>> e.__repr__() #doctest: +ELLIPSIS
+   "<System.Exception object at ... [System.Exception: Exception of type 'System.Exception' was thrown.]>"
+   >>> e.__str__() #doctest:
+   "System.Exception: Exception of type 'System.Exception' was thrown."
+
+For Python types that override ToString, `__str__` is mapped to the ToString
+override:: 
+
+   >>> class MyClass(object):
+   ...     def ToString(self):
+   ...         return "ToString implemented in Python"
+   >>> o = MyClass()
+   >>> o.__repr__() #doctest: +ELLIPSIS
+   '<MyClass object at ...>'
+   >>> o.__str__()
+   'ToString implemented in Python'
+   >>> str(o) #doctest: +ELLIPSIS
+   '<MyClass object at ...>'
+
+.. [#]
+
+   There is some inconsistency in handling of __str__ that is tracked by
+   http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24973
 
 ********************************************************************************
 OleAutomation and COM interop 
@@ -1942,6 +2224,39 @@ However, once you do `import clr`, `object` has both `__hash__` as well as
    >>> hasattr(object, "GetHashCode")
    True
 
+================================================================================
+LINQ
+================================================================================
+
+Language-integrated Query (LINQ) is a set of features that was added in 
+.NET 3.5. Since it is a scenario rather than a specific feature, we will
+first compare which of the scenarios work with IronPython:
+
+* LINQ-to-objects
+
+  Python's list comprehension provides similar functionality, and is more
+  Pythonic. Hence, it is recommended to use list comprehension itself.
+
+* DLinq - This is currently not supported.
+
+--------------------------------------------------------------------------------
+Feature by feature comparison
+--------------------------------------------------------------------------------
+
+LINQ consists of a number of language and .NET features, and IronPython has 
+differing levels of support for the different features:
+
+* C# and VB.NET lambda function - Python supports lambda functions already.
+
+* Anonymous types - Python has tuples which can be used like anonymous types.
+
+* Extension methods - See :ref:`extension-methods`
+
+* Generic method type parameter inference - See :ref:`generic-method-type-parameter-inference`
+
+* Expression trees - This is not supported. This is the main reason DLinq 
+  does not work.
+
 ********************************************************************************
 Appendix - Type conversion rules
 ********************************************************************************
@@ -2188,3 +2503,9 @@ or delegates are implemented on the Python side:
   any other relatively simple and clear option here and I think that because 
   overriding overloaded methods can get quite complicated we should err on the 
   side of simplicity.
+
+********************************************************************************
+Appendix - Rules for Type parameter inference while invoking generic methods
+********************************************************************************
+
+**TODO**

@@ -11,14 +11,13 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Scripting.Silverlight</RootNamespace>
     <AssemblyName>Microsoft.Scripting.Silverlight</AssemblyName>
-<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
-    <DelaySign>true</DelaySign>    
+    <DelaySign>true</DelaySign>
     <SilverlightBuild>true</SilverlightBuild>
     <Silverlight3Path>$(ProgramFiles)\Microsoft Silverlight\3.0.40818.0</Silverlight3Path>
     <Silverlight4Path>..\..\..\Utilities\Silverlight\v4-x86fre</Silverlight4Path>
-
     <!-- The following two lines prevent csc.rsp and Microsoft.NETFramework.props from adding additional assembly references -->
     <NoConfig>true</NoConfig>
     <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
@@ -27,7 +26,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE;SILVERLIGHT;SILVERLIGHT_3;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -40,7 +39,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;SILVERLIGHT_3;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -54,7 +53,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -69,7 +68,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -131,9 +130,11 @@
       <HintPath>$(SilverlightPath)\System.Net.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(TargetFrameworkVersion)' == 'v4.0' ">
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightPath)\System.Core.dll</HintPath>
+      <Private>False</Private>
+      <Aliases>systemcore</Aliases>
     </Reference>
   </ItemGroup>
   <ItemGroup>

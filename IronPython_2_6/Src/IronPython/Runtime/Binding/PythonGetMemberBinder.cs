@@ -29,6 +29,7 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -136,7 +137,11 @@ namespace IronPython.Runtime.Binding {
                         case "__name__":
                             return (T)(object)new Func<CallSite, object, CodeContext, object>(new NamespaceTrackerDelegate(_name).GetName);
                         default:
-                            return (T)(object)new Func<CallSite, object, CodeContext, object>(new NamespaceTrackerDelegate(_name).Target);
+                            if (IsNoThrow) {
+                                return (T)(object)new Func<CallSite, object, CodeContext, object>(new NamespaceTrackerDelegate(_name).NoThrowTarget);
+                            } else {
+                                return (T)(object)new Func<CallSite, object, CodeContext, object>(new NamespaceTrackerDelegate(_name).Target);
+                            }
                     }
                 }
             }
@@ -390,14 +395,15 @@ namespace IronPython.Runtime.Binding {
                             PropertyTracker pt = (PropertyTracker)members[0];
                             if (!pt.IsStatic && pt.GetIndexParameters().Length == 0) {
                                 MethodInfo prop = pt.GetGetMethod();
+                                ParameterInfo[] parameters;
 
-                                if (prop != null && prop.GetParameters().Length == 0) {
+                                if (prop != null && (parameters = prop.GetParameters()).Length == 0) {
                                     if (prop.ReturnType == typeof(bool)) {
-                                        return new FastPropertyGet<TSelfType>(type, ReflectedCaller.Create(prop).Invoke).GetPropertyBool;
+                                        return new FastPropertyGet<TSelfType>(type, CallInstruction.Create(prop, parameters).Invoke).GetPropertyBool;
                                     } else if (prop.ReturnType == typeof(int)) {
-                                        return new FastPropertyGet<TSelfType>(type, ReflectedCaller.Create(prop).Invoke).GetPropertyInt;
+                                        return new FastPropertyGet<TSelfType>(type, CallInstruction.Create(prop, parameters).Invoke).GetPropertyInt;
                                     } else {
-                                        return new FastPropertyGet<TSelfType>(type, ReflectedCaller.Create(prop).Invoke).GetProperty;
+                                        return new FastPropertyGet<TSelfType>(type, CallInstruction.Create(prop, parameters).Invoke).GetProperty;
                                     }
                                 }
                             }
@@ -476,6 +482,14 @@ namespace IronPython.Runtime.Binding {
                     }
 
                     throw PythonOps.AttributeErrorForMissingAttribute(self, _name);
+                }
+
+                return Update(site, self, context);
+            }
+
+            public object NoThrowTarget(CallSite site, object self, CodeContext context) {
+                if (self != null && self.GetType() == typeof(NamespaceTracker)) {
+                    return NamespaceTrackerOps.GetCustomMember(context, (NamespaceTracker)self, _name);
                 }
 
                 return Update(site, self, context);

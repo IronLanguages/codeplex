@@ -509,5 +509,20 @@ def test_generator_attrs():
     
     temp_gen = f()
     AreEqual(f.func_code, temp_gen.gi_code)
+    
+def test_cp24031():
+    def f(*args):
+        return args
+    
+    AreEqual(f(*(x for x in xrange(2))),
+             (0, 1))
+    
+    class KNew(object):
+        pass
+    
+    AssertErrorWithMessage(TypeError, "object.__new__() takes no parameters",
+                           lambda: KNew(*(i for i in xrange(10))) != None)
 
+    
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

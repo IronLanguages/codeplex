@@ -107,7 +107,15 @@ def test_generic_types():
     AreEqual(G2[int].A, 30)
     AreEqual(G2[int, int].A, 40)
 
-    AssertErrorWithMessage(ValueError, "The type or method has 1 generic parameter(s), but 0 generic argument(s) were provided. A generic argument must be provided for each generic parameter.", lambda: G3[()])
+    if not is_net40:
+        AssertErrorWithMessage(ValueError, 
+                               "The type or method has 1 generic parameter(s), but 0 generic argument(s) were provided. A generic argument must be provided for each generic parameter.", lambda: G3[()])
+    else: #.NET changed the error message with .NET 4.0
+        AssertErrorWithMessage(ValueError, 
+                               "The number of generic arguments provided doesn't equal the arity of the generic type definition.\r\nParameter name: instantiation", 
+                               lambda: G3[()])
+    
+                
     AssertErrorWithMessage(ValueError, "GenericArguments[0], 'System.Exception', on 'NSwGeneric.G3`1[T]' violates the constraint of type 'T'.", lambda: G3[System.Exception])
     AreEqual(G3[int].A, 50)
     

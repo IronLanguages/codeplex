@@ -173,6 +173,22 @@ def test_S():
     # Now check that we can suppress this with -S.
     TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'"), 1)
 
+def test_cp24720():
+    f = file(nt.getcwd() + "\\site.py", "w")
+    f.write("import sys\nsys.foo = 456\n")
+    f.close()
+    orig_ipy_path = Environment.GetEnvironmentVariable("IRONPYTHONPATH")
+    
+    try:
+        Environment.SetEnvironmentVariable("IRONPYTHONPATH", "")
+        TestCommandLine(("-c", "import site;import sys;print hasattr(sys, 'foo')"), "False\n")
+        Environment.SetEnvironmentVariable("IRONPYTHONPATH", ".")
+        TestCommandLine(("-c", "import site;import sys;print hasattr(sys, 'foo')"), "True\n")
+        
+    finally:
+        Environment.SetEnvironmentVariable("IRONPYTHONPATH", orig_ipy_path)
+        nt.remove(nt.getcwd() + "\\site.py")
+
 def test_V():
     # Test the -V (print version and exit) option.
     TestCommandLine(("-V",), ("regexp", "IronPython ([0-9.]+)(.*) on .NET ([0-9.]+)\n"))

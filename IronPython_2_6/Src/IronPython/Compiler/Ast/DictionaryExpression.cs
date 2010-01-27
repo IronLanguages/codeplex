@@ -39,7 +39,7 @@ namespace IronPython.Compiler.Ast {
             get { return _items; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+        public override MSAst.Expression Reduce() {
             // create keys & values into array and then call helper function
             // which creates the dictionary
             if (_items.Length != 0) {
@@ -52,9 +52,9 @@ namespace IronPython.Compiler.Ast {
                     //   { 2 : 1, 4 : 3, 6 :5 }
                     // This is backwards from parameter list eval, so create temporaries to swap ordering.
 
-                    
-                    parts[index * 2] = ag.TransformOrConstantNull(slice.SliceStop, typeof(object));
-                    MSAst.Expression key = parts[index * 2 + 1] = ag.TransformOrConstantNull(slice.SliceStart, typeof(object));
+
+                    parts[index * 2] = TransformOrConstantNull(slice.SliceStop, typeof(object));
+                    MSAst.Expression key = parts[index * 2 + 1] = TransformOrConstantNull(slice.SliceStart, typeof(object));
 
                     Type newType;
                     if (key.NodeType == MSAst.ExpressionType.Convert) {
@@ -73,7 +73,7 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 return Ast.Call(
-                    typeof(PythonOps).GetMethod(heterogeneous ? "MakeDictFromItems" : "MakeHomogeneousDictFromItems"),
+                    heterogeneous ? AstMethods.MakeDictFromItems : AstMethods.MakeHomogeneousDictFromItems,
                     Ast.NewArrayInit(
                         typeof(object),
                         parts
@@ -83,7 +83,7 @@ namespace IronPython.Compiler.Ast {
 
             // empty dictionary
             return Ast.Call(
-                typeof(PythonOps).GetMethod("MakeDict"),
+                AstMethods.MakeDict,
                 AstUtils.Constant(0)
             );
         }

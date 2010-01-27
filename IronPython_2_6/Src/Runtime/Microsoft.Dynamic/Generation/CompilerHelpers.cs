@@ -207,7 +207,7 @@ namespace Microsoft.Scripting.Generation {
         public static bool IsSealed(Type type) {
             return type.IsSealed || type.IsValueType;
         }
-        
+
         public static bool IsComparisonOperator(ExpressionType op) {
             switch (op) {
                 case ExpressionType.LessThan: return true;
@@ -240,14 +240,6 @@ namespace Microsoft.Scripting.Generation {
             Type[] types = new Type[args.Length];
             for (int i = 0; i < args.Length; i++) {
                 types[i] = GetType(args[i]);
-            }
-            return types;
-        }
-
-        internal static Type[] GetTypes(IList<Expression> args) {
-            Type[] types = new Type[args.Count];
-            for (int i = 0, n = types.Length; i < n; i++) {
-                types[i] = args[i].Type;
             }
             return types;
         }
@@ -733,7 +725,7 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="lambda">The lambda to compile.</param>
         /// <returns>A delegate which can interpret the lambda.</returns>
         public static Delegate LightCompile(this LambdaExpression lambda) {
-            return new LightCompiler(true).CompileTop(lambda).CreateDelegate();
+            return new LightCompiler(-1).CompileTop(lambda).CreateDelegate();
         }
 
         /// <summary>
@@ -743,7 +735,17 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="compileLoops">true if the presence of loops should result in a compiled delegate</param>
         /// <returns>A delegate which can interpret the lambda.</returns>
         public static Delegate LightCompile(this LambdaExpression lambda, bool compileLoops) {
-            return new LightCompiler(compileLoops).CompileTop(lambda).CreateDelegate();
+            return new LightCompiler(-1).CompileTop(lambda).CreateDelegate();
+        }
+
+        /// <summary>
+        /// Creates an interpreted delegate for the lambda.
+        /// </summary>
+        /// <param name="lambda">The lambda to compile.</param>
+        /// <param name="compilationThreshold">The number of iterations before the interpreter starts compiling</param>
+        /// <returns>A delegate which can interpret the lambda.</returns>
+        public static Delegate LightCompile(this LambdaExpression lambda, int compilationThreshold) {
+            return new LightCompiler(compilationThreshold).CompileTop(lambda).CreateDelegate();
         }
 
         /// <summary>
@@ -757,7 +759,7 @@ namespace Microsoft.Scripting.Generation {
             return (T)(object)LightCompile((LambdaExpression)lambda);
         }
 
-        /// <summary>
+    /// <summary>
         /// Creates an interpreted delegate for the lambda.
         /// </summary>
         /// <typeparam name="T">The lambda's delegate type.</typeparam>
@@ -766,9 +768,19 @@ namespace Microsoft.Scripting.Generation {
         /// <returns>A delegate which can interpret the lambda.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static T LightCompile<T>(this Expression<T> lambda, bool compileLoops) {
-            return (T)(object)LightCompile((LambdaExpression)lambda, compileLoops);
+            return (T)(object)LightCompile((LambdaExpression)lambda, -1);
         }
 
+
+        /// <summary>
+        /// Creates an interpreted delegate for the lambda.
+        /// </summary>
+        /// <param name="lambda">The lambda to compile.</param>
+        /// <param name="compilationThreshold">The number of iterations before the interpreter starts compiling</param>
+        /// <returns>A delegate which can interpret the lambda.</returns>
+        public static T LightCompile<T>(this Expression<T> lambda, int compilationThreshold) {
+            return (T)(object)LightCompile((LambdaExpression)lambda, compilationThreshold);
+        }
 
         /// <summary>
         /// Compiles the lambda into a method definition.

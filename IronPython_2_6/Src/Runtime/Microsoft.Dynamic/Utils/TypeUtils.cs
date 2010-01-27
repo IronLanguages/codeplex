@@ -26,7 +26,15 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Utils {
-    static class TypeUtils {
+    public static class TypeUtils {
+#if SILVERLIGHT
+        public static bool IsNested(this Type t) {
+            return t.DeclaringType != null;
+        }
+#else
+        public static bool IsNested(this Type t) { return t.IsNested; }
+#endif
+
         // keep in sync with System.Core version
         internal static Type GetNonNullableType(Type type) {
             if (IsNullableType(type)) {
@@ -336,10 +344,6 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        internal static Type GetNonNoneType(Type type) {
-            return (type == typeof(DynamicNull)) ? typeof(object) : type;
-        }
-
         internal static bool IsFloatingPoint(Type type) {
             type = GetNonNullableType(type);
             switch (Type.GetTypeCode(type)) {
@@ -349,6 +353,28 @@ namespace Microsoft.Scripting.Utils {
                 default:
                     return false;
             }
+        }
+
+
+#if !SILVERLIGHT
+        public static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
+#endif
+
+        public static bool IsComObjectType(Type/*!*/ type) {
+#if SILVERLIGHT
+            return false;
+#else
+            return ComObjectType.IsAssignableFrom(type);
+#endif
+        }
+
+        public static bool IsComObject(object obj) {
+#if SILVERLIGHT
+            return false;
+#else
+            // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust
+            return obj != null && IsComObjectType(obj.GetType());
+#endif
         }
     }
 }

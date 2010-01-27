@@ -20,13 +20,12 @@ using Microsoft.Scripting.Ast;
 #endif
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -163,10 +162,37 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
+        public static bool TryGetDictionaryValue(PythonDictionary dict, string name, int keyVersion, int keyIndex, out object res) {
+            CustomInstanceDictionaryStorage dictStorage;
+            if (dict != null) {
+                if ((dictStorage = dict._storage as CustomInstanceDictionaryStorage) != null && dictStorage.KeyVersion == keyVersion) {
+                    if (dictStorage.TryGetValue(keyIndex, out res)) {
+                        return true;
+                    }
+                } else if (dict.TryGetValue(name, out res)) {
+                    return true;
+                }
+            }
+            res = null;
+            return false;
+        }
+
         public static object SetDictionaryValue(IPythonObject self, string name, object value) {
             PythonDictionary dict = GetDictionary(self);
 
             return dict[name] = value;
+        }
+
+        public static object SetDictionaryValueOptimized(IPythonObject ipo, string name, object value, int keysVersion, int index) {
+            var dict = UserTypeOps.GetDictionary(ipo);
+            CustomInstanceDictionaryStorage storage;
+
+            if ((storage = dict._storage as CustomInstanceDictionaryStorage) != null && storage.KeyVersion == keysVersion) {
+                storage.SetExtraValue(index, value);
+            } else {
+                dict[name] = value;
+            }
+            return value;
         }
 
         public static object FastSetDictionaryValue(ref PythonDictionary dict, string name, object value) {
@@ -175,6 +201,21 @@ namespace IronPython.Runtime.Operations {
             }
 
             return dict[name] = value;
+        }
+
+        public static object FastSetDictionaryValueOptimized(PythonType type, ref PythonDictionary dict, string name, object value, int keysVersion, int index) {
+            if (dict == null) {
+                Interlocked.CompareExchange(ref dict, type.MakeDictionary(), null);
+            }
+
+            CustomInstanceDictionaryStorage storage;
+
+            if ((storage = dict._storage as CustomInstanceDictionaryStorage) != null && storage.KeyVersion == keysVersion) {
+                storage.SetExtraValue(index, value);
+                return value;
+            } else {
+                return dict[name] = value;
+            }
         }
 
         public static object RemoveDictionaryValue(IPythonObject self, string name) {
@@ -191,7 +232,7 @@ namespace IronPython.Runtime.Operations {
         internal static PythonDictionary GetDictionary(IPythonObject self) {
             PythonDictionary dict = self.Dict;
             if (dict == null && self.PythonType.HasDictionary) {
-                dict = self.SetDict(PythonDictionary.MakeSymbolDictionary());
+                dict = self.SetDict(self.PythonType.MakeDictionary());
             }
             return dict;
         }
@@ -274,6 +315,7 @@ namespace IronPython.Runtime.Operations {
                 } 
             } catch (MissingMemberException) {
                 if (getAttrSlot != null && getAttrSlot.TryGetValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                    ExceptionHelpers.DynamicStackFrames = null;
                     return callSite.Data.Target(callSite.Data, context, value, name);
                 }
 
@@ -300,11 +342,13 @@ namespace IronPython.Runtime.Operations {
             } catch (MissingMemberException) {
                 try {
                     if (getAttrSlot != null && getAttrSlot.TryGetValue(context, self, ((IPythonObject)self).PythonType, out value)) {
+                        ExceptionHelpers.DynamicStackFrames = null;
                         return callSite.Data.Target(callSite.Data, context, value, name);
                     }
 
                     return OperationFailed.Value;
                 } catch (MissingMemberException) {
+                    ExceptionHelpers.DynamicStackFrames = null;
                     return OperationFailed.Value;
                 }
             }
@@ -314,6 +358,7 @@ namespace IronPython.Runtime.Operations {
                     return callSite.Data.Target(callSite.Data, context, value, name);
                 }
             } catch (MissingMemberException) {
+                ExceptionHelpers.DynamicStackFrames = null;
             }
 
             return OperationFailed.Value;
@@ -426,6 +471,54 @@ namespace IronPython.Runtime.Operations {
             }
 
             return new FastBindResult<T>();
+        }
+    }
+
+    /// <summary>
+    /// Provides a debug view for user defined types.  This class is declared as public
+    /// because it is referred to from generated code.  You should not use this class.
+    /// </summary>
+    public class UserTypeDebugView {
+        private readonly IPythonObject _userObject;
+        
+        public UserTypeDebugView(IPythonObject userObject) {
+            _userObject = userObject;
+        }
+
+        public PythonType __class__ {
+            get {
+                return _userObject.PythonType;
+            }
+        }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        internal List<ObjectDebugView> Members {
+            get {
+                var res = new List<ObjectDebugView>();
+                if (_userObject.Dict != null) {
+                    foreach (var v in _userObject.Dict) {
+                        res.Add(new ObjectDebugView(v.Key, v.Value));
+                    }
+                }
+
+                // collect any slots on the object
+                object[] slots = _userObject.GetSlots();
+                if (slots != null) {
+                    var mro = _userObject.PythonType.ResolutionOrder;
+                    List<string> slotNames = new List<string>();
+                    
+                    for(int i = mro.Count - 1; i>= 0; i--) {
+                        slotNames.AddRange(mro[i].GetTypeSlots());
+                    }
+
+                    for (int i = 0; i < slots.Length - 1; i++) {
+                        if (slots[i] != Uninitialized.Instance) {
+                            res.Add(new ObjectDebugView(slotNames[i], slots[i]));
+                        }
+                    }
+                }
+                return res;
+            }
         }
     }
 }

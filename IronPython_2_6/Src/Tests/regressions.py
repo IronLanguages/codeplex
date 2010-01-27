@@ -380,10 +380,10 @@ def test_conversions_cp19675():
 @skip("win32")
 def test_type_delegate_conversion():
     import clr
-    clr.AddReference('Microsoft.Scripting.Core')
     if is_net40:
       from System import Func    
     else:
+      clr.AddReference('Microsoft.Scripting.Core')
       from Microsoft.Scripting.Utils import Func    
       
     class x(object): pass
@@ -405,6 +405,40 @@ def test_module_alias_cp19656():
         import nt
         nt.unlink(stuff_mod)
         nt.unlink(check_mod)
+
+def test_cp24691():
+    import os
+    pwd = os.getcwd()
+    AreEqual(os.path.abspath("bad:"),
+             os.getcwd() + "\\bad:")
+
+def test_cp24690():
+    import errno
+    AreEqual(errno.errorcode[2],
+             "ENOENT")
+
+def test_cp24692():
+    import errno, nt, stat
+    dir_name = "cp24692_testdir"
+    try:
+        nt.mkdir(dir_name)
+        nt.chmod(dir_name, stat.S_IREAD)
+        try:
+            nt.rmdir(dir_name)
+        except WindowsError, e:
+            pass
+        AreEqual(e.errno, errno.EACCES)
+    finally:
+        nt.chmod(dir_name, stat.S_IWRITE)
+        nt.rmdir(dir_name)
+
+# TODO: this test needs to run against Dev10 builds as well
+@skip("win32")
+def test_cp22735():
+    import System
+    if System.Environment.Version.Major < 4:
+        clr.AddReference("System.Core")
+    from System import Func
 
 #------------------------------------------------------------------------------
 #--General coverage.  These need to be extended.
@@ -441,6 +475,93 @@ def test_not___len___cp_24129():
     c = C()
     print bool(c)
     AreEqual(not c, False)
+
+@skip("win32")
+def test_cp18912():
+    import __future__
+    feature = __future__.__dict__['with_statement']
+    x = compile('x=1', 'ignored', 'exec', feature.compiler_flag)
+
+def test_cp19789():
+    class A:
+        a = 1
+    
+    class B(object):
+        b = 2
+    
+    class C(A, B):
+        pass
+    
+    AreEqual(dir(A),
+             ['__doc__', '__module__', 'a'])
+    Assert('b' in dir(B))
+    Assert('a' in dir(C) and 'b' in dir(C))
+
+def test_cp24573():
+    def f(a=None):
+        pass
+        
+    AssertErrorWithMessage(TypeError, "f() got multiple values for keyword argument 'a'",
+                           lambda: f(1, a=3))
+
+@skip("win32")
+def test_cp24802():
+    import clr
+    clr.AddReference('System.Drawing')
+    import System
+    p = System.Drawing.Pen(System.Drawing.Color.Blue)
+    p.Width = System.Single(3.14)
+    AreEqual(p.Width, System.Single(3.14))
+    p.Width = 4.0
+    AreEqual(p.Width, 4.0)
+
+#------------------------------------------------------------------------------
+# This is not a regression, but need to find the right place to move this test to
+
+class MyException(IOError):
+    def __str__(self):
+        return "MyException is a user sub-type of IOError"
+
+@skip("win32")
+def test_clr_exception_has_non_trivial_exception_message():
+    import System
+    try:
+        raise MyException
+    except System.Exception as e:
+        pass
+    AreEqual(e.Message, "Python Exception: MyException")
+
+def test_cp23822():
+    from copy import deepcopy
+    def F():
+        a = 4
+        class C:
+            field=7
+            def G(self):
+                print a
+                b = 4
+                return deepcopy(locals().keys())
+        
+        c = C()
+        return c.G()
+    
+    temp_list = F()
+    temp_list.sort()
+    AreEqual(temp_list, ['a', 'b', 'deepcopy', 'self'])
+    
+def test_cp23823():
+    from copy import deepcopy
+    def f():
+        a = 10
+        def g1():
+            print a
+            return deepcopy(locals().keys())
+        def g2():
+            return deepcopy(locals().keys())
+        return (g1(), g2())
+    
+    AreEqual(f(), (['a', 'deepcopy'], ['deepcopy']))
+
 
 #------------------------------------------------------------------------------
 #--Main

@@ -49,6 +49,7 @@ def test_excel():
     
     try: 
         ex = CreateExcelApplication() 
+        Assert(not callable(ex))
         ex.DisplayAlerts = False
         AreEqual(ex.DisplayAlerts, False)
         

@@ -19,16 +19,21 @@ using MSAst = System.Linq.Expressions;
 using MSAst = Microsoft.Scripting.Ast;
 #endif
 
-using System.Diagnostics;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Interpreter;
+
+using IronPython.Runtime;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
-    public class IfStatement : Statement {
+    public class IfStatement : Statement, IInstructionProvider {
         private readonly IfStatementTest[] _tests;
         private readonly Statement _else;
 
@@ -45,11 +50,24 @@ namespace IronPython.Compiler.Ast {
             get { return _else; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        public override MSAst.Expression Reduce() {
+            return ReduceWorker(true);
+        }
+
+        #region IInstructionProvider Members
+
+        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
+            // optimizing bool conversions does no good in the light compiler
+            compiler.Compile(ReduceWorker(false));
+        }
+
+        #endregion
+
+        private MSAst.Expression ReduceWorker(bool optimizeDynamicConvert) {
             MSAst.Expression result;
 
             if (_else != null) {
-                result = ag.Transform(_else);
+                result = _else;
             } else {
                 result = AstUtils.Empty();
             }
@@ -59,10 +77,12 @@ namespace IronPython.Compiler.Ast {
             while (i-- > 0) {
                 IfStatementTest ist = _tests[i];
 
-                result = ag.AddDebugInfoAndVoid(
+                result = GlobalParent.AddDebugInfoAndVoid(
                     Ast.Condition(
-                        ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
-                        ag.TransformMaybeSingleLineSuite(ist.Body, ist.Test.Start), 
+                        optimizeDynamicConvert ?
+                            TransformAndDynamicConvert(ist.Test, typeof(bool)) :
+                            GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
+                        TransformMaybeSingleLineSuite(ist.Body, ist.Test.Start),
                         result
                     ),
                     new SourceSpan(ist.Start, ist.Header)
@@ -84,12 +104,6 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
-        }
-
-        internal override bool CanThrow {
-            get {
-                return this._tests[0].Test.CanThrow;
-            }
         }
     }
 }

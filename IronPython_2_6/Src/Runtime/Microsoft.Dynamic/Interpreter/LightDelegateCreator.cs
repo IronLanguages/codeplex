@@ -34,26 +34,19 @@ namespace Microsoft.Scripting.Interpreter {
     /// compiled if they are executed often enough.
     /// </summary>
     internal sealed class LightDelegateCreator {
+        // null if we are forced to compile
         private readonly Interpreter _interpreter;
         private readonly LambdaExpression _lambda;
-        private readonly IList<ParameterExpression> _closureVariables;
 
         // Adaptive compilation support:
         private Type _compiledDelegateType;
         private Delegate _compiled;
-        private int _executionCount;
         private readonly object _compileLock = new object();
 
-        private const int CompilationThreshold = 32;
-
-        internal LightDelegateCreator(Interpreter interpreter, LambdaExpression lambda, IList<ParameterExpression> closureVariables) {
+        internal LightDelegateCreator(Interpreter interpreter, LambdaExpression lambda) {
+            Assert.NotNull(lambda);
             _interpreter = interpreter;
             _lambda = lambda;
-            _closureVariables = closureVariables;
-        }
-
-        internal IList<ParameterExpression> ClosureVariables {
-            get { return _closureVariables; }
         }
 
         internal Interpreter Interpreter {
@@ -61,7 +54,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         private bool HasClosure {
-            get { return _closureVariables.Count > 0; }
+            get { return _interpreter != null && _interpreter.Locals.ClosureSize > 0; }
         }
 
         internal bool HasCompiled {
@@ -88,7 +81,7 @@ namespace Microsoft.Scripting.Interpreter {
                 // the compiled delegate on its first run.
                 //
                 // Ideally, we would just rebind the compiled delegate using
-                // Delgate.CreateDelegate. Unfortunately, it doesn't work on
+                // Delegate.CreateDelegate. Unfortunately, it doesn't work on
                 // dynamic methods.
                 if (SameDelegateType) {
                     return CreateCompiledDelegate(closure);
@@ -104,7 +97,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             // Otherwise, we'll create an interpreted LightLambda
-            return new LightLambda(this, closure).MakeDelegate(_lambda.Type);
+            return new LightLambda(this, closure, _interpreter._compilationThreshold).MakeDelegate(_lambda.Type);
         }
 
         /// <summary>
@@ -137,6 +130,8 @@ namespace Microsoft.Scripting.Interpreter {
                     return;
                 }
 
+                PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Interpreted lambda compiled");
+                
                 // Interpreter needs a standard delegate type.
                 // So change the lambda's delegate type to Func<...> or
                 // Action<...> so it can be called from the LightLambda.Run
@@ -148,7 +143,7 @@ namespace Microsoft.Scripting.Interpreter {
                 }
 
                 if (HasClosure) {
-                    _compiled = LightLambdaClosureVisitor.BindLambda(lambda, _closureVariables);
+                    _compiled = LightLambdaClosureVisitor.BindLambda(lambda, _interpreter.Locals);
                 } else {
                     _compiled = lambda.Compile();
                 }
@@ -175,29 +170,6 @@ namespace Microsoft.Scripting.Interpreter {
                     }
                 }
                 return lambda.Type;
-            }
-        }
-
-        /// <summary>
-        /// Updates the execution count of this light delegate. If a certain
-        /// threshold is reached, it will start a background compilation.
-        /// </summary>
-        internal void UpdateExecutionCount() {
-            Debug.Assert(_interpreter != null);
-
-            // Don't lock here, it's a frequently hit path.
-            //
-            // There could be multiple threads racing, but that is okay.
-            // Two bad things can happen:
-            //   * We miss increments (one thread sets the counter back)
-            //   * We might enter the "if" branch more than once.
-            //
-            // The first is okay, it just means we take longer to compile.
-            // The second we explicitly guard against inside of Compile().
-            //
-            if (++_executionCount >= CompilationThreshold) {
-                // Kick off the compile on another thread so this one can keep going
-                ThreadPool.QueueUserWorkItem(Compile, null);
             }
         }
     }

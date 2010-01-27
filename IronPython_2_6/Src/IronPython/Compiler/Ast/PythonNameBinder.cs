@@ -13,14 +13,22 @@
  *
  * ***************************************************************************/
 
+#if !CLR2
+using MSAst = System.Linq.Expressions;
+#else
+using MSAst = Microsoft.Scripting.Ast;
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 /*
  * The name binding:
@@ -46,6 +54,8 @@ using Microsoft.Scripting.Utils;
  */
 
 namespace IronPython.Compiler.Ast {
+    using Ast = MSAst.Expression;
+
     class DefineBinder : PythonWalkerNonRecursive {
         private PythonNameBinder _binder;
         public DefineBinder(PythonNameBinder binder) {
@@ -71,23 +81,33 @@ namespace IronPython.Compiler.Ast {
         public ParameterBinder(PythonNameBinder binder) {
             _binder = binder;
         }
-        public override bool Walk(NameExpression node) {
-            // Called for the sublist parameters. The elements of the tuple become regular
-            // local variables, therefore don't make the parameters (DefineParameter), but
-            // regular locals (DefineName)
-            _binder.DefineName(node.Name);
-            node.Reference = _binder.Reference(node.Name);
-            return false;
-        }
+
         public override bool Walk(Parameter node) {
-            node.Variable = _binder.DefineParameter(node.Name);
+            node.PythonVariable = _binder.DefineParameter(node.Name);
             return false;
         }
         public override bool Walk(SublistParameter node) {
-            node.Variable = _binder.DefineParameter(node.Name);
-            return true;
+            node.PythonVariable = _binder.DefineParameter(node.Name);
+            // we walk the node by hand to avoid walking the default values.
+            WalkTuple(node.Tuple);
+            return false;
+        }
+
+        private void WalkTuple(TupleExpression tuple) {
+            tuple.Parent = _binder._currentScope;
+            foreach (Expression innerNode in tuple.Items) {
+                NameExpression name = innerNode as NameExpression;
+                if (name != null) {
+                    _binder.DefineName(name.Name);
+                    name.Parent = _binder._currentScope;
+                    name.Reference = _binder.Reference(name.Name);
+                } else {                    
+                    WalkTuple((TupleExpression)innerNode);
+                }
+            }
         }
         public override bool Walk(TupleExpression node) {
+            node.Parent = _binder._currentScope;
             return true;
         }
     }
@@ -105,8 +125,10 @@ namespace IronPython.Compiler.Ast {
 
     class PythonNameBinder : PythonWalker {
         private PythonAst _globalScope;
-        private ScopeStatement _currentScope;
+        internal ScopeStatement _currentScope;
         private List<ScopeStatement> _scopes = new List<ScopeStatement>();
+        private List<ILoopStatement> _loops = new List<ILoopStatement>();
+        private List<int> _finallyCount = new List<int>();
 
         #region Recursive binders
 
@@ -117,6 +139,12 @@ namespace IronPython.Compiler.Ast {
         #endregion
 
         private readonly CompilerContext _context;
+
+        public CompilerContext Context {
+            get {
+                return _context;
+            }
+        }
 
         private PythonNameBinder(CompilerContext context) {
             _define = new DefineBinder(this);
@@ -134,18 +162,13 @@ namespace IronPython.Compiler.Ast {
             binder.Bind(ast);
         }
 
-        internal ModuleOptions Module {
-            get {
-                return ((PythonCompilerOptions)_context.Options).Module;
-            }
-        }
-
         #endregion
 
         private void Bind(PythonAst unboundAst) {
             Assert.NotNull(unboundAst);
 
             _currentScope = _globalScope = unboundAst;
+            _finallyCount.Add(0);
 
             // Find all scopes and variables
             unboundAst.Walk(this);
@@ -158,6 +181,14 @@ namespace IronPython.Compiler.Ast {
             // Finish the globals
             unboundAst.Bind(this);
 
+            // Finish Binding w/ outer most scopes first.
+            for (int i = _scopes.Count - 1; i >= 0; i--) {
+                _scopes[i].FinishBind(this);
+            }
+
+            // Finish the globals
+            unboundAst.FinishBind(this);
+
             // Run flow checker
             foreach (ScopeStatement scope in _scopes) {
                 FlowChecker.Check(scope);
@@ -167,6 +198,13 @@ namespace IronPython.Compiler.Ast {
         private void PushScope(ScopeStatement node) {
             node.Parent = _currentScope;
             _currentScope = node;
+            _finallyCount.Add(0);
+        }
+
+        private void PopScope() {
+            _scopes.Add(_currentScope);
+            _currentScope = _currentScope.Parent;
+            _finallyCount.RemoveAt(_finallyCount.Count - 1);
         }
 
         internal PythonReference Reference(string name) {
@@ -201,6 +239,7 @@ namespace IronPython.Compiler.Ast {
 
         // AssignmentStatement
         public override bool Walk(AssignmentStatement node) {
+            node.Parent = _currentScope;
             foreach (Expression e in node.Left) {
                 e.Walk(_define);
             }
@@ -208,6 +247,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override bool Walk(AugmentedAssignStatement node) {
+            node.Parent = _currentScope;
             node.Left.Walk(_define);
             return true;
         }
@@ -220,7 +260,7 @@ namespace IronPython.Compiler.Ast {
 
         // ClassDefinition
         public override bool Walk(ClassDefinition node) {
-            node.Variable = DefineName(node.Name);
+            node.PythonVariable = DefineName(node.Name);
 
             // Base references are in the outer context
             foreach (Expression b in node.Bases) b.Walk(this);
@@ -234,7 +274,7 @@ namespace IronPython.Compiler.Ast {
             
             PushScope(node);
 
-            node.ModuleNameVariable = _globalScope.EnsureGlobalVariable(this, "__name__");
+            node.ModuleNameVariable = _globalScope.EnsureGlobalVariable("__name__");
 
             // define the __doc__ and the __module__
             if (node.Body.Documentation != null) {
@@ -250,12 +290,13 @@ namespace IronPython.Compiler.Ast {
         // ClassDefinition
         public override void PostWalk(ClassDefinition node) {
             Debug.Assert(node == _currentScope);
-            _scopes.Add(_currentScope);
-            _currentScope = _currentScope.Parent;
+            PopScope();
         }
 
         // DelStatement
         public override bool Walk(DelStatement node) {
+            node.Parent = _currentScope;
+
             foreach (Expression e in node.Expressions) {
                 e.Walk(_delete);
             }
@@ -264,6 +305,7 @@ namespace IronPython.Compiler.Ast {
 
         // ExecStatement
         public override bool Walk(ExecStatement node) {
+            node.Parent = _currentScope;
             if (node.Locals == null && node.Globals == null) {
                 Debug.Assert(_currentScope != null);
                 _currentScope.ContainsUnqualifiedExec = true;
@@ -281,15 +323,225 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
+        public override bool Walk(ExpressionStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(BinaryExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(AndExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(CallExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ConditionalExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(IndexExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ListComprehension node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ListComprehensionIf node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+        
+        public override bool Walk(MemberExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(TupleExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ListExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(DictionaryExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(YieldExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(UnaryExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(SliceExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override void PostWalk(ConditionalExpression node) {
+            node.Parent = _currentScope;
+            base.PostWalk(node);
+        }
+
+        public override bool Walk(BackQuoteExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ConstantExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(GeneratorExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(OrExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(LambdaExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ParenthesisExpression node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(EmptyStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(RaiseStatement node) {
+            node.Parent = _currentScope;
+            node.InFinally = _finallyCount[_finallyCount.Count - 1] != 0;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(SuiteStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+        
         // ForEachStatement
         public override bool Walk(ForStatement node) {
+            node.Parent = _currentScope;
+            if (_currentScope is FunctionDefinition) {
+                _currentScope.ShouldInterpret = false;
+            }
+
+            // we only push the loop for the body of the loop
+            // so we need to walk the for statement ourselves
             node.Left.Walk(_define);
-            // Add locals
-            return true;
+
+            if (node.Left != null) {
+                node.Left.Walk(this);
+            }
+            if (node.List != null) {
+                node.List.Walk(this);
+            }
+            
+            PushLoop(node);
+
+            if (node.Body != null) {
+                node.Body.Walk(this);
+            }
+            
+            PopLoop();
+            
+            if (node.Else != null) {
+                node.Else.Walk(this);
+            }
+
+            return false;
+        }
+
+        private void PushLoop(ILoopStatement node) {
+            node.BreakLabel = Ast.Label("break");
+            node.ContinueLabel = Ast.Label("continue");
+            _loops.Add(node);
+        }
+
+        private void PopLoop() {
+            _loops.RemoveAt(_loops.Count - 1);
+        }
+
+        public override bool Walk(WhileStatement node) {
+            node.Parent = _currentScope;
+
+            // we only push the loop for the body of the loop
+            // so we need to walk the while statement ourselves
+            if (node.Test != null) {
+                node.Test.Walk(this);
+            }
+            
+            PushLoop(node);
+            if (node.Body != null) {
+                node.Body.Walk(this);
+            }
+            PopLoop();
+
+            if (node.ElseStatement != null) {
+                node.ElseStatement.Walk(this);
+            }
+            
+            return false;
+        }
+
+        public override bool Walk(BreakStatement node) {
+            node.Parent = _currentScope;
+            node.LoopStatement = _loops[_loops.Count - 1];
+            
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ContinueStatement node) {
+            node.Parent = _currentScope;
+            node.LoopStatement = _loops[_loops.Count - 1];
+            
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ReturnStatement node) {
+            node.Parent = _currentScope;
+            FunctionDefinition funcDef = _currentScope as FunctionDefinition;
+            if (funcDef != null) {
+                funcDef._hasReturn = true;
+            }
+            return base.Walk(node);
         }
 
         // WithStatement
         public override bool Walk(WithStatement node) {
+            node.Parent = _currentScope;
+            _currentScope.ContainsExceptionHandling = true;
+
             if (node.Variable != null) {
                 node.Variable.Walk(_define);
             }
@@ -298,6 +550,8 @@ namespace IronPython.Compiler.Ast {
 
         // FromImportStatement
         public override bool Walk(FromImportStatement node) {
+            node.Parent = _currentScope;
+
             if (node.Names != FromImportStatement.Star) {
                 PythonVariable[] variables = new PythonVariable[node.Names.Count];
                 for (int i = 0; i < node.Names.Count; i++) {
@@ -316,11 +570,11 @@ namespace IronPython.Compiler.Ast {
 
         // FunctionDefinition
         public override bool Walk(FunctionDefinition node) {
-            node._nameVariable = _globalScope.EnsureGlobalVariable("__name__");            
+            node._nameVariable = _globalScope.EnsureGlobalVariable("__name__");
             
             // Name is defined in the enclosing context
             if (!node.IsLambda) {
-                node.Variable = DefineName(node.Name);
+                node.PythonVariable = DefineName(node.Name);
             }
             
             // process the default arg values in the outer context
@@ -349,12 +603,13 @@ namespace IronPython.Compiler.Ast {
         // FunctionDefinition
         public override void PostWalk(FunctionDefinition node) {
             Debug.Assert(_currentScope == node);
-            _scopes.Add(_currentScope);
-            _currentScope = _currentScope.Parent;
+            PopScope();
         }
 
         // GlobalStatement
         public override bool Walk(GlobalStatement node) {
+            node.Parent = _currentScope;
+
             foreach (string n in node.Names) {
                 PythonVariable conflict;
                 // Check current scope for conflicting variable
@@ -364,8 +619,6 @@ namespace IronPython.Compiler.Ast {
                     switch (conflict.Kind) {
                         case VariableKind.Global:
                         case VariableKind.Local:
-                        case VariableKind.HiddenLocal:
-                        case VariableKind.GlobalLocal:
                             assignedGlobal = true;
                             ReportSyntaxWarning(
                                 String.Format(
@@ -386,8 +639,6 @@ namespace IronPython.Compiler.Ast {
                                 node);
                             break;
                     }
-                } else {
-                    conflict = null;
                 }
 
                 // Check for the name being referenced previously. If it has been, issue warning.
@@ -414,9 +665,25 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override bool Walk(NameExpression node) {
+            node.Parent = _currentScope;
             node.Reference = Reference(node.Name);
             return true;
         }
+
+        public override bool Walk(PrintStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(IfStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(AssertStatement node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }        
 
         // PythonAst
         public override bool Walk(PythonAst node) {
@@ -439,10 +706,13 @@ namespace IronPython.Compiler.Ast {
             // the publishing must be done after the class local binding.
             Debug.Assert(_currentScope == node);
             _currentScope = _currentScope.Parent;
+            _finallyCount.RemoveAt(_finallyCount.Count - 1);
         }
 
         // ImportStatement
         public override bool Walk(ImportStatement node) {
+            node.Parent = _currentScope;
+
             PythonVariable[] variables = new PythonVariable[node.Names.Count];
             for (int i = 0; i < node.Names.Count; i++) {
                 string name = node.AsNames[i] != null ? node.AsNames[i] : node.Names[i].Names[0];
@@ -454,19 +724,38 @@ namespace IronPython.Compiler.Ast {
 
         // TryStatement
         public override bool Walk(TryStatement node) {
+            // we manually walk the TryStatement so we can track finally blocks.
+            node.Parent = _currentScope;
+            _currentScope.ContainsExceptionHandling = true;
+
+            node.Body.Walk(this);
+
             if (node.Handlers != null) {
                 foreach (TryStatementHandler tsh in node.Handlers) {
                     if (tsh.Target != null) {
                         tsh.Target.Walk(_define);
                     }
+
+                    tsh.Walk(this);
                 }
             }
 
-            return true;
+            if (node.Else != null) {
+                node.Else.Walk(this);
+            }
+
+            if (node.Finally != null) {
+                _finallyCount[_finallyCount.Count - 1]++;
+                node.Finally.Walk(this);
+                _finallyCount[_finallyCount.Count - 1]--;
+            }
+
+            return false;
         }
 
         // ListComprehensionFor
         public override bool Walk(ListComprehensionFor node) {
+            node.Parent = _currentScope;
             node.Left.Walk(_define);
             return true;
         }

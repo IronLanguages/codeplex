@@ -158,22 +158,15 @@ def test_cp9908():
     class LE(LayoutEngine):
         def Layout(self, parent, eventArgs):
             LayoutEngine.Layout(self, parent, eventArgs)
-            
-            
+    
     le = LE()
     
     class P(Panel):
-        @property
         def get_LayoutEngine(self): return le
-        #LayoutEngine = property(lambda self: le)
-
-        
-    p = P()
-    Assert(str(p.get_LayoutEngine).startswith("<LE object at 0x"))
-    AreEqual(p.get_LayoutEngine, le)
-    #CodePlex 9908 - this lambda should return le, not throw a TypeError
-    AssertError(TypeError, lambda: p.LayoutEngine)
     
+    p = P()
+    AreEqual(p.LayoutEngine, le)
+
 def test_cp13405():
     from System.Windows.Forms import PropertyGrid, DockStyle, Form
     grid = PropertyGrid()

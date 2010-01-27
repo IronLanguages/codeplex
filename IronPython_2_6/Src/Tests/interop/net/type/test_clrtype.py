@@ -48,6 +48,8 @@ import System
 import clr
 import nt, os
 
+clr.AddReference("Microsoft.Dynamic")
+
 #--GLOBALS---------------------------------------------------------------------
 TYPE_COUNTER = 0
 
@@ -845,7 +847,6 @@ def test_neg_type___new___args():
         AreEqual(e.message,
                  "__new__() takes exactly 1 argument (4 given)")
     finally:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=23346
         AreEqual(called, False)
     
 

@@ -36,8 +36,6 @@ et = IronPythonTest.EngineTest()
 multipleexecskips = [ ]
 for s in dir(et):
     if s.startswith("Scenario"):
-        if is_net40 and s in ["ScenarioPartialTrust"]: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24085
-            continue
         if s in multipleexecskips:
             exec '@skip("multiple_execute") \ndef test_Engine_%s(): getattr(et, "%s")()' % (s, s)
         else :
@@ -173,7 +171,41 @@ def test_import_clr():
     eng = Python.CreateEngine()
     mod = Python.ImportModule(eng, 'clr')
     Assert('ToString' not in eng.Operations.GetMemberNames(42))
-        
+
+@skip("silverlight")
+def test_cp6703():
+    import clr
+    clr.AddReference("IronPython")
+    import IronPython
+    pe = IronPython.Hosting.Python.CreateEngine()
+    
+    stuff = '''
+import System
+a = 2
+globals()["b"] = None
+globals().Add("c", "blah")
+joe = System.Collections.Generic.KeyValuePair[object,object]("d", int(3))
+globals().Add(joe)
+count = 0
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("b", None)): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("c", "blah")): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", int(3))): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", 3)): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("d", "3")): count += 1
+if globals().Contains(System.Collections.Generic.KeyValuePair[object,object]("a", 2)): count += 1
+'''
+    s = pe.CreateScope()
+    pe.Execute(stuff, s)
+    AreEqual(s.count, 6)
+    
+
+def test_cp20594():
+    import IronPython
+    AreEqual(IronPython.Runtime.PythonContext.GetIronPythonAssembly("IronPython").split(",", 1)[1],
+             IronPython.Runtime.PythonContext.GetIronPythonAssembly("IronPython.Modules").split(",", 1)[1])
+            
+
+#--MAIN------------------------------------------------------------------------        
 run_test(__name__)
 
 

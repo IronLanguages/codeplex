@@ -76,7 +76,10 @@ namespace IronPython.Compiler {
             _gotoRouter = Expression.Variable(typeof(int), "$gotoRouter");
         }
 
-        internal Expression Reduce(bool shouldInterpret, bool emitDebugSymbols, IList<ParameterExpression> parameters, Func<Expression<Func<MutableTuple, object>>, Expression<Func<MutableTuple, object>>> bodyConverter) {
+        internal Expression Reduce(bool shouldInterpret, bool emitDebugSymbols, int compilationThreshold, 
+            IList<ParameterExpression> parameters, Func<Expression<Func<MutableTuple, object>>, 
+            Expression<Func<MutableTuple, object>>> bodyConverter) {
+
             _state = LiftVariable(Expression.Parameter(typeof(int), "state"));
             _current = LiftVariable(Expression.Parameter(typeof(object), "current"));
 
@@ -154,7 +157,8 @@ namespace IronPython.Compiler {
                             (Expression)Expression.Constant(
                                 new LazyCode<Func<MutableTuple, object>>(
                                     bodyConverter(innerLambda),
-                                    shouldInterpret
+                                    shouldInterpret,
+                                    compilationThreshold
                                 ),
                                 typeof(object)
                             )
@@ -461,9 +465,14 @@ namespace IronPython.Compiler {
             );
         }
 
-        // This is copied from the base implementation. 
-        // Just want to make sure we disallow yield in filters
+        // Mostly copied from the base implementation. 
+        // - makes sure we disallow yield in filters
+        // - lifts exception variable
         protected override CatchBlock VisitCatchBlock(CatchBlock node) {
+            if (node.Variable != null) {
+                LiftVariable(node.Variable);
+            }
+
             Expression v = Visit(node.Variable);
             int yields = _yields.Count;
             Expression f = Visit(node.Filter);
@@ -480,7 +489,6 @@ namespace IronPython.Compiler {
             // if we have variable and no yields in the catch block then
             // we need to hoist the variable into a closure
             if (v != node.Variable && yields == _yields.Count) {
-                _temps.Add(node.Variable);
                 return Expression.MakeCatchBlock(
                     node.Test,
                     node.Variable,
@@ -641,7 +649,7 @@ namespace IronPython.Compiler {
                         // and returned a different node
                         throw Assert.Unreachable;
                 }
-            } else if (!(left is DelayedTupleExpression)) {
+            } else if (left is BlockExpression) {
                 // Get the last expression of the rewritten left side
                 var leftBlock = (BlockExpression)left;
                 left = leftBlock.Expressions[leftBlock.Expressions.Count - 1];
@@ -977,15 +985,17 @@ namespace IronPython.Compiler {
         }
     }
 
-    sealed class PythonGeneratorExpression : Expression {
-        private LambdaExpression _lambda;
+    internal sealed class PythonGeneratorExpression : Expression {
+        private readonly LambdaExpression _lambda;
+        private readonly int _compilationThreshold;
 
-        public PythonGeneratorExpression(LambdaExpression lambda) {
+        public PythonGeneratorExpression(LambdaExpression lambda, int compilationThreshold) {
             _lambda = lambda;
+            _compilationThreshold = compilationThreshold;
         }
 
         public override Expression Reduce() {
-            return _lambda.ToGenerator(false, true);
+            return _lambda.ToGenerator(false, true, _compilationThreshold);
         }
 
         public sealed override ExpressionType NodeType {

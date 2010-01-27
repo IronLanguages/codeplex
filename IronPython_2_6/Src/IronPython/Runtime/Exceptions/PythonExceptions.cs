@@ -21,6 +21,7 @@ using Microsoft.Scripting.Ast;
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
@@ -381,7 +382,11 @@ namespace IronPython.Runtime.Exceptions {
                     return _clrException;
                 }
 
-                System.Exception newExcep = CreateClrException(_message as string ?? ("Python Exception: " + _type.Name));
+                string stringMessage = _message as string;
+                if (String.IsNullOrEmpty(stringMessage)) {
+                    stringMessage = "Python Exception: " + _type.Name;
+                }
+                System.Exception newExcep = CreateClrException(stringMessage);
                 AssociateException(newExcep, this);
 
                 Interlocked.CompareExchange<System.Exception>(ref _clrException, newExcep, null);
@@ -1023,6 +1028,17 @@ for k, v in toError.iteritems():
             if (clrException is InvalidCastException || clrException is ArgumentNullException) {
                 // explicit extra conversions outside the generated hierarchy
                 pyExcep = new BaseException(TypeError);
+#if !SILVERLIGHT
+            } else if (clrException is Win32Exception) {
+                Win32Exception win32 = (Win32Exception)clrException;
+                pyExcep = new _WindowsError();
+                if ((win32.ErrorCode & 0x80070000) == 0x80070000) {
+                    pyExcep.__init__(win32.ErrorCode & 0xffff, win32.Message);
+                } else {
+                    pyExcep.__init__(win32.ErrorCode, win32.Message);
+                }
+                return pyExcep;
+#endif
             } else {
                 // conversions from generated code (in the generated hierarchy)...
                 pyExcep = ToPythonHelper(clrException);

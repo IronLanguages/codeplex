@@ -50,31 +50,30 @@ namespace IronPython.Compiler.Ast {
             return base.ToString() + ":" + _name;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return ag.Get(
-                type,
+        public override MSAst.Expression Reduce() {
+            return GlobalParent.Get(
                 _name,
-                ag.Transform(_target)
+                _target
             );
         }
 
-        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, PythonOperationKind op) {
+        internal override MSAst.Expression TransformSet(SourceSpan span, MSAst.Expression right, PythonOperationKind op) {
             if (op == PythonOperationKind.None) {
-                return ag.AddDebugInfoAndVoid(
-                    ag.Set(
-                        typeof(object),
+                return GlobalParent.AddDebugInfoAndVoid(
+                    GlobalParent.Set(
                         _name,
-                        ag.Transform(_target),
+                        _target,
                         right
                     ),
                     span
                 );
             } else {
-                MSAst.ParameterExpression temp = ag.GetTemporary("inplace");
-                return ag.AddDebugInfo(
+                MSAst.ParameterExpression temp = Ast.Variable(typeof(object), "inplace");
+                return GlobalParent.AddDebugInfo(
                     Ast.Block(
-                        Ast.Assign(temp, ag.Transform(_target)),
-                        SetMemberOperator(ag, right, op, temp),
+                        new[] { temp },
+                        Ast.Assign(temp, _target),
+                        SetMemberOperator(right, op, temp),
                         AstUtils.Empty()
                     ),
                     Span.Start,
@@ -91,16 +90,14 @@ namespace IronPython.Compiler.Ast {
             return null;
         }
 
-        private MSAst.Expression SetMemberOperator(AstGenerator ag, MSAst.Expression right, PythonOperationKind op, MSAst.ParameterExpression temp) {
-            return ag.Set(
-                typeof(object),
+        private MSAst.Expression SetMemberOperator(MSAst.Expression right, PythonOperationKind op, MSAst.ParameterExpression temp) {
+            return GlobalParent.Set(
                 _name,
                 temp,
-                ag.Operation(
+                GlobalParent.Operation(
                     typeof(object),
                     op,
-                    ag.Get(
-                        typeof(object),
+                    GlobalParent.Get(
                         _name,
                         temp
                     ),
@@ -109,11 +106,11 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            return ag.Delete(
+        internal override MSAst.Expression TransformDelete() {
+            return GlobalParent.Delete(
                 typeof(void),
                 _name,
-                ag.Transform(_target)
+                _target
             );
         }
 

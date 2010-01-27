@@ -89,7 +89,7 @@ namespace IronPython.Runtime.Binding {
         public override DynamicMetaObject/*!*/ BindUnaryOperation(UnaryOperationBinder/*!*/ binder) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Binding, "OldClass UnaryOperation" + binder.Operation);
             PerfTrack.NoteEvent(PerfTrack.Categories.BindingTarget, "OldClass UnaryOperation");
-            return PythonProtocol.Operation(binder, this);
+            return PythonProtocol.Operation(binder, this, null);
         }
 
         public override DynamicMetaObject/*!*/ BindGetIndex(GetIndexBinder/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ indexes) {
@@ -397,7 +397,7 @@ namespace IronPython.Runtime.Binding {
         private DynamicMetaObject/*!*/ MakeMemberAccess(DynamicMetaObjectBinder/*!*/ member, string name, MemberAccess access, params DynamicMetaObject/*!*/[]/*!*/ args) {
             DynamicMetaObject self = Restrict(typeof(OldInstance));
 
-            CustomOldClassDictionaryStorage dict;
+            CustomInstanceDictionaryStorage dict;
             int key = GetCustomStorageSlot(name, out dict);
             if (key == -1) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Binding, "OldInstance " + access + " NoOptimized"); 
@@ -487,8 +487,8 @@ namespace IronPython.Runtime.Binding {
             );                            
         }
 
-        private int GetCustomStorageSlot(string name, out CustomOldClassDictionaryStorage dict) {
-            dict = Value.Dictionary._storage as CustomOldClassDictionaryStorage;
+        private int GetCustomStorageSlot(string name, out CustomInstanceDictionaryStorage dict) {
+            dict = Value.Dictionary._storage as CustomInstanceDictionaryStorage;
             if (dict == null || Value._class.HasSetAttr) {
                 return -1;
             }

@@ -219,6 +219,26 @@ def test_get_set_locale():
 def test_cp17819():
     import xml.sax
     AreEqual(xml.sax._false, 0)
+
+@runonly("win32")
+def test_cp20162():
+    import collections
+    AssertErrorWithMessage(TypeError, "deque() takes at most 2 arguments (3 given)",
+                           collections.deque, 'abc', 2, 2)
+
+def test_cp20603():
+    '''
+    Just ensure this does not throw a ValueError.
+    '''
+    import os
+    for root, files, dirs in os.walk(''):
+        for f in files:
+            temp = os.path.join(root, f)
+
+def test_cp21929():
+    import os
+    AreEqual(os.listdir(""),
+             os.listdir(os.getcwd()))
     
 ##MAIN#########################################################################
 run_test(__name__)

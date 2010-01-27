@@ -38,8 +38,14 @@ def test_none():
     AssertError(TypeError, 'abc'.replace, None, 'ef')
     AssertError(TypeError, 'abc'.replace, None, 'ef', 1)
     
-    AssertError(TypeError, lambda: None + 'abc')
-    AssertError(TypeError, lambda: 'abc' + None)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'NoneType' and 'str'",
+                           lambda: None + 'abc')
+    AssertError(TypeError, #"cannot concatenate 'str' and 'NoneType' objects", #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21947
+                           lambda: 'abc' + None)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'NoneType' and 'str'",
+                           lambda: None + '')
+    AssertError(TypeError, #"cannot concatenate 'str' and 'NoneType' objects", #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21947
+                           lambda: '' + None)
 
 def test_add_mul():
     AssertError(TypeError, lambda: "a" + 3)

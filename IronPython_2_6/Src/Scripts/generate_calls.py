@@ -539,8 +539,84 @@ def gen_fast_init_switch(cw):
 def gen_fast_init_max_args(cw):
     cw.write("public const int MaxFastLateBoundInitArgs = %d;" % MAX_FAST_INIT_ARGS)
 
+MAX_INSTRUCTION_PROVIDED_CALLS = 7
+def gen_call_expression_instruction_switch(cw):
+    for i in xrange(MAX_INSTRUCTION_PROVIDED_CALLS):
+        cw.case_label('case %d:' % i)
+        cw.write('compiler.Compile(Parent.LocalContext);')
+        cw.write('compiler.Compile(_target);')
+        for j in xrange(i):
+            cw.write('compiler.Compile(_args[%d].Expression);' % j)
+        cw.write('compiler.Instructions.Emit(new Invoke%dInstruction(Parent.PyContext));' % i)        
+        cw.write('return;')
+        cw.dedent()
+
+def gen_call_expression_instructions(cw):
+    for i in xrange(MAX_INSTRUCTION_PROVIDED_CALLS):
+        siteargs = 'object, ' * (i + 1)
+        argfetch = '\n'.join(['        var arg%d = frame.Pop();' % (j-1) for j in xrange(i, 0, -1)])
+        callargs = ', '.join(['target'] + ['arg%d' % j for j in xrange(i)])
+        cw.write("""
+class Invoke%(argcount)dInstruction : InvokeInstruction {
+    private readonly CallSite<Func<CallSite, CodeContext, %(siteargs)sobject>> _site;
+
+    public Invoke%(argcount)dInstruction(PythonContext context) {
+        _site = context.CallSite%(argcount)d;
+    }
+
+    public override int ConsumedStack {
+        get {
+            return %(consumedCount)d;
+        }
+    }
+
+    public override int Run(InterpretedFrame frame) {
+%(argfetch)s
+        var target = frame.Pop();
+        frame.Push(_site.Target(_site, (CodeContext)frame.Pop(), %(callargs)s));
+        return +1;
+    }
+}""" % {'siteargs': siteargs, 'argfetch' : argfetch, 'callargs' : callargs, 'argcount' : i, 'consumedCount' : i + 2 })
+
+
+def gen_shared_call_sites_storage(cw):
+    for i in xrange(MAX_INSTRUCTION_PROVIDED_CALLS):
+        siteargs = 'object, ' * (i + 1)
+        cw.writeline('private CallSite<Func<CallSite, CodeContext, %sobject>> _callSite%d;' % (siteargs, i))
+
+def gen_shared_call_sites_properties(cw):
+    for i in xrange(MAX_INSTRUCTION_PROVIDED_CALLS):
+        siteargs = 'object, ' * (i + 1)
+        cw.enter_block('internal CallSite<Func<CallSite, CodeContext, %sobject>> CallSite%d' % (siteargs, i))
+        cw.enter_block('get')
+        cw.writeline('EnsureCall%dSite();' % i)
+
+        cw.writeline('return _callSite%d;' % i)
+        cw.exit_block()
+        cw.exit_block()
+        
+        cw.writeline('')
+        
+        cw.enter_block('private void EnsureCall%dSite()' % i)
+        cw.enter_block('if (_callSite%d == null)' % i)
+        cw.writeline('Interlocked.CompareExchange(')
+        cw.indent()
+        cw.writeline('ref _callSite%d,' % i)
+        cw.writeline('CallSite<Func<CallSite, CodeContext, %sobject>>.Create(Invoke(new CallSignature(%d))),' % (siteargs, i))
+        cw.writeline('null')
+        cw.dedent()
+        cw.writeline(');')
+        cw.exit_block()
+        cw.exit_block()
+        
+        cw.writeline('')
+
 def main(): 
     return generate(
+        ("Python Shared Call Sites Properties", gen_shared_call_sites_properties),
+        ("Python Shared Call Sites Storage", gen_shared_call_sites_storage),
+        ("Python Call Expression Instructions", gen_call_expression_instructions),
+        ("Python Call Expression Instruction Switch", gen_call_expression_instruction_switch),
         ("Python Fast Init Max Args", gen_fast_init_max_args),
         ("Python Fast Init Switch", gen_fast_init_switch),
         ("Python Fast Init Callers", gen_fast_init_callers),

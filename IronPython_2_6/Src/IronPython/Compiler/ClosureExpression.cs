@@ -22,7 +22,7 @@ using Microsoft.Scripting.Ast;
 using System;
 using System.Reflection;
 
-using Microsoft.Scripting;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -37,11 +37,11 @@ namespace IronPython.Compiler {
     /// </summary>
     class ClosureExpression : Expression, IPythonVariableExpression {
         private readonly Expression/*!*/ _closureCell;
-        private readonly Expression _parameter;
+        private readonly ParameterExpression _parameter;
         private readonly Ast.PythonVariable/*!*/ _variable;
-        private static readonly FieldInfo _cellField = typeof(ClosureCell).GetField("Value");
+        internal static readonly FieldInfo _cellField = typeof(ClosureCell).GetField("Value");
 
-        public ClosureExpression(Ast.PythonVariable/*!*/ variable, Expression/*!*/ closureCell, Expression parameter) {
+        public ClosureExpression(Ast.PythonVariable/*!*/ variable, Expression/*!*/ closureCell, ParameterExpression parameter) {
             Assert.NotNull(closureCell);
 
             _variable = variable;
@@ -64,7 +64,7 @@ namespace IronPython.Compiler {
         /// The original expression for the incoming parameter if this is a parameter closure.  Otherwise
         /// the value is null.
         /// </summary>
-        public Expression OriginalParameter {
+        public ParameterExpression OriginalParameter {
             get {
                 return _parameter;
             }
@@ -85,9 +85,65 @@ namespace IronPython.Compiler {
         /// </summary>
         public Expression/*!*/ Create() {
             if (OriginalParameter != null) {
-                return Expression.Assign(_closureCell, Expression.Call(typeof(PythonOps).GetMethod("MakeClosureCellWithValue"), OriginalParameter));
+                return Expression.Assign(_closureCell, Expression.Call(Ast.AstMethods.MakeClosureCellWithValue, OriginalParameter));
             }
-            return Expression.Assign(_closureCell, Expression.Call(typeof(PythonOps).GetMethod("MakeClosureCell")));
+            return Expression.Assign(_closureCell, MakeClosureCellExpression.Instance);
+        }
+
+        class MakeClosureCellExpression : Expression, IInstructionProvider {
+            private static readonly Expression _call = Expression.Call(Ast.AstMethods.MakeClosureCell);
+            public static readonly MakeClosureCellExpression Instance = new MakeClosureCellExpression();
+
+            public override bool CanReduce {
+                get {
+                    return true;
+                }
+            }
+
+            public override ExpressionType NodeType {
+                get {
+                    return ExpressionType.Extension;
+                }
+            }
+
+            public override Type Type {
+                get {
+                    return typeof(ClosureCell);
+                }
+            }
+
+            public override Expression Reduce() {
+                return _call;
+            }
+
+            #region IInstructionProvider Members
+
+            public void AddInstructions(LightCompiler compiler) {
+                compiler.Instructions.Emit(MakeClosureCellInstruction.Instance);
+            }
+
+            #endregion
+
+            class MakeClosureCellInstruction : Instruction {
+                public static readonly MakeClosureCellInstruction Instance = new MakeClosureCellInstruction();
+
+                public override int ProducedStack {
+                    get {
+                        return 1;
+                    }
+                }
+
+                public override int ConsumedStack {
+                    get {
+                        return 0;
+                    }
+                }
+
+                public override int Run(InterpretedFrame frame) {
+                    frame.Push(PythonOps.MakeClosureCell());
+                    return +1;
+                }
+            }
         }
 
         #endregion

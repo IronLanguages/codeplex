@@ -32,6 +32,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 namespace IronPython.Runtime {
 
     [PythonType("list"), Serializable, System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
+    [DebuggerTypeProxy(typeof(ObjectCollectionDebugProxy)), DebuggerDisplay("list, {Count} items")]
     public class List : IList, ICodeFormattable, IValueEquality, IList<object>, IReversible {
         internal int _size;
         internal volatile object[] _data;
@@ -97,6 +98,7 @@ namespace IronPython.Runtime {
                     extend(sequence);
                 }
             } catch (MissingMemberException) {
+                ExceptionHelpers.DynamicStackFrames = null;
                 _data = new object[20];
                 _size = 0;
                 extend(sequence);

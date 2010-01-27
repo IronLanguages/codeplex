@@ -376,7 +376,7 @@ namespace Microsoft.Scripting.Math {
 
         public int GetBitCount() {
             if (IsZero()) {
-                return 0;
+                return 1;
             }
             int w = GetWordCount() - 1;
             uint b = data[w];
@@ -1255,7 +1255,24 @@ namespace Microsoft.Scripting.Math {
                     carry = rot << carryShift;
                 }
             }
-            return new BigInteger(x.sign, zd);
+
+            BigInteger res = new BigInteger(x.sign, zd);
+
+            // We wish to always round down, but shifting our data array (which is not
+            // stored in 2's-complement form) has caused us to round towards zero instead.
+            // Correct that here.
+            if (x.IsNegative()) {
+                for (int i = 0; i < digitShift; i++) {
+                    if (xd[i] != 0u) {
+                        return res - One;
+                    }
+                }
+                if (smallShift > 0 && xd[digitShift] << (BitsPerDigit - smallShift) != 0u) {
+                    return res - One;
+                }
+            }
+
+            return res;
         }
 
         public static BigInteger Negate(BigInteger x) {
@@ -1584,7 +1601,7 @@ namespace Microsoft.Scripting.Math {
 
         [Confined]
         public double ToDouble(IFormatProvider provider) {
-            return ToFloat64();
+            return this.ToFloat64();
         }
 
         [Confined]

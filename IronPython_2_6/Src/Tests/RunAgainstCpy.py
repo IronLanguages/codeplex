@@ -52,10 +52,6 @@ os.environ.update({ "pythonpath" : sys.exec_prefix + r"\lib;" + rowan_bin})
 #tests we do not wish to run. These should be in the "Tests" directory
 EXCLUDE_LIST = ["test_fuzz_parser.py"]
 
-#For some reason test_math is taking extraordinary amounts of time to run
-#under CPython 2.5.  For now, this is just disabled.
-EXCLUDE_LIST.append("test_math.py")
-
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
 #These WILL be run.
 EXTRA_INCLUDE_LIST = ["regressions.py"]
@@ -69,6 +65,8 @@ EXTRA_INCLUDE_LIST = [x.lower() for x in EXTRA_INCLUDE_LIST]
 
 #Test Packages
 PKG_LIST = [ "modules"]
+
+BAIL_ON_FIRST_FAIL = True
 
 #------------------------------------------------------------------------------
 
@@ -95,13 +93,16 @@ for test_name in test_list:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = subprocess.call(sys.executable + " " + test_name,
+    ec = subprocess.call(sys.executable + " -B " + test_name,
                          env=os.environ,
                          shell=True)
     
     #if it fails, add it to the list
     if ec!=0:
         failed_tests.append(test_name + "; Exit Code=" + str(ec))
+        if BAIL_ON_FIRST_FAIL:
+            print "%s failed!" % test_name
+            break
     print
 
 #------------------------------------------------------------------------------
@@ -110,7 +111,7 @@ for test_name in PKG_LIST:
     print "-------------------------------------------------------------------"
     print "-- " + test_name
     #run the test
-    ec = subprocess.call(sys.executable + " harness.py " + test_name,
+    ec = subprocess.call(sys.executable + " -B harness.py " + test_name,
                          env=os.environ)
     
     #if it fails, add it to the list

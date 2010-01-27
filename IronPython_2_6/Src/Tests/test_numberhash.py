@@ -89,7 +89,8 @@ def test_userhash_result():
     class x(object):
         def __hash__(self): return 1<<33L
     
-    AreEqual(hash(x()), 2)
+    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894
+        AreEqual(hash(x()), 2)
 
 @skip("win32")
 def test_cli_number_hash():

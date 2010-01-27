@@ -274,7 +274,7 @@ def test_generic_TypeGroup():
     
     # IsAssignableFrom is SecurityCritical and thus cannot be called via reflection in silverlight,
     # so disable this in interpreted mode.
-    if not (is_silverlight and is_interpreted()):
+    if not (is_silverlight):
         # converstion to Type
         Assert(System.Type.IsAssignableFrom(System.IComparable, int))
         AssertError(TypeError, System.Type.IsAssignableFrom, object, genericTypes)
@@ -304,8 +304,7 @@ def test_generic_TypeGroup():
     # Test constructor
     if not is_silverlight:
         # GetType is SecurityCritical; can't call via reflection on silverlight
-        if not is_interpreted():
-            AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
+        AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
         
         # GetGenericTypeDefinition is SecuritySafe, can't call on Silverlight.
         AreEqual(System.EventHandler[System.EventArgs](handler).GetType().GetGenericTypeDefinition(), System.Type.GetType("System.EventHandler`1"))
@@ -1424,7 +1423,7 @@ def test_ienumerable__getiter__():
 
 def test_overload_functions():
     for x in min.Overloads.Functions:
-        Assert(x.__doc__.startswith('object min('))
+        Assert(x.__doc__.startswith('min('))
         Assert(x.__doc__.find('CodeContext') == -1)
     # multiple accesses should return the same object
     AreEqual(
@@ -1476,7 +1475,12 @@ def test_dir():
     # includes special types like ArgIterator and Func
     for attr in dir(System):
         dir(getattr(System, attr))
-        
+
+    if not is_silverlight:        
+        for x in [System.Collections.Generic.SortedList,
+                  System.Collections.Generic.Dictionary,
+                  ]:
+            temp = dir(x)
 
 def test_family_or_assembly():
     class my(FamilyOrAssembly): pass
@@ -1681,5 +1685,46 @@ def test_convert_int64_to_float():
     AreEqual(float(System.Int64(42)), 42.0)
     AreEqual(type(float(System.Int64(42))), float)
 
+@skip("silverlight")
+def test_cp24004():
+    Assert(System.Array.__dict__.has_key("Find"))
+
+@skip("silverlight")
+def test_cp23772():
+    a = System.Array
+    x = a[int]([1, 2, 3])
+    f = lambda x: x == 2
+    g = a.Find[int]
+    AreEqual(g.__call__(match=f, array=x),
+             2)
+
+def test_cp23938():
+    dt = System.DateTime()
+    x = dt.ToString
+    y = dt.__getattribute__("ToString")
+    AreEqual(x, y)
+    z = dt.__getattribute__(*("ToString",))
+    AreEqual(x, z)
+    
+    AreEqual(None.__getattribute__(*("__class__",)),
+             None.__getattribute__("__class__"))
+    
+    class Base(object):
+        def __getattribute__(self, name):
+            return object.__getattribute__(*(self, name))
+
+    class Derived(Base):
+        def __getattr__(self, name):
+            if name == "bar":
+                return 23
+            raise AttributeError(*(name,))
+        def __getattribute__(self, name):
+            return Base.__getattribute__(*(self, name))
+
+    a = Derived(*())
+    AreEqual(a.bar, 23)
+
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
 

@@ -441,4 +441,16 @@ def test_backwards_slicing_no_step():
         AreEqual(a, list("stuff"[:1] + "stuff" + "stuff"[1:]))
         a = list('stuff')
 
+def test_cp20125():
+    class Temp(list):
+        def __init__(self, value):
+          self.value = value
+        def __mul__(self, other):
+            return self.value * other
+
+    t1 = Temp(3.0)
+    AreEqual(t1 * 3.0, 9.0)
+
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)

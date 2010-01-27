@@ -126,8 +126,6 @@ namespace IronPython.Runtime.Operations {
             return InfiniteRepr;
         }
 
-#if !SILVERLIGHT
-
         internal static object LookupEncodingError(CodeContext/*!*/ context, string name) {
             Dictionary<string, object> errorHandlers = PythonContext.GetContext(context).ErrorHandlers;
             lock (errorHandlers) {
@@ -148,8 +146,6 @@ namespace IronPython.Runtime.Operations {
                 errorHandlers[name] = handler;
             }
         }
-
-#endif
 
         internal static PythonTuple LookupEncoding(CodeContext/*!*/ context, string encoding) {
             PythonContext.GetContext(context).EnsureEncodings();
@@ -969,6 +965,7 @@ namespace IronPython.Runtime.Operations {
                 // automatically re-throw on it's own.
                 throw;
             } catch {
+                ExceptionHelpers.DynamicStackFrames = null;
                 return false;
             }
         }
@@ -1260,7 +1257,9 @@ namespace IronPython.Runtime.Operations {
             Func<CodeContext, CodeContext> func = body as Func<CodeContext, CodeContext>;
             if (func == null) {
                 FunctionCode code = (FunctionCode)body;
-                code.UpdateDelegate(context.LanguageContext, true);
+                if (code.Target == null) {
+                    code.UpdateDelegate(context.LanguageContext, true);
+                }
                 return (Func<CodeContext, CodeContext>)code.Target;
             }
             return func;
@@ -1292,7 +1291,7 @@ namespace IronPython.Runtime.Operations {
             if (metaclass == TypeCache.OldInstance) {
                 return new OldClass(name, tupleBases, vars, selfNames);
             } else if (metaclass == TypeCache.PythonType) {
-                return PythonType.__new__(context, TypeCache.PythonType, name, tupleBases, vars);
+                return PythonType.__new__(context, TypeCache.PythonType, name, tupleBases, vars, selfNames);
             }
 
             // eg:
@@ -1600,6 +1599,8 @@ namespace IronPython.Runtime.Operations {
 
                     PrintWithDest(context, pc.SystemStandardError, "Original exception was:");
                     PrintWithDest(context, pc.SystemStandardError, pc.FormatException(exception));
+
+                    ExceptionHelpers.DynamicStackFrames = null;
                 }
             }
         }
@@ -2956,7 +2957,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static FunctionCode MakeFunctionCode(CodeContext context, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, Delegate code, string[] freeVars, string[] names, string[] cellVars, string[] varNames, int localCount) {
-            return new FunctionCode(PythonContext.GetContext(context), code, name, documentation, argNames, flags, span, path, freeVars, names, cellVars, varNames, localCount);
+            Compiler.Ast.SerializedScopeStatement scope = new Compiler.Ast.SerializedScopeStatement(name, argNames, flags, span, path, freeVars, names, cellVars, varNames);
+
+            return new FunctionCode(PythonContext.GetContext(context), code, scope, documentation, localCount);
         }
 
         [NoSideEffects]
@@ -3199,7 +3202,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object OldInstanceGetOptimizedDictionary(OldInstance instance, int keyVersion) {
-            CustomOldClassDictionaryStorage storage = instance.Dictionary._storage as CustomOldClassDictionaryStorage;
+            CustomInstanceDictionaryStorage storage = instance.Dictionary._storage as CustomInstanceDictionaryStorage;
             if (storage == null || instance._class.HasSetAttr || storage.KeyVersion != keyVersion) {
                 return null;
             }
@@ -3208,11 +3211,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object OldInstanceDictionaryGetValueHelper(object dict, int index, object oldInstance) {
-            return ((CustomOldClassDictionaryStorage)dict).GetValueHelper(index, oldInstance);
+            return ((CustomInstanceDictionaryStorage)dict).GetValueHelper(index, oldInstance);
         }
 
         public static bool TryOldInstanceDictionaryGetValueHelper(object dict, int index, object oldInstance, out object res) {
-            return ((CustomOldClassDictionaryStorage)dict).TryGetValueHelper(index, oldInstance, out res);
+            return ((CustomInstanceDictionaryStorage)dict).TryGetValueHelper(index, oldInstance, out res);
         }
 
         public static object OldInstanceGetBoundMember(CodeContext context, OldInstance instance, string name) {
@@ -3220,7 +3223,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object OldInstanceDictionarySetExtraValue(object dict, int index, object value) {
-            ((CustomOldClassDictionaryStorage)dict).SetExtraValue(index, value);
+            ((CustomInstanceDictionaryStorage)dict).SetExtraValue(index, value);
             return value;
         }
 
@@ -3395,7 +3398,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static DynamicMetaObjectBinder MakeCompatConvertAction(CodeContext/*!*/ context, Type toType, bool isExplicit) {
-            return PythonContext.GetContext(context).CompatConvert(toType, isExplicit);
+            return PythonContext.GetContext(context).Convert(toType, isExplicit ? ConversionResultKind.ExplicitCast : ConversionResultKind.ImplicitCast).CompatBinder;
         }
 
         public static DynamicMetaObjectBinder MakeSetAction(CodeContext/*!*/ context, string name) {
@@ -3522,6 +3525,8 @@ namespace IronPython.Runtime.Operations {
             try {
                 Importer.Import(modCtx.GlobalContext, main, PythonTuple.EMPTY, 0);
             } catch (SystemExitException ex) {
+                ExceptionHelpers.DynamicStackFrames = null;
+
                 object dummy;
                 return ex.GetExitCode(out dummy);
             }
@@ -3601,11 +3606,9 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static object LookupName(CodeContext context, string name) {
             object value;
-            if (context.TryLookupName(name, out value) && value != Uninitialized.Instance) {
+            if (context.TryLookupName(name, out value)) {
                 return value;
-            }
-
-            if (context.TryLookupGlobal(name, out value) && value != Uninitialized.Instance) {
+            } else if (context.TryLookupBuiltin(name, out value)) {
                 return value;
             }
 
@@ -4158,10 +4161,10 @@ namespace IronPython.Runtime.Operations {
             return stack;
         }
 
-        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable) {
+        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable, int compilationThreshold) {
             return Expression.Lambda(
                 code.Type,
-                new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, code.Parameters, x => x),
+                new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, compilationThreshold, code.Parameters, x => x),
                 code.Name,
                 code.Parameters
             );

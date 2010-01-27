@@ -14,7 +14,7 @@
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
-<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <SignedDir Condition="'$(SignAssembly)' == 'true'">Signed</SignedDir>
@@ -25,7 +25,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -34,7 +34,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;CLR2;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -44,7 +44,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -53,7 +53,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight 4 Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -64,18 +64,27 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppManifestTemplate.cs" />
     <Compile Include="Chiron.cs" />
     <Compile Include="Crc32.cs" />
+    <Compile Include="DetailsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DetailsForm.Designer.cs">
+      <DependentUpon>DetailsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="HtmlFormatter.cs" />
     <Compile Include="HttpRequestData.cs" />
     <Compile Include="HttpSocket.cs" />
     <Compile Include="LanguageInfo.cs" />
+    <Compile Include="Notification.cs" />
     <Compile Include="XapHttpHandler.cs" />
     <Compile Include="Zip.cs" />
     <Compile Include="MimeTypeSection.cs" />
@@ -84,12 +93,14 @@
     <Compile Include="XapBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="DetailsForm.resx">
+      <DependentUpon>DetailsForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="sl.png" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="slx.png" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="NotifyIcon.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

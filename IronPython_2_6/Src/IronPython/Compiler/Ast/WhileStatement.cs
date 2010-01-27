@@ -20,16 +20,19 @@ using MSAst = Microsoft.Scripting.Ast;
 #endif
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Interpreter;
+
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
 
-    public class WhileStatement : Statement {
+    public class WhileStatement : Statement, ILoopStatement, IInstructionProvider {
         // Marks the end of the condition of the while loop
         private SourceLocation _header;
         private readonly Expression _test;
         private readonly Statement _body;
         private readonly Statement _else;
+        private MSAst.LabelTarget _break, _continue;
 
         public WhileStatement(Expression test, Statement body, Statement else_) {
             _test = test;
@@ -59,10 +62,40 @@ namespace IronPython.Compiler.Ast {
             End = end;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        MSAst.LabelTarget ILoopStatement.BreakLabel {
+            get {
+                return _break;
+            }
+            set {
+                _break = value;
+            }
+        }
+
+        MSAst.LabelTarget ILoopStatement.ContinueLabel {
+            get {
+                return _continue;
+            }
+            set {
+                _continue = value;
+            }
+        }
+
+        public override MSAst.Expression Reduce() {
+            return ReduceWorker(true);
+        }
+
+        #region IInstructionProvider Members
+
+        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
+            // optimizing bool conversions does no good in the light compiler
+            compiler.Compile(ReduceWorker(false));
+        }
+
+        #endregion
+
+        private MSAst.Expression ReduceWorker(bool optimizeDynamicConvert) {
             // Only the body is "in the loop" for the purposes of break/continue
             // The "else" clause is outside
-            MSAst.LabelTarget breakLabel, continueLabel;
 
             ConstantExpression constTest = _test as ConstantExpression;
             if (constTest != null && constTest.Value is int) {
@@ -73,35 +106,37 @@ namespace IronPython.Compiler.Ast {
                     if (_else == null) {
                         return MSAst.Expression.Empty();
                     } else {
-                        return ag.Transform(_else);
+                        return _else;
                     }
                 }
 
                 MSAst.Expression test = MSAst.Expression.Constant(true);
                 MSAst.Expression res = AstUtils.While(
                     test,
-                    ag.TransformLoopBody(_body, SourceLocation.Invalid, out breakLabel, out continueLabel),
-                    ag.Transform(_else),
-                    breakLabel,
-                    continueLabel
+                    _body,
+                    _else,
+                    _break,
+                    _continue
                 );
 
                 if (_test.Start.Line != _body.Start.Line) {
-                    res = ag.AddDebugInfoAndVoid(res, _test.Span);
+                    res = GlobalParent.AddDebugInfoAndVoid(res, _test.Span);
                 }
 
                 return res;
             }
 
             return AstUtils.While(
-                ag.AddDebugInfo(
-                    ag.TransformAndDynamicConvert(_test, typeof(bool)),
+                GlobalParent.AddDebugInfo(
+                    optimizeDynamicConvert ?
+                        TransformAndDynamicConvert(_test, typeof(bool)) :
+                        GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, _test),
                     Header
                 ),
-                ag.TransformLoopBody(_body, _test.Start, out breakLabel, out continueLabel), 
-                ag.Transform(_else),
-                breakLabel,
-                continueLabel
+                _body,
+                _else,
+                _break,
+                _continue
             );
         }
 
@@ -118,12 +153,6 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
-        }
-
-        internal override bool CanThrow {
-            get {
-                return _test.CanThrow;
-            }
         }
     }
 }

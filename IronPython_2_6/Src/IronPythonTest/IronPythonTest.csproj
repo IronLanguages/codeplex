@@ -14,7 +14,7 @@
     <StartupObject>
     </StartupObject>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
-<AssemblyOriginatorKeyFile>$(SolutionDir)\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
+<AssemblyOriginatorKeyFile>$(SolutionDir)MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == '' And Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
     <SignedSym Condition="'$(SignAssembly)' == 'true'">SIGNED</SignedSym>
     <DelaySign>true</DelaySign>
@@ -25,19 +25,19 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;$(SignedSym);CLR2</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;$(SignedSym);CLR2</DefineConstants>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Debug' ">
     <DebugSymbols>true</DebugSymbols>
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT;$(SignedSym);CLR2</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -46,7 +46,7 @@
     <SilverlightBuild>true</SilverlightBuild>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
-<OutputPath>$(SolutionDir)\..\Bin\Silverlight Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT;$(SignedSym);CLR2</DefineConstants>
     <NoWarn>618</NoWarn>
     <NoStdLib>true</NoStdLib>
@@ -59,14 +59,14 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;CLR4;$(SignedSym)</DefineConstants>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'V4 Release|AnyCPU' ">
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)\..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
     <DefineConstants>TRACE;CLR4;$(SignedSym)</DefineConstants>
     <WarningsNotAsErrors>618,1685,649</WarningsNotAsErrors>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
@@ -82,6 +82,7 @@
     <Compile Include="DefaultParams.cs" />
     <Compile Include="DelegateTest.cs" />
     <Compile Include="DeTest.cs" />
+    <Compile Include="DynamicRegressions.cs" />
     <Compile Include="MemberMappingTests.cs" />
     <Compile Include="Stress\Engine.cs" />
     <Compile Include="EngineTest.cs" />
@@ -106,6 +107,7 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" Condition=" '$(Configuration)' == 'V4 Debug' Or '$(Configuration)' == 'V4 Release'"/>
     <Reference Include="System" Condition=" '$(SilverlightBuild)' != 'true' " />
     <Reference Include="System.Data" Condition=" '$(SilverlightBuild)' != 'true' " />
     <Reference Include="System.Xml" Condition=" '$(SilverlightBuild)' != 'true' " />
