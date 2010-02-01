@@ -56,7 +56,7 @@ using System.Security;
 
 #if !SILVERLIGHT
 [assembly: AssemblyVersion("2.0.0.0")]  // shouldn't change, this assembly is unchanged.  This is the version it originally shipped as.
-[assembly: AssemblyFileVersion("2.6.1001.0")]
+[assembly: AssemblyFileVersion("2.6.1002.0")]
 [assembly: AssemblyInformationalVersion("2.6")]
 [assembly: AllowPartiallyTrustedCallers]
 #endif
