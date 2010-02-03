@@ -1379,8 +1379,10 @@ def test_zzz_cli_features():
         AreEqual(testType(b'').join([myList]), b'abc')
 
     # bytearray
-    AreEqual(Microsoft.Scripting.IValueEquality.ValueEquals(bytearray(b'abc'), 'abc'), False)
-        
+    AreEqual(bytearray(b'abc') == 'abc', False)
+    if not is_net40:
+        AreEqual(Microsoft.Scripting.IValueEquality.ValueEquals(bytearray(b'abc'), 'abc'), False)
+    
     AreEqual(b'abc'.IsReadOnly, True)
     AreEqual(bytearray(b'abc').IsReadOnly, False)
         
