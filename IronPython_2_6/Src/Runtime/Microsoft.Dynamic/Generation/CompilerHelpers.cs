@@ -734,6 +734,7 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="lambda">The lambda to compile.</param>
         /// <param name="compileLoops">true if the presence of loops should result in a compiled delegate</param>
         /// <returns>A delegate which can interpret the lambda.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "compileLoops")]
         public static Delegate LightCompile(this LambdaExpression lambda, bool compileLoops) {
             return new LightCompiler(-1).CompileTop(lambda).CreateDelegate();
         }
@@ -766,7 +767,7 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="lambda">The lambda to compile.</param>
         /// <param name="compileLoops">true if the presence of loops should result in a compiled delegate</param>
         /// <returns>A delegate which can interpret the lambda.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "compileLoops"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static T LightCompile<T>(this Expression<T> lambda, bool compileLoops) {
             return (T)(object)LightCompile((LambdaExpression)lambda, -1);
         }

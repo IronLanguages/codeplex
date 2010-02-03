@@ -219,7 +219,118 @@ public class test2{
     
     # this is to make peverify happy, apparently snippetx.dll referenced to test1
     filecopy(test1_dll, test1_dll_along_with_ipy)
+
+@skip("multiple_execute")
+def test_assembly_resolve_isolation():
+    # CodePlex issue 23506. This feature only works with .NET 4.0
+    # builds of IronPython
+    if not is_dlr_in_ndp:
+        return
     
+    import os
+    clr.AddReference("IronPython.dll")
+    clr.AddReference("Microsoft.Scripting.dll")
+    from IronPython.Hosting import Python
+    from Microsoft.Scripting import SourceCodeKind
+    tmp = testpath.temporary_dir
+    tmp1 = path_combine(tmp, 'resolve1')
+    tmp2 = path_combine(tmp, 'resolve2')
+
+    if not os.path.exists(tmp1):
+        nt.mkdir(tmp1)
+    if not os.path.exists(tmp2):
+        nt.mkdir(tmp2)
+    
+    code1a = """
+using System;
+
+public class ResolveTestA {
+    public static string Test() {
+        ResolveTestB test = new ResolveTestB();
+        return test.DoSomething();
+    }
+}
+"""
+    
+    code1b = """
+using System;
+
+public class ResolveTestB {
+    public string DoSomething() {
+        return "resolve test 1";
+    }
+}
+"""
+    
+    code2a = """
+using System;
+
+public class ResolveTestA {
+    public static string Test() {
+        ResolveTestB test = new ResolveTestB();
+        return test.DoSomething();
+    }
+}
+"""
+    
+    code2b = """
+using System;
+
+public class ResolveTestB {
+    public string DoSomething() {
+        return "resolve test 2";
+    }
+}
+"""
+    
+    script_code = """import clr
+clr.AddReferenceToFile("ResolveTestA")
+from ResolveTestA import Test
+result = Test()
+"""
+    
+    test1a_cs, test1a_dll, test1b_cs, test1b_dll = map(
+        lambda x: path_combine(tmp1, x),
+        ['ResolveTestA.cs', 'ResolveTestA.dll', 'ResolveTestB.cs', 'ResolveTestB.dll']
+    )
+    
+    test2a_cs, test2a_dll, test2b_cs, test2b_dll = map(
+        lambda x: path_combine(tmp2, x),
+        ['ResolveTestA.cs', 'ResolveTestA.dll', 'ResolveTestB.cs', 'ResolveTestB.dll']
+    )
+
+    write_to_file(test1a_cs, code1a)
+    write_to_file(test1b_cs, code1b)
+    write_to_file(test2a_cs, code2a)
+    write_to_file(test2b_cs, code2b)
+    
+    AreEqual(run_csc("/nologo /target:library /out:" + test1b_dll + ' ' + test1b_cs), 0)
+    AreEqual(run_csc("/nologo /target:library /r:" + test1b_dll + " /out:" + test1a_dll + ' ' + test1a_cs), 0)
+    AreEqual(run_csc("/nologo /target:library /out:" + test2b_dll + ' ' + test2b_cs), 0)
+    AreEqual(run_csc("/nologo /target:library /r:" + test2b_dll + " /out:" + test2a_dll + ' ' + test2a_cs), 0)
+    
+    engine1 = Python.CreateEngine()
+    paths1 = engine1.GetSearchPaths()
+    paths1.Add(tmp1)
+    engine1.SetSearchPaths(paths1)
+    scope1 = engine1.CreateScope()
+    script1 = engine1.CreateScriptSourceFromString(script_code, SourceCodeKind.Statements)
+    script1.Execute(scope1)
+    result1 = scope1.GetVariable("result").TryGetValue()
+    AreEqual(result1[0], True)
+    AreEqual(result1[1], "resolve test 1")
+    
+    engine2 = Python.CreateEngine()
+    paths2 = engine2.GetSearchPaths()
+    paths2.Add(tmp2)
+    engine2.SetSearchPaths(paths2)
+    scope2 = engine2.CreateScope()
+    script2 = engine2.CreateScriptSourceFromString(script_code, SourceCodeKind.Statements)
+    script2.Execute(scope2)
+    result2 = scope2.GetVariable("result").TryGetValue()
+    AreEqual(result2[0], True)
+    AreEqual(result2[1], "resolve test 2")
+
 #####################
 def test_addreference_sanity():
     # add reference directly to assembly
