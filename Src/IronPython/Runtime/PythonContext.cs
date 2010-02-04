@@ -1638,6 +1638,8 @@ namespace IronPython.Runtime {
                 return (TService)(object)new Tokenizer(ErrorSink.Null, GetPythonCompilerOptions(), true);
             } else if (typeof(TService) == typeof(PythonService)) {
                 return (TService)(object)GetPythonService((Microsoft.Scripting.Hosting.ScriptEngine)args[0]);
+            } else if (typeof(TService) == typeof(DocumentationProvider)) {
+                return (TService)(object)new PythonDocumentationProvider(this);
             }
 
             return base.GetService<TService>(args);
