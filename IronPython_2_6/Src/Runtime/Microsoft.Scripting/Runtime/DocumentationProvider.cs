@@ -13,6 +13,15 @@
  *
  * ***************************************************************************/
 
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Hosting.Providers")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Math")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "System.Collections")]
+using System.Collections.Generic;
+using Microsoft.Scripting.Hosting;
+
+namespace Microsoft.Scripting.Runtime {
+    /// <summary>
+    /// Provides language specific documentation for live objects.
+    /// </summary>
+    public abstract class DocumentationProvider {
+        public abstract ICollection<MemberDoc> GetMembers(object value);
+        public abstract ICollection<OverloadDoc> GetOverloads(object value);
+    }
+}

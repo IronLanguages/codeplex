@@ -180,6 +180,7 @@
     <Compile Include="Runtime\Exceptions\Win32Exception.cs" />
     <Compile Include="Runtime\FutureBuiltins.cs" />
     <Compile Include="Runtime\Binding\IPythonConvertible.cs" />
+    <Compile Include="Runtime\PythonDocumentationProvider.cs" />
     <Compile Include="Runtime\SequenceTypeInfoAttribute.cs" />
     <Compile Include="Runtime\ModuleContext.cs" />
     <Compile Include="Runtime\ModuleGlobalCache.cs" />

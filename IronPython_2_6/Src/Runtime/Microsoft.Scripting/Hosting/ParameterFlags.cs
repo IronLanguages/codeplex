@@ -13,6 +13,17 @@
  *
  * ***************************************************************************/
 
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Hosting.Providers")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Math")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "System.Collections")]
+using System;
+
+namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Indications extra information about a parameter such as if it's a parameter array.
+    /// </summary>
+    [Flags]
+    public enum ParameterFlags {
+        None,
+        ParamsArray = 0x01,
+        ParamsDict = 0x02,
+    }
+
+}

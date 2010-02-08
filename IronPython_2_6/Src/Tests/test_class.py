@@ -1940,9 +1940,23 @@ def test_override_container_contains():
 def test_override_container_len():
     for x in (dict, list, tuple):
         class C(x):
-            def __len__(self): return 42
-            
-        AreEqual(len(C()), 42)
+            def __len__(self): return 2
+        
+        AreEqual(C().__len__(), 2)
+        AreEqual(len(C()), 2)
+        
+        AreEqual(C(), x())
+        
+        if x is dict:
+            AreEqual(C({1:1}), {1:1})
+            d = {1:1, 2:2, 3:3}
+            AreEqual(C(d).__cmp__({0:0, 1:1, 2:2}), 1)
+            d[4] = 4
+            AreEqual(len(list(C(d).iterkeys())), len(list(d.iterkeys())))
+        else:
+            AreEqual(C([1]), x([1]))
+            a = range(4)
+            AreEqual(len(list(iter(C(a)))), len(list(iter(x(a)))))
 
 @skip("multiple_execute") #http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=17551        
 def test_dictproxy_access():
