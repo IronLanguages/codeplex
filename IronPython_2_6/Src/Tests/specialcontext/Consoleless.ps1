@@ -158,7 +158,7 @@ function test-verify_ipyw
     else
     {
         #Give ipyw.exe a chance to exit
-        sleep 30
+        sleep 45
     }
 
     #Make sure ipyw.exe has now exited

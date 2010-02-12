@@ -1677,6 +1677,9 @@ def test_weird_compare():
 
 @skip("silverlight")
 def test_load_ruby():
+    if not System.IO.File.Exists(sys.exec_prefix + r"\IronRuby.dll"):
+        print "Cannot run this test case without IronRuby being available!"
+        return
     sys.path.append(path_combine(testpath.public_testdir, r'XLang'))
     rubyfile = clr.Use('some_ruby_file')
     AreEqual(rubyfile.f(), 42)
