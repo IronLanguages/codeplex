@@ -563,6 +563,80 @@ def test_cp23823():
     AreEqual(f(), (['a', 'deepcopy'], ['deepcopy']))
 
 
+def cp22692_helper(source, flags):
+    retVal = []
+    err = err1 = err2 = None
+    code = code1 = code2 = None
+    try:
+        code = compile(source, "dummy", "single", flags, 1)
+    except SyntaxError, err:
+        pass
+    try:
+        code1 = compile(source + "\n", "dummy", "single", flags, 1)
+    except SyntaxError, err1:
+        pass
+    try:
+        code2 = compile(source + "\n\n", "dummy", "single", flags, 1)
+    except SyntaxError, err2:
+        pass
+    if not code:
+        retVal.append(type(err1))
+        retVal.append(type(err2))
+    return retVal 
+
+@skip("cli", "silverlight")
+def test_cp22692():
+    AreEqual(cp22692_helper("if 1:", 0x200),
+             [SyntaxError, IndentationError])
+    AreEqual(cp22692_helper("if 1:", 0),
+             [SyntaxError, IndentationError])
+    AreEqual(cp22692_helper("if 1:\n  if 1:", 0x200),
+             [IndentationError, IndentationError])
+    AreEqual(cp22692_helper("if 1:\n  if 1:", 0),
+             [IndentationError, IndentationError])
+
+@skip("win32")
+def test_cp23545():
+    import clr
+    clr.AddReference("rowantest.defaultmemberscs.dll")
+    from Merlin.Testing.DefaultMemberSample import ClassWithDefaultField
+    AreEqual(repr(ClassWithDefaultField.Field),
+             "<field# Field on ClassWithDefaultField>")
+    try:
+        ClassWithDefaultField.Field = 20
+    except ValueError, e:
+        AreEqual(e.message,
+                 "assignment to instance field w/o instance")
+    AreEqual(ClassWithDefaultField().Field, 10)
+
+def test_cp20174():
+    cp20174_path = testpath.public_testdir + r"\cp20174"
+    
+    try:
+        nt.mkdir(cp20174_path)
+        
+        cp20174_init = cp20174_path + r"\__init__.py"
+        write_to_file(cp20174_init, "import a")
+        
+        cp20174_a = cp20174_path + r"\a.py"
+        write_to_file(cp20174_a, """
+from property import x
+class C:
+    def _get_x(self): return x
+    x = property(_get_x)
+""")
+        
+        cp20174_property = cp20174_path + r"\property.py"
+        write_to_file(cp20174_property, "x=1")
+        
+        import cp20174
+        AreEqual(cp20174.property.x, 1)
+        
+    finally:
+        for x in nt.listdir(cp20174_path):
+            nt.unlink(cp20174_path + "\\" + x)
+        nt.rmdir(cp20174_path)
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)
