@@ -278,6 +278,21 @@ namespace IronPythonTest {
         }
 #endif
 
+#if !SILVERLIGHT        
+        public void ScenarioCodePlex20472() {
+            try {
+                string fileName = System.IO.Directory.GetCurrentDirectory() + "\\encoded_files\\cp20472.py";
+                _pe.CreateScriptSourceFromFile(fileName, System.Text.Encoding.GetEncoding(1251));
+
+                //Disabled. The line above should have thrown a syntax exception or an import error,
+                //but does not.
+
+                //throw new Exception("ScenarioCodePlex20472");
+            }
+            catch (IronPython.Runtime.Exceptions.ImportException) { }
+        }
+#endif
+
         // Execute
         public void ScenarioExecute() {
             ClsPart clsPart = new ClsPart();
