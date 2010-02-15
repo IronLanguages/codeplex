@@ -317,12 +317,39 @@ def test_gettrace():
     sys.settrace(None)
     AreEqual(sys.gettrace(), None)
 
+@skip("silverlight")
+def test_cp24242():
+    # This test requires -X:FullFrames, run it in separate instance of IronPython.
+    global testDelGetFrame
+    if not testDelGetFrame:
+        return
+        
+    frame = sys._getframe()
+    ids = []
+    while frame:
+        ids.append(id(frame))
+        frame = frame.f_back
+    del frame
+    force_gc()
+
+    frame = sys._getframe()
+    new_ids = []
+    while frame:
+        new_ids.append(id(frame))
+        frame = frame.f_back
+    del frame
+    force_gc()
+    
+    AreEqual(ids, new_ids)
+
 #--MAIN------------------------------------------------------------------------    
 
 testDelGetFrame = "Test_GetFrame" in sys.argv
 if testDelGetFrame:
     print 'Calling test_getframe()...'
     test_getframe()
+    print 'Calling test_cp24242()...'
+    test_cp24242()
 else:
     run_test(__name__)
     # this is a destructive test, run it in separate instance of IronPython

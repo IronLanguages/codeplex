@@ -148,4 +148,9 @@ def test_binary_floats():
     AreEqual(marshal.dumps(2.0, 1), 'f\x032.0')
     AreEqual(marshal.loads(marshal.dumps(2.0, 2)), 2.0)
 
+def test_cp24547():
+    AreEqual(marshal.dumps(2**33), "l\x03\x00\x00\x00\x00\x00\x00\x00\x08\x00")
+
+
+#--MAIN------------------------------------------------------------------------
 run_test(__name__)
