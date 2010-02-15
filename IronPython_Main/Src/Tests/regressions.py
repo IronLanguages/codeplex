@@ -637,6 +637,88 @@ class C:
             nt.unlink(cp20174_path + "\\" + x)
         nt.rmdir(cp20174_path)
 
+@skip("win32")
+def test_cp20370():
+    import clr
+    clr.AddReference("System.Drawing")
+    from System.Drawing import Point
+    p1 = Point(1, 2)
+    p2 = Point(3, 4)
+    
+    l = [p1]
+    Assert(id(l[-1]) != id(p2))
+    l[-1] = p2
+    AreEqual(id(l[-1]), id(p2))
+
+@skip("win32", "silverlight")
+def test_cp23878():
+    import clr
+    clr.AddReference("rowantest.delegatedefinitions.dll")
+    clr.AddReference("rowantest.typesamples.dll")
+    from Merlin.Testing import Delegate, Flag
+    from time import sleep
+    
+    cwtm = Delegate.ClassWithTargetMethods()
+    vi32d = Delegate.VoidInt32Delegate(cwtm.MVoidInt32)
+    ar = vi32d.BeginInvoke(32, None, None)
+    is_complete = False
+    for i in xrange(100):
+        sleep(1)
+        if ar.IsCompleted:
+            is_complete = True
+            break
+    Assert(is_complete)
+    AreEqual(Flag.Value, 32)
+
+def test_cp23914():
+    class C(object):
+        def __init__(self, x,y,z):
+            print x,y,z
+    
+    m = type.__call__
+    
+    import sys
+    from cStringIO import StringIO
+    oldstdout, sys.stdout = sys.stdout, StringIO()
+    try:
+        l = m(C,1,2,3)
+        l = m(C,z=3,y=2,x=1)
+        sys.stdout.flush()
+    finally:
+        temp_stdout = sys.stdout
+        sys.stdout = oldstdout
+    
+    AreEqual(temp_stdout.getvalue(), '1 2 3\n1 2 3\n')
+
+@skip("cli", "silverlight")
+def test_cp23992():
+    def f():
+        x = 3
+        def g():
+            return locals()
+        l1 = locals()
+        l2 = g()
+        return (l1, l2)
+    
+    t1, t2 = f()
+    AreEqual(t1.keys(), ['x', 'g'])
+    AreEqual(t2, {})
+
+def test_cp24169():
+    import os, sys
+    
+    orig_syspath = [x for x in sys.path]
+    try:
+        sys.path.append(os.getcwd() + r"\encoded_files")
+        import cp20472 #no encoding specified and has non-ascii characters
+        raise Exception("Line above should had thrown!")
+    except SyntaxError, e:
+        Assert(e.msg.startswith("Non-ASCII character '\\xcf' in file"))
+        Assert(e.msg.endswith("on line 1, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details"))
+        Assert("\\encoded_files\\cp20472.py" in e.msg, e.msg)
+    finally:
+        sys.path = orig_syspath
+
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)
