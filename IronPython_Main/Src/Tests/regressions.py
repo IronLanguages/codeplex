@@ -719,6 +719,86 @@ def test_cp24169():
     finally:
         sys.path = orig_syspath
 
+def test_cp24484():
+    class DictClass(dict):
+        def __getattr__(self, name):
+            return lambda x: x*20
+
+    class K(object):
+        def __init__(self, parent):
+            self.parent = parent
+        def __getattr__(self, name):
+            return getattr(self.parent, name)
+
+    dc = DictClass()
+    k = K(dc)
+    for i in xrange(200):
+        temp = k.test(20)
+
+
+def test_cp23555():
+    with stdout_trapper() as trapper:
+        class Base(object):
+            pass
+
+        class Real(Base, float):
+            def __new__(cls, *args, **kwargs):
+                print 'real new'
+                result = Stub.__new__(cls, *args, **kwargs)
+                return result
+            def __init__(self, *args, **kwargs):
+                print 'real init'
+            def __del__(self):
+                print 'real del'
+        
+        class Stub(Real):
+            def __new__(cls, *args, **kwargs):
+                print 'stub new'
+                return float.__new__(Stub, args[0])
+            def __init__(self, *args, **kwargs):
+                print 'stub init'
+            def __del__(self):
+                print "this should never happen; it's just here to ensure I get registered for GC"
+        
+        def ConstructReal(x):
+            f = Real(x)
+            f.__class__ = Real
+            return f
+
+        f = ConstructReal(1.0)
+        del f
+
+    AreEqual(trapper.messages[0:3],
+             ['real new', 'stub new', 'stub init']) #'real del']) => CLR GC
+
+def test_cp24677():
+    class SomeError(Exception):
+        pass
+    
+    class SomeOtherError(SomeError, IOError):
+        pass
+    
+    soe = SomeOtherError("some message")
+
+    try:
+        raise soe
+    except Exception:
+        pass
+        
+    try:
+        raise soe
+    except SomeError:
+        pass
+
+    try:
+        raise soe
+    except IOError:
+        pass
+        
+    try:
+        raise soe
+    except SomeOtherError:
+        pass
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)
