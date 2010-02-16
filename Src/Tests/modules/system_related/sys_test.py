@@ -342,6 +342,42 @@ def test_cp24242():
     
     AreEqual(ids, new_ids)
 
+
+CP24381_MESSAGES = []
+@skip("silverlight", "cli")
+def test_cp24381():
+    import sys
+    orig_sys_trace_func = sys.gettrace()
+    def f(*args):
+        global CP24381_MESSAGES
+        CP24381_MESSAGES += args[1:]
+        return f
+    
+    cp24381_file_name = r"cp24381.py"
+    cp24381_contents  = """
+print 'a'
+print 'b'
+print 'c'
+
+def f():
+    print 'hi'
+
+f()
+"""
+
+    try:
+        write_to_file(cp24381_file_name, cp24381_contents)
+        sys.settrace(f)
+        import cp24381
+    finally:
+        sys.settrace(orig_sys_trace_func)
+        nt.unlink(cp24381_file_name)
+
+    AreEqual(CP24381_MESSAGES,
+             ['call', None, 'line', None, 'line', None, 'line', None, 'line', 
+              None, 'line', None, 'call', None, 'line', None, 'return', None, 
+              'return', None])
+
 #--MAIN------------------------------------------------------------------------    
 
 testDelGetFrame = "Test_GetFrame" in sys.argv
