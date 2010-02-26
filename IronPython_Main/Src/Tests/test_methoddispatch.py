@@ -1344,17 +1344,8 @@ def test_multicall_generator():
 
 
 # verify calling a generic method w/o args throws a reasonable exception
-def test_array_badargs():
+def test_missing_generic_args():
     import System
-    x = System.Array.CreateInstance(System.Byte, 1024)
-    try:
-        System.Array.Resize(x, 2048)
-        AssertUnreachable()
-    except TypeError:
-        pass
-
-    System.Array.Resize[System.Byte](x, 2048)
-
     #TODO specify clearly which exception is appropriate here
     AssertError(Exception, System.Collections.Generic.List)
 

@@ -658,11 +658,19 @@ namespace IronPython.Compiler {
 
                             // backup over the eoln:
                             _buffer.SeekRelative(-eol_size);
+                            _buffer.MarkTokenEnd(multi_line);
 
                             // incomplete string in the form "abc\
-                            _buffer.MarkTokenEnd(multi_line);
-                            UnexpectedEndOfString(isTriple, true);
-                            return new ErrorToken(Resources.EofInString);
+
+                            if (_verbatim && isTriple) {
+                                // return the partial string in verbatim mode
+                                string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add - 1);
+                                incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
+                                return MakeStringToken(quote, isRaw, isUnicode, isBytes, isTriple, false, incompleteContents);
+                            } else {
+                                UnexpectedEndOfString(isTriple, true);
+                                return new ErrorToken(Resources.EofInString);
+                            }
                         }
 
                         multi_line = true;
@@ -691,13 +699,21 @@ namespace IronPython.Compiler {
             // TODO: do not create a string, parse in place
             string contents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add); //.Substring(_start + startAdd, end - _start - (startAdd + eadd));
 
+            contents = NormalizeMultiLineEndings(isTriple, multi_line, contents);
+
+            return MakeStringToken(quote, isRaw, isUnicode, isBytes, isTriple, complete, contents);
+        }
+
+        private string NormalizeMultiLineEndings(bool isTriple, bool multi_line, string contents) {
             // EOLN should be normalized to '\n' in triple-quoted strings:
             // TODO: do this better
             if (multi_line && isTriple && !_disableLineFeedLineSeparator) {
                 contents = contents.Replace("\r\n", "\n").Replace("\r", "\n");
             }
+            return contents;
+        }
 
-
+        private Token MakeStringToken(char quote, bool isRaw, bool isUnicode, bool isBytes, bool isTriple, bool complete, string contents) {
             if (!isBytes) {
                 contents = LiteralParser.ParseString(contents, isRaw, isUnicode || UnicodeLiterals, complete);
                 if (complete) {
