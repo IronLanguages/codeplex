@@ -1061,8 +1061,14 @@ def test_generic_type_inference():
          
          # public static PythonType M34<T>(IList<T> x, IList<T> y) -> pytype(T)
          (target.M34,       ((), [], ),                     object,            True,         None),
+         
+         # T[] and IList<T> overloads:
+         (target.M35,       (objArray, ),                    System.Array[object], False,    None),
         ]
-    
+        
+        # TODO: more by-ref and arrays tests:
+        x = Array.Resize(Array.CreateInstance(int, 10), 20)
+        AreEqual(x.Length, 20)
         
         for method, args, res, kwArgs, excep in tests:
             generic_method_tester(method, args, res, kwArgs, excep)
