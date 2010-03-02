@@ -66,7 +66,7 @@ data = [
     TypeData('Single', 'singleType'),
     TypeData('Double', 'doubleType'),
     TypeData('BigInteger'),
-    TypeData('Complex64'),
+    TypeData('Complex'),
     TypeData('Super'),
     TypeData('OldClass'),
     TypeData('OldInstance'),

@@ -49,7 +49,12 @@ def get_all_paths():
             
         elif sys.platform == "win32":
             rowan_bin = get_environ_variable('ROWAN_BIN')
-            if not rowan_bin and not get_environ_variable('THISISSNAP'):
+            if rowan_bin:
+                if rowan_bin.startswith('"'):
+                    # strip quotes when ROWAN_BIN has spaces, e.g. "bin\Debug\V4 Debug"
+                    Assert(rowan_bin.endswith('"'))
+                    rowan_bin = rowan_bin[1:-1]
+            elif not get_environ_variable('THISISSNAP'):
                 rowan_bin = get_environ_variable('MERLIN_ROOT') + '/Bin/Debug'
             cpython_executable = sys.executable
             cpython_lib_path   = sys.prefix + "/Lib"
@@ -96,9 +101,21 @@ class my_stdout:
         self.stdout.write(s)
 
 def printwith(head, *arg): 
-    print "%s##" %head, 
+    print "%s##" %head,
     for x in arg: print x,
-    print 
+    print
+
+# Make windiff logs more readable
+if sys.platform == 'cli':
+    from System import Byte, Int64
+    def printwith(head, *arg): 
+        print "%s##" %head,
+        for x in arg:
+            if isinstance(x, type) and (x == Byte or x == Int64):
+                print int,
+            else:
+                print x,
+        print
 
 def printwithtype(arg):
     t = type(arg)

@@ -43,6 +43,10 @@ def test_complex():
     AreEqual(1+0j, 1L)
     AreEqual((1+1j)/1L, (1+1j))
     AreEqual((1j) + 1L, (1+1j))
+    AreEqual(0j ** 0, 1)
+    AreEqual(0j ** 0j, 1)
+    AreEqual(pow(0j, 0), 1)
+    AreEqual(pow(0j, 0j), 1)
 
     if is_cli or is_silverlight: AreEqual((1j) + Int64(), 1j)
 
