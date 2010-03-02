@@ -25,7 +25,12 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+#if CLR2
 using Microsoft.Scripting.Math;
+#else
+using System.Numerics;
+#endif
 
 namespace IronPython.Compiler {
 
@@ -809,7 +814,8 @@ namespace IronPython.Compiler {
         private Token ReadBinaryNumber() {
             int bits = 0;
             int iVal = 0;
-            BigInteger bigInt = null;
+            bool useBigInt = false;
+            BigInteger bigInt = BigInteger.Zero;
             while (true) {
                 int ch = NextChar();
                 switch (ch) {
@@ -822,6 +828,7 @@ namespace IronPython.Compiler {
                     case '1':
                         bits++;
                         if (bits == 32) {
+                            useBigInt = true;
                             bigInt = (BigInteger)iVal;
                         }
 
@@ -835,12 +842,12 @@ namespace IronPython.Compiler {
                     case 'L':
                         _buffer.MarkSingleLineTokenEnd();
 
-                        return new ConstantValueToken(bigInt ?? ((BigInteger)iVal));
+                        return new ConstantValueToken(useBigInt ? bigInt : (BigInteger)iVal);
                     default:
                         _buffer.Back();
                         _buffer.MarkSingleLineTokenEnd();
 
-                        return new ConstantValueToken((object)bigInt ?? (object)iVal);
+                        return new ConstantValueToken(useBigInt ? (object)bigInt : (object)iVal);
                 }
             }
         }

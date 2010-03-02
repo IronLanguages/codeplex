@@ -30,9 +30,32 @@ if is_cli:
     clr.AddReference(math_assembly)
 load_iron_python_test()
 import IronPythonTest
+
+if is_net40:
+    #clr.AddReference("System.Numerics")
+    #clr.AddReference("Microsoft.Dynamic")
+    #from System.Numerics import BigInteger as _BigInteger
+    #from System.Numerics import Complex
     
-from Microsoft.Scripting.Math import BigInteger
-from Microsoft.Scripting.Math import Complex64
+    #from Microsoft.Scripting.Utils import MathUtils
+    #class BigInteger(_BigInteger):
+    #    def IsZero(self):
+    #        return MathUtils.IsZero(self)
+    #    def LeftShift(self, shift):
+    #        return self << shift
+    #    def RightShift(self, shift):
+    #        return self >> shift
+    #    def IsPositive(self):
+    #        return self.Sign > 0
+    #    def IsNegative(self):
+    #        return self.Sign < 0
+    #    def Create(bytes):
+    #        return BigInteger.__new__(BigInteger, bytes)
+    BigInteger = long
+    Complex = complex
+else:
+    from Microsoft.Scripting.Math import BigInteger
+    from Microsoft.Scripting.Math import Complex64 as Complex
 
 
 class myFormatProvider(IFormatProvider):
@@ -115,6 +138,9 @@ def test_big_1():
 
 
 def test_big_2():
+    if is_net40:
+        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894"
+        return
     for (a, m, t,x) in [
                         (31, "ToInt32",Int32,2),
                         (32, "ToUInt32",UInt32,0),
@@ -143,10 +169,10 @@ def test_big_2():
 
 #complex
 def test_complex():
-    AreEqual(Complex64.Add(Complex64(BigInteger(9999L),-1234),Complex64(9999,-1234).Conjugate()),Complex64.Multiply(Complex64(BigInteger(9999L)),2))
-    AreEqual(Complex64.Add(Complex64(99999.99e-200,12345.88e+100),Complex64.Negate(Complex64(99999.99e-200,12345.88e+100))),Complex64.Subtract(Complex64(99999.99e-200,12345.88e+100),Complex64(99999.99e-200,12345.88e+100)))
-    AreEqual (Complex64.Divide(4+2j,2) , (2 + 1j) )
-    Assert(not hasattr(Complex64, "Mod"))  #IP 1.x had limited support for modulo which has been removed
+    AreEqual(Complex.Add(Complex(BigInteger(9999L),-1234),Complex(9999,-1234).Conjugate()),Complex.Multiply(Complex(BigInteger(9999L)),2))
+    AreEqual(Complex.Add(Complex(99999.99e-200,12345.88e+100),Complex.Negate(Complex(99999.99e-200,12345.88e+100))),Complex.Subtract(Complex(99999.99e-200,12345.88e+100),Complex(99999.99e-200,12345.88e+100)))
+    AreEqual (Complex.Divide(4+2j,2) , (2 + 1j) )
+    Assert(not hasattr(Complex, "Mod"))  #IP 1.x had limited support for modulo which has been removed
 
 def test_bool_misc():
     AreEqual(BigInteger(-1234).Sign, -1)

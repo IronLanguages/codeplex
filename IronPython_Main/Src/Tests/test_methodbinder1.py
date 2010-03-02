@@ -402,11 +402,16 @@ def _repeat_with_one_arg(goodStr, getArg):
             else:  Fail("expect TypeError, but got none when func %s on arg %s" % (fn, arg))
 
 def test_pass_in_none():
-    _repeat_with_one_arg('''
-BigInt Bool String Object I C1 C2 A C6
+    test_str = '''
+Bool String Object I C1 C2 A C6
 ArrInt32 ArrI ParamArrInt32 ParamArrI ParamArrS IParamArrI
 IListInt Array IEnumerableInt IEnumeratorInt NullableInt
-''', lambda : None)
+'''
+    # Big integers are only nullable in CLR 2
+    if not is_net40:
+        test_str = "BigInt " + test_str
+    
+    _repeat_with_one_arg(test_str, lambda : None)
 
 def test_pass_in_clrReference():
     import clr
