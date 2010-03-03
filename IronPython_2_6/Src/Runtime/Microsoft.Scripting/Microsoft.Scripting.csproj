@@ -94,7 +94,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-<OutputPath>$(SolutionDir)..\Bin\Debug\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\V4 Debug\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <DefineConstants>DEBUG;TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -106,7 +106,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'V4 Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-<OutputPath>$(SolutionDir)..\Bin\Release\</OutputPath>
+<OutputPath>$(SolutionDir)..\Bin\V4 Release\</OutputPath>
 <DocumentationFile>$(OutputPath)\Microsoft.Scripting.xml</DocumentationFile>
     <DefineConstants>TRACE;CLR4;$(SignedSym)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
