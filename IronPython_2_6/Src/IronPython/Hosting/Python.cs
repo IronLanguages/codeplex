@@ -26,7 +26,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 
 #if SILVERLIGHT
-[assembly: DynamicLanguageProvider(typeof(PythonContext), "IronPython 2.6", PythonContext.IronPythonNames, PythonContext.IronPythonFileExtensions)]
+[assembly: DynamicLanguageProvider(typeof(PythonContext), "IronPython 2.9", PythonContext.IronPythonNames, PythonContext.IronPythonFileExtensions)]
 #endif
 
 namespace IronPython.Hosting {
@@ -304,7 +304,7 @@ namespace IronPython.Hosting {
         public static LanguageSetup/*!*/ CreateLanguageSetup(IDictionary<string, object> options) {
             var setup = new LanguageSetup(
                 typeof(PythonContext).AssemblyQualifiedName,
-                "IronPython 2.6",
+                "IronPython 2.9",
                 PythonContext.IronPythonNames.Split(';'),
                 PythonContext.IronPythonFileExtensions.Split(';')
             );

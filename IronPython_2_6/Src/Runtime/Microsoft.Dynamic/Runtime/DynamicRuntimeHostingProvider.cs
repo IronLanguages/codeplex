@@ -13,13 +13,20 @@
  *
  * ***************************************************************************/
 
-using System.Reflection;
+using System;
+using System.IO;
+using System.Text;
 
-#if !SILVERLIGHT
-[assembly: AssemblyVersion("2.6.10920.0")]
-#else
-[assembly: AssemblyVersion("2.6.20920.0")]
-#endif
-
-[assembly: AssemblyInformationalVersion("2.9")]
-[assembly: AssemblyFileVersion("2.9.1003.0")]
+namespace Microsoft.Scripting.Runtime {
+    /// <summary>
+    /// DLR requires any Hosting API provider to implement this class and provide its instance upon Runtime initialization.
+    /// DLR calls on it to perform basic host/system dependent operations.
+    /// </summary>
+    [Serializable]
+    public abstract class DynamicRuntimeHostingProvider {
+        /// <summary>
+        /// Abstracts system operations that are used by DLR and could potentially be platform specific.
+        /// </summary>
+        public abstract PlatformAdaptationLayer PlatformAdaptationLayer { get; }
+    }
+}
