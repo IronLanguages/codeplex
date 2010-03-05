@@ -258,8 +258,8 @@ def test_settrace():
 
     g_ret = g
     def x():
-        print 'hello'
-        print 'next'
+        abc = 'hello'
+        abc = 'next'
 
     sys.settrace(f)
     x()
@@ -272,6 +272,51 @@ def test_settrace():
     x()
     sys.settrace(None)
     AreEqual(traces, [('f', 'call', 'x'), ('g', 'line', 'x'), ('f', 'line', 'x'), ('g', 'return', 'x')])
+    
+    # verify globals/locals are correct on the frame
+    global frameobj
+    def f(frame, event, payload):
+        global frameobj
+        frameobj = frame
+    
+    def g(a):
+        b = 42
+        
+    sys.settrace(f)    
+    g(32)
+    sys.settrace(None)
+    AreEqual(frameobj.f_locals, {'a': 32, 'b':42})
+    Assert('test_getrefcount' in frameobj.f_globals)
+    
+    if is_cli:
+        # -X:Tracing should enable tracing of top-level code
+        import os
+        content = """a = "aaa"
+import pdb; pdb.set_trace()
+b = "bbb"
+c = "ccc"
+final = a + b + c
+print final"""
+        f = file('temp.py', 'w+')
+        try:
+            f.write(content)
+            f.close()
+            
+            stdin, stdout = os.popen2(sys.executable +  ' -X:Tracing -X:Frames temp.py')
+            stdin.write('n\nn\nn\nn\nn\nn\nn\nn\n')
+            stdin.flush()
+            out = [x for x in stdout]
+            Assert('-> b = "bbb"\n' in out)
+            Assert('-> c = "ccc"\n' in out)
+            Assert('-> final = a + b + c\n' in out)
+            Assert('-> print final\n' in out)
+            Assert('(Pdb) aaabbbccc\n' in out)
+            Assert('--Return--\n' in out)
+            Assert('-> print final\n' in out)
+            Assert('(Pdb) ' in out)
+        finally:
+            nt.unlink('temp.py')
+
 
 @skip("win32")
 def test_getrefcount():
