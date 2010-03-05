@@ -16,6 +16,7 @@
 from iptest.assert_util import *
 import thread
 import time
+import sys
 if not is_cpython:
     from System import *
     from System.Threading import *
@@ -114,6 +115,37 @@ def test_new_thread_is_background():
         Thread.Sleep(1000)
     Assert(done)
 
+@skip("silverlight")
+def test_threading_waits_for_thread_exit():
+    import os
+    from iptest.process_util import launch
+    f = file('temp.py', 'w+')
+    try:
+        f.write("""
+import sys
+def f():
+    print 'bye bye'
+
+def f(*args):
+    print 'bye bye'
+
+sys.exitfunc = f
+from threading import Thread
+def count(n):
+    while n > 0:
+            n -= 1
+    print 'done'
+
+t1 = Thread(target=count, args=(50000000,))
+t1.start()
+    """)
+        f.close()
+        stdin, stdout = os.popen2(sys.executable +  ' temp.py')
+        Assert('bye bye\n' in list(stdout))
+    finally:
+        import nt
+        nt.unlink('temp.py')
+    
 @skip("win32")
 def test_thread_local():
     import thread
