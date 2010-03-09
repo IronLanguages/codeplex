@@ -58,11 +58,9 @@ def GenerateExe(name, targetKind, platform, machine, main_module):
         mainMethod.SetCustomAttribute(clr.GetClrType(System.STAThreadAttribute).GetConstructor(()), System.Array[System.Byte](())) 
     gen = mainMethod.GetILGenerator()
     
-    # get the ScriptCode assembly...    
-    gen.EmitCall(OpCodes.Call, clr.GetClrType(Assembly).GetMethod("GetEntryAssembly"), ());
-    gen.EmitCall(OpCodes.Call, clr.GetClrType(Assembly).GetMethod("get_CodeBase"), ());
-    gen.Emit(OpCodes.Newobj, clr.GetClrType(System.Uri).GetConstructor( (str, ) ));
-    gen.EmitCall(OpCodes.Call, clr.GetClrType(System.Uri).GetMethod("get_LocalPath"), ());
+    # get the ScriptCode assembly...
+    gen.EmitCall(OpCodes.Call, clr.GetClrType(Assembly).GetMethod("GetEntryAssembly"), ())
+    gen.EmitCall(OpCodes.Callvirt, clr.GetClrType(Assembly).GetMethod("get_Location"), ())
     gen.Emit(OpCodes.Newobj, clr.GetClrType(System.IO.FileInfo).GetConstructor( (str, ) ))
     gen.EmitCall(OpCodes.Call, clr.GetClrType(System.IO.FileInfo).GetMethod("get_Directory"), ())
     gen.EmitCall(OpCodes.Call, clr.GetClrType(System.IO.DirectoryInfo).GetMethod("get_FullName"), ())
