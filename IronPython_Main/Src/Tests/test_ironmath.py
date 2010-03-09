@@ -32,27 +32,7 @@ load_iron_python_test()
 import IronPythonTest
 
 if is_net40:
-    #clr.AddReference("System.Numerics")
-    #clr.AddReference("Microsoft.Dynamic")
-    #from System.Numerics import BigInteger as _BigInteger
-    #from System.Numerics import Complex
-    
-    #from Microsoft.Scripting.Utils import MathUtils
-    #class BigInteger(_BigInteger):
-    #    def IsZero(self):
-    #        return MathUtils.IsZero(self)
-    #    def LeftShift(self, shift):
-    #        return self << shift
-    #    def RightShift(self, shift):
-    #        return self >> shift
-    #    def IsPositive(self):
-    #        return self.Sign > 0
-    #    def IsNegative(self):
-    #        return self.Sign < 0
-    #    def Create(bytes):
-    #        return BigInteger.__new__(BigInteger, bytes)
-    BigInteger = long
-    Complex = complex
+    from System.Numerics import BigInteger, Complex
 else:
     from Microsoft.Scripting.Math import BigInteger
     from Microsoft.Scripting.Math import Complex64 as Complex
@@ -69,33 +49,36 @@ def test_bigint():
     AreEqual(BigInteger.Multiply(400L,500L) , BigInteger.Divide(1000000L,5L))
     AreEqual(BigInteger.Multiply(400L,8L) , BigInteger.LeftShift(400L,3L))
     AreEqual(BigInteger.Divide(400L,8L) , BigInteger.RightShift(400L,3L))
-    AreEqual(BigInteger.LeftShift(BigInteger.RightShift(400L,-100L),-100L) , 400L)
-    AreEqual(BigInteger.LeftShift(BigInteger.RightShift(-12345678987654321L,-100L),-100L) , -12345678987654321L)
+    AreEqual(BigInteger.RightShift(BigInteger.LeftShift(400L,100L),100L) , 400L)
+    AreEqual(BigInteger.RightShift(BigInteger.LeftShift(-12345678987654321L,100L),100L) , -12345678987654321L)
+    if is_net40:
+        AssertError(ValueError, BigInteger.RightShift, 400L, -100L)
+        AssertError(ValueError, BigInteger.LeftShift, 400L, -100L)
+        AssertError(ValueError, BigInteger.RightShift, -12345678987654321L, -100L)
+        AssertError(ValueError, BigInteger.LeftShift, -12345678987654321L, -100L)
+    else:
+        AreEqual(BigInteger.LeftShift(BigInteger.RightShift(400L,-100L),-100L) , 400L)
+        AreEqual(BigInteger.LeftShift(BigInteger.RightShift(-12345678987654321L,-100L),-100L) , -12345678987654321L)
     AreEqual(BigInteger(-123456781234567812345678123456781234567812345678123456781234567812345678L).OnesComplement().OnesComplement() , -123456781234567812345678123456781234567812345678123456781234567812345678L)
     AreEqual(BigInteger(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L).OnesComplement() , -(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L + 1L ))
     Assert(BigInteger.Xor(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L,BigInteger(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L).OnesComplement()) , -1L)
     AreEqual(BigInteger.BitwiseAnd(0xff00ff00,BigInteger.BitwiseOr(0x00ff00ff,0xaabbaabb)) , BigInteger(0xaa00aa00))
     AreEqual(BigInteger.Mod(BigInteger(-9999999999999999999999999999999999999999),1000000000000000000) , -BigInteger.Mod(9999999999999999999999999999999999999999,BigInteger(-1000000000000000000)))
-
-
+    
     AreEqual(BigInteger.ToInt64(0x7fffffffffffffff) , 9223372036854775807L)
-
     AssertError(OverflowError, BigInteger.ToInt64, 0x8000000000000000)
-
-
-
-    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894
-        AreEqual(BigInteger(-0).ToBoolean(p) , False )
-        AreEqual(BigInteger(-1212321.3213).ToBoolean(p) , True )
-        AreEqual(BigInteger(1212321384892342394723947L).ToBoolean(p) , True )
     
-        AreEqual(BigInteger(0L).ToChar(p) , Char.MinValue)
-        AreEqual(BigInteger(65L).ToChar(p) , IConvertible.ToChar('A', p))
-        AreEqual(BigInteger(0xffff).ToChar(p) , Char.MaxValue)
-        AssertError(OverflowError, BigInteger(-1).ToChar, p)
+    AreEqual(BigInteger(-0).ToBoolean(p) , False )
+    AreEqual(BigInteger(-1212321.3213).ToBoolean(p) , True )
+    AreEqual(BigInteger(1212321384892342394723947L).ToBoolean(p) , True )
     
-        AreEqual(BigInteger(100).ToDouble(p) , 100.0)
-        AreEqual(BigInteger(BigInteger(100).ToDouble(p)).ToSingle(p) , BigInteger(100.1213123).ToFloat())
+    AreEqual(BigInteger(0L).ToChar(p) , Char.MinValue)
+    AreEqual(BigInteger(65L).ToChar(p) , IConvertible.ToChar('A', p))
+    AreEqual(BigInteger(0xffff).ToChar(p) , Char.MaxValue)
+    AssertError(OverflowError, BigInteger(-1).ToChar, p)
+    
+    AreEqual(BigInteger(100).ToDouble(p) , 100.0)
+    AreEqual(BigInteger(BigInteger(100).ToDouble(p)).ToSingle(p) , BigInteger(100.1213123).ToFloat())
     
     Assert(BigInteger(100) != 100.32)
     AreEqual(BigInteger(100) , 100.0)
@@ -104,9 +87,6 @@ def test_bigint():
     AreEqual(100.0 , BigInteger(100) )
 
 def test_big_1():
-    if is_net40:
-        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894"
-        return
     for (a, m, t,x) in [
                         (7, "ToSByte",  SByte,2),
                         (8, "ToByte",   Byte, 0),
@@ -138,9 +118,6 @@ def test_big_1():
 
 
 def test_big_2():
-    if is_net40:
-        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25894"
-        return
     for (a, m, t,x) in [
                         (31, "ToInt32",Int32,2),
                         (32, "ToUInt32",UInt32,0),
@@ -169,24 +146,43 @@ def test_big_2():
 
 #complex
 def test_complex():
-    AreEqual(Complex.Add(Complex(BigInteger(9999L),-1234),Complex(9999,-1234).Conjugate()),Complex.Multiply(Complex(BigInteger(9999L)),2))
-    AreEqual(Complex.Add(Complex(99999.99e-200,12345.88e+100),Complex.Negate(Complex(99999.99e-200,12345.88e+100))),Complex.Subtract(Complex(99999.99e-200,12345.88e+100),Complex(99999.99e-200,12345.88e+100)))
-    AreEqual (Complex.Divide(4+2j,2) , (2 + 1j) )
+    AreEqual(
+        Complex.Add(
+            Complex(BigInteger(9999L), -1234),
+            Complex.Conjugate(Complex(9999, -1234)) ),
+        Complex.Multiply(BigInteger(9999L), 2) )
+    AreEqual(
+        Complex.Add(
+            Complex(99999.99e-200, 12345.88e+100),
+            Complex.Negate(Complex(99999.99e-200, 12345.88e+100)) ),
+        Complex.Subtract(
+            Complex(99999.99e-200, 12345.88e+100),
+            Complex(99999.99e-200, 12345.88e+100) ))
+    AreEqual(
+        Complex.Divide(4+2j,2),
+        (2 + 1j) )
     Assert(not hasattr(Complex, "Mod"))  #IP 1.x had limited support for modulo which has been removed
 
 def test_bool_misc():
+    if is_net40:
+        def is_zero(bigint):
+            return bigint.IsZero
+    else:
+        def is_zero(bigint):
+            return bigint.IsZero()
+    
     AreEqual(BigInteger(-1234).Sign, -1)
-    AreEqual(BigInteger(-1234).IsZero(), False)
+    AreEqual(is_zero(BigInteger(-1234)), False)
     AreEqual(BigInteger(-1234).IsNegative(), True)
     AreEqual(BigInteger(-1234).IsPositive(), False)
     
     AreEqual(BigInteger(0).Sign, 0)
-    AreEqual(BigInteger(0).IsZero(), True)
+    AreEqual(is_zero(BigInteger(0)), True)
     AreEqual(BigInteger(0).IsNegative(), False)
     AreEqual(BigInteger(0).IsPositive(), False)
 
     AreEqual(BigInteger(1234).Sign, 1)
-    AreEqual(BigInteger(1234).IsZero(), False)
+    AreEqual(is_zero(BigInteger(1234)), False)
     AreEqual(BigInteger(1234).IsNegative(), False)
     AreEqual(BigInteger(1234).IsPositive(), True)
 
@@ -218,9 +214,6 @@ def test_byte_conversions():
     CheckByteConversions(BigInteger(0x080706050403020100), [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
 
 def test_dword_conversions():
-    if is_net40:
-        print "http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=25899"
-        return
     def CheckDwordConversions(bigint, dwords):
         SequencesAreEqual(bigint.GetWords(), dwords)
         if bigint == BigInteger.Zero:
@@ -241,7 +234,7 @@ def test_dword_conversions():
                     Array[UInt32](dwords)),
                 BigInteger.Negate(bigint))
     
-    CheckDwordConversions(BigInteger(0), [])
+    CheckDwordConversions(BigInteger(0), [0x00000000])
     CheckDwordConversions(BigInteger(1), [0x00000001])
     CheckDwordConversions(BigInteger((1<<31)), [0x80000000])
     CheckDwordConversions(BigInteger(((1<<31) + 9)), [0x80000009])
@@ -252,6 +245,9 @@ def test_misc():
     AssertError(ArgumentNullException, IronPythonTest.System_Scripting_Math.CreateBigInteger, 0, None)
 
     AreEqual(BigInteger(1).CompareTo(None), 1)
-    AssertError(ArgumentException, BigInteger(1).CompareTo, True)
+    if is_net40:
+        AreEqual(BigInteger(1).CompareTo(True), 0)
+    else:
+        AssertError(ArgumentException, BigInteger(1).CompareTo, True)
 
 run_test(__name__)
