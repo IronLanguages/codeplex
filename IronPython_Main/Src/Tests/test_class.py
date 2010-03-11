@@ -2431,6 +2431,18 @@ def test_mixed_newstyle_oldstyle_new():
     
     AreEqual(type(P()), P)
 
+def test_mixed_newstyle_oldstyle_descriptor():
+    class base:
+        @classmethod
+        def f(cls):
+                return cls
+    
+    
+    class x(base, object):
+        pass
+    
+    AreEqual(x.f(), x)
+
 def test_getattr_exceptions():
     """verify the original exception propagates out"""
     class AttributeTest(object):

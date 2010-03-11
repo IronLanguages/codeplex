@@ -208,5 +208,17 @@ def test_cp14539():
     finally:
         ex.Quit()
     
+def test_cp24654():
+    app = CreateExcelApplication() 
+    try:
+        app.workbooks.Add()
+        workbook = app.ActiveWorkbook
+        worksheet = workbook.ActiveSheet
+        chart = worksheet.ChartObjects
+        type(chart)
+        AreEqual(type(chart.__doc__), str)
+    finally:
+        app.Quit()
+    
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

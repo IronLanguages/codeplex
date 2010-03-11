@@ -1958,7 +1958,11 @@ namespace IronPython.Compiler {
                         }
                     }
 
-                    ret = new ConstantExpression(cv);
+                    if (t is UnicodeStringToken) {
+                        ret = ConstantExpression.MakeUnicode((string)cv);
+                    } else {
+                        ret = new ConstantExpression(cv);
+                    }
                     ret.SetLoc(start, GetEnd());
                     return ret;
                 default:

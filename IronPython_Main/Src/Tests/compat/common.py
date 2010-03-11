@@ -100,32 +100,38 @@ class my_stdout:
     def write(self, s):
         self.stdout.write(s)
 
-def printwith(head, *arg): 
-    print "%s##" %head,
-    for x in arg: print x,
-    print
+# Transforms that make windiff logs more readable
 
-# Make windiff logs more readable
+def _common_transform(x):
+    # Change +/-0.0 into +0.0
+    if isinstance(x, float) and x == 0.0:
+        return 0.0
+    return x
+
 if sys.platform == 'cli':
     from System import Byte, Int64
-    def printwith(head, *arg): 
-        print "%s##" %head,
-        for x in arg:
-            if isinstance(x, type) and (x == Byte or x == Int64):
-                print int,
-            else:
-                print x,
-        print
+    def transform(x):
+        x = _common_transform(x)
+        if isinstance(x, type) and (x == Byte or x == Int64):
+            return int
+        return x
+else:
+    transform = _common_transform
+
+def printwith(head, *arg): 
+    print "%s##" %head,
+    for x in arg: print transform(x),
+    print
 
 def printwithtype(arg):
     t = type(arg)
     if t == float:
-        print "float## %.4f" % arg
+        print "float## %.4f" % transform(arg)
     elif t == complex:
-        print "complex## %.4f | %.4f" % (arg.real, arg.imag)
+        print "complex## %.4f | %.4f" % (transform(arg.real), transform(arg.imag))
     else:
-        print "same##", arg
-    
+        print "same##", transform(arg)
+
 def fullpath(file):
     return compat_test_path + file
 

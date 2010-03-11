@@ -214,10 +214,15 @@ class Operator(Symbol):
         cw.writeline('[SlotField] public static PythonTypeSlot __i%s__ = new SlotWrapper(\"__i%s__\", CallableProxyType);' % (self.name, self.name))
     
     def genConstantFolding(self, cw, type):
-        if self.isCompare(): 
-            if self.symbol != '<>':
+        # Exclude bitwise ops on Double and Complex, and exclude comparisons
+        # on Complex. Also exclude Complex floordiv and because they need to
+        # issue warnings during runtime.
+        if type == 'Complex' and (self.clrName in ['Mod', 'FloorDivide']):
+            return
+        if self.isCompare():
+            if type != 'Complex' and self.symbol != '<>':
                 cw.writeline('case PythonOperator.%s: return new ConstantExpression(ScriptingRuntimeHelpers.BooleanToObject(%sOps.Compare((%s)constLeft.Value, (%s)constRight.Value) %s 0));' % (self.clrName, type, type, type, self.symbol))
-        elif type !='Double' or not self.is_bitwise():
+        elif (type !='Double' and type != 'Complex') or not self.is_bitwise():
             cw.writeline('case PythonOperator.%s: return new ConstantExpression(%sOps.%s((%s)constLeft.Value, (%s)constRight.Value));' % (self.clrName, type, self.clrName, type, type))
 
 class Grouping(Symbol):
@@ -581,7 +586,7 @@ def fast_op_ret_bool(cw):
                     cw.write('')
 
 def gen_constant_folding(cw):
-    types = ['Int32', 'Double', 'BigInteger']
+    types = ['Int32', 'Double', 'BigInteger', 'Complex']
     for cur_type in types:
         cw.enter_block('if (constLeft.Value.GetType() == typeof(%s))' % (cur_type, ))
         cw.enter_block('switch (_op)')

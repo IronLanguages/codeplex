@@ -1285,6 +1285,9 @@ def test_ximp_load_module():
         
     AreEqual(mod.x, 42)
     
+@skip("silverlight") # no stdlib in silverlight
+def test_import_string_from_list_cp26098():
+    AreEqual(__import__('email.mime.application', globals(), locals(), 'MIMEApplication').__name__, 'email.mime.application')
 
 #------------------------------------------------------------------------------
 run_test(__name__)

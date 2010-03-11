@@ -155,8 +155,8 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                             ExceptionInfo('ValueError', 'System.ArgumentException', None, (), (
                                     ExceptionInfo('UnicodeError', 'IronPython.Runtime.Exceptions.UnicodeException', None, (), 
                                         (
-                                            ExceptionInfo('UnicodeDecodeError', 'System.Text.DecoderFallbackException', ('encoding', 'object', 'start', 'end', 'reason'), ('start', 'reason', 'object', 'end', 'encoding'), (), False),
-                                            ExceptionInfo('UnicodeEncodeError', 'System.Text.EncoderFallbackException', ('encoding', 'object', 'start', 'end', 'reason'), ('start', 'reason', 'object', 'end', 'encoding'), (), False),
+                                            ExceptionInfo('UnicodeDecodeError', 'System.Text.DecoderFallbackException', ('encoding', 'object', 'start', 'end', 'reason'), ('start', 'reason', 'object', 'end', 'encoding'), ()),
+                                            ExceptionInfo('UnicodeEncodeError', 'System.Text.EncoderFallbackException', ('encoding', 'object', 'start', 'end', 'reason'), ('start', 'reason', 'object', 'end', 'encoding'), ()),
                                             ExceptionInfo('UnicodeTranslateError', 'IronPython.Runtime.Exceptions.UnicodeTranslateException', None, ('start', 'reason', 'object', 'end', 'encoding'), ()),
                                         ),
                                     ),
