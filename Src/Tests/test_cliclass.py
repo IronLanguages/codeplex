@@ -1725,6 +1725,10 @@ def test_cp23938():
     AreEqual(a.bar, 23)
 
 
+def test_nothrow_attr_access():
+    AreEqual(hasattr('System', 'does_not_exist'), False)
+    AreEqual(hasattr(type, '__all__'), False)
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
 

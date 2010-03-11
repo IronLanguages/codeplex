@@ -119,3 +119,29 @@ names = {}
 eval(e, names)
 AreEqual(names['z'], 5)
 
+
+def test_cp26005():
+    def coroutine():
+        try: pass
+        except: pass
+        just_numbers = range(1,1000)
+        def inner_method():
+                    return just_numbers
+        yield None
+        yield None
+     
+    from System import GC
+    def get_memory():
+        for _ in xrange(4):
+                    GC.Collect()
+                    GC.WaitForPendingFinalizers()
+        return GC.GetTotalMemory(True)/1e6
+    before = get_memory()
+    for j in xrange(10000):
+        crt = coroutine()
+        crt.next()
+    after = get_memory()
+    Assert(after-before < 10)
+
+
+test_cp26005()

@@ -20,10 +20,7 @@ from iptest.assert_util import *
 skiptest("silverlight")
 
 #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24266
-if is_cpython:
-    import _ssl as real_ssl
-else:
-    import socket as real_ssl
+import _ssl as real_ssl
 
 import socket
 
@@ -126,9 +123,7 @@ def test_RAND_status():
 
     
 def test_SSLError():
-    if not is_cpython and hasattr(real_ssl, "SSLError"):
-        raise Exception("Please add a test for _ssl.SSLError")
-    print 'TODO: no implementation to test yet.'
+    AreEqual(real_ssl.SSLError.__bases__, (socket.error, ))
 
 
 def test_SSL_ERROR_EOF():
@@ -181,8 +176,6 @@ def test__test_decode_cert():
 
 
 def test_sslwrap():
-    if not is_cpython and hasattr(real_ssl, "sslwrap"):
-        raise Exception("Please add a test for _ssl.sslwrap")
     print 'TODO: no implementation to test yet.'
 
 
@@ -226,10 +219,7 @@ def test_SSLType_ssl():
     #sock
     s = socket.socket(socket.AF_INET)
     s.connect((SSL_URL, SSL_PORT))
-    if is_cpython:
-        ssl_s = real_ssl.sslwrap(s._sock, False)
-    else:
-        ssl_s = real_ssl.ssl(s)
+    ssl_s = real_ssl.sslwrap(s._sock, False)
 
     if is_cpython:
         pass #ssl_s.shutdown()  #Too slow
@@ -251,48 +241,22 @@ def test_SSLType_ssl_neg():
     #--Negative
     
     #Empty
-    if is_cpython:
-        AssertError(TypeError, real_ssl.sslwrap)
-        AssertError(TypeError, real_ssl.sslwrap, False)
-    else:
-        AssertError(TypeError, real_ssl.ssl)
+    AssertError(TypeError, real_ssl.sslwrap)
+    AssertError(TypeError, real_ssl.sslwrap, False)
     
     #None
-    if is_cpython:
-        AssertError(TypeError, real_ssl.sslwrap, None, False)
-    else:
-        AssertError(SystemError, real_ssl.ssl, None)
+    AssertError(TypeError, real_ssl.sslwrap, None, False)
     
     #s, bad keyfile
     #Should throw _ssl.SSLError because both keyfile and certificate weren't specified
-    if is_cpython:
-        AssertError(real_ssl.SSLError, real_ssl.sslwrap, s._sock, False, "bad keyfile")
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24279
-        real_ssl.ssl(s, "bad keyfile")
-        s.close()
-        s = socket.socket(socket.AF_INET)
-        s.connect((SSL_URL, SSL_PORT))
+    AssertError(real_ssl.SSLError, real_ssl.sslwrap, s._sock, False, "bad keyfile")
     
     #s, bad certfile
     #Should throw _ssl.SSLError because both keyfile and certificate weren't specified
-    if not is_cpython:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24279
-        real_ssl.ssl(s, certfile="bad certfile")
-        s.close()
-        s = socket.socket(socket.AF_INET)
-        s.connect((SSL_URL, SSL_PORT))
     
     #s, bad keyfile, bad certfile
     #Should throw ssl.SSLError
-    if is_cpython:
-        AssertError(real_ssl.SSLError, real_ssl.sslwrap, s._sock, False, "bad keyfile", "bad certfile")
-    else:
-        #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24280
-        real_ssl.ssl(s, "bad keyfile", "bad certfile")
-        s.close()
-        s = socket.socket(socket.AF_INET)
-        s.connect((SSL_URL, SSL_PORT))
+    AssertError(real_ssl.SSLError, real_ssl.sslwrap, s._sock, False, "bad keyfile", "bad certfile")
     
     #Cleanup
     s.close()
@@ -302,12 +266,9 @@ def test_SSLType_issuer():
     #--Positive
     s = socket.socket(socket.AF_INET)
     s.connect((SSL_URL, SSL_PORT))
-    if is_cpython:
-        ssl_s = real_ssl.sslwrap(s._sock, False)
-        AreEqual(ssl_s.issuer(), '')  #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24281
-        ssl_s.do_handshake()
-    else:
-        ssl_s = real_ssl.ssl(s)
+    ssl_s = real_ssl.sslwrap(s._sock, False)
+    AreEqual(ssl_s.issuer(), '')  #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24281
+    ssl_s.do_handshake()
     
     if is_cpython:
         AreEqual(ssl_s.issuer.__doc__, None)
@@ -339,12 +300,9 @@ def test_SSLType_server():
     #--Positive
     s = socket.socket(socket.AF_INET)
     s.connect((SSL_URL, SSL_PORT))
-    if is_cpython:
-        ssl_s = real_ssl.sslwrap(s._sock, False)
-        AreEqual(ssl_s.server(), '')  #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24281
-        ssl_s.do_handshake()
-    else:
-        ssl_s = real_ssl.ssl(s)
+    ssl_s = real_ssl.sslwrap(s._sock, False)
+    AreEqual(ssl_s.server(), '')  #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24281
+    ssl_s.do_handshake()
     
     if is_cpython:
         AreEqual(ssl_s.server.__doc__, None)
@@ -376,11 +334,8 @@ def test_SSLType_read_and_write():
     #--Positive
     s = socket.socket(socket.AF_INET)
     s.connect((SSL_URL, SSL_PORT))
-    if is_cpython:
-        ssl_s = real_ssl.sslwrap(s._sock, False)
-        ssl_s.do_handshake()
-    else:
-        ssl_s = real_ssl.ssl(s)
+    ssl_s = real_ssl.sslwrap(s._sock, False)
+    ssl_s.do_handshake()
     
     if is_cpython:
         Assert("Writes the string s into the SSL object" in ssl_s.write.__doc__)
