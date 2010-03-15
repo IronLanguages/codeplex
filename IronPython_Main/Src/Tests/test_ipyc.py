@@ -451,17 +451,13 @@ def test_cached_types():
                 clrType = clr.GetClrType(attr)
                 if clrType.IsEnum or clrType.IsSealed or clrType.IsValueType or clrType.ContainsGenericParameters:
                     continue
-                #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24509
-                if is_net40 and name in ["CLRException1", "CLRException2", "CLRException3", "CLRException4", "EngineTest"]:
-                    continue
                 types.append(attr)
             elif type(attr) == type(IronPythonTest):
                 queue.append(attr)
 
     clr.CompileSubclassTypes('InheritanceTypes', *types)
-    if not is_net40: ##http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24509
-        clr.AddReference('InheritanceTypes')
-        import test_inheritance
+    clr.AddReference('InheritanceTypes')
+    import test_inheritance
 
     #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=21892
     # verify that GetSubclassedTypes round trips with clr.CompileSubclassTypes

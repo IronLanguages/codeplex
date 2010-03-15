@@ -775,19 +775,17 @@ def test_mutable_Valuetypes():
     # ensure .GetType() and calling the helper w/ the type work
     AreEqual(clr.GetClrType(str), ''.GetType())
     # and ensure we're not just auto-converting back on both of them
-    if not is_net40: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24083
-        Assert(clr.GetClrType(str) != str)
+    AreEqual(clr.GetClrType(str), str)
+    AreEqual(clr.GetClrType(str) != str, False)
     
     # as well as GetPythonType
     import System
     AreEqual(clr.GetPythonType(System.Int32), int)
     AreEqual(clr.GetPythonType(clr.GetClrType(int)), int)
 
-
     # verify we can't create *Ops classes
     from IronPython.Runtime.Operations import DoubleOps
     AssertError(TypeError, DoubleOps)
-        
     
     # setting mro to an invalid value should result in
     # bases still being correct
