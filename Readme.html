@@ -116,6 +116,45 @@ OK
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a><span style="color: #000000">, 
 which has many examples of using IronPython in various ways.</span></p>
 <p>&nbsp;</p>
+<h2><a name="silverlight"></a>IronPython in Silverlight</h2>
+<div style="border-left: 10px solid yellow; padding: 10px;">
+<h3>ATTENTION!</h3>
+<p>
+  See <a href="http://ironpython.net/browser/" target="_blank">ironpython.net/browser</a>
+  for the most up-to-date information on using Python in the browser with Silverlight.
+  For example, this HTML page hosts Silverlight to run Python code, and requires no extra
+  dependencies:
+</p>
+<blockquote><pre>&lt;html&gt;
+  &lt;head&gt;
+    &lt;script type="text/javascript" 
+            src="http://gestalt.ironpython.net/dlr-latest.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div id="message"&gt;Loading ...&lt;/div&gt;
+    &lt;script type="text/python"&gt;
+      document.message.innerHTML = "Hello from python!"
+      def on_click(obj, args):
+          obj.innerHTML = "Clicked!"
+      document.message.events.onclick += on_click
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre></blockquote>
+<p>
+Keep in mind the information, binaries, and examples in this package
+will still help you build Silverlight applications with IronPython, but
+using HTML script-tags is the preferred model going forward; the
+ways described here will be deprecated in a future release.
+</p>
+</div>
+<h3>Generating an application</h3>
+<blockquote><pre>script\sl python MyApp</pre></blockquote>
+<p>Will create "MyApp" in the current directory.</p>
+<p>For more information on the "server" script, run <code>script\server</code></p>
+<h3>Running an app</h3>
+<blockquote><pre>script\server /b:MyApp\index.html</pre></blockquote>
+<p>This will launch the default browesr pointed at the application.</p>
+<p>&nbsp;</p>
 <h2><a name="BuilFromSource"></a>Building IronPython from Source</h2>
     <p>
         If you downloaded the binaries from
