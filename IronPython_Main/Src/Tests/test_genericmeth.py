@@ -25,10 +25,33 @@ from IronPythonTest import *
 gm = GenMeth()
 
 # Check that the documentation strings for all the instance methods (they all have the same name) is as expected.
-AssertDocEqual(gm.InstMeth.__doc__, 'InstMeth[T](self) -> str' + newline + 'InstMeth[(T, U)](self) -> str' + newline + 'InstMeth[T](self, int arg1) -> str' + newline +'InstMeth[T](self, str arg1) -> str' + newline + 'InstMeth[(T, U)](self, int arg1) -> str' + newline + 'InstMeth[T](self, T arg1) -> str' + newline + 'InstMeth[(T, U)](self, T arg1, U arg2) -> str' + newline + 'InstMeth(self) -> str' + newline + 'InstMeth(self, int arg1) -> str' + newline + 'InstMeth(self, str arg1) -> str')
+expected = newline.join([
+    'InstMeth[T](self: GenMeth) -> str',
+    'InstMeth[(T, U)](self: GenMeth) -> str',
+    'InstMeth[T](self: GenMeth, arg1: int) -> str',
+    'InstMeth[T](self: GenMeth, arg1: str) -> str',
+    'InstMeth[(T, U)](self: GenMeth, arg1: int) -> str',
+    'InstMeth[T](self: GenMeth, arg1: T) -> str',
+    'InstMeth[(T, U)](self: GenMeth, arg1: T, arg2: U) -> str',
+    'InstMeth(self: GenMeth) -> str',
+    'InstMeth(self: GenMeth, arg1: int) -> str',
+    'InstMeth(self: GenMeth, arg1: str) -> str']) + newline
+    
+AssertDocEqual(gm.InstMeth.__doc__, expected)
 
 # And the same for the static methods.
-expected_static_methods = 'StaticMeth[T]() -> str' + newline + 'StaticMeth[(T, U)]() -> str' + newline + 'StaticMeth[T](int arg1) -> str' + newline + 'StaticMeth[T](str arg1) -> str' + newline + 'StaticMeth[(T, U)](int arg1) -> str' + newline + 'StaticMeth[T](T arg1) -> str' + newline + 'StaticMeth[(T, U)](T arg1, U arg2) -> str' + newline + 'StaticMeth() -> str' + newline + 'StaticMeth(int arg1) -> str' + newline + 'StaticMeth(str arg1) -> str'
+expected_static_methods = newline.join([
+        'StaticMeth[T]() -> str' , 
+        'StaticMeth[(T, U)]() -> str' , 
+        'StaticMeth[T](arg1: int) -> str' , 
+        'StaticMeth[T](arg1: str) -> str' , 
+        'StaticMeth[(T, U)](arg1: int) -> str' , 
+        'StaticMeth[T](arg1: T) -> str' , 
+        'StaticMeth[(T, U)](arg1: T, arg2: U) -> str' , 
+        'StaticMeth() -> str' , 
+        'StaticMeth(arg1: int) -> str' , 
+        'StaticMeth(arg1: str) -> str']) + newline
+ 
 AssertDocEqual(GenMeth.StaticMeth.__doc__, expected_static_methods)
 
 # Check that we bind to the correct method based on type and call arguments for each of our instance methods. We can validate this

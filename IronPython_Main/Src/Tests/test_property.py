@@ -102,7 +102,7 @@ def test_reflected_extension_property_ops():
                 ]
     
     for stuff, typename, returnType, propName in t_list:
-        expected = "Get: " + propName + "(" + typename + " self) -> " + returnType + newline
+        expected = "Get: " + propName + "(self: " + typename + ") -> " + returnType + newline
         Assert(stuff.__doc__.startswith(expected), stuff.__doc__)
                 
                 
