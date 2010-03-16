@@ -163,11 +163,11 @@ def test_func_meth_class():
 def test_clr_doc():
     import System
     Assert(System.Collections.Generic.List.__doc__.find("List[T]()") != -1)
-    Assert(System.Collections.Generic.List.__doc__.find("IEnumerable[T] collection") != -1)
+    Assert(System.Collections.Generic.List.__doc__.find("collection: IEnumerable[T]") != -1)
 
-    # static (bool, float) TryParse(str s)
+    # static TryParse(str s) -> (bool, float) 
     Assert(System.Double.TryParse.__doc__.index('(bool, float)') >= 0)
-    Assert(System.Double.TryParse.__doc__.index('(str s)') >= 0)
+    Assert(System.Double.TryParse.__doc__.index('(s: str)') >= 0)
 
 def test_none():
     AreEqual(None.__doc__, None)
