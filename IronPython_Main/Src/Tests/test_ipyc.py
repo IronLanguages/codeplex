@@ -411,6 +411,7 @@ def test_compiled_code():
     System.IO.File.Move(testpath.public_testdir + '\\test_class.py', 'old_test_class.py')
     try:
         import test_class
+        Assert(test_class.test_oldstyle_getattr.__doc__ != '')
     finally:
         System.IO.File.Move('old_test_class.py', testpath.public_testdir + '\\test_class.py')
         
