@@ -15,8 +15,11 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using System.Numerics;
 #else
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Math;
+using Complex = Microsoft.Scripting.Math.Complex64;
 #endif
 
 using System;
@@ -32,7 +35,6 @@ using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -41,7 +43,6 @@ using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
-
 [assembly: ExtensionType(typeof(IronPythonTest.IFooable), typeof(IronPythonTest.FooableExtensions))]
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -278,6 +279,84 @@ namespace IronPythonTest {
         }
 #endif
 
+#if !SILVERLIGHT        
+        public void ScenarioCodePlex20472() {
+            try {
+                string fileName = System.IO.Directory.GetCurrentDirectory() + "\\encoded_files\\cp20472.py";
+                _pe.CreateScriptSourceFromFile(fileName, System.Text.Encoding.GetEncoding(1251));
+
+                //Disabled. The line above should have thrown a syntax exception or an import error,
+                //but does not.
+
+                //throw new Exception("ScenarioCodePlex20472");
+            }
+            catch (IronPython.Runtime.Exceptions.ImportException) { }
+        }
+#endif
+
+        public class TestCodePlex23562 {
+            public bool MethodCalled = false;
+            public TestCodePlex23562() {
+            }
+            public void TestMethod() {
+                MethodCalled = true;
+            }
+        }
+
+        public void ScenarioCodePlex23562()
+        {
+            string pyCode = @"
+test = TestCodePlex23562()
+test.TestMethod()
+";
+            var scope = _pe.CreateScope();
+            scope.SetVariable("TestCodePlex23562", typeof(TestCodePlex23562));
+            _pe.Execute(pyCode, scope);
+
+            TestCodePlex23562 temp = scope.GetVariable<TestCodePlex23562>("test");
+            Assert(temp.MethodCalled);
+        }
+
+        public void ScenarioCodePlex18595() {
+            string pyCode = @"
+str_tuple = ('ab', 'cd')
+str_list  = ['abc', 'def', 'xyz']
+
+py_func_called = False
+def py_func():
+    global py_func_called
+    py_func_called = True
+";
+            var scope = _pe.CreateScope();
+            _pe.Execute(pyCode, scope);
+
+            IList<string> str_tuple = scope.GetVariable<IList<string>>("str_tuple");
+            AreEqual<int>(str_tuple.Count, 2);
+            IList<string> str_list  = scope.GetVariable<IList<string>>("str_list");
+            AreEqual<int>(str_list.Count, 3);
+            VoidDelegate py_func = scope.GetVariable<VoidDelegate>("py_func");
+            py_func();
+            AreEqual<bool>(scope.GetVariable<bool>("py_func_called"), true);
+        }
+
+        public void ScenarioCodePlex24077()
+        {
+            string pyCode = @"
+class K(object):
+    def __init__(self, a, b, c):
+        global A, B, C
+        A = a
+        B = b
+        C = c
+";
+            var scope = _pe.CreateScope();
+            _pe.Execute(pyCode, scope);
+            object KKlass = scope.GetVariable("K");
+            object[] Kparams = new object[] { 1, 3.14, "abc"};
+            _pe.Operations.CreateInstance(KKlass, Kparams);
+            AreEqual<int>(scope.GetVariable<int>("A"), 1);
+        }
+
         // Execute
         public void ScenarioExecute() {
             ClsPart clsPart = new ClsPart();
@@ -498,6 +577,7 @@ namespace IronPythonTest {
             ScriptScope scope = _pe.CreateScope();
             ScriptSource src = _pe.CreateScriptSourceFromString(@"
 import System
+import clr
 
 def f0(a, b): pass
 def f1(a, *b): pass
@@ -684,6 +764,7 @@ i = int
             object subklass = scope.GetVariable("SC");
             object subnewklass = scope.GetVariable("SNC");
             object System = scope.GetVariable("System");
+            object clr = scope.GetVariable("clr");
 
             foreach (object o in new[] { inst, ncinst }) {
                 var members = doc.GetMembers(o);
@@ -696,6 +777,7 @@ i = int
             ContainsMemberName(doc.GetMembers(subklass), "m0", MemberKind.Method);
             ContainsMemberName(doc.GetMembers(subnewklass), "m0", MemberKind.Method);
             ContainsMemberName(doc.GetMembers(System), "Collections", MemberKind.Namespace);
+            ContainsMemberName(doc.GetMembers(clr), "AddReference", MemberKind.Function);
 
             object intType = scope.GetVariable("i");
             foreach (object o in new object[] { intType, 42 }) {
@@ -1099,14 +1181,14 @@ xrange = xrange
                 var dsite = CallSite<Func<CallSite, object, double>>.Create(new MyConvertBinder(typeof(double), 23.0));
                 AreEqual(dsite.Target(dsite, inst), 42.0);
 
-                var csite = CallSite<Func<CallSite, object, Complex64>>.Create(new MyConvertBinder(typeof(Complex64), new Complex64(0, 23)));
-                AreEqual(csite.Target(csite, inst), new Complex64(0, 42));
+                var csite = CallSite<Func<CallSite, object, Complex>>.Create(new MyConvertBinder(typeof(Complex), new Complex(0, 23)));
+                AreEqual(csite.Target(csite, inst), new Complex(0, 42));
 
                 var bsite = CallSite<Func<CallSite, object, bool>>.Create(new MyConvertBinder(typeof(bool), true));
                 AreEqual(bsite.Target(bsite, inst), false);
 
-                var bisite = CallSite<Func<CallSite, object, Microsoft.Scripting.Math.BigInteger>>.Create(new MyConvertBinder(typeof(BigInteger), (BigInteger)23));
-                AreEqual(bisite.Target(bisite, inst), (Microsoft.Scripting.Math.BigInteger)42);
+                var bisite = CallSite<Func<CallSite, object, BigInteger>>.Create(new MyConvertBinder(typeof(BigInteger), (BigInteger)23));
+                AreEqual(bisite.Target(bisite, inst), (BigInteger)42);
 
                 var dlgsite = CallSite<Func<CallSite, object, Func<object, object>>>.Create(new MyConvertBinder(typeof(Func<object, object>), null));
                 VerifyFunction(new[] { "foo" }, new string[0], dlgsite.Target(dlgsite, inst)("foo"));
@@ -1120,8 +1202,10 @@ xrange = xrange
                 site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(string)));
                 AreEqual(site.Target(site, inst), "Converted");
 
-                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(Microsoft.Scripting.Math.BigInteger), (BigInteger)23));
+#if CLR2
+                site = CallSite<Func<CallSite, object, object>>.Create(new MyConvertBinder(typeof(BigInteger), (BigInteger)23));
                 AreEqual(site.Target(site, inst), (BigInteger)23);
+#endif
 
                 // strongly typed return versions
                 var ssite = CallSite<Func<CallSite, object, string>>.Create(new MyConvertBinder(typeof(string)));
@@ -1133,8 +1217,8 @@ xrange = xrange
                 var dsite = CallSite<Func<CallSite, object, double>>.Create(new MyConvertBinder(typeof(double), 23.0));
                 AreEqual(dsite.Target(dsite, inst), 23.0);
 
-                var csite = CallSite<Func<CallSite, object, Complex64>>.Create(new MyConvertBinder(typeof(Complex64), new Complex64(0, 23.0)));
-                AreEqual(csite.Target(csite, inst), new Complex64(0, 23.0));
+                var csite = CallSite<Func<CallSite, object, Complex>>.Create(new MyConvertBinder(typeof(Complex), new Complex(0, 23.0)));
+                AreEqual(csite.Target(csite, inst), new Complex(0, 23.0));
 
                 var bsite = CallSite<Func<CallSite, object, bool>>.Create(new MyConvertBinder(typeof(bool), true));
                 AreEqual(bsite.Target(bsite, inst), true);

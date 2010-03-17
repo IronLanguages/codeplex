@@ -24,13 +24,18 @@ using System.Security;
 using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
+#if CLR2
+using Microsoft.Scripting.Math;
+#else
+using System.Numerics;
+#endif
 
 [assembly: PythonModule("sys", typeof(IronPython.Modules.SysModule))]
 namespace IronPython.Modules {
@@ -146,13 +151,7 @@ namespace IronPython.Modules {
 
             if (depth < stack.Count) {
                 TraceBackFrame cur = null;
-                TraceThread thread = PythonTracebackListener.GetCurrentThread();
-                List<TraceBackFrame> frames = null;
                 int curTraceFrame = -1;
-                if (thread != null) {
-                    frames = thread.Frames;
-                    curTraceFrame = thread.Frames.Count - stack.Count;
-                }
                 
                 for (int i = 0; i < stack.Count - depth; i++) {
                     var elem = stack[i];
@@ -160,11 +159,6 @@ namespace IronPython.Modules {
                     if (elem.Frame != null) {
                         // we previously handed out a frame here, hand out the same one now
                         cur = elem.Frame;
-                    } else if (frames != null && curTraceFrame >= 0) {
-                        // tracing is enabled and it created a frame
-                        cur = frames[curTraceFrame];
-
-                        stack[i] = new FunctionStack(elem.Context, elem.Code, cur);
                     } else {
                         // create a new frame and save it for future calls
                         cur = new TraceBackFrame(
@@ -266,8 +260,8 @@ namespace IronPython.Modules {
                 // We're following CPython behavior here.
                 // If CurrentPythonFrame is not null then we're currently inside a traceback, and
                 // enabling trace while inside a traceback is only allowed through sys.call_tracing()
-                var pyThread = PythonTracebackListener.GetCurrentThread();
-                if (pyThread == null || !pyThread.InTraceback) {
+                var pyThread = PythonOps.GetFunctionStackNoCreate();
+                if (pyThread == null || !PythonTracebackListener.InTraceBack) {
                     pyContext.PushTracebackHandler(new PythonTracebackListener((PythonContext)context.LanguageContext));
                     pyContext.RegisterTracebackHandler();
                     PythonTracebackListener.SetTrace(o, (TracebackDelegate)Converter.ConvertToDelegate(o, typeof(TracebackDelegate)));
@@ -470,7 +464,7 @@ namespace IronPython.Modules {
 
             public object this[BigInteger i] {
                 get {
-                    return this[i.ToInt32()];
+                    return this[(int)i];
                 }
             }
 
@@ -694,13 +688,11 @@ namespace IronPython.Modules {
             }
 
             private static object TryShrinkToInt(object value) {
-                BigInteger bi = value as BigInteger;
-
-                if (Object.ReferenceEquals(bi, null)) {
+                if (!(value is BigInteger)) {
                     return value;
                 }
 
-                return BigIntegerOps.__int__(bi);
+                return BigIntegerOps.__int__((BigInteger)value);
             }
 
             public object epsilon {

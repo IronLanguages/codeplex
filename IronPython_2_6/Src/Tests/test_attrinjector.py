@@ -53,4 +53,28 @@ def test_get_set_extended(): operator_test(ExtendedClass())
 
 def test_get_set_instance(): operator_test(OperatorTest())
 
+#
+# test_overload_*
+# http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=26277
+#
+
+def test_overload_0_GetCustomMember():
+    x = MemberOverloadTest()
+    AreEqual(x.Prop, 0)
+
+def test_overload_1_GetBoundMember():
+    x = MemberOverloadTest()
+    AssertError(AttributeError, getattr, x, "Prop_Nonexistent")
+
+def test_overload_2_SetMember():
+    x = MemberOverloadTest()
+    x.Prop = 5
+    AreEqual(x.Prop, 5)
+
+def test_overload_3_DeleteMember():
+    x = MemberOverloadTest()
+    def f():
+        del x.Prop
+    AssertError(AttributeError, f)
+
 run_test(__name__)

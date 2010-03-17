@@ -21,12 +21,18 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Modules;
 using IronPython.Runtime.Types;
+
+#if CLR2
+using Microsoft.Scripting.Math;
+using Complex = Microsoft.Scripting.Math.Complex64;
+#else
+using System.Numerics;
+#endif
 
 namespace IronPython.Runtime.Operations {
 
@@ -87,10 +93,10 @@ namespace IronPython.Runtime.Operations {
             if (x is int) return ReturnObject(context, cls, (BigInteger)(int)x);
             if (x is BigInteger) return ReturnObject(context, cls, x);
             
-            if (x is Complex64) throw PythonOps.TypeError("can't convert complex to long; use long(abs(z))");
+            if (x is Complex) throw PythonOps.TypeError("can't convert complex to long; use long(abs(z))");
 
             if (x is decimal) {
-                return ReturnObject(context, cls, BigInteger.Create((decimal)x));
+                return ReturnObject(context, cls, (BigInteger)(decimal)x);
             }
 
             object result;
@@ -151,7 +157,7 @@ namespace IronPython.Runtime.Operations {
             if (y is int) {
                 return Power(x, (int)y, z);
             } else if (y is long) {
-                return Power(x, BigInteger.Create((long)y), z);
+                return Power(x, (BigInteger)(long)y, z);
             } else if (y is BigInteger) {
                 return Power(x, (BigInteger)y, z);
             }
@@ -161,9 +167,9 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static object Power(BigInteger x, int y, object z) {
             if (z is int) {
-                return Power(x, y, BigInteger.Create((int)z));
+                return Power(x, y, (BigInteger)(int)z);
             } else if (z is long) {
-                return Power(x, y, BigInteger.Create((long)z));
+                return Power(x, y, (BigInteger)(long)z);
             } else if (z is BigInteger) {
                 return Power(x, y, (BigInteger)z);
             } else if (z == null) {
@@ -175,9 +181,9 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static object Power(BigInteger x, BigInteger y, object z) {
             if (z is int) {
-                return Power(x, y, BigInteger.Create((int)z));
+                return Power(x, y, (BigInteger)(int)z);
             } else if (z is long) {
-                return Power(x, y, BigInteger.Create((long)z));
+                return Power(x, y, (BigInteger)(long)z);
             } else if (z is BigInteger) {
                 return Power(x, y, (BigInteger)z);
             } else if (z == null) {
@@ -235,15 +241,12 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static object Power([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            if (Object.ReferenceEquals(x, null)) throw PythonOps.TypeError("unsupported operands for __pow__: NoneType and long");
-            if (Object.ReferenceEquals(y, null)) throw PythonOps.TypeError("unsupported operands for __pow__: long and NoneType");
-
             int yl;
             if (y.AsInt32(out yl)) {
                 return Power(x, yl);
             } else {
                 if (x == BigInteger.Zero) {
-                    if (y.IsNegative())
+                    if (y.Sign < 0)
                         throw PythonOps.ZeroDivisionError("0.0 cannot be raised to a negative power");
                     return BigInteger.Zero;
                 } else if (x == BigInteger.One) {
@@ -258,8 +261,10 @@ namespace IronPython.Runtime.Operations {
             BigInteger rr;
             BigInteger qq;
 
+#if CLR2
             if (Object.ReferenceEquals(x, null)) throw PythonOps.TypeError("unsupported operands for div/mod: NoneType and long");
             if (Object.ReferenceEquals(y, null)) throw PythonOps.TypeError("unsupported operands for div/mod: long and NoneType");
+#endif
 
             qq = BigInteger.DivRem(x, y, out rr);
 
@@ -292,6 +297,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+#if CLR2
         [SpecialName]
         public static BigInteger Add([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x + y;
@@ -304,6 +310,20 @@ namespace IronPython.Runtime.Operations {
         public static BigInteger Multiply([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x * y;
         }
+#else
+        [PythonHidden]
+        public static BigInteger Add(BigInteger x, BigInteger y) {
+            return x + y;
+        }
+        [PythonHidden]
+        public static BigInteger Subtract(BigInteger x, BigInteger y) {
+            return x - y;
+        }
+        [PythonHidden]
+        public static BigInteger Multiply(BigInteger x, BigInteger y) {
+            return x * y;
+        }
+#endif
 
         [SpecialName]
         public static BigInteger FloorDivide([NotNull]BigInteger x, [NotNull]BigInteger y) {
@@ -343,6 +363,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.OverflowError("long/long too large for a float");
         }
 
+#if CLR2
         [SpecialName]
         public static BigInteger Divide([NotNull]BigInteger x, [NotNull]BigInteger y) {
             BigInteger r;
@@ -355,7 +376,6 @@ namespace IronPython.Runtime.Operations {
             DivMod(x, y, out r);
             return r;
         }
-
 
         [SpecialName]
         public static BigInteger LeftShift([NotNull]BigInteger x, int y) {
@@ -375,13 +395,57 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static BigInteger LeftShift([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return LeftShift(x, y.ToInt32());
+            return LeftShift(x, (int)y);
         }
 
         [SpecialName]
         public static BigInteger RightShift([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return RightShift(x, y.ToInt32());
+            return RightShift(x, (int)y);
         }
+#else
+        // The op_* nomenclature is required here to avoid name collisions with the
+        // PythonHidden methods Divide, Mod, and [Left,Right]Shift.
+
+        [SpecialName]
+        public static BigInteger op_Division(BigInteger x, BigInteger y) {
+            BigInteger r;
+            return DivMod(x, y, out r);
+        }
+
+        [SpecialName]
+        public static BigInteger op_Modulus(BigInteger x, BigInteger y) {
+            BigInteger r;
+            DivMod(x, y, out r);
+            return r;
+        }
+
+        [SpecialName]
+        public static BigInteger op_LeftShift(BigInteger x, int y) {
+            if (y < 0) {
+                throw PythonOps.ValueError("negative shift count");
+            }
+            return x << y;
+        }
+
+        [SpecialName]
+        public static BigInteger op_RightShift(BigInteger x, int y) {
+            if (y < 0) {
+                throw PythonOps.ValueError("negative shift count");
+            }
+            return x >> y;
+        }
+
+        [SpecialName]
+        public static BigInteger op_LeftShift(BigInteger x, BigInteger y) {
+            return op_LeftShift(x, (int)y);
+        }
+
+        [SpecialName]
+        public static BigInteger op_RightShift(BigInteger x, BigInteger y) {
+            return op_RightShift(x, (int)y);
+        }
+#endif
+
         #endregion
 
         [SpecialName]
@@ -444,22 +508,33 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object __getnewargs__(CodeContext context, BigInteger self) {
+#if CLR2
             if (!Object.ReferenceEquals(self, null)) {
                 return PythonTuple.MakeTuple(BigIntegerOps.__new__(context, TypeCache.BigInteger, self));
             }
             throw PythonOps.TypeErrorForBadInstance("__getnewargs__ requires a 'long' object but received a '{0}'", self);
+#else
+            return PythonTuple.MakeTuple(BigIntegerOps.__new__(context, TypeCache.BigInteger, self));
+#endif
         }
 
         #endregion
 
         // These functions make the code generation of other types more regular
-        internal static BigInteger OnesComplement(BigInteger x) {
+#if CLR2
+        internal
+#else
+        [PythonHidden] public
+#endif
+        static BigInteger OnesComplement(BigInteger x) {
             return ~x;
         }
 
         internal static BigInteger FloorDivideImpl(BigInteger x, BigInteger y) {
             return FloorDivide(x, y);
         }
+
+#if CLR2
         [SpecialName]
         public static BigInteger BitwiseAnd([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x & y;
@@ -472,6 +547,20 @@ namespace IronPython.Runtime.Operations {
         public static BigInteger ExclusiveOr([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x ^ y;
         }
+#else
+        [PythonHidden]
+        public static BigInteger BitwiseAnd(BigInteger x, BigInteger y) {
+            return x & y;
+        }
+        [PythonHidden]
+        public static BigInteger BitwiseOr(BigInteger x, BigInteger y) {
+            return x | y;
+        }
+        [PythonHidden]
+        public static BigInteger ExclusiveOr(BigInteger x, BigInteger y) {
+            return x ^ y;
+        }
+#endif
 
         [PropertyMethod, SpecialName]
         public static BigInteger Getreal(BigInteger self) {
@@ -499,9 +588,6 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName, ImplicitConversionMethod]
         public static double ConvertToDouble(BigInteger self) {
-            if (object.ReferenceEquals(self, null)) {
-                throw new ArgumentNullException("self");
-            }
             return self.ToFloat64();
         }
 
@@ -511,6 +597,11 @@ namespace IronPython.Runtime.Operations {
             if (self.AsInt32(out res)) return res;
 
             throw Converter.CannotConvertOverflow("int", self);
+        }
+
+        [SpecialName, ExplicitConversionMethod]
+        public static Complex ConvertToComplex(BigInteger self) {
+            return MathUtils.MakeReal(ConvertToDouble(self));
         }
 
         [SpecialName, ImplicitConversionMethod]
@@ -549,7 +640,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
-        public static int Compare(BigInteger x, Extensible<double> y) {
+        public static int Compare(BigInteger x, [NotNull]Extensible<double> y) {
             return -((int)DoubleOps.Compare(y.Value, x));
         }
 
@@ -603,11 +694,327 @@ namespace IronPython.Runtime.Operations {
             return NotImplementedType.Value;
         }
 
-        // provided for backwards compatibility...
+        #region Backwards compatibility with BigIntegerV2
+
         [PythonHidden]
         public static float ToFloat(BigInteger/*!*/ self) {
             return checked((float)self.ToFloat64());
         }
+
+#if !CLR2
+        #region Binary Ops
+        
+        [PythonHidden]
+        public static BigInteger Xor(BigInteger x, BigInteger y) {
+            return x ^ y;
+        }
+
+        [PythonHidden]
+        public static BigInteger Divide(BigInteger x, BigInteger y) {
+            return op_Division(x, y);
+        }
+
+        [PythonHidden]
+        public static BigInteger Mod(BigInteger x, BigInteger y) {
+            return op_Modulus(x, y);
+        }
+
+        [PythonHidden]
+        public static BigInteger LeftShift(BigInteger x, int y) {
+            return op_LeftShift(x, y);
+        }
+
+        [PythonHidden]
+        public static BigInteger RightShift(BigInteger x, int y) {
+            return op_RightShift(x, y);
+        }
+
+        [PythonHidden]
+        public static BigInteger LeftShift(BigInteger x, BigInteger y) {
+            return op_LeftShift(x, y);
+        }
+
+        [PythonHidden]
+        public static BigInteger RightShift(BigInteger x, BigInteger y) {
+            return op_RightShift(x, y);
+        }
+
+        #endregion
+
+        #region 'As' Conversions
+
+        [PythonHidden]
+        public static bool AsDecimal(BigInteger self, out decimal res) {
+            if (self <= (BigInteger)decimal.MaxValue && self >= (BigInteger)decimal.MinValue) {
+                res = (decimal)self;
+                return true;
+            }
+            res = default(decimal);
+            return false;
+        }
+
+        [PythonHidden]
+        public static bool AsInt32(BigInteger self, out int res) {
+            return self.AsInt32(out res);
+        }
+
+        [PythonHidden]
+        public static bool AsInt64(BigInteger self, out long res) {
+            return self.AsInt64(out res);
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static bool AsUInt32(BigInteger self, out uint res) {
+            return self.AsUInt32(out res);
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static bool AsUInt64(BigInteger self, out ulong res) {
+            return self.AsUInt64(out res);
+        }
+        
+        #endregion
+
+        #region Direct Conversions
+
+        [PythonHidden]
+        public static int ToInt32(BigInteger self) {
+            return (int)self;
+        }
+
+        [PythonHidden]
+        public static long ToInt64(BigInteger self) {
+            return (long)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static uint ToUInt32(BigInteger self) {
+            return (uint)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static ulong ToUInt64(BigInteger self) {
+            return (ulong)self;
+        }
+
+        #endregion
+
+        #region Mimic some IConvertible members
+
+        [PythonHidden]
+        public static bool ToBoolean(BigInteger self, IFormatProvider provider) {
+            return !self.IsZero;
+        }
+
+        [PythonHidden]
+        public static byte ToByte(BigInteger self, IFormatProvider provider) {
+            return (byte)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static sbyte ToSByte(BigInteger self, IFormatProvider provider) {
+            return (sbyte)self;
+        }
+
+        [PythonHidden]
+        public static char ToChar(BigInteger self, IFormatProvider provider) {
+            int res;
+            if (self.AsInt32(out res) && res <= Char.MaxValue && res >= Char.MinValue) {
+                return (char)res;
+            }
+            throw new OverflowException("big integer won't fit into char");
+        }
+
+        [PythonHidden]
+        public static decimal ToDecimal(BigInteger self, IFormatProvider provider) {
+            return (decimal)self;
+        }
+
+        [PythonHidden]
+        public static double ToDouble(BigInteger self, IFormatProvider provider) {
+            return ConvertToDouble(self);
+        }
+
+        [PythonHidden]
+        public static float ToSingle(BigInteger self, IFormatProvider provider) {
+            return ToFloat(self);
+        }
+
+        [PythonHidden]
+        public static short ToInt16(BigInteger self, IFormatProvider provider) {
+            return (short)self;
+        }
+
+        [PythonHidden]
+        public static int ToInt32(BigInteger self, IFormatProvider provider) {
+            return (int)self;
+        }
+
+        [PythonHidden]
+        public static long ToInt64(BigInteger self, IFormatProvider provider) {
+            return (long)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static ushort ToUInt16(BigInteger self, IFormatProvider provider) {
+            return (ushort)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static uint ToUInt32(BigInteger self, IFormatProvider provider) {
+            return (uint)self;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static ulong ToUInt64(BigInteger self, IFormatProvider provider) {
+            return (ulong)self;
+        }
+
+        [PythonHidden]
+        public static object ToType(BigInteger self, Type conversionType, IFormatProvider provider) {
+            if (conversionType == typeof(BigInteger)) {
+                return self;
+            }
+            throw new NotImplementedException();
+        }
+
+        [PythonHidden]
+        public static TypeCode GetTypeCode(BigInteger self) {
+            return TypeCode.Object;
+        }
+
+        #endregion
+
+        [PythonHidden]
+        public static BigInteger Square(BigInteger self) {
+            return self * self;
+        }
+
+        [PythonHidden]
+        public static bool IsNegative(BigInteger self) {
+            return self.Sign < 0;
+        }
+
+        [PythonHidden]
+        public static bool IsPositive(BigInteger self) {
+            return self.Sign > 0;
+        }
+
+        [PythonHidden]
+        public static int GetBitCount(BigInteger self) {
+            return self.GetBitCount();
+        }
+
+        [PythonHidden]
+        public static int GetByteCount(BigInteger self) {
+            int index;
+            byte[] bytes;
+            GetHighestByte(self, out index, out bytes);
+            return index + 1;
+        }
+
+        #region 'Create' Methods
+
+        [PythonHidden]
+        public static BigInteger Create(byte[] v) {
+            return new BigInteger(v);
+        }
+
+        [PythonHidden]
+        public static BigInteger Create(int v) {
+            return new BigInteger(v);
+        }
+
+        [PythonHidden]
+        public static BigInteger Create(long v) {
+            return new BigInteger(v);
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static BigInteger Create(uint v) {
+            return new BigInteger(v);
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static BigInteger Create(ulong v) {
+            return (BigInteger)v;
+        }
+
+        [PythonHidden]
+        public static BigInteger Create(decimal v) {
+            return new BigInteger(v);
+        }
+
+        [PythonHidden]
+        public static BigInteger Create(double v) {
+            return new BigInteger(v);
+        }
+
+        #endregion
+
+        #region Expose BigIntegerV2-style uint data
+
+        [CLSCompliant(false), PythonHidden]
+        public static uint[] GetWords(BigInteger self) {
+            if (self.IsZero) {
+                return new uint[] { 0 };
+            }
+
+            int hi;
+            byte[] bytes;
+            GetHighestByte(self, out hi, out bytes);
+
+            uint[] result = new uint[(hi + 1 + 3) / 4];
+            int i = 0;
+            int j = 0;
+            uint u = 0;
+            int shift = 0;
+            while (i < bytes.Length) {
+                u |= (uint)bytes[i++] << shift;
+                if (i % 4 == 0) {
+                    result[j++] = u;
+                    u = 0;
+                }
+                shift += 8;
+            }
+            if (u != 0) {
+                result[j] = u;
+            }
+            return result;
+        }
+
+        [CLSCompliant(false), PythonHidden]
+        public static uint GetWord(BigInteger self, int index) {
+            return GetWords(self)[index];
+        }
+
+        [PythonHidden]
+        public static int GetWordCount(BigInteger self) {
+            return GetWords(self).Length;
+        }
+
+        private static byte GetHighestByte(BigInteger self, out int index, out byte[] byteArray) {
+            byte[] bytes = BigInteger.Abs(self).ToByteArray();
+            if (self.IsZero) {
+                byteArray = bytes;
+                index = 0;
+                return 1;
+            }
+
+            int hi = bytes.Length;
+            byte b;
+            do {
+                b = bytes[--hi];
+            } while (b == 0);
+            index = hi;
+            byteArray = bytes;
+            return b;
+        }
+
+        #endregion
+#endif
+
+        #endregion
 
         public static string/*!*/ __format__(CodeContext/*!*/ context, BigInteger/*!*/ self, [NotNull]string/*!*/ formatSpec) {
             StringFormatSpec spec = StringFormatSpec.FromString(formatSpec);

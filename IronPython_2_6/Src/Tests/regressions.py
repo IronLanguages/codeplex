@@ -563,6 +563,242 @@ def test_cp23823():
     AreEqual(f(), (['a', 'deepcopy'], ['deepcopy']))
 
 
+def cp22692_helper(source, flags):
+    retVal = []
+    err = err1 = err2 = None
+    code = code1 = code2 = None
+    try:
+        code = compile(source, "dummy", "single", flags, 1)
+    except SyntaxError, err:
+        pass
+    try:
+        code1 = compile(source + "\n", "dummy", "single", flags, 1)
+    except SyntaxError, err1:
+        pass
+    try:
+        code2 = compile(source + "\n\n", "dummy", "single", flags, 1)
+    except SyntaxError, err2:
+        pass
+    if not code:
+        retVal.append(type(err1))
+        retVal.append(type(err2))
+    return retVal 
+
+@skip("cli", "silverlight")
+def test_cp22692():
+    AreEqual(cp22692_helper("if 1:", 0x200),
+             [SyntaxError, IndentationError])
+    AreEqual(cp22692_helper("if 1:", 0),
+             [SyntaxError, IndentationError])
+    AreEqual(cp22692_helper("if 1:\n  if 1:", 0x200),
+             [IndentationError, IndentationError])
+    AreEqual(cp22692_helper("if 1:\n  if 1:", 0),
+             [IndentationError, IndentationError])
+
+@skip("win32")
+def test_cp23545():
+    import clr
+    clr.AddReference("rowantest.defaultmemberscs.dll")
+    from Merlin.Testing.DefaultMemberSample import ClassWithDefaultField
+    AreEqual(repr(ClassWithDefaultField.Field),
+             "<field# Field on ClassWithDefaultField>")
+    try:
+        ClassWithDefaultField.Field = 20
+    except ValueError, e:
+        AreEqual(e.message,
+                 "assignment to instance field w/o instance")
+    AreEqual(ClassWithDefaultField().Field, 10)
+
+def test_cp20174():
+    cp20174_path = testpath.public_testdir + r"\cp20174"
+    
+    try:
+        nt.mkdir(cp20174_path)
+        
+        cp20174_init = cp20174_path + r"\__init__.py"
+        write_to_file(cp20174_init, "import a")
+        
+        cp20174_a = cp20174_path + r"\a.py"
+        write_to_file(cp20174_a, """
+from property import x
+class C:
+    def _get_x(self): return x
+    x = property(_get_x)
+""")
+        
+        cp20174_property = cp20174_path + r"\property.py"
+        write_to_file(cp20174_property, "x=1")
+        
+        import cp20174
+        AreEqual(cp20174.property.x, 1)
+        
+    finally:
+        for x in nt.listdir(cp20174_path):
+            nt.unlink(cp20174_path + "\\" + x)
+        nt.rmdir(cp20174_path)
+
+@skip("win32")
+def test_cp20370():
+    import clr
+    clr.AddReference("System.Drawing")
+    from System.Drawing import Point
+    p1 = Point(1, 2)
+    p2 = Point(3, 4)
+    
+    l = [p1]
+    Assert(id(l[-1]) != id(p2))
+    l[-1] = p2
+    AreEqual(id(l[-1]), id(p2))
+
+@skip("win32", "silverlight")
+def test_cp23878():
+    import clr
+    clr.AddReference("rowantest.delegatedefinitions.dll")
+    clr.AddReference("rowantest.typesamples.dll")
+    from Merlin.Testing import Delegate, Flag
+    from time import sleep
+    
+    cwtm = Delegate.ClassWithTargetMethods()
+    vi32d = Delegate.VoidInt32Delegate(cwtm.MVoidInt32)
+    ar = vi32d.BeginInvoke(32, None, None)
+    is_complete = False
+    for i in xrange(100):
+        sleep(1)
+        if ar.IsCompleted:
+            is_complete = True
+            break
+    Assert(is_complete)
+    AreEqual(Flag.Value, 32)
+
+def test_cp23914():
+    class C(object):
+        def __init__(self, x,y,z):
+            print x,y,z
+    
+    m = type.__call__
+    
+    import sys
+    from cStringIO import StringIO
+    oldstdout, sys.stdout = sys.stdout, StringIO()
+    try:
+        l = m(C,1,2,3)
+        l = m(C,z=3,y=2,x=1)
+        sys.stdout.flush()
+    finally:
+        temp_stdout = sys.stdout
+        sys.stdout = oldstdout
+    
+    AreEqual(temp_stdout.getvalue(), '1 2 3\n1 2 3\n')
+
+@skip("cli", "silverlight")
+def test_cp23992():
+    def f():
+        x = 3
+        def g():
+            return locals()
+        l1 = locals()
+        l2 = g()
+        return (l1, l2)
+    
+    t1, t2 = f()
+    AreEqual(t1.keys(), ['x', 'g'])
+    AreEqual(t2, {})
+
+def test_cp24169():
+    import os, sys
+    
+    orig_syspath = [x for x in sys.path]
+    try:
+        sys.path.append(os.getcwd() + r"\encoded_files")
+        import cp20472 #no encoding specified and has non-ascii characters
+        raise Exception("Line above should had thrown!")
+    except SyntaxError, e:
+        Assert(e.msg.startswith("Non-ASCII character '\\xcf' in file"))
+        Assert(e.msg.endswith("on line 1, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details"))
+        Assert("\\encoded_files\\cp20472.py" in e.msg, e.msg)
+    finally:
+        sys.path = orig_syspath
+
+def test_cp24484():
+    class DictClass(dict):
+        def __getattr__(self, name):
+            return lambda x: x*20
+
+    class K(object):
+        def __init__(self, parent):
+            self.parent = parent
+        def __getattr__(self, name):
+            return getattr(self.parent, name)
+
+    dc = DictClass()
+    k = K(dc)
+    for i in xrange(200):
+        temp = k.test(20)
+
+
+def test_cp23555():
+    with stdout_trapper() as trapper:
+        class Base(object):
+            pass
+
+        class Real(Base, float):
+            def __new__(cls, *args, **kwargs):
+                print 'real new'
+                result = Stub.__new__(cls, *args, **kwargs)
+                return result
+            def __init__(self, *args, **kwargs):
+                print 'real init'
+            def __del__(self):
+                print 'real del'
+        
+        class Stub(Real):
+            def __new__(cls, *args, **kwargs):
+                print 'stub new'
+                return float.__new__(Stub, args[0])
+            def __init__(self, *args, **kwargs):
+                print 'stub init'
+            def __del__(self):
+                print "this should never happen; it's just here to ensure I get registered for GC"
+        
+        def ConstructReal(x):
+            f = Real(x)
+            f.__class__ = Real
+            return f
+
+        f = ConstructReal(1.0)
+        del f
+
+    AreEqual(trapper.messages[0:3],
+             ['real new', 'stub new', 'stub init']) #'real del']) => CLR GC
+
+def test_cp24677():
+    class SomeError(Exception):
+        pass
+    
+    class SomeOtherError(SomeError, IOError):
+        pass
+    
+    soe = SomeOtherError("some message")
+
+    try:
+        raise soe
+    except Exception:
+        pass
+        
+    try:
+        raise soe
+    except SomeError:
+        pass
+
+    try:
+        raise soe
+    except IOError:
+        pass
+        
+    try:
+        raise soe
+    except SomeOtherError:
+        pass
 #------------------------------------------------------------------------------
 #--Main
 run_test(__name__)

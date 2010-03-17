@@ -64,7 +64,7 @@ EXTRA_INCLUDE_LIST = [x.lower() for x in EXTRA_INCLUDE_LIST]
 
 
 #Test Packages
-PKG_LIST = [ "modules"]
+PKG_LIST = [ "modules", "stress"]
 
 BAIL_ON_FIRST_FAIL = True
 

@@ -337,6 +337,8 @@ namespace Microsoft.Scripting.Math {
             this.data = copy.data;
         }
 
+        public BigInteger(byte[] bytes) : this(Create(bytes)) { }
+
         [CLSCompliant(false)]
         public BigInteger(int sign, params uint[] data) {
             ContractUtils.RequiresNotNull(data, "data");
@@ -362,8 +364,8 @@ namespace Microsoft.Scripting.Math {
         /// </summary>
         [CLSCompliant(false)]
         public uint[] GetWords() {
-            if (sign == 0) return new uint[0];
-            int w = GetWordCount();
+            if (sign == 0) return new uint[] { 0 };
+            int w = GetLength();
             uint[] bits = new uint[w];
             Array.Copy(data, bits, w);
             return bits;
@@ -378,7 +380,7 @@ namespace Microsoft.Scripting.Math {
             if (IsZero()) {
                 return 1;
             }
-            int w = GetWordCount() - 1;
+            int w = GetLength() - 1;
             uint b = data[w];
             Debug.Assert(b > 0);
             int result = w * 32;
@@ -406,7 +408,7 @@ namespace Microsoft.Scripting.Math {
         public bool AsInt64(out long ret) {
             ret = 0;
             if (sign == 0) return true;
-            if (GetWordCount() > 2) return false;
+            if (GetLength() > 2) return false;
             if (data.Length == 1) {
                 ret = sign * (long)data[0];
                 return true;
@@ -423,7 +425,7 @@ namespace Microsoft.Scripting.Math {
             ret = 0;
             if (sign == 0) return true;
             if (sign < 0) return false;
-            if (GetWordCount() > 1) return false;
+            if (GetLength() > 1) return false;
             ret = data[0];
             return true;
         }
@@ -433,7 +435,7 @@ namespace Microsoft.Scripting.Math {
             ret = 0;
             if (sign == 0) return true;
             if (sign < 0) return false;
-            if (GetWordCount() > 2) return false;
+            if (GetLength() > 2) return false;
             ret = (ulong)data[0];
             if (data.Length > 1) {
                 ret |= ((ulong)data[1]) << 32;
@@ -444,7 +446,7 @@ namespace Microsoft.Scripting.Math {
         public bool AsInt32(out int ret) {
             ret = 0;
             if (sign == 0) return true;
-            if (GetWordCount() > 1) return false;
+            if (GetLength() > 1) return false;
             if (data[0] > 0x80000000) return false;
             if (data[0] == 0x80000000 && sign == 1) return false;
             ret = (int)data[0];
@@ -458,7 +460,7 @@ namespace Microsoft.Scripting.Math {
                 return true;
             }
 
-            int length = GetWordCount();
+            int length = GetLength();
             if (length > 3) {
                 ret = default(Decimal);
                 return false;
@@ -521,6 +523,13 @@ namespace Microsoft.Scripting.Math {
         }
 
         public int GetWordCount() {
+            if (IsZero()) {
+                return 1;
+            }
+            return GetLength();
+        }
+
+        private int GetLength() {
             return GetLength(data);
         }
 
@@ -623,8 +632,8 @@ namespace Microsoft.Scripting.Math {
                 throw new ArgumentNullException("y");
             }
             if (x.sign == y.sign) {
-                int xl = x.GetWordCount();
-                int yl = y.GetWordCount();
+                int xl = x.GetLength();
+                int yl = y.GetLength();
                 if (xl == yl) {
                     for (int i = xl - 1; i >= 0; i--) {
                         if (x.data[i] == y.data[i]) continue;
@@ -708,7 +717,7 @@ namespace Microsoft.Scripting.Math {
             }
 
             if (x.sign == y.sign) {
-                return new BigInteger(x.sign, add0(x.data, x.GetWordCount(), y.data, y.GetWordCount()));
+                return new BigInteger(x.sign, add0(x.data, x.GetLength(), y.data, y.GetLength()));
             } else {
                 return x - new BigInteger(-y.sign, y.data);  //??? performance issue
             }
@@ -726,17 +735,17 @@ namespace Microsoft.Scripting.Math {
                 uint[] z;
                 switch (c * x.sign) {
                     case +1:
-                        z = sub(x.data, x.GetWordCount(), y.data, y.GetWordCount());
+                        z = sub(x.data, x.GetLength(), y.data, y.GetLength());
                         break;
                     case -1:
-                        z = sub(y.data, y.GetWordCount(), x.data, x.GetWordCount());
+                        z = sub(y.data, y.GetLength(), x.data, x.GetLength());
                         break;
                     default:
                         return Zero;
                 }
                 return new BigInteger(c, z);
             } else {
-                uint[] z = add0(x.data, x.GetWordCount(), y.data, y.GetWordCount());
+                uint[] z = add0(x.data, x.GetLength(), y.data, y.GetLength());
                 return new BigInteger(c, z);
             }
         }
@@ -752,8 +761,8 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(y, null)) {
                 throw new ArgumentNullException("y");
             }
-            int xl = x.GetWordCount();
-            int yl = y.GetWordCount();
+            int xl = x.GetLength();
+            int yl = y.GetLength();
             int zl = xl + yl;
             uint[] xd = x.data, yd = y.data, zd = new uint[zl];
 
@@ -1093,7 +1102,7 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(y, null)) {
                 throw new ArgumentNullException("y");
             }
-            int xl = x.GetWordCount(), yl = y.GetWordCount();
+            int xl = x.GetLength(), yl = y.GetLength();
             uint[] xd = x.data, yd = y.data;
 
             int zl = System.Math.Max(xl, yl);
@@ -1128,7 +1137,7 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(y, null)) {
                 throw new ArgumentNullException("y");
             }
-            int xl = x.GetWordCount(), yl = y.GetWordCount();
+            int xl = x.GetLength(), yl = y.GetLength();
             uint[] xd = x.data, yd = y.data;
 
             int zl = System.Math.Max(xl, yl);
@@ -1162,7 +1171,7 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(y, null)) {
                 throw new ArgumentNullException("y");
             }
-            int xl = x.GetWordCount(), yl = y.GetWordCount();
+            int xl = x.GetLength(), yl = y.GetLength();
             uint[] xd = x.data, yd = y.data;
 
             int zl = System.Math.Max(xl, yl);
@@ -1199,7 +1208,7 @@ namespace Microsoft.Scripting.Math {
             int digitShift = shift / BitsPerDigit;
             int smallShift = shift - (digitShift * BitsPerDigit);
 
-            int xl = x.GetWordCount();
+            int xl = x.GetLength();
             uint[] xd = x.data;
             int zl = xl + digitShift + 1;
             uint[] zd = new uint[zl];
@@ -1236,7 +1245,7 @@ namespace Microsoft.Scripting.Math {
             int digitShift = shift / BitsPerDigit;
             int smallShift = shift - (digitShift * BitsPerDigit);
 
-            int xl = x.GetWordCount();
+            int xl = x.GetLength();
             uint[] xd = x.data;
             int zl = xl - digitShift;
             if (zl < 0) zl = 0;
@@ -1449,7 +1458,7 @@ namespace Microsoft.Scripting.Math {
                 return this == One ? 0.0D : Double.NaN;
             }
 
-            int length = GetLength(data) - 1;
+            int length = GetLength() - 1;
             int bitCount = -1;
             for (int curBit = 31; curBit >= 0; curBit--) {
                 if ((data[length] & (1 << curBit)) != 0) {

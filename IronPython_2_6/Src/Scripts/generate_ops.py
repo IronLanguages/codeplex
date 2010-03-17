@@ -90,12 +90,15 @@ class Operator(Symbol):
         return 'Operator(%s,%s,%s)' % (self.symbol, self.name, self.rname)
 
     def genOperatorTable_Mapping(self, cw):
-        cw.writeline("pyOp[\"__%s__\"] = PythonOperationKind.%s;" % (self.name, self.title_name()))        
+        titleName = self.title_name()
+        if titleName.endswith('Equals'):
+            titleName = titleName[:-1]
+        cw.writeline("pyOp[\"__%s__\"] = PythonOperationKind.%s;" % (self.name, titleName))
         
         if self.isCompare(): return
 
-        cw.writeline("pyOp[\"__r%s__\"] = PythonOperationKind.Reverse%s;" % (self.name, self.title_name()))        
-        cw.writeline("pyOp[\"__i%s__\"] = PythonOperationKind.InPlace%s;" % (self.name, self.title_name()))
+        cw.writeline("pyOp[\"__r%s__\"] = PythonOperationKind.Reverse%s;" % (self.name, titleName))
+        cw.writeline("pyOp[\"__i%s__\"] = PythonOperationKind.InPlace%s;" % (self.name, titleName))
 
     def genOperatorReversal_Forward(self, cw):
         if self.isCompare(): return
@@ -144,13 +147,16 @@ class Operator(Symbol):
         cw.writeline("case Operators.Reverse%s: return \"__r%s__\";" % (self.title_name(), self.name))
         cw.writeline("case Operators.InPlace%s: return \"__i%s__\";" % (self.title_name(), self.name))
 
-    def genStringOperatorToSymbol(self, cw): 
-        cw.writeline("case PythonOperationKind.%s: return \"__%s__\";" % (self.title_name(), self.name))
+    def genStringOperatorToSymbol(self, cw):
+        titleName = self.title_name()
+        if titleName.endswith('Equals'):
+            titleName = titleName[:-1]
+        cw.writeline("case PythonOperationKind.%s: return \"__%s__\";" % (titleName, self.name))
         
         if self.isCompare(): return
         
-        cw.writeline("case PythonOperationKind.Reverse%s: return \"__r%s__\";" % (self.title_name(), self.name))
-        cw.writeline("case PythonOperationKind.InPlace%s: return \"__i%s__\";" % (self.title_name(), self.name))
+        cw.writeline("case PythonOperationKind.Reverse%s: return \"__r%s__\";" % (titleName, self.name))
+        cw.writeline("case PythonOperationKind.InPlace%s: return \"__i%s__\";" % (titleName, self.name))
 
     def genOldStyleOp(self, cw):
         if self.isCompare(): return
@@ -600,7 +606,7 @@ def main():
         ("StringOperatorToSymbol", gen_StringOperatorToSymbol),
         ("WeakRef Operators Initialization", weakref_operators),
         ("OldInstance Operators", oldinstance_operators),
-        ("Operator Reversal", operator_reversal),
+        #("Operator Reversal", operator_reversal),
         ("WeakRef Callable Proxy Operators Initialization", weakrefCallabelProxy_operators),
     )
 

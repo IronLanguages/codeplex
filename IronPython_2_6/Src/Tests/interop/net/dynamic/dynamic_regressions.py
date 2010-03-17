@@ -65,7 +65,6 @@ class Method01(object):
   def Optional01(self, a, b=1):
     return a + b
 
-@disabled("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=26089")
 def test_cp24118():
     #TODO: once 26089 gets fixed the following needs actual verification.  That is,
     #right now DR.cp24118 just calls GetMethodTest without doing much validation.

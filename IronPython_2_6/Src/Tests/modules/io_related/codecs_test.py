@@ -591,5 +591,11 @@ def test_cp20302():
             continue
         temp = _codecs.lookup(encoding)
 
+def test_charmap_build():
+    decodemap = ''.join([unichr(i).upper() if chr(i).islower() else unichr(i).lower() for i in xrange(256)])    
+    encodemap = codecs.charmap_build(decodemap)
+    AreEqual(codecs.charmap_decode(u'Hello World', 'strict', decodemap), ('hELLO wORLD', 11))
+    AreEqual(codecs.charmap_encode(u'Hello World', 'strict', encodemap), ('hELLO wORLD', 11))
+    
 #--MAIN------------------------------------------------------------------------        
 run_test(__name__)

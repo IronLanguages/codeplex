@@ -146,6 +146,24 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
+        public IEnumerable<InterpretedFrameInfo> GetStackTraceDebugInfo() {
+            var frame = this;
+            do {
+                yield return new InterpretedFrameInfo(frame.Lambda.Name, frame.GetDebugInfo(frame.InstructionIndex));
+                frame = frame.Parent;
+            } while (frame != null);
+        }
+
+        internal void SaveTraceToException(Exception exception) {
+            if (exception.Data[typeof(InterpretedFrameInfo)] == null) {
+                exception.Data[typeof(InterpretedFrameInfo)] = new List<InterpretedFrameInfo>(GetStackTraceDebugInfo()).ToArray();
+            }
+        }
+
+        public static InterpretedFrameInfo[] GetExceptionStackTrace(Exception exception) {
+            return exception.Data[typeof(InterpretedFrameInfo)] as InterpretedFrameInfo[];
+        }
+
 #if DEBUG
         internal string[] Trace {
             get {
