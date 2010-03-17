@@ -1729,6 +1729,18 @@ def test_nothrow_attr_access():
     AreEqual(hasattr('System', 'does_not_exist'), False)
     AreEqual(hasattr(type, '__all__'), False)
 
+@skip("cli") # only run on Silverlight
+def test_silverlight_access_isolated_storage():
+    import System
+    try:
+        System.IO.IsolatedStorage.IsolatedStorageFile.GetUserStoreForSite()
+    except System.MethodAccessException:
+        # bad exception, CLR is rejecting our call
+        Assert(False)
+    except: 
+        # IsolatedStorage may not actually be available
+        pass
+    
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
 
