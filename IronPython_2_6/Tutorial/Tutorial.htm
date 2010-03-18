@@ -911,9 +911,9 @@ TypeError: Matrix() takes at least 1 argument (0 given)</p>
     </ol>
     <p class="TypedExample">print Matrix.__new__.__doc__</p>
     <p class="Code-Highlighted">&gt;&gt;&gt; print Matrix.__new__.__doc__</p>
-    <p class="Code-Background">__new__(cls, int rows, int columns)<br />
-    __new__(cls, int rows, int columns, float value)<br />
-    __new__(cls, Array[Array[float]] value)
+    <p class="Code-Background">__new__(cls: type, rows: int, columns: int)<br />
+    __new__(cls:type, rows: int, columns: int, value: float)<br />
+    __new__(cls:type, value: Array[Array[float]])
     </p>
     <ol start="5">
         <li>

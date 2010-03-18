@@ -20,5 +20,6 @@ def test_trival():
     AreEqual(str(None), None.__str__())
     AreEqual(repr(None), None.__repr__())
     None.__init__('abc')
+    AssertErrorWithPartialMessage(TypeError, 'NoneType', lambda : None())
     
 run_test(__name__)

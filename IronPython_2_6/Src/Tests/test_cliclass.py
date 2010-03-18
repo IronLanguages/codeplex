@@ -339,7 +339,7 @@ def test_generic_only_TypeGroup():
 def test_autodoc():
     from System.Threading import Thread, ThreadStart
     
-    Assert(Thread.__doc__.find('Thread(ThreadStart start)') != -1)
+    Assert(Thread.__doc__.find('Thread(start: ThreadStart)') != -1)
     
     #Assert(Thread.__new__.__doc__.find('__new__(cls, ThreadStart start)') != -1)
     
@@ -968,10 +968,10 @@ def test_constructor_function():
     '''
     
     AreEqual(System.DateTime.__new__.__name__, '__new__')
-    Assert(System.DateTime.__new__.__doc__.find('__new__(cls, int year, int month, int day)') != -1)
+    Assert(System.DateTime.__new__.__doc__.find('__new__(cls: type, year: int, month: int, day: int)') != -1)
                 
     if not is_silverlight:
-        Assert(System.AssemblyLoadEventArgs.__new__.__doc__.find('__new__(cls, Assembly loadedAssembly)') != -1)
+        Assert(System.AssemblyLoadEventArgs.__new__.__doc__.find('__new__(cls: type, loadedAssembly: Assembly)') != -1)
 
 def test_class_property():
     """__class__ should work on standard .NET types and should return the type object associated with that class"""
@@ -1728,6 +1728,22 @@ def test_cp23938():
     AreEqual(a.bar, 23)
 
 
+def test_nothrow_attr_access():
+    AreEqual(hasattr('System', 'does_not_exist'), False)
+    AreEqual(hasattr(type, '__all__'), False)
+
+@skip("cli") # only run on Silverlight
+def test_silverlight_access_isolated_storage():
+    import System
+    try:
+        System.IO.IsolatedStorage.IsolatedStorageFile.GetUserStoreForSite()
+    except System.MethodAccessException:
+        # bad exception, CLR is rejecting our call
+        Assert(False)
+    except: 
+        # IsolatedStorage may not actually be available
+        pass
+    
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
 

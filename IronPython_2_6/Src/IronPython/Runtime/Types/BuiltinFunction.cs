@@ -604,11 +604,12 @@ namespace IronPython.Runtime.Types {
             if (target.Overload != null && target.Overload.IsProtected) {
                 Type declaringType = target.Overload.DeclaringType;
                 string methodName = target.Overload.Name;
-                
+
+                string name = target.Overload.Name;
                 // report an error when calling a protected member
                 res = delegate(object[] callArgs, out bool shouldOptimize) { 
                     shouldOptimize = false;
-                    throw PythonOps.TypeErrorForProtectedMember(declaringType, target.Overload.Name);
+                    throw PythonOps.TypeErrorForProtectedMember(declaringType, name);
                 };
             } else if (result.MetaObject.Expression.NodeType == ExpressionType.Throw) {
                 if (IsBinaryOperator && args.Length == 2) {
@@ -801,9 +802,10 @@ namespace IronPython.Runtime.Types {
             get {
                 StringBuilder sb = new StringBuilder();
                 IList<MethodBase> targets = Targets;
-                bool needNewLine = false;
                 for (int i = 0; i < targets.Count; i++) {
-                    if (targets[i] != null) AddDocumentation(sb, ref needNewLine, targets[i]);
+                    if (targets[i] != null) {
+                        sb.Append(DocBuilder.DocOneInfo(targets[i], Name));
+                    }
                 }
                 return sb.ToString();
             }
@@ -833,14 +835,6 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         #region Private members
-
-        private void AddDocumentation(StringBuilder sb, ref bool nl, MethodBase mb) {
-            if (nl) {
-                sb.Append(System.Environment.NewLine);
-            }
-            sb.Append(DocBuilder.DocOneInfo(mb, Name));
-            nl = true;
-        }
 
         private BinderType BinderType {
             get {

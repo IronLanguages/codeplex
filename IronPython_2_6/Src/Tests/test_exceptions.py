@@ -980,4 +980,11 @@ def test_windows_error():
     # winerror code is mapped to Python error code
     AreEqual(WindowsError(10, 'foo').errno, 7)
 
+def test_derived_keyword_args():
+    class ED(Exception):
+        def __init__(self, args=''):
+            pass
+    
+    AreEqual(type(ED(args='')), ED)
+
 run_test(__name__)
