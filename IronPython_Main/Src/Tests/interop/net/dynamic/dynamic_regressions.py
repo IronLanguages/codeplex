@@ -45,12 +45,8 @@ import IronPythonTest.DynamicRegressions as DR
 #------------------------------------------------------------------------------
 #--Test cases
 def test_cp24117():
-    if False: #Expectation
-        AreEqual(DR.cp24117(xrange),    "<type 'xrange'>")
-        AreEqual(DR.cp24117(xrange(3)), "xrange(3)")
-    else: #Actual
-        AreEqual(DR.cp24117(xrange),    "IronPython.Runtime.Types.PythonType")
-        AreEqual(DR.cp24117(xrange(3)), "IronPython.Runtime.XRange")
+    AreEqual(DR.cp24117(xrange),    "IronPython.Runtime.Types.PythonType")
+    AreEqual(DR.cp24117(xrange(3)), "IronPython.Runtime.XRange")
 
 #--CodePlex 24118--#
 def GetMethodTest():
