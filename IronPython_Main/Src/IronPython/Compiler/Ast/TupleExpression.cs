@@ -95,5 +95,25 @@ namespace IronPython.Compiler.Ast {
                 return _expandable;
             }
         }
+
+        internal override bool IsConstant {
+            get {
+                foreach (var item in Items) {
+                    if (!item.IsConstant) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        internal override object GetConstantValue() {
+            object[] items = new object[Items.Count];
+            for (int i = 0; i < items.Length; i++) {
+                items[i] = Items[i].GetConstantValue();
+            }
+
+            return PythonOps.MakeTuple(items);
+        }
     }
 }

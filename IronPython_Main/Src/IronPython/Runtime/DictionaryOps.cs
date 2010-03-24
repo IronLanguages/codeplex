@@ -153,7 +153,7 @@ namespace IronPython.Runtime {
             PythonDictionary pyDict;
 
             if ((pyDict = b as PythonDictionary) != null) {
-                pyDict._storage.CopyTo(self._storage);
+                pyDict._storage.CopyTo(ref self._storage);
             } else {
                 SlowUpdate(context, self, b);
             }
@@ -168,13 +168,13 @@ namespace IronPython.Runtime {
             } else if ((dict = b as IDictionary) != null) {
                 IDictionaryEnumerator e = dict.GetEnumerator();
                 while (e.MoveNext()) {
-                    self._storage.Add(e.Key, e.Value);
+                    self._storage.Add(ref self._storage, e.Key, e.Value);
                 }
             } else if (PythonOps.TryGetBoundAttr(b, "keys", out keysFunc)) {
                 // user defined dictionary
                 IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(context, keysFunc));
                 while (i.MoveNext()) {
-                    self._storage.Add(i.Current, PythonOps.GetIndex(context, b, i.Current));
+                    self._storage.Add(ref self._storage, i.Current, PythonOps.GetIndex(context, b, i.Current));
                 }
             } else {
                 // list of lists (key/value pairs), list of tuples,
@@ -238,7 +238,7 @@ namespace IronPython.Runtime {
                 object key = i.Current;
                 if (i.MoveNext()) {
                     object value = i.Current;
-                    self._storage.Add(key, value);
+                    self._storage.Add(ref self._storage, key, value);
 
                     return !i.MoveNext();
                 }

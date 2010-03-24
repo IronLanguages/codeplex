@@ -62,6 +62,25 @@ namespace IronPython.Compiler.Ast {
             return "can't delete " + NodeName;
         }
 
+        internal virtual bool IsConstant {
+            get {
+                var folded = ConstantFold();
+                if (folded != null) {
+                    return folded.IsConstant;
+                }
+                return false;
+            }
+        }
+
+        internal virtual object GetConstantValue() {            
+            var folded = ConstantFold();
+            if (folded != null && folded.IsConstant) {
+                return folded.GetConstantValue();
+            }
+
+            throw new InvalidOperationException(GetType().Name + " is not a constant");
+        }
+
         public override Type Type {
             get {
                 return typeof(object);

@@ -155,6 +155,7 @@
     <Compile Include="Compiler\PythonDynamicExpression.cs" />
     <Compile Include="Compiler\UncollectableCompilationMode.Generated.cs" />
     <Compile Include="Compiler\RunnableScriptCode.cs" />
+    <Compile Include="Runtime\ConstantDictionaryStorage.cs" />
     <Compile Include="Runtime\DictionaryTypeInfoAttribute.cs" />
     <Compile Include="Modules\imp.cs" />
     <Compile Include="Runtime\AttributesDictionaryStorage.cs" />
@@ -176,6 +177,7 @@
     <Compile Include="Runtime\DontMapICollectionToLenAttribute.cs" />
     <Compile Include="Runtime\DontMapIDisposableToContextManagerAttribute.cs" />
     <Compile Include="Runtime\DontMapIEnumerableToContainsAttribute.cs" />
+    <Compile Include="Runtime\EmptyDictionaryStorage.cs" />
     <Compile Include="Runtime\Exceptions\BufferException.Generated.cs" />
     <Compile Include="Runtime\Exceptions\Win32Exception.cs" />
     <Compile Include="Runtime\FutureBuiltins.cs" />

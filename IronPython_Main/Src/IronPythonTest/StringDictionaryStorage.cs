@@ -37,7 +37,7 @@ namespace IronPythonTest {
             _objDict = objDict;
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             lock (this) {
                 string strKey = key as string;
                 if (strKey != null) {
@@ -64,7 +64,7 @@ namespace IronPythonTest {
             }
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             lock (this) {
                 string strKey = key as string;
                 if (strKey != null) {
@@ -107,7 +107,7 @@ namespace IronPythonTest {
             }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             lock (this) {
                 _dict.Clear();
                 if (_objDict != null) {

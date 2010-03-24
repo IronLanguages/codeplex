@@ -269,7 +269,7 @@ namespace IronPython.Modules {
             private class ThreadLocalDictionaryStorage : DictionaryStorage {
                 private readonly Microsoft.Scripting.Utils.ThreadLocal<CommonDictionaryStorage> _storage = new Microsoft.Scripting.Utils.ThreadLocal<CommonDictionaryStorage>();
 
-                public override void Add(object key, object value) {
+                public override void Add(ref DictionaryStorage storage, object key, object value) {
                     GetStorage().Add(key, value);
                 }
 
@@ -277,8 +277,8 @@ namespace IronPython.Modules {
                     return GetStorage().Contains(key);
                 }
 
-                public override bool Remove(object key) {
-                    return GetStorage().Remove(key);
+                public override bool Remove(ref DictionaryStorage storage, object key) {
+                    return GetStorage().Remove(ref storage, key);
                 }
 
                 public override bool TryGetValue(object key, out object value) {
@@ -289,8 +289,8 @@ namespace IronPython.Modules {
                     get { return GetStorage().Count; }
                 }
 
-                public override void Clear() {
-                    GetStorage().Clear();
+                public override void Clear(ref DictionaryStorage storage) {
+                    GetStorage().Clear(ref storage);
                 }
 
                 public override List<KeyValuePair<object, object>>/*!*/ GetItems() {

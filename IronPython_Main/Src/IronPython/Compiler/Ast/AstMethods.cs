@@ -83,7 +83,9 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo SetName = GetMethod((Func<CodeContext, string, object, object>)PythonOps.SetName);
         public static readonly MethodInfo KeepAlive = GetMethod((Action<object>)GC.KeepAlive);
         public static readonly MethodInfo MakeDict = GetMethod((Func<int, PythonDictionary>)PythonOps.MakeDict);
+        public static readonly MethodInfo MakeEmptyDict = GetMethod((Func<PythonDictionary>)PythonOps.MakeEmptyDict);
         public static readonly MethodInfo MakeDictFromItems = GetMethod((Func<object[], PythonDictionary>)PythonOps.MakeDictFromItems);
+        public static readonly MethodInfo MakeConstantDict = GetMethod((Func<object, PythonDictionary>)PythonOps.MakeConstantDict);
         public static readonly MethodInfo MakeHomogeneousDictFromItems = GetMethod((Func<object[], PythonDictionary>)PythonOps.MakeHomogeneousDictFromItems);
         public static readonly MethodInfo CreateLocalContext = GetMethod((Func<CodeContext, MutableTuple, string[], CodeContext>)PythonOps.CreateLocalContext);
         public static readonly MethodInfo UpdateStackTrace = GetMethod((Action<CodeContext, FunctionCode, MethodBase, string, string, int>)PythonOps.UpdateStackTrace);

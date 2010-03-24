@@ -40,11 +40,11 @@ namespace IronPython.Runtime {
             _data = data;
         }
 
-        public override void Add(object key, object value) {
-            AddNoLock(key, value);
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
+            AddNoLock(ref storage, key, value);
         }
 
-        public override void AddNoLock(object key, object value) {
+        public override void AddNoLock(ref DictionaryStorage storage, object key, object value) {
             _hidden.Remove(key);
 
             string strKey = key as string;
@@ -68,7 +68,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             if (_hidden.Contains(key)) {
                 return false;
             }
@@ -100,7 +100,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             _data = new SymbolDictionary();
             _hidden.Clear();
         }

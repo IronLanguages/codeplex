@@ -23,7 +23,7 @@ namespace IronPython.Runtime {
     abstract class CustomDictionaryStorage : DictionaryStorage {
         private readonly CommonDictionaryStorage/*!*/ _storage = new CommonDictionaryStorage();
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             if (key is string && TrySetExtraValue((string)key, value)) {
                 return;
             }
@@ -39,7 +39,7 @@ namespace IronPython.Runtime {
             return _storage.Contains(key);
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             if (key is string) {
                 return TryRemoveExtraValue((string)key) ?? _storage.Remove(key);
 
@@ -59,8 +59,8 @@ namespace IronPython.Runtime {
             get { return GetItems().Count; }
         }
 
-        public override void Clear() {
-            _storage.Clear();
+        public override void Clear(ref DictionaryStorage storage) {
+            _storage.Clear(ref storage);
             foreach (var item in GetExtraItems()) {
                 TryRemoveExtraValue(item.Key);
             }

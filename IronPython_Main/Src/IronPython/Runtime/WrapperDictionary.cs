@@ -27,7 +27,7 @@ namespace IronPython.Runtime {
             _data = data;
         }
       
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             string strKey = key as string;
             if (strKey != null) {
                 _data[SymbolTable.StringToId(strKey)] = value;
@@ -45,7 +45,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             string strKey = key as string;
             if (strKey != null) {
                 return _data.Remove(SymbolTable.StringToId(strKey));
@@ -69,7 +69,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             ICollection<object> keys = _data.Keys;
             foreach (object key in keys) {
                 _data.RemoveObjectKey(key);

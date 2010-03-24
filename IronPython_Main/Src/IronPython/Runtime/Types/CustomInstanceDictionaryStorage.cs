@@ -64,24 +64,24 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             int ikey = FindKey(key);
             if (ikey != -1) {
                 _values[ikey] = value;
                 return;
             }
 
-            base.Add(key, value);
+            base.Add(ref storage, key, value);
         }
 
-        public override void AddNoLock(object key, object value) {
+        public override void AddNoLock(ref DictionaryStorage storage, object key, object value) {
             int ikey = FindKey(key);
             if (ikey != -1) {
                 _values[ikey] = value;
                 return;
             }
 
-            base.AddNoLock(key, value);
+            base.AddNoLock(ref storage, key, value);
         }
 
         public override bool Contains(object key) {
@@ -93,7 +93,7 @@ namespace IronPython.Runtime.Types {
             return base.Contains(key);
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             int ikey = FindKey(key);
             if (ikey != -1) {
                 if (Interlocked.Exchange<object>(ref _values[ikey], Uninitialized.Instance) != Uninitialized.Instance) {
@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Types {
                 return false;
             }
 
-            return base.Remove(key);
+            return base.Remove(ref storage, key);
         }
 
         public override bool TryGetValue(object key, out object value) {
@@ -134,12 +134,12 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             for (int i = 0; i < _values.Length; i++) {
                 _values[i] = Uninitialized.Instance;
             }
 
-            base.Clear();
+            base.Clear(ref storage);
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {

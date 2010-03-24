@@ -46,20 +46,23 @@ namespace IronPython.Runtime {
     /// array to ensure that readers are not seeing multiple bucket arrays.
     /// </summary>
     [Serializable]
-    internal sealed class CommonDictionaryStorage : DictionaryStorage
+    internal class CommonDictionaryStorage : DictionaryStorage
 #if !SILVERLIGHT
 , ISerializable, IDeserializationCallback
 #endif
  {
-        private Bucket[] _buckets;
+        protected Bucket[] _buckets;
         private int _count;
+        private int _version;
+        private NullValue _nullValue;  // value stored in null bucket
+
         private Func<object, int> _hashFunc;
         private Func<object, object, bool> _eqFunc;
         private Type _keyType;
-        private int _version;
 
         private const int InitialBucketSize = 7;
         private const int ResizeMultiplier = 3;
+        private const double Load = .7;
 
         // pre-created delegate instances shared by all homogeneous dictionaries for primitive types.
         private static readonly Func<object, int> _primitiveHash = PrimitiveHash, _doubleHash = DoubleHash, _intHash = IntHash, _tupleHash = TupleHash, _genericHash = GenericHash;
@@ -68,17 +71,21 @@ namespace IronPython.Runtime {
         // marker type used to indicate we've gone megamorphic
         private static readonly Type HeterogeneousType = typeof(CommonDictionaryStorage);   // a type we can never see here.
 
+        // Marker object used to indicate we have a removed value
+        private static object _removed = new object();
+
+ 
         /// <summary>
         /// Creates a new dictionary storage with no buckets
         /// </summary>
-        public CommonDictionaryStorage() {
+        public CommonDictionaryStorage() {            
         }
 
         /// <summary>
         /// Creates a new dictionary storage with no buckets
         /// </summary>
         public CommonDictionaryStorage(int count) {
-            _buckets = new Bucket[count + 1];
+            _buckets = new Bucket[(int)(count / Load + 2)];
         }
 
         /// <summary>
@@ -108,7 +115,12 @@ namespace IronPython.Runtime {
             }
 
             for (int i = 0; i < items.Length / 2; i++) {
-                AddOne(items[i * 2 + 1], items[i * 2]);
+                object key = items[i * 2 + 1];
+                if (key != null) {
+                    AddOne(key, items[i * 2]);
+                } else {
+                    AddNull(items[i * 2]);
+                }
             }
         }
 
@@ -128,12 +140,13 @@ namespace IronPython.Runtime {
         /// Creates a new dictionary storage with the given set of buckets
         /// and size.  Used when cloning the dictionary storage.
         /// </summary>
-        private CommonDictionaryStorage(Bucket[] buckets, int count, Type keyType, Func<object, int> hashFunc, Func<object, object, bool> eqFunc) {
+        private CommonDictionaryStorage(Bucket[] buckets, int count, Type keyType, Func<object, int> hashFunc, Func<object, object, bool> eqFunc, NullValue nullValue) {
             _buckets = buckets;
             _count = count;
             _keyType = keyType;
             _hashFunc = hashFunc;
             _eqFunc = eqFunc;
+            _nullValue = nullValue;
         }
 
 #if !SILVERLIGHT
@@ -142,39 +155,59 @@ namespace IronPython.Runtime {
             // enables special types like DBNull.Value to successfully be deserialized inside of us.  We
             // store the serialization info in a special bucket so we don't have an extra field just for
             // serialization
-            _buckets = new Bucket[] { new DeserializationBucket(info) };
+            _nullValue = new DeserializationNullValue(info);
         }
 #endif
+
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
+            Add(key, value);
+        }
 
         /// <summary>
         /// Adds a new item to the dictionary, replacing an existing one if it already exists.
         /// </summary>
-        public override void Add(object key, object value) {
+        public void Add(object key, object value) {
             lock (this) {
                 AddNoLock(key, value);
             }
         }
 
-        public override void AddNoLock(object key, object value) {
-            if (_buckets == null) {
-                Initialize();
+        private void AddNull(object value) {
+            if (_nullValue != null) {
+                _nullValue.Value = value;
+            } else {
+                _nullValue = new NullValue(value);
+                _count++;
             }
+        }
 
-            Type t = CompilerHelpers.GetType(key);
-            if (t != _keyType && _keyType != HeterogeneousType) {
-                UpdateHelperFunctions(t, key);
+        public override void AddNoLock(ref DictionaryStorage storage, object key, object value) {
+            AddNoLock(key, value);
+        }
+
+        public void AddNoLock(object key, object value) {
+            if (key != null) {
+                if (_buckets == null) {
+                    Initialize();
+                }
+
+                if (key.GetType() != _keyType && _keyType != HeterogeneousType) {
+                    UpdateHelperFunctions(key.GetType(), key);
+                }
+
+                AddOne(key, value);
+            } else {
+                AddNull(value);
             }
-
-            AddOne(key, value);
         }
 
         private void AddOne(object key, object value) {
             if (Add(_buckets, key, value)) {
                 _count++;
 
-                if (_count >= _buckets.Length) {
+                if (_count >= (_buckets.Length * Load)) {
                     // grow the hash table
-                    EnsureSize(_buckets.Length * ResizeMultiplier);
+                    EnsureSize((int)(_buckets.Length / Load) * ResizeMultiplier);
                 }
             }
         }
@@ -243,12 +276,9 @@ namespace IronPython.Runtime {
 
             for (int i = 0; i < _buckets.Length; i++) {
                 Bucket curBucket = _buckets[i];
-                while (curBucket != null) {
-                    Bucket next = curBucket.Next;
 
+                if (curBucket.Key != null && curBucket.Key != _removed) {
                     AddWorker(newBuckets, curBucket.Key, curBucket.Value, curBucket.HashCode);
-
-                    curBucket = next;
                 }
             }
 
@@ -264,7 +294,7 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Static add helper that works over a single set of buckets.  Used for
+        /// Add helper that works over a single set of buckets.  Used for
         /// both the normal add case as well as the resize case.
         /// </summary>
         private bool Add(Bucket[] buckets, object key, object value) {
@@ -273,41 +303,56 @@ namespace IronPython.Runtime {
             return AddWorker(buckets, key, value, hc);
         }
 
-        private bool AddWorker(Bucket[] buckets, object key, object value, int hc) {
+        /// <summary>
+        /// Add helper which adds the given key/value (where the key is not null) with
+        /// a pre-computed hash code.
+        /// </summary>
+        protected bool AddWorker(Bucket[] buckets, object/*!*/ key, object value, int hc) {
+            Debug.Assert(key != null);
+
             _version++;
 
+            Debug.Assert(_count < buckets.Length);
             int index = hc % buckets.Length;
-            Bucket prev = buckets[index];
-            Bucket cur = prev;
 
-            while (cur != null) {
-                if (cur.HashCode == hc && _eqFunc(key, cur.Key)) {
-                    cur.Value = value;
+            for (; ; ) {
+                Bucket cur = buckets[index];
+                if (cur.Key == null || cur.Key == _removed) {
+                    break;
+                } else if (cur.HashCode == hc && _eqFunc(key, cur.Key)) {
+                    buckets[index].Value = value;
                     return false;
                 }
 
-                prev = cur;
-                cur = cur.Next;
+                index = ProbeNext(buckets, index);
             }
 
-            if (prev != null) {
-                Debug.Assert(prev.Next == null);
-                prev.Next = new Bucket(hc, key, value, null);
-            } else {
-                buckets[index] = new Bucket(hc, key, value, null);
-            }
+            buckets[index] = new Bucket(hc, key, value);
 
             return true;
         }
+
+       private static int ProbeNext(Bucket[] buckets, int index) {
+           // probe to next bucket               
+           index++;
+           if (index == buckets.Length) {
+               index = 0;
+           }
+           return index;
+       }
 
         /// <summary>
         /// Removes an entry from the dictionary and returns true if the
         /// entry was removed or false.
         /// </summary>
-        public override bool Remove(object key) {
-            object dummy;
-            return TryRemoveValue(key, out dummy);
+       public override bool Remove(ref DictionaryStorage storage, object key) {
+           return Remove(key);
         }
+
+       public bool Remove(object key) {
+           object dummy;
+           return TryRemoveValue(key, out dummy);
+       }
 
         /// <summary>
         /// Removes an entry from the dictionary and returns true if the
@@ -315,15 +360,27 @@ namespace IronPython.Runtime {
         /// so if it is unhashable an exception will be thrown - even
         /// if the dictionary has no buckets.
         /// </summary>
-        internal bool RemoveAlwaysHash(object key) {
+        internal bool RemoveAlwaysHash(object key) {            
             lock (this) {
                 object dummy;
+                if (key == null) {
+                    return TryRemoveNull(out dummy);
+                }
+
                 return TryRemoveNoLock(key, out dummy);
             }
         }
-        
-        public override bool TryRemoveValue(object key, out object value) {
+
+        public override bool TryRemoveValue(ref DictionaryStorage storage, object key, out object value) {
+            return TryRemoveValue(key, out value);
+        }
+
+        public bool TryRemoveValue(object key, out object value) {
             lock (this) {
+                if (key == null) {
+                    return TryRemoveNull(out value);
+                }
+
                 if (!HasAnyValues(_buckets)) {
                     value = null;
                     return false;
@@ -333,10 +390,24 @@ namespace IronPython.Runtime {
             }
         }
 
-        private bool TryRemoveNoLock(object key, out object value) {
+        private bool TryRemoveNull(out object value) {
+            if (_nullValue != null) {
+                _count--;
+                value = _nullValue.Value;
+                _nullValue = null;
+                return true;
+            } else {
+                value = null;
+                return false;
+            }
+        }
+
+        private bool TryRemoveNoLock(object/*!*/ key, out object value) {
+            Debug.Assert(key != null);
+
             Func<object, int> hashFunc;
             Func<object, object, bool> eqFunc;
-            if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
+            if (key.GetType() == _keyType || _keyType == HeterogeneousType) {
                 hashFunc = _hashFunc;
                 eqFunc = _eqFunc;
             } else {
@@ -345,31 +416,35 @@ namespace IronPython.Runtime {
             }
 
             int hc = hashFunc(key) & Int32.MaxValue;
-            
+
+            return TryRemoveNoLock(key, eqFunc, hc, out value);
+        }
+
+        protected bool TryRemoveNoLock(object/*!*/ key, Func<object, object, bool> eqFunc, int hc, out object value) {
+            Debug.Assert(key != null);
+
             if (_buckets == null) {
                 value = null;
                 return false;
             }
 
             int index = hc % _buckets.Length;
-            Bucket bucket = _buckets[index];
-            Bucket prev = bucket;
-            while (bucket != null) {
-                if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
+            int startIndex = index;
+            do {
+                Bucket bucket = _buckets[index];
+                if (bucket.Key == null) {
+                    break;
+                } else if (bucket.HashCode == hc && eqFunc(key, bucket.Key)) {
                     value = bucket.Value;
-                    if (prev == bucket) {
-                        _buckets[index] = bucket.Next;
-                    } else {
-                        prev.Next = bucket.Next;
-                    }
+                    _buckets[index] = new Bucket(0, _removed, null);
                     _count--;
                     _version++;
 
                     return true;
                 }
-                prev = bucket;
-                bucket = bucket.Next;
-            }
+
+                index = ProbeNext(_buckets, index);
+            } while (index != startIndex);
             value = null;
             return false;
         }
@@ -378,18 +453,8 @@ namespace IronPython.Runtime {
         /// Checks to see if the key exists in the dictionary.
         /// </summary>
         public override bool Contains(object key) {
-            return Contains(_buckets, key);
-        }
-
-        /// <summary>
-        /// Static helper to see if the key exists in the provided bucket array.
-        /// 
-        /// Used so the contains check can run against a buckets while a writer
-        /// replaces the buckets.
-        /// </summary>
-        private bool Contains(Bucket[] buckets, object key) {
-            object res;
-            return TryGetValue(buckets, key, out res);
+            object dummy;
+            return TryGetValue(key, out dummy);
         }
 
         private bool HasAnyValues(Bucket[] buckets) {
@@ -401,7 +466,18 @@ namespace IronPython.Runtime {
         /// if it's found or false if it's not present.
         /// </summary>
         public override bool TryGetValue(object key, out object value) {
-            return TryGetValue(_buckets, key, out value);
+            if (key != null) {
+                return TryGetValue(_buckets, key, out value);
+            }
+
+            NullValue nv = _nullValue;
+            if (nv != null) {
+                value = nv.Value;
+                return true;
+            }
+
+            value = null;
+            return false;
         }
 
         /// <summary>
@@ -410,11 +486,13 @@ namespace IronPython.Runtime {
         /// Used so the value lookup can run against a buckets while a writer
         /// replaces the buckets.
         /// </summary>
-        private bool TryGetValue(Bucket[] buckets, object key, out object value) {
+        private bool TryGetValue(Bucket[] buckets, object/*!*/ key, out object value) {
+            Debug.Assert(key != null);
+
             if (HasAnyValues(buckets)) {
                 int hc;
                 Func<object, object, bool> eqFunc;
-                if (CompilerHelpers.GetType(key) == _keyType || _keyType == HeterogeneousType) {
+                if (key.GetType() == _keyType || _keyType == HeterogeneousType) {
                     hc = _hashFunc(key) & Int32.MaxValue;
                     eqFunc = _eqFunc;
                 } else {
@@ -422,15 +500,30 @@ namespace IronPython.Runtime {
                     eqFunc = _genericEquals;
                 }
 
-                Bucket bucket = buckets[hc % buckets.Length];
-                while (bucket != null) {
-                    if (bucket.HashCode == hc && (Object.ReferenceEquals(key, bucket.Key) || eqFunc(key, bucket.Key))) {
-                        value = bucket.Value;
-                        return true;
-                    }
-                    bucket = bucket.Next;
-                }
+                return TryGetValue(buckets, key, hc, eqFunc, out value);
             }
+
+            value = null;
+            return false;
+        }
+
+        protected static bool TryGetValue(Bucket[] buckets, object key, int hc, Func<object, object, bool> eqFunc, out object value) {
+            int index = hc % buckets.Length;
+            int startIndex = index;
+            do {
+                Bucket bucket = buckets[index];
+                if (bucket.Key == null) {
+                    break;
+                } else if (
+                    bucket.Key != _removed &&
+                    bucket.HashCode == hc &&
+                    (Object.ReferenceEquals(key, bucket.Key) || eqFunc(key, bucket.Key))) {
+                    value = bucket.Value;
+                    return true;
+                }
+
+                index = ProbeNext(buckets, index);
+            } while (startIndex != index);
 
             value = null;
             return false;
@@ -446,13 +539,18 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Clears the contents of the dictionary.
         /// </summary>
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
+            Clear();
+        }
+
+        public void Clear() {
             lock (this) {
                 if (_buckets != null) {
                     _buckets = new Bucket[8];
                     _count = 0;
                     _version++;
                 }
+                _nullValue = null;
             }
         }
 
@@ -462,12 +560,14 @@ namespace IronPython.Runtime {
                 if (_buckets != null) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
-                        while (curBucket != null) {
+                        if (curBucket.Key != null && curBucket.Key != _removed) {
                             res.Add(new KeyValuePair<object, object>(curBucket.Key, curBucket.Value));
-
-                            curBucket = curBucket.Next;
                         }
                     }
+                }
+
+                if (_nullValue != null) {
+                    res.Add(new KeyValuePair<object, object>(null, _nullValue.Value));
                 }
                 return res;
             }
@@ -481,11 +581,14 @@ namespace IronPython.Runtime {
                 if (buckets != null) {
                     for (int i = 0; i < buckets.Length; i++) {
                         Bucket curBucket = buckets[i];
-                        while (curBucket != null) {
+                        if (curBucket.Key != null && curBucket.Key != _removed) {
                             res[index++] = curBucket.Key;
-                            curBucket = curBucket.Next;
                         }
                     }
+                }
+
+                if (_nullValue != null) {
+                    res[index++] = null;
                 }
 
                 return res;
@@ -494,15 +597,16 @@ namespace IronPython.Runtime {
 
         public override bool HasNonStringAttributes() {
             lock (this) {
+                var nullValue = _nullValue;
+                if (nullValue != null && !(nullValue.Value is string)) {
+                    return true;
+                }
                 if (_keyType != typeof(string) && _buckets != null) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
-                        while (curBucket != null) {
-                            if (!(curBucket.Key is string)) {
-                                return true;
-                            }
-
-                            curBucket = curBucket.Next;
+                        
+                        if (!(curBucket.Key is string)) {
+                            return true;
                         }
                     }
                 }
@@ -517,21 +621,33 @@ namespace IronPython.Runtime {
         public override DictionaryStorage Clone() {
             lock (this) {
                 if (_buckets == null) {
+                    if (_nullValue != null) {
+                        return new CommonDictionaryStorage(null, 1, _keyType, _hashFunc, _eqFunc, new NullValue(_nullValue.Value));
+                    }
+
                     return new CommonDictionaryStorage();
                 }
 
                 Bucket[] resBuckets = new Bucket[_buckets.Length];
                 for (int i = 0; i < _buckets.Length; i++) {
-                    if (_buckets[i] != null) {
-                        resBuckets[i] = _buckets[i].Clone();
+                    if (_buckets[i].Key != null) {
+                        resBuckets[i] = _buckets[i];
                     }
                 }
 
-                return new CommonDictionaryStorage(resBuckets, Count, _keyType, _hashFunc, _eqFunc);
+                NullValue nv = null;
+                if (_nullValue != null) {
+                    nv = new NullValue(nv.Value);
+                }
+                return new CommonDictionaryStorage(resBuckets, Count, _keyType, _hashFunc, _eqFunc, nv);
             }
         }
 
-        public override void CopyTo(DictionaryStorage/*!*/ into) {
+        public override void CopyTo(ref DictionaryStorage/*!*/ into) {
+            into = CopyTo(into);
+        }
+
+        public DictionaryStorage CopyTo(DictionaryStorage into) {
             Debug.Assert(into != null);
 
             if (_buckets != null) {
@@ -540,10 +656,16 @@ namespace IronPython.Runtime {
                     if (commonInto != null) {
                         CommonCopyTo(commonInto);
                     } else {
-                        UncommonCopyTo(into);
+                        UncommonCopyTo(ref into);
                     }
                 }
             }
+
+            var nullValue = _nullValue;
+            if (nullValue != null) {
+                into.Add(ref into, null, nullValue.Value);
+            }
+            return into;
         }
 
         private void CommonCopyTo(CommonDictionaryStorage into) {
@@ -551,7 +673,8 @@ namespace IronPython.Runtime {
                 into._buckets = new Bucket[_buckets.Length];
             } else {
                 int curSize = into._buckets.Length;
-                while (curSize < _count + into._count) {
+                int newSize = (int)((_count + into._count) / Load) + 2;
+                while (curSize < newSize) {
                     curSize *= ResizeMultiplier;
                 }
                 into.EnsureSize(curSize);
@@ -562,27 +685,25 @@ namespace IronPython.Runtime {
                 into._hashFunc = _hashFunc;
                 into._eqFunc = _eqFunc;
             } else if (into._keyType != _keyType) {
-                SetHeterogeneousSites();
+                into.SetHeterogeneousSites();
             }
 
             for (int i = 0; i < _buckets.Length; i++) {
                 Bucket curBucket = _buckets[i];
-                while (curBucket != null) {
-                    if (AddWorker(into._buckets, curBucket.Key, curBucket.Value, curBucket.HashCode)) {
-                        into._count++;
-                    }
-                    curBucket = curBucket.Next;
+
+                if (curBucket.Key != null &&
+                    curBucket.Key != _removed &&
+                    into.AddWorker(into._buckets, curBucket.Key, curBucket.Value, curBucket.HashCode)) {
+                    into._count++;
                 }
             }
         }
 
-        private void UncommonCopyTo(DictionaryStorage into) {
+        private void UncommonCopyTo(ref DictionaryStorage into) {
             for (int i = 0; i < _buckets.Length; i++) {
                 Bucket curBucket = _buckets[i];
-                while (curBucket != null) {
-                    into.AddNoLock(curBucket.Key, curBucket.Value);
-
-                    curBucket = curBucket.Next;
+                if (curBucket.Key != null && curBucket.Key != _removed) {
+                    into.AddNoLock(ref into, curBucket.Key, curBucket.Value);
                 }
             }
         }
@@ -603,29 +724,15 @@ namespace IronPython.Runtime {
         /// Bucket is not serializable because it stores the computed hash
         /// code which could change between serialization and deserialization.
         /// </summary>
-        private class Bucket {
+        protected struct Bucket {
             public object Key;          // the key to be hashed
             public object Value;        // the value associated with the key
-            public Bucket Next;         // the next chained bucket when there's a collision
             public int HashCode;        // the hash code of the contained key.
 
-            public Bucket() {
-            }
-
-            public Bucket(int hashCode, object key, object value, Bucket next) {
+            public Bucket(int hashCode, object key, object value) {
                 HashCode = hashCode;
                 Key = key;
                 Value = value;
-                Next = next;
-            }
-
-            public Bucket Clone() {
-                return new Bucket(HashCode, Key, Value, CloneNext());
-            }
-
-            private Bucket CloneNext() {
-                if (Next == null) return null;
-                return Next.Clone();
             }
         }
 
@@ -658,6 +765,7 @@ namespace IronPython.Runtime {
         }
 
         private static bool IntEquals(object o1, object o2) {
+            Debug.Assert(o1 is int && o2 is int);
             return (int)o1 == (int)o2;
         }
 
@@ -677,36 +785,41 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        [Serializable]
+        private class NullValue {
+            public object Value;
+
+            public NullValue(object value) {
+                Value = value;
+            }
+        }
 #if !SILVERLIGHT
 
         /// <summary>
-        /// Special marker bucket used during deserialization to not add
+        /// Special marker NullValue used during deserialization to not add
         /// an extra field to the dictionary storage type.
         /// </summary>
-        private class DeserializationBucket : Bucket {
-            public readonly SerializationInfo/*!*/ SerializationInfo;
+        private class DeserializationNullValue : NullValue {
+            public SerializationInfo/*!*/ SerializationInfo {
+                get {
+                    return (SerializationInfo)Value;
+                }
+            }
 
-            public DeserializationBucket(SerializationInfo info) {
-                SerializationInfo = info;
+            public DeserializationNullValue(SerializationInfo info)
+                : base(info) {
             }
         }
 
-        private DeserializationBucket GetDeserializationBucket() {
-            if (_buckets == null) {
-                return null;
-            }
-
-            if (_buckets.Length != 1) {
-                return null;
-            }
-
-            return _buckets[0] as DeserializationBucket;
+        private DeserializationNullValue GetDeserializationBucket() {
+            return _nullValue  as DeserializationNullValue;
         }
 
         #region ISerializable Members
 
         public void GetObjectData(SerializationInfo info, StreamingContext context) {
             info.AddValue("buckets", GetItems());
+            info.AddValue("nullvalue", _nullValue);
         }
 
         #endregion
@@ -714,7 +827,7 @@ namespace IronPython.Runtime {
         #region IDeserializationCallback Members
 
         void IDeserializationCallback.OnDeserialization(object sender) {
-            DeserializationBucket bucket = GetDeserializationBucket();
+            DeserializationNullValue bucket = GetDeserializationBucket();
             if (bucket == null) {
                 // we've received multiple OnDeserialization callbacks, only 
                 // deserialize after the 1st one
@@ -723,11 +836,17 @@ namespace IronPython.Runtime {
 
             SerializationInfo info = bucket.SerializationInfo;
             _buckets = null;
+            _nullValue = null;
 
             var buckets = (List<KeyValuePair<object, object>>)info.GetValue("buckets", typeof(List<KeyValuePair<object, object>>));
 
             foreach (KeyValuePair<object, object> kvp in buckets) {
                 Add(kvp.Key, kvp.Value);
+            }
+
+            NullValue nullVal = (NullValue)info.GetValue("nullvalue", typeof(NullValue));
+            if (nullVal != null) {
+                _nullValue = new NullValue(nullVal);
             }
         }
 
