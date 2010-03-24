@@ -37,13 +37,13 @@ namespace IronPython.Runtime {
             _type = moduleType;
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             string strKey = key as string;
             if (strKey == null) {
-                return base.Remove(key);
+                return base.Remove(ref storage, key);
             }
 
-            bool found = base.Remove(key);
+            bool found = base.Remove(ref storage, key);
             object value;
             if (TryGetLazyValue(strKey, out value)) {
                 // hide the deleted value
@@ -63,9 +63,9 @@ namespace IronPython.Runtime {
             return TryGetValue(key, out dummy);
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             _cleared = true;
-            base.Clear();
+            base.Clear(ref storage);
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {

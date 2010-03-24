@@ -116,7 +116,7 @@ namespace IronPython.Runtime.Types {
 
             
             if (!_dict._storage.Contains("__doc__")) {
-                _dict._storage.Add("__doc__", null);
+                _dict._storage.Add(ref _dict._storage, "__doc__", null);
             }
 
             CheckSpecialMethods(_dict);
@@ -400,7 +400,7 @@ namespace IronPython.Runtime.Types {
         }
 
         internal bool DeleteCustomMember(CodeContext context, string name) {
-            if (!_dict._storage.Remove(name)) {
+            if (!_dict._storage.Remove(ref _dict._storage, name)) {
                 throw PythonOps.AttributeError("{0} is not a valid attribute", name);
             }
 
@@ -558,7 +558,7 @@ namespace IronPython.Runtime.Types {
         }
 
         internal void SetNameHelper(string name, object value) {
-            _dict._storage.Add(name, value);
+            _dict._storage.Add(ref _dict._storage, name, value);
 
             if (name == "__del__") {
                 HasFinalizer = true;

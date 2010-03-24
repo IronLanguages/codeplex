@@ -84,6 +84,10 @@ namespace IronPython.Runtime.Operations {
             return new PythonDictionary(size);
         }
 
+        public static PythonDictionary MakeEmptyDict() {
+            return new PythonDictionary(EmptyDictionaryStorage.Instance);
+        }
+
         /// <summary>
         /// Creates a new dictionary extracting the keys and values from the
         /// provided data array.  Keys/values are adjacent in the array with
@@ -91,6 +95,14 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static PythonDictionary MakeDictFromItems(params object[] data) {
             return new PythonDictionary(new CommonDictionaryStorage(data, false));
+        }
+
+        public static PythonDictionary MakeConstantDict(object items) {
+            return new PythonDictionary((ConstantDictionaryStorage)items);
+        }
+
+        public static object MakeConstantDictStorage(params object[] data) {
+            return new ConstantDictionaryStorage(new CommonDictionaryStorage(data, false));
         }
 
         /// <summary>

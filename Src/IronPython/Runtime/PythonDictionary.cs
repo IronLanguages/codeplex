@@ -33,7 +33,7 @@ namespace IronPython.Runtime {
         ICodeFormattable, IStructuralEquatable {
         [MultiRuntimeAware]
         private static object DefaultGetItem;   // our cached __getitem__ method
-        internal readonly DictionaryStorage _storage;
+        internal DictionaryStorage _storage;
 
         internal static object MakeDict(CodeContext/*!*/ context, PythonType cls) {
             if (cls == TypeCache.Dict) {
@@ -45,7 +45,7 @@ namespace IronPython.Runtime {
         #region Constructors
 
         public PythonDictionary() {
-            _storage = new CommonDictionaryStorage();
+            _storage = EmptyDictionaryStorage.Instance;
         }
 
         internal PythonDictionary(DictionaryStorage storage) {
@@ -53,12 +53,12 @@ namespace IronPython.Runtime {
         }
 
         internal PythonDictionary(IDictionary dict) {
-            _storage = new CommonDictionaryStorage();
-            lock (_storage) {
-                foreach (DictionaryEntry de in dict) {
-                    _storage.AddNoLock(de.Key, de.Value);
-                }
+            var storage = new CommonDictionaryStorage();
+            
+            foreach (DictionaryEntry de in dict) {
+                storage.AddNoLock(de.Key, de.Value);
             }
+            _storage = storage;
         }
 
         internal PythonDictionary(PythonDictionary dict) {
@@ -113,7 +113,7 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public void Add(object key, object value) {
-            _storage.Add(key, value);
+            _storage.Add(ref _storage, key, value);
         }
 
         [PythonHidden]
@@ -172,12 +172,12 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public void Add(KeyValuePair<object, object> item) {
-            _storage.Add(item.Key, item.Value);
+            _storage.Add(ref _storage, item.Key, item.Value);
         }
 
         [PythonHidden]
         public void Clear() {
-            _storage.Clear();
+            _storage.Clear(ref _storage);
         }
 
         [PythonHidden]
@@ -201,7 +201,7 @@ namespace IronPython.Runtime {
 
         [PythonHidden]
         public bool Remove(KeyValuePair<object, object> item) {
-            return _storage.Remove(item.Key);
+            return _storage.Remove(ref _storage, item.Key);
         }
 
         #endregion
@@ -275,7 +275,7 @@ namespace IronPython.Runtime {
         }
 
         private void SetItem(object key, object value) {
-            _storage.Add(key, value);
+            _storage.Add(ref _storage, key, value);
         }
 
         private object GetItem(object key) {
@@ -289,7 +289,7 @@ namespace IronPython.Runtime {
 
 
         public virtual void __delitem__(object key) {
-            if (!_storage.Remove(key)) {
+            if (!_storage.Remove(ref _storage, key)) {
                 throw PythonOps.KeyError(key);
             }
         }
@@ -317,7 +317,7 @@ namespace IronPython.Runtime {
         #region Python dict implementation
 
         public void clear() {
-            _storage.Clear();
+            _storage.Clear(ref _storage);
         }
 
         public bool has_key(object key) {
@@ -416,7 +416,7 @@ namespace IronPython.Runtime {
 
                 IEnumerator i = PythonOps.GetEnumerator(o);
                 while (i.MoveNext()) {
-                    pyDict._storage.AddNoLock(i.Current, value);
+                    pyDict._storage.AddNoLock(ref pyDict._storage, i.Current, value);
                 }
 
                 return pyDict;
@@ -824,7 +824,7 @@ namespace IronPython.Runtime {
             set {
                 if (GetType() == typeof(PythonDictionary)) {
                     // no need to call virtual version
-                    _storage.Add(SymbolTable.IdToString(name), value);
+                    _storage.Add(ref _storage, SymbolTable.IdToString(name), value);
                 } else {
                     this[SymbolTable.IdToString(name)] = value;
                 }
@@ -852,7 +852,7 @@ namespace IronPython.Runtime {
         #endregion
 
         internal bool TryRemoveValue(object key, out object value) {
-            return _storage.TryRemoveValue(key, out value);
+            return _storage.TryRemoveValue(ref _storage, key, out value);
         }
 
         #endregion
@@ -911,14 +911,14 @@ namespace IronPython.Runtime {
         private void AddEnvironmentVars() {
             try {
                 foreach (DictionaryEntry de in Environment.GetEnvironmentVariables()) {
-                    Add(de.Key, de.Value);
+                    _storage.Add(de.Key, de.Value);
                 }
             } catch (SecurityException) {
                 // environment isn't available under partial trust
             }
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             _storage.Add(key, value);
 
             string s1 = key as string;
@@ -928,7 +928,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             bool res = _storage.Remove(key);
 
             string s = key as string;
@@ -951,7 +951,7 @@ namespace IronPython.Runtime {
             get { return _storage.Count; }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             foreach (var x in GetItems()) {
                 string key = x.Key as string;
                 if (key != null) {
@@ -959,7 +959,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            _storage.Clear();
+            _storage.Clear(ref storage);
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {

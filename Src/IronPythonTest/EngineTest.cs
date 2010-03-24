@@ -32,6 +32,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Policy;
 using System.Text;
+using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
@@ -42,7 +43,9 @@ using IronPython;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
 [assembly: ExtensionType(typeof(IronPythonTest.IFooable), typeof(IronPythonTest.FooableExtensions))]
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -2246,6 +2249,190 @@ if id(a) == id(b):
             } finally {
                 _pe.Runtime.IO.RedirectToConsole();
             }
+        }
+
+        class DictThreadGlobalState {
+            public int DoneCount;
+            public bool IsDone;
+            public ManualResetEvent Event;
+            public ManualResetEvent DoneEvent;
+            public PythonDictionary Dict;
+            public List<DictThreadTestState> Tests = new List<DictThreadTestState>();
+            public List<Thread> Threads = new List<Thread>();
+            public Func<PythonDictionary> DictMaker;
+        }
+
+        class DictThreadTestState {
+            public Action<PythonDictionary> Action;
+            public Action<PythonDictionary> Verify;
+            public DictThreadGlobalState GlobalState;
+        }
+
+        public static void ScenarioDictionaryThreadSafety() {
+            const int ThreadCount = 10;
+
+            // add new keys to an empty dictionary concurrently
+            RunThreadTest(
+                MakeThreadTest(
+                    ThreadCount, 
+                    AddStringKey, 
+                    VerifyStringKey, 
+                    () => new PythonDictionary()
+                )
+            );
+
+            // add new keys to a constant dictionary concurrently
+            var constantStorage = MakeConstantStringDictionary(ThreadCount);
+            RunThreadTest(
+                MakeThreadTest(
+                    ThreadCount,
+                    AddStringKey,
+                    VerifyStringKey,
+                    () => new PythonDictionary(constantStorage)
+                )
+            );
+
+            // remove keys from a constant dictionary concurrently
+            var emptyStorage = MakeConstantStringDictionary(ThreadCount);
+            RunThreadTest(
+                MakeThreadTest(
+                    ThreadCount,
+                    RemoveStringKey,
+                    VerifyNoKeys,
+                    () => new PythonDictionary(emptyStorage)
+                )
+            );
+        }
+
+        private static ConstantDictionaryStorage MakeConstantStringDictionary(int ThreadCount) {
+            object[] storage = new object[ThreadCount * 2];
+            for (int i = 0; i < ThreadCount; i++) {
+                storage[i * 2] = StringKey(i);
+                storage[i * 2 + 1] = StringKey(i);
+            }
+
+            var emptyStorage = new ConstantDictionaryStorage(new CommonDictionaryStorage(storage, true));
+            return emptyStorage;
+        }
+
+        private static ConstantDictionaryStorage MakeConstantStringDictionary() {
+            object[] storage = new object[2];
+            storage[0] = storage[1] = "SomeValueWhichIsNeverUsedDuringTheTest";
+            var emptyStorage = new ConstantDictionaryStorage(new CommonDictionaryStorage(storage, true));
+            return emptyStorage;
+        }
+
+        private static void RunThreadTest(DictThreadGlobalState globalState) {
+            for (int i = 0; i < globalState.Threads.Count; i++) {
+                globalState.Threads[i].Start(globalState.Tests[i]);
+            }
+            for (int i = 0; i < 10000; i++) {
+                globalState.Dict = globalState.DictMaker();
+
+                while (globalState.DoneCount != globalState.Threads.Count) {
+                    // wait for threads to get back to start point
+                }
+
+                globalState.DoneEvent.Reset();
+                globalState.Event.Set();
+
+                while (globalState.DoneCount != 0) {
+                    // wait for threads to get back to finish
+                }
+
+                foreach (var test in globalState.Tests) {
+                    test.Verify(globalState.Dict);
+                }
+
+                globalState.Event.Reset();
+                globalState.DoneEvent.Set();
+            }
+
+            globalState.IsDone = true;
+            globalState.Event.Set();
+        }
+
+        private static DictThreadGlobalState MakeThreadTest(int threadCount, 
+            Func<int, Action<PythonDictionary>> actionMaker, 
+            Func<int, Action<PythonDictionary>> verifyMaker,
+            Func<PythonDictionary> dictMaker) {
+            DictThreadGlobalState globalState = new DictThreadGlobalState();
+
+            globalState.DictMaker = dictMaker;
+            globalState.Event = new ManualResetEvent(false);
+            globalState.DoneEvent = new ManualResetEvent(false);
+            globalState.Threads = new List<Thread>();
+            globalState.Tests = new List<DictThreadTestState>();
+
+            for (int i = 0; i < threadCount; i++) {                
+                var curTestCase = new DictThreadTestState();
+                curTestCase.GlobalState = globalState;
+                curTestCase.Action = actionMaker(i);
+                curTestCase.Verify = verifyMaker(i);
+                globalState.Tests.Add(curTestCase);
+
+                Thread thread = new Thread(new ParameterizedThreadStart((x) => {
+                    var state = (DictThreadTestState)x;
+
+                    for (; ; ) {
+                        Interlocked.Increment(ref state.GlobalState.DoneCount);
+                        state.GlobalState.Event.WaitOne();
+                        if (globalState.IsDone) {
+                            break;
+                        }
+
+                        state.Action(state.GlobalState.Dict);
+
+                        Interlocked.Decrement(ref state.GlobalState.DoneCount);
+
+                        state.GlobalState.DoneEvent.WaitOne();
+                    }
+                }));
+
+                thread.IsBackground = true;
+                globalState.Threads.Add(thread);
+            }
+            return globalState;
+        }
+
+        private static Action<PythonDictionary> AddStringKey(int value) {
+            string key = StringKey(value);
+
+            return (dict) => {
+                dict[key] = key; 
+            };
+        }
+
+        private static string StringKey(int value) {
+            return new string((char)(65 + value), 1);
+        }
+
+        private static Action<PythonDictionary> RemoveStringKey(int value) {
+            string key = StringKey(value);
+
+            return (dict) => {
+                dict.Remove(key);
+            };
+        }
+
+        private static Action<PythonDictionary> VerifyStringKey(int value) {
+            string key = StringKey(value);
+            
+            return (dict) => {
+                if (!dict.Contains(key)) {
+                    Console.WriteLine(PythonOps.Repr(DefaultContext.Default, dict));
+                }
+                Assert(dict.Contains(key));
+                AreEqual((string)dict[key], key);
+            };
+        }
+
+        private static Action<PythonDictionary> VerifyNoKeys(int value) {
+            string key = new string((char)(65 + value), 1);
+
+            return (dict) => {
+                AreEqual(dict.Count, 0);
+            };
         }
 
         public void Scenario12() {

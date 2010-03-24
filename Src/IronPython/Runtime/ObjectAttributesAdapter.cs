@@ -34,7 +34,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             PythonContext.GetContext(_context).SetIndex(_backing, key, value);
         }
 
@@ -43,7 +43,7 @@ namespace IronPython.Runtime {
             return TryGetValue(key, out dummy);
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             try {
                 PythonContext.GetContext(_context).DelIndex(_backing, key);
                 return true;
@@ -69,7 +69,7 @@ namespace IronPython.Runtime {
             get { return PythonOps.Length(_backing);  }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             PythonOps.Invoke(_context, _backing, "clear");
         }
 

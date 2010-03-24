@@ -30,7 +30,7 @@ namespace IronPython.Runtime {
             _change = change;
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
             string strkey = key as string;
             if (strkey != null) {
                 if (strkey == "__import__") {
@@ -38,14 +38,14 @@ namespace IronPython.Runtime {
                 }
                 _change(this, new ModuleChangeEventArgs(strkey, ModuleChangeType.Set, value));
             }
-            base.Add(key, value);
+            base.Add(ref storage, key, value);
         }
         
         protected override void LazyAdd(object name, object value) {
             base.Add(name, value);
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
             string strkey = key as string;
             if (strkey != null) {
                 if (strkey == "__import__") {
@@ -53,12 +53,12 @@ namespace IronPython.Runtime {
                 }
                 _change(this, new ModuleChangeEventArgs(strkey, ModuleChangeType.Delete));
             }
-            return base.Remove(key);
+            return base.Remove(ref storage, key);
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             _import = null;
-            base.Clear();
+            base.Clear(ref storage);
         }
 
         public override bool TryGetImport(out object value) {

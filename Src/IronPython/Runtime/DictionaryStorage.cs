@@ -33,28 +33,40 @@ namespace IronPython.Runtime {
     /// </summary>
     [Serializable]
     internal abstract class DictionaryStorage  {
-        public abstract void Add(object key, object value);
+        public abstract void Add(ref DictionaryStorage storage, object key, object value);
 
-        public virtual void AddNoLock(object key, object value) {
-            Add(key, value);
+        public virtual void AddNoLock(ref DictionaryStorage storage, object key, object value) {
+            Add(ref storage, key, value);
         }
 
-        public abstract bool Contains(object key);
-        
-        public abstract bool Remove(object key);
-        public abstract bool TryGetValue(object key, out object value);
+        public abstract bool Remove(ref DictionaryStorage storage, object key);
 
-        public virtual bool TryRemoveValue(object key, out object value) {
+        public virtual bool TryRemoveValue(ref DictionaryStorage storage, object key, out object value) {
             if (TryGetValue(key, out value)) {
-                return Remove(key);
-                
+                return Remove(ref storage, key);
+
             }
 
             return false;
         }
+        public abstract void Clear(ref DictionaryStorage storage);
+
+        /// <summary>
+        /// Adds items from this dictionary into the other dictionary
+        /// </summary>
+        public virtual void CopyTo(ref DictionaryStorage/*!*/ into) {
+            Debug.Assert(into != null);
+
+            foreach (KeyValuePair<object, object> kvp in GetItems()) {
+                into.Add(ref into, kvp.Key, kvp.Value);
+            }
+        }
+
+        public abstract bool Contains(object key);
+        
+        public abstract bool TryGetValue(object key, out object value);
 
         public abstract int Count { get; }
-        public abstract void Clear();
         public virtual bool HasNonStringAttributes() {
             foreach (KeyValuePair<object, object> o in GetItems()) {
                 if (!(o.Key is string)) {
@@ -80,17 +92,6 @@ namespace IronPython.Runtime {
             return storage;
         }
         
-        /// <summary>
-        /// Adds items from this dictionary into the other dictionary
-        /// </summary>
-        public virtual void CopyTo(DictionaryStorage/*!*/ into) {
-            Debug.Assert(into != null);
-
-            foreach (KeyValuePair<object, object> kvp in GetItems()) {
-                into.Add(kvp.Key, kvp.Value);
-            }
-        }
-
         /// <summary>
         /// Provides fast access to the __path__ attribute if the dictionary storage supports caching it.
         /// </summary>

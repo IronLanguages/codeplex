@@ -31,13 +31,21 @@ namespace IronPython.Runtime {
             _data = new Dictionary<string, object>(count, StringComparer.Ordinal);
         }
 
-        public override void Add(object key, object value) {
+        public override void Add(ref DictionaryStorage storage, object key, object value) {
+            Add(key, value);
+        }
+
+        public void Add(object key, object value) {
             lock (this) {
                 AddNoLock(key, value);
             }
         }
 
-        public override void AddNoLock(object key, object value) {
+        public override void AddNoLock(ref DictionaryStorage storage, object key, object value) {
+            AddNoLock(key, value);
+        }
+
+        public void AddNoLock(object key, object value) {
             EnsureData();
 
             string strKey = key as string;
@@ -66,7 +74,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override bool Remove(object key) {
+        public override bool Remove(ref DictionaryStorage storage, object key) {
+            return Remove(key);
+        }
+
+        public bool Remove(object key) {
             if (_data == null) return false;
 
             lock (this) {
@@ -122,7 +134,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override void Clear() {
+        public override void Clear(ref DictionaryStorage storage) {
             _data = null;
         }
 

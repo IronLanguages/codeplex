@@ -117,6 +117,16 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
+        internal override object GetConstantValue() {
+            return Value;
+        }
+
+        internal override bool IsConstant {
+            get {
+                return true;
+            }
+        }
+
         class UnicodeWrapper {
             public readonly object Value;
 
