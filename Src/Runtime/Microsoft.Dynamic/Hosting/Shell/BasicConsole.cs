@@ -54,6 +54,9 @@ namespace Microsoft.Scripting.Hosting.Shell {
             set { _creatingThread = value; }
         }
 
+#if !SILVERLIGHT // ConsoleCancelEventHandler
+        public ConsoleCancelEventHandler ConsoleCancelEventHandler { get; set; }
+#endif
         private ConsoleColor _promptColor;
         private ConsoleColor _outColor;
         private ConsoleColor _errorColor;
@@ -67,13 +70,22 @@ namespace Microsoft.Scripting.Hosting.Shell {
             _creatingThread = Thread.CurrentThread;            
 
 #if !SILVERLIGHT // ConsoleCancelEventHandler
-            Console.CancelKeyPress += new ConsoleCancelEventHandler(delegate(object sender, ConsoleCancelEventArgs e) {
+            // Create the default handler
+            this.ConsoleCancelEventHandler = delegate(object sender, ConsoleCancelEventArgs e) {
                 if (e.SpecialKey == ConsoleSpecialKey.ControlC) {
                     e.Cancel = true;
                     _ctrlCEvent.Set();
                     _creatingThread.Abort(new KeyboardInterruptException(""));
                 }
-            });
+            };
+
+            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) {
+                // Dispatch the registered handler
+                ConsoleCancelEventHandler handler = this.ConsoleCancelEventHandler;
+                if (handler != null) {
+                    this.ConsoleCancelEventHandler(sender, e);
+                }
+            };
 #endif
             _ctrlCEvent = new AutoResetEvent(false);
         }
