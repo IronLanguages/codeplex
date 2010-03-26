@@ -73,6 +73,7 @@ BUILTIN_MODULES =  [
                     "nt", 
                     "operator", 
                     "select",
+                    "signal", #CodePlex 16414
                     "sys",
                     "thread",
                     "time", 
@@ -101,7 +102,6 @@ MISSING_MODULES = [
                     "mmap", #CodePlex 21401
                     "msvcrt", #CodePlex 21402
                     "parser", #CodePlex 1347 - Won't fix
-                    "signal", #CodePlex 16414
                     "strop", #CodePlex 21403
                     "zipimport", #CodePlex 391
                     "zlib", #CodePlex 2590
