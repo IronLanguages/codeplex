@@ -147,12 +147,14 @@ namespace IronPython.Modules {
 
         [PythonHidden]
         public static TraceBackFrame/*!*/ _getframeImpl(CodeContext/*!*/ context, int depth) {
-            var stack = PythonOps.GetFunctionStack();
+            return _getframeImpl(context, depth, PythonOps.GetFunctionStack());
+        }
 
+        internal static TraceBackFrame/*!*/ _getframeImpl(CodeContext/*!*/ context, int depth, List<FunctionStack> stack) {
             if (depth < stack.Count) {
                 TraceBackFrame cur = null;
                 int curTraceFrame = -1;
-                
+
                 for (int i = 0; i < stack.Count - depth; i++) {
                     var elem = stack[i];
 
@@ -174,8 +176,8 @@ namespace IronPython.Modules {
 
                     curTraceFrame++;
                 }
-                return cur; 
-            }
+                return cur;
+            } 
 
             throw PythonOps.ValueError("call stack is not deep enough");
         }

@@ -9,7 +9,7 @@ DESCRIPTION
 -------------------------------------------------------
 Complete list of module attributes IronPython is still 
 missing implementations for:
-    nt  closerange                          # 17475, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17475
+    nt  closerange                    
     nt  dup                           
     nt  dup2                          
     nt  execv                         
@@ -68,6 +68,7 @@ missing implementations for:
 -------------------------------------------------------
 Complete list of module attributes that should be removed 
 from IronPython:
+    nt  kill                          
     nt  spawnl                        
     nt  spawnle                       
     nt  unsetenv                      

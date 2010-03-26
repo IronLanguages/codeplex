@@ -2109,6 +2109,8 @@ import sys
 for mod in sys.builtin_module_names:
     if mod.startswith('_ctypes'):
         continue
+    elif mod.startswith('signal'):
+        continue
     x = __import__(mod)
     dir(x)
 ", SourceCodeKind.Statements);

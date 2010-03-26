@@ -20,7 +20,6 @@
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <Silverlight3Path>$(ProgramFiles)\Microsoft Silverlight\3.0.40818.0</Silverlight3Path>
     <Silverlight4Path>..\..\..\Utilities\Silverlight\v4-x86fre</Silverlight4Path>
-
     <!-- The following two lines prevent csc.rsp and Microsoft.NETFramework.props from adding additional assembly references -->
     <NoConfig>true</NoConfig>
     <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
@@ -140,7 +139,9 @@
     <Compile Include="array.cs" />
     <Compile Include="binascii.cs" />
     <Compile Include="cmath.cs" />
+    <Compile Include="NativeSignal.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="signal.cs" />
     <Compile Include="_codecs.cs" />
     <Compile Include="ModuleOps.cs" />
     <Compile Include="_bytesio.cs" />
@@ -218,15 +219,15 @@
     <Reference Include="System.Core" Condition=" '$(TargetFrameworkVersion)' == 'v4.0' " />
   </ItemGroup>
   <ItemGroup Condition=" '$(SilverlightBuild)' == 'true' ">
-    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" >
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightPath)\mscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" >
+    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightPath)\System.dll</HintPath>
     </Reference>
-    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" >
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightPath)\System.Core.dll</HintPath>
       <Aliases Condition=" '$(TargetFrameworkVersion)' != 'v4.0' ">systemcore</Aliases>

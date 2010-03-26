@@ -199,6 +199,8 @@ namespace IronPython.Runtime {
         [ThreadStatic]
         private static bool _enableTracing;
 
+        internal readonly List<FunctionStack> _mainThreadFunctionStack;
+
         #region Generated Python Shared Call Sites Storage
 
         // *** BEGIN GENERATED CODE ***
@@ -320,6 +322,8 @@ namespace IronPython.Runtime {
                 _topNamespace.LoadAssembly(asm);
             }
             manager.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(ManagerAssemblyLoaded);
+
+            _mainThreadFunctionStack = Runtime.Operations.PythonOps.GetFunctionStack();
         }
 
         void ManagerAssemblyLoaded(object sender, AssemblyLoadedEventArgs e) {
