@@ -58,8 +58,6 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo MakeException = GetMethod((Func<CodeContext, object, object, object, Exception>)PythonOps.MakeException);
         public static readonly MethodInfo MakeSlice = GetMethod((Func<object, object, object, Slice>)PythonOps.MakeSlice);
         public static readonly MethodInfo ExceptionHandled = GetMethod((Action<CodeContext>)PythonOps.ExceptionHandled);
-        public static readonly MethodInfo GetAndClearDynamicStackFrames = GetMethod((Func<List<DynamicStackFrame>>)PythonOps.GetAndClearDynamicStackFrames);
-        public static readonly MethodInfo SetDynamicStackFrames = GetMethod((Action<List<DynamicStackFrame>>)PythonOps.SetDynamicStackFrames);
         public static readonly MethodInfo GetExceptionInfoLocal = GetMethod((Func<CodeContext, Exception, PythonTuple>)PythonOps.GetExceptionInfoLocal);
         public static readonly MethodInfo CheckException = GetMethod((Func<CodeContext, object, object, object>)PythonOps.CheckException);
         public static readonly MethodInfo SetCurrentException = GetMethod((Func<CodeContext, Exception, object>)PythonOps.SetCurrentException);
@@ -88,7 +86,7 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo MakeConstantDict = GetMethod((Func<object, PythonDictionary>)PythonOps.MakeConstantDict);
         public static readonly MethodInfo MakeHomogeneousDictFromItems = GetMethod((Func<object[], PythonDictionary>)PythonOps.MakeHomogeneousDictFromItems);
         public static readonly MethodInfo CreateLocalContext = GetMethod((Func<CodeContext, MutableTuple, string[], CodeContext>)PythonOps.CreateLocalContext);
-        public static readonly MethodInfo UpdateStackTrace = GetMethod((Action<CodeContext, FunctionCode, MethodBase, string, string, int>)PythonOps.UpdateStackTrace);
+        public static readonly MethodInfo UpdateStackTrace = GetMethod((Action<Exception, CodeContext, FunctionCode, MethodBase, string, string, int>)PythonOps.UpdateStackTrace);
         public static readonly MethodInfo GetCurrentMethod = GetMethod((Func<MethodBase>)MethodBase.GetCurrentMethod);
         public static readonly MethodInfo ForLoopDispose = GetMethod((Action<KeyValuePair<IEnumerator, IDisposable>>)PythonOps.ForLoopDispose);
         public static readonly MethodInfo GetClosureTupleFromContext = GetMethod((Func<CodeContext, MutableTuple>)PythonOps.GetClosureTupleFromContext);

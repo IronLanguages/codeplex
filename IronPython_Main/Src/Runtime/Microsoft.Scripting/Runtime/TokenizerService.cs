@@ -53,7 +53,6 @@ namespace Microsoft.Scripting.Runtime {
             return ReadToken().Category != TokenCategory.EndOfStream;
         }
 
-        // TODO: shouldn't be virutal (JS tokenizer needs to be fixed)
         /// <summary>
         /// Get all tokens over a block of the stream.
         /// </summary>
@@ -63,16 +62,18 @@ namespace Microsoft.Scripting.Runtime {
         /// should be returned.
         /// </para>
         /// </remarks>
-        /// <param name="countOfChars">The mininum number of characters to process while getting tokens.</param>
+        /// <param name="characterCount">Tokens are read until at least given amount of characters is read or the stream ends.</param>
         /// <returns>A enumeration of tokens.</returns>
-        public virtual IEnumerable<TokenInfo> ReadTokens(int countOfChars) {
+        public IEnumerable<TokenInfo> ReadTokens(int characterCount) {
             List<TokenInfo> tokens = new List<TokenInfo>();
 
-            int start_index = CurrentPosition.Index;
+            int start = CurrentPosition.Index;
 
-            while (CurrentPosition.Index - start_index < countOfChars) {
+            while (CurrentPosition.Index - start < characterCount) {
                 TokenInfo token = ReadToken();
-                if (token.Category == TokenCategory.EndOfStream) break;
+                if (token.Category == TokenCategory.EndOfStream) {
+                    break;
+                }
                 tokens.Add(token);
             }
 

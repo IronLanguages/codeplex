@@ -1564,13 +1564,16 @@ namespace IronPython.Runtime {
             return className;
         }
 
+        public override IList<DynamicStackFrame> GetStackFrames(Exception exception) {
+            return PythonOps.GetDynamicStackFrames(exception);
+        }
 
 #if SILVERLIGHT // stack trace
         private string FormatStackTraces(Exception e) {
 
             StringBuilder result = new StringBuilder();
             result.AppendLine("Traceback (most recent call last):");
-            DynamicStackFrame[] dfs = ScriptingRuntimeHelpers.GetDynamicStackFrames(e);
+            DynamicStackFrame[] dfs = PythonExceptions.GetDynamicStackFrames(e);
             for (int i = 0; i < dfs.Length; ++i) {
                 DynamicStackFrame frame = dfs[i];
                 result.AppendFormat("  at {0} in {1}, line {2}\n", frame.GetMethodName(), frame.GetFileName(), frame.GetFileLineNumber());
@@ -1626,7 +1629,7 @@ namespace IronPython.Runtime {
                 printedHeader = true;
             }
 
-            foreach (DynamicStackFrame frame in ExceptionHelpers.GetStackFrames(e, true)) {
+            foreach (DynamicStackFrame frame in PythonExceptions.GetStackFrames(e, true)) {
                 MethodBase method = frame.GetMethod();
                 if (method.DeclaringType != null &&
                     method.DeclaringType.FullName.StartsWith("IronPython.")) {
@@ -1992,7 +1995,6 @@ namespace IronPython.Runtime {
 
                 program.Execute(pco, ErrorSink.Default);
             } catch (SystemExitException e) {
-                ExceptionHelpers.DynamicStackFrames = null;
                 object obj;
                 return e.GetExitCode(out obj);
             }

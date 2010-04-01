@@ -1018,7 +1018,6 @@ namespace IronPython.Runtime.Operations {
                 // automatically re-throw on it's own.
                 throw;
             } catch {
-                ExceptionHelpers.DynamicStackFrames = null;
                 return false;
             }
         }
@@ -1652,8 +1651,6 @@ namespace IronPython.Runtime.Operations {
 
                     PrintWithDest(context, pc.SystemStandardError, "Original exception was:");
                     PrintWithDest(context, pc.SystemStandardError, pc.FormatException(exception));
-
-                    ExceptionHelpers.DynamicStackFrames = null;
                 }
             }
         }
@@ -2034,9 +2031,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void BuildExceptionInfo(CodeContext/*!*/ context, Exception clrException) {
-            ExceptionHelpers.AssociateDynamicStackFrames(clrException);
             GetExceptionInfo(context);
-            ClearDynamicStackFrames();
         }
 
         // Clear the current exception. Most callers should restore the exception.
@@ -2103,7 +2098,7 @@ namespace IronPython.Runtime.Operations {
                 return (TraceBack)e.Data[typeof(TraceBack)];
             }
 
-            DynamicStackFrame[] frames = ScriptingRuntimeHelpers.GetDynamicStackFrames(e, false);
+            DynamicStackFrame[] frames = PythonExceptions.GetDynamicStackFrames(e, false);
             TraceBack tb = null;
             for (int i = 0; i < frames.Length; i++) {
                 DynamicStackFrame frame = frames[i];
@@ -2196,7 +2191,9 @@ namespace IronPython.Runtime.Operations {
         /// a Tuple, or a single value.  This case is handled by EC.CreateThrowable.
         /// </summary>
         public static Exception MakeException(CodeContext/*!*/ context, object type, object value, object traceback) {
-            return MakeExceptionWorker(context, type, value, traceback, false);
+            Exception e = MakeExceptionWorker(context, type, value, traceback, false);
+            e.Data.Remove(typeof(DynamicStackFrame));
+            return e;
         }
 
         private static Exception MakeExceptionWorker(CodeContext context, object type, object value, object traceback, bool forRethrow) {
@@ -2234,10 +2231,6 @@ namespace IronPython.Runtime.Operations {
                 dict.Remove(typeof(TraceBack));
             }
 
-            if (!forRethrow) {
-                ExceptionHelpers.ClearDynamicStackFrames(throwable);
-            }
-
             PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, throwable);
 
             return throwable;
@@ -2245,20 +2238,6 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception CreateThrowable(PythonType type, params object[] args) {
             return PythonExceptions.CreateThrowable(type, args);
-        }
-
-        public static void ClearDynamicStackFrames() {
-            ExceptionHelpers.DynamicStackFrames = null;
-        }
-
-        public static List<DynamicStackFrame> GetAndClearDynamicStackFrames() {
-            List<DynamicStackFrame> res = ExceptionHelpers.DynamicStackFrames;
-            ClearDynamicStackFrames();
-            return res;
-        }
-
-        public static void SetDynamicStackFrames(List<DynamicStackFrame> frames) {
-            ExceptionHelpers.DynamicStackFrames = frames;
         }
 
         #endregion
@@ -3578,8 +3557,6 @@ namespace IronPython.Runtime.Operations {
             try {
                 Importer.Import(modCtx.GlobalContext, main, PythonTuple.EMPTY, 0);
             } catch (SystemExitException ex) {
-                ExceptionHelpers.DynamicStackFrames = null;
-
                 object dummy;
                 return ex.GetExitCode(out dummy);
             }
@@ -4219,17 +4196,31 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        public static void UpdateStackTrace(CodeContext context, FunctionCode funcCode, MethodBase method, string funcName, string filename, int line) {
+        public static void UpdateStackTrace(Exception e, CodeContext context, FunctionCode funcCode, MethodBase method, string funcName, string filename, int line) {
             if (line != -1) {
                 Debug.Assert(filename != null);
-                if (ExceptionHelpers.DynamicStackFrames == null) {
-                    ExceptionHelpers.DynamicStackFrames = new List<DynamicStackFrame>();
-                }
-
                 Debug.Assert(line != SourceLocation.None.Line);
 
-                ExceptionHelpers.DynamicStackFrames.Add(new PythonDynamicStackFrame(context, funcCode, method, funcName, filename, line));
+                List<DynamicStackFrame> pyFrames = (List<DynamicStackFrame>)e.Data[typeof(DynamicStackFrame)];
+                
+                if (pyFrames == null) {
+                    e.Data[typeof(DynamicStackFrame)] = pyFrames = new List<DynamicStackFrame>();
+                }
+
+                pyFrames.Add(new PythonDynamicStackFrame(context, funcCode, method, funcName, filename, line));
             }
+        }
+
+        /// <summary>
+        /// Gets a list of DynamicStackFrames for the given exception.  These stack frames
+        /// can be programmatically inspected to understand the frames the exception crossed
+        /// through including Python frames.
+        /// 
+        /// Dynamic stack frames are not preserved when an exception crosses an app domain
+        /// boundary.
+        /// </summary>
+        public static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
+            return PythonExceptions.GetDynamicStackFrames(e);
         }
 
         public static byte[] ConvertBufferToByteArray(PythonBuffer buffer) {

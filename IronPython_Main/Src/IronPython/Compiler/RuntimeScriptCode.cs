@@ -102,8 +102,8 @@ namespace IronPython.Compiler {
         private object OptimizedEvalWrapper() {
             try {
                 return _optimizedTarget(EnsureFunctionCode(_optimizedTarget));
-            } catch (Exception) {
-                PythonOps.UpdateStackTrace(_optimizedContext, Code, _optimizedTarget.Method, "<module>", "<string>", 0);
+            } catch (Exception e) {
+                PythonOps.UpdateStackTrace(e, _optimizedContext, Code, _optimizedTarget.Method, "<module>", "<string>", 0);
                 throw;
             }
         }

@@ -836,16 +836,21 @@ namespace Microsoft.Scripting.Interpreter {
             var node = (UnaryExpression)expr;
 
             if (node.Operand == null) {
-                CompileGetVariable(_exceptionForRethrowStack.Peek());
+                CompileParameterExpression(_exceptionForRethrowStack.Peek());
+                if (asVoid) {
+                    _instructions.EmitRethrowVoid();
+                } else {
+                    _instructions.EmitRethrow();
+                }
             } else {
                 Compile(node.Operand);
+                if (asVoid) {
+                    _instructions.EmitThrowVoid();
+                } else {
+                    _instructions.EmitThrow();
+                }
             }
 
-            if (asVoid) {
-                _instructions.EmitThrowVoid();
-            } else {
-                _instructions.EmitThrow();
-            }
         }
 
         // TODO: remove (replace by true fault support)

@@ -88,11 +88,6 @@ namespace IronPython.Compiler.Ast {
         public override MSAst.Expression Reduce() {
             // allocated all variables here so they won't be shared w/ other 
             // locals allocated during the body or except blocks.
-            MSAst.ParameterExpression noNestedException = null;
-            if (_finally != null) {
-                noNestedException = Ast.Variable(typeof(bool), "$noException");
-            }
-
             MSAst.ParameterExpression lineUpdated = null;
             MSAst.ParameterExpression runElse = null;
 
@@ -131,7 +126,7 @@ namespace IronPython.Compiler.Ast {
                 //  if (run_else) {
                 //      else_body
                 //  }
-                result =                        
+                result =
                     Ast.Block(
                         Ast.Assign(runElse, AstUtils.Constant(true)),
                         // save existing line updated, we could choose to do this only for nested exception handlers.
@@ -160,7 +155,7 @@ namespace IronPython.Compiler.Ast {
                 //      ... catch handling ...
                 //  }
                 //
-                result = 
+                result =
                     AstUtils.Try(
                         GlobalParent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
                         // save existing line updated
@@ -179,16 +174,13 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Block(
-                GetVariables(noNestedException, lineUpdated, runElse), 
-                AddFinally(result, noNestedException)
+                GetVariables(lineUpdated, runElse),
+                AddFinally(result)
             );
         }
 
-        private static ReadOnlyCollectionBuilder<MSAst.ParameterExpression> GetVariables(MSAst.ParameterExpression noNestedException, MSAst.ParameterExpression lineUpdated, MSAst.ParameterExpression runElse) {
+        private static ReadOnlyCollectionBuilder<MSAst.ParameterExpression> GetVariables(MSAst.ParameterExpression lineUpdated, MSAst.ParameterExpression runElse) {
             var paramList = new ReadOnlyCollectionBuilder<MSAst.ParameterExpression>();
-            if(noNestedException != null) {
-                paramList.Add(noNestedException);
-            }
             if(lineUpdated != null) {
                 paramList.Add(lineUpdated);
             }
@@ -198,11 +190,10 @@ namespace IronPython.Compiler.Ast {
             return paramList;
         }
 
-        private MSAst.Expression AddFinally(MSAst.Expression/*!*/ body, MSAst.ParameterExpression nestedException) {
-            if (_finally != null) {
-                Debug.Assert(nestedException != null);
-
-                MSAst.ParameterExpression nestedFrames = Ast.Variable(typeof(List<DynamicStackFrame>), "$nestedFrames");
+        private MSAst.Expression AddFinally(MSAst.Expression/*!*/ body) {
+            if (_finally != null) {                
+                MSAst.ParameterExpression tryThrows = Ast.Variable(typeof(Exception), "$tryThrows");
+                MSAst.ParameterExpression locException = Ast.Variable(typeof(Exception), "$localException");
 
                 MSAst.Expression @finally = _finally;
 
@@ -217,47 +208,40 @@ namespace IronPython.Compiler.Ast {
                     // either a return or the body completing successfully).
                     AstUtils.Try(
                         Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
-                        Ast.Assign(nestedException, AstUtils.Constant(false)),
+                        Ast.Assign(tryThrows, AstUtils.Constant(null, typeof(Exception))),
                         body
-                    ).Fault(
-                    // fault
-                        Ast.Assign(nestedException, AstUtils.Constant(true))
+                    ).Catch(
+                        locException,
+                        Expression.Block(
+                            Ast.Assign(tryThrows, locException),
+                            Expression.Rethrow()
+                        )
                     )
                 ).FinallyWithJumps(
                     // if we had an exception save the line # that was last executing during the try
                     AstUtils.If(
-                        nestedException,
-                        Parent.GetSaveLineNumberExpression(false)
+                        Expression.NotEqual(tryThrows, Expression.Default(typeof(Exception))),
+                        Parent.GetSaveLineNumberExpression(tryThrows, false)
                     ),
 
                     // clear the frames incase thae finally throws, and allow line number
                     // updates to proceed
                     UpdateLineUpdated(false),
-                    Ast.Assign(
-                        nestedFrames,
-                        Ast.Call(AstMethods.GetAndClearDynamicStackFrames)
-                    ),
-
+                    
                     // run the finally code
                     @finally,
-
-                    // if the finally exits normally restore any previous exception info
-                    Ast.Call(
-                        AstMethods.SetDynamicStackFrames,
-                        nestedFrames
-                    ),
 
                     // if we took an exception in the try block we have saved the line number.  Otherwise
                     // we have no line number saved and will need to continue saving them if
                     // other exceptions are thrown.
                     AstUtils.If(
-                        nestedException,
+                        Expression.NotEqual(tryThrows, Expression.Default(typeof(Exception))),
                         UpdateLineUpdated(true)
                     )
                 );
-
-                body = Ast.Block(new[] { nestedFrames }, body);
+                body = Ast.Block(new[] { tryThrows }, body);
             }
+
             return body;
         }
 
@@ -381,7 +365,7 @@ namespace IronPython.Compiler.Ast {
                 // rethrow the exception if we have no catch-all block
                 if (catchAll == null) {
                     catchAll = Ast.Block(
-                        Parent.GetSaveLineNumberExpression(true),
+                        Parent.GetSaveLineNumberExpression(exception, true),
                         Ast.Throw(
                             Ast.Call(
                                 typeof(ExceptionHelpers).GetMethod("UpdateForRethrow"),
@@ -436,7 +420,7 @@ namespace IronPython.Compiler.Ast {
             // been associated with this exception.
             return Ast.Block(
                 // pass false so if we take another exception we'll add it to the frame list
-                node.Parent.GetSaveLineNumberExpression(false),
+                node.Parent.GetSaveLineNumberExpression(exception, false),
                 Ast.Call(
                     AstMethods.BuildExceptionInfo,
                     node.Parent.LocalContext,

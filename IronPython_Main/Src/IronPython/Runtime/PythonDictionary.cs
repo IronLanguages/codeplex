@@ -132,7 +132,6 @@ namespace IronPython.Runtime {
                 __delitem__(key);
                 return true;
             } catch (KeyNotFoundException) {
-                ExceptionHelpers.DynamicStackFrames = null;
                 return false;
             }
         }

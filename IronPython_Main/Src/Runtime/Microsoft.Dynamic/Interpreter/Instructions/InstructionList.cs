@@ -874,6 +874,14 @@ namespace Microsoft.Scripting.Interpreter {
             Emit(ThrowInstruction.VoidThrow);
         }
 
+        public void EmitRethrow() {
+            Emit(ThrowInstruction.Rethrow);
+        }
+
+        public void EmitRethrowVoid() {
+            Emit(ThrowInstruction.VoidRethrow);
+        }
+
         public void EmitEnterTryFinally(BranchLabel finallyStartLabel) {
             Emit(EnterTryFinallyInstruction.Create(EnsureLabelIndex(finallyStartLabel)));
         }

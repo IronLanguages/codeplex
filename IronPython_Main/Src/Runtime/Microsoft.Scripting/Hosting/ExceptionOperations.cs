@@ -18,6 +18,7 @@ using System.Runtime.Remoting;
 using System.Security.Permissions;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Hosting {
     public sealed class ExceptionOperations
@@ -44,8 +45,14 @@ namespace Microsoft.Scripting.Hosting {
             return false;
         }
 
+        public IList<DynamicStackFrame> GetStackFrames(Exception exception) {
+            ContractUtils.RequiresNotNull(exception, "exception");
+            return _context.GetStackFrames(exception);
+        }
+
 #if !SILVERLIGHT
         public string FormatException(ObjectHandle exception) {
+            ContractUtils.RequiresNotNull(exception, "exception");
             var exceptionObj = exception.Unwrap() as Exception;
             ContractUtils.Requires(exceptionObj != null, "exception", "ObjectHandle must be to Exception object");
 
@@ -53,6 +60,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public void GetExceptionMessage(ObjectHandle exception, out string message, out string errorTypeName) {
+            ContractUtils.RequiresNotNull(exception, "exception");
             var exceptionObj = exception.Unwrap() as Exception;
             ContractUtils.Requires(exceptionObj != null, "exception", "ObjectHandle must be to Exception object");
 
@@ -60,11 +68,19 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public bool HandleException(ObjectHandle exception) {
+            ContractUtils.RequiresNotNull(exception, "exception");
             var exceptionObj = exception.Unwrap() as Exception;
             ContractUtils.Requires(exceptionObj != null, "exception", "ObjectHandle must be to Exception object");
 
-            ContractUtils.RequiresNotNull(exceptionObj, "exception");
             return false;
+        }
+
+        public IList<DynamicStackFrame> GetStackFrames(ObjectHandle exception) {
+            ContractUtils.RequiresNotNull(exception, "exception");
+            var exceptionObj = exception.Unwrap() as Exception;
+            ContractUtils.Requires(exceptionObj != null, "exception", "ObjectHandle must be to Exception object");
+
+            return _context.GetStackFrames(exceptionObj);
         }
 
         // TODO: Figure out what is the right lifetime

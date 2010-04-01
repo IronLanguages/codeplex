@@ -25,12 +25,16 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
 using System.Threading;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -1154,6 +1158,187 @@ for k, v in toError.iteritems():
             myType.HasDictionary = true;
 
             return myType;
+        }
+
+        #endregion
+
+        #region .NET/Python Exception Merging/Tracking
+
+        /// <summary>
+        /// Walks all stack frames, filtering out DLR frames
+        /// Does not walk the frames in the InnerException, if any
+        /// Frames are returned in CLR order (inner to outer)
+        /// </summary>
+        internal static IEnumerable<DynamicStackFrame> GetStackFrames(Exception e) {
+            return GetStackFrames(e, false);
+        }
+
+        /// <summary>
+        /// Walks all stack frames, filtering out DLR frames
+        /// Does not walk the frames in the InnerException, if any
+        /// Frames are returned in CLR order (inner to outer), unless reverse is set
+        /// </summary>
+        internal static IEnumerable<DynamicStackFrame> GetStackFrames(Exception e, bool reverseOrder) {
+            IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
+            if (traces == null) {
+                traces = new[] { GetStackTrace(e) };
+            } else {
+                traces.Add(GetStackTrace(e));
+            }
+
+            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(GetDynamicStackFrames(e));
+            // dynamicFrames is stored in the opposite order that we are walking,
+            // so we can always pop them from the back of the List<T>, which is O(1)
+            if (!reverseOrder) {
+                dynamicFrames.Reverse();
+            }
+
+            foreach (StackTrace trace in WalkList(traces, reverseOrder)) {
+                foreach (DynamicStackFrame result in GetStackFrames(trace, dynamicFrames, reverseOrder)) {
+                    yield return result;
+                }
+            }
+
+            //TODO: we would like to be able to assert this;
+            // right now, we cannot, because we are not using dynamic frames for non-interpreted dynamic methods.
+            // (we create the frames, but we do not consume them in FormatStackTrace.)
+            //Debug.Assert(dynamicFrames.Count == 0);
+        }
+
+        private static StackTrace GetStackTrace(Exception e) {
+#if SILVERLIGHT
+            return new StackTrace(e);
+#else
+            return new StackTrace(e, true);
+#endif
+        }
+
+        private static IEnumerable<T> WalkList<T>(IList<T> list, bool reverseOrder) {
+            if (reverseOrder) {
+                for (int i = list.Count - 1; i >= 0; i--) {
+                    yield return list[i];
+                }
+            } else {
+                for (int i = 0; i < list.Count; i++) {
+                    yield return list[i];
+                }
+            }
+        }
+
+        private static DynamicStackFrame GetStackFrame(StackFrame frame) {
+            MethodBase method = frame.GetMethod();
+            string methodName = method.Name;
+            string filename = frame.GetFileName();
+            int line = frame.GetFileLineNumber();
+
+            int dollar = method.Name.IndexOf('$');
+            if (dollar != -1) {
+                methodName = methodName.Substring(0, dollar);
+            }
+
+            if (String.IsNullOrEmpty(filename) && method.DeclaringType != null) {
+                filename = method.DeclaringType.Assembly.GetName().Name;
+                line = 0;
+            }
+
+            return new DynamicStackFrame(method, methodName, filename, line);
+        }
+
+
+        private static IEnumerable<DynamicStackFrame> GetStackFrames(StackTrace trace, List<DynamicStackFrame> dynamicFrames, bool reverseOrder) {
+            StackFrame[] frames = trace.GetFrames();
+            if (frames == null) {
+                yield break;
+            }
+
+            foreach (StackFrame frame in WalkList(frames, reverseOrder)) {
+                MethodBase method = frame.GetMethod();
+                Type parentType = method.DeclaringType;
+
+                if (dynamicFrames.Count > 0 && frame.GetMethod() == dynamicFrames[dynamicFrames.Count - 1].GetMethod()) {
+                    yield return dynamicFrames[dynamicFrames.Count - 1];
+                    dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
+                    continue;
+                }
+
+                if (parentType != null) {
+                    if (parentType == typeof(LambdaExpression) && method.Name == "DoExecute") {
+                        // Evaluated frame -- Replace with dynamic frame
+                        Debug.Assert(dynamicFrames.Count > 0);
+                        //if (dynamicFrames.Count == 0) continue;
+                        yield return dynamicFrames[dynamicFrames.Count - 1];
+
+                        dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
+                        continue;
+                    }
+                }
+
+                if (!DynamicSiteHelpers.IsInvisibleDlrStackFrame(method) &&
+                    (method.DeclaringType != null && Snippets.Shared.IsSnippetsAssembly(method.DeclaringType.Assembly))) {
+                    yield return GetStackFrame(frame);
+                }
+            }
+
+        }
+
+        internal static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
+            return GetDynamicStackFrames(e, true);
+        }
+
+        internal static DynamicStackFrame[] GetDynamicStackFrames(Exception e, bool filter) {
+            List<DynamicStackFrame> frames = e.Data[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
+
+            if (frames == null) {
+                return new DynamicStackFrame[0];
+            }
+
+#if !SILVERLIGHT
+            if (!filter) return frames.ToArray();
+
+            frames = new List<DynamicStackFrame>(frames);
+            List<DynamicStackFrame> res = new List<DynamicStackFrame>();
+
+            // the list of _stackFrames we build up in ScriptingRuntimeHelpers can have
+            // too many frames if exceptions are thrown from script code and
+            // caught outside w/o calling GetDynamicStackFrames.  Therefore we
+            // filter down to only script frames which we know are associated
+            // w/ the exception here.
+            try {
+                StackTrace outermostTrace = new StackTrace(e);
+                IList<StackTrace> otherTraces = ExceptionHelpers.GetExceptionStackTraces(e) ?? new List<StackTrace>();
+                List<StackFrame> clrFrames = new List<StackFrame>();
+                
+                foreach (StackTrace trace in otherTraces) {
+                    clrFrames.AddRange(trace.GetFrames() ?? new StackFrame[0]); // rare, sometimes GetFrames returns null
+                }
+                clrFrames.AddRange(outermostTrace.GetFrames() ?? new StackFrame[0]);    // rare, sometimes GetFrames returns null
+
+                int lastFound = 0;
+                foreach (StackFrame clrFrame in InterpretedFrame.GroupStackFrames(clrFrames)) {
+                    MethodBase method = clrFrame.GetMethod();
+
+                    for (int j = lastFound; j < frames.Count; j++) {
+                        MethodBase other = frames[j].GetMethod();
+                        // method info's don't always compare equal, check based
+                        // upon name/module/declaring type which will always be a correct
+                        // check for dynamic methods.
+                        if (method.Module == other.Module &&
+                            method.DeclaringType == other.DeclaringType &&
+                            method.Name == other.Name) {
+                            res.Add(frames[j]);
+                            frames.RemoveAt(j);
+                            lastFound = j;
+                            break;
+                        }
+                    }
+                }
+            } catch (MemberAccessException) {
+                // can't access new StackTrace(e) due to security
+            }
+            return res.ToArray();
+#else 
+            return frames.ToArray();
+#endif
         }
 
         #endregion

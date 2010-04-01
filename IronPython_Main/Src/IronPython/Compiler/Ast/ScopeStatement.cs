@@ -60,11 +60,11 @@ namespace IronPython.Compiler.Ast {
         private Dictionary<string, PythonReference> _references;        // names of all variables referenced, null after binding completes
 
         internal Dictionary<PythonVariable, MSAst.Expression> _variableMapping = new Dictionary<PythonVariable, MSAst.Expression>();
-        private MSAst.Expression _saveLineNumberAdds, _saveLineNumberNoAdds;                        // line number update expressions, saved so we don't repeatedly re-generate them
         private MSAst.ParameterExpression _localParentTuple;                                        // parent's tuple local saved locally
         private readonly DelayedFunctionCode _funcCodeExpr = new DelayedFunctionCode();             // expression that refers to the function code for this scope
 
         internal static MSAst.ParameterExpression LocalCodeContextVariable = Ast.Parameter(typeof(CodeContext), "$localContext");
+        private static MSAst.ParameterExpression _catchException = Ast.Parameter(typeof(Exception), "$updException");
         private static readonly MSAst.Expression _GetCurrentMethod = Ast.Call(AstMethods.GetCurrentMethod);
         internal const string NameForExec = "module: <exec>";
 
@@ -560,12 +560,13 @@ namespace IronPython.Compiler.Ast {
         /// Gets the expression for updating the dynamic stack trace at runtime when an
         /// exception is thrown.
         /// </summary>
-        internal MSAst.Expression GetUpdateTrackbackExpression() {
+        internal MSAst.Expression GetUpdateTrackbackExpression(MSAst.ParameterExpression exception) {
             if (!_containsExceptionHandling) {
                 Debug.Assert(Name != null);
-
+                Debug.Assert(exception.Type == typeof(Exception));
                 return Ast.Call(
                     AstMethods.UpdateStackTrace,
+                    exception,
                     LocalContext,
                     _funcCodeExpr,
                     _GetCurrentMethod,
@@ -575,52 +576,37 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return GetSaveLineNumberExpression(true);
+            return GetSaveLineNumberExpression(exception, true);
         }
 
 
         /// <summary>
         /// Gets the expression for the actual updating of the line number for stack traces to be available
         /// </summary>
-        internal MSAst.Expression GetSaveLineNumberExpression(bool preventAdditionalAdds) {            
-            MSAst.Expression res;
-            if (preventAdditionalAdds) {
-                res = _saveLineNumberNoAdds;
-            } else {
-                res = _saveLineNumberAdds;
-            }
-
-            if (res == null) {
-                res = Ast.Block(
-                    AstUtils.If(
-                        Ast.Not(
-                            LineNumberUpdated
-                        ),
-                        Ast.Call(
-                            AstMethods.UpdateStackTrace,
-                            LocalContext,
-                            _funcCodeExpr,
-                            _GetCurrentMethod,
-                            AstUtils.Constant(Name),
-                            AstUtils.Constant(GlobalParent.SourceUnit.Path ?? "<string>"),
-                            new LastFaultingLineExpression(LineNumberExpression)
-                        )
+        internal MSAst.Expression GetSaveLineNumberExpression(MSAst.ParameterExpression exception, bool preventAdditionalAdds) {
+            Debug.Assert(exception.Type == typeof(Exception));
+            return Ast.Block(
+                AstUtils.If(
+                    Ast.Not(
+                        LineNumberUpdated
                     ),
-                    Ast.Assign(
-                        LineNumberUpdated,
-                        AstUtils.Constant(preventAdditionalAdds)
-                    ),
-                    AstUtils.Empty()
-                );
-
-                if (preventAdditionalAdds) {
-                    _saveLineNumberNoAdds = res;
-                } else {
-                    _saveLineNumberAdds = res;
-                }
-            }
-
-            return res;
+                    Ast.Call(
+                        AstMethods.UpdateStackTrace,
+                        exception,
+                        LocalContext,
+                        _funcCodeExpr,
+                        _GetCurrentMethod,
+                        AstUtils.Constant(Name),
+                        AstUtils.Constant(GlobalParent.SourceUnit.Path ?? "<string>"),
+                        new LastFaultingLineExpression(LineNumberExpression)
+                    )
+                ),
+                Ast.Assign(
+                    LineNumberUpdated,
+                    AstUtils.Constant(preventAdditionalAdds)
+                ),
+                AstUtils.Empty()
+            );
         }
 
         /// <summary>
@@ -631,10 +617,15 @@ namespace IronPython.Compiler.Ast {
             if (canThrow) {
                 body = Ast.Block(
                     new[] { LineNumberExpression, LineNumberUpdated },
-                    AstUtils.Try(
-                        body
-                    ).Fault(
-                        GetUpdateTrackbackExpression()
+                    Ast.TryCatch(
+                        body,
+                        Ast.Catch(
+                            _catchException,
+                            Ast.Block(
+                                GetUpdateTrackbackExpression(_catchException),
+                                Ast.Rethrow(body.Type)
+                            )
+                        )
                     )
                 );
             }

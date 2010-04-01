@@ -13,12 +13,14 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Reflection;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Helper for storing information about stack frames.
     /// </summary>
+    [Serializable]
     public class DynamicStackFrame {
         private string _funcName;
         private string _filename;

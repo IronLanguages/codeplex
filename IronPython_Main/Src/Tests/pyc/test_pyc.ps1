@@ -157,6 +157,50 @@ testcase-helper "/main:$CURRPATH\winforms_hw.py /target:winexe" @("winforms_hw.e
 #--Console Package
 testcase-helper "/main:$CURRPATH\pycpkgtest.py $CURRPATH\pkg\a.py $CURRPATH\pkg\b.py $CURRPATH\pkg\__init__.py " @("pycpkgtest.exe", "pycpkgtest.dll") "pycpkgtest.exe" 0 "<module 'pkg.b' from 'pkg\b'>"
 
+#--CPython standard library is a very special case
+function test-stdcpymodule {
+	echo "Generating a precompiled module for the entire CPython standard library..."
+	. $CURRPATH\stdmodules_ok.ps1
+
+	#Generate the DLL
+	pushd "$env:MERLIN_ROOT\..\External.LCA_RESTRICTED\Languages\CPython\26\lib"
+	IPY_CMD -X:Frames $TOOLSPATH\Pyc.py /out:cpystdlib /target:dll $STDMODULES
+	if (! $?) {
+		echo "Failed to run Pyc against the CPython standard library!"
+		$FINALEXIT = 1
+	}
+	if (test-path "$PWD\cpystdlib.dll") {
+		copy -force "$PWD\cpystdlib.dll" $TOOLSPATH\
+		rm -force "$PWD\cpystdlib.dll"
+	}
+	else {
+		echo "Failed to generate the '$PWD\cpystdlib.dll' precompiled module!"
+		$FINALEXIT = 1
+	}
+	popd
+
+	#Minimal verification
+	$TEMP_OUT = IPY_CMD -s -E -c "import os" 2>&1
+	if ($?) {
+		echo "Should not be able to import os w/o the standard library!"
+		echo $TEMP_OUT
+		$FINALEXIT = 1
+	}
+
+	$TEMP_OUT = IPY_CMD -s -E -c "import clr;clr.AddReference('cpystdlib.dll');import os;print os.__name__"
+	if (! $?) {
+		echo "Should be able to import os w/ precompiled standard library!"
+		echo $TEMP_OUT
+		$FINALEXIT = 1
+	}
+	if (! $TEMP_OUT.Contains("os")) {
+		echo "'print os.__name__' resulted in unexpected output!"
+		echo $TEMP_OUT
+		$FINALEXIT = 1
+	}
+}
+#http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=26593
+#test-stdcpymodule
 
 #------------------------------------------------------------------------------
 #Cleanup and exit

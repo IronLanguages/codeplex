@@ -262,6 +262,10 @@ namespace Microsoft.Scripting.Runtime {
             return exception.ToString();
         }
 
+        public virtual IList<DynamicStackFrame> GetStackFrames(Exception exception) {
+            return new DynamicStackFrame[0];
+        }
+        
         public virtual Microsoft.Scripting.LanguageOptions Options {
             get {
                 return new Microsoft.Scripting.LanguageOptions();
@@ -592,5 +596,6 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         #endregion
+
     }
 }

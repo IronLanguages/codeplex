@@ -856,7 +856,6 @@ namespace IronPython.Runtime {
                     }
                 } catch (ImportException) {
                     // we can't handle the path
-                    ExceptionHelpers.DynamicStackFrames = null;
                 }
             }
 

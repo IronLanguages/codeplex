@@ -442,13 +442,16 @@ namespace Microsoft.Scripting.Interpreter {
 
 
     internal sealed class ThrowInstruction : Instruction {
-        internal static readonly ThrowInstruction Throw = new ThrowInstruction(true);
-        internal static readonly ThrowInstruction VoidThrow = new ThrowInstruction(false);
+        internal static readonly ThrowInstruction Throw = new ThrowInstruction(true, false);
+        internal static readonly ThrowInstruction VoidThrow = new ThrowInstruction(false, false);
+        internal static readonly ThrowInstruction Rethrow = new ThrowInstruction(true, true);
+        internal static readonly ThrowInstruction VoidRethrow = new ThrowInstruction(false, true);
 
-        private readonly bool _hasResult;
+        private readonly bool _hasResult, _rethrow;
 
-        private ThrowInstruction(bool hasResult) {
+        private ThrowInstruction(bool hasResult, bool isRethrow) {
             _hasResult = hasResult;
+            _rethrow = isRethrow;
         }
 
         public override int ProducedStack {
@@ -456,11 +459,18 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         public override int ConsumedStack {
-            get { return 1; }
+            get {
+                return 1; 
+            }
         }
 
         public override int Run(InterpretedFrame frame) {
-            throw (Exception)frame.Pop();
+            var ex = (Exception)frame.Pop();
+            if (_rethrow) {
+                ExceptionHandler handler;
+                return frame.Interpreter.GotoHandler(frame, ex, out handler);
+            }
+            throw ex;
         }
     }
 

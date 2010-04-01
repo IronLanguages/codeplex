@@ -289,7 +289,7 @@ namespace Microsoft.Scripting.Silverlight {
                 ContractUtils.RequiresNotNull(e, "e");
 
                 _exception = e;
-                _dynamicStackFrames = ScriptingRuntimeHelpers.GetDynamicStackFrames(e);
+                _dynamicStackFrames = ArrayUtils.ToArray(DynamicApplication.Current.Engine.Engine.GetService<ExceptionOperations>().GetStackFrames(e));
 
                 // We can get the file name and line number from either the 
                 // DynamicStackFrame or from a SyntaxErrorException

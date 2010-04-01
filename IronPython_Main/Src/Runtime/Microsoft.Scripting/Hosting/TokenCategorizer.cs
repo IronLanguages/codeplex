@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Hosting {
         /// should be returned.
         /// </para>
         /// </remarks>s
-        /// <param name="characterCount">The mininum number of characters to process while getting tokens.</param>
+        /// <param name="characterCount">Tokens are read until at least given amount of characters is read or the stream ends.</param>
         /// <returns>A enumeration of tokens.</returns>
         public IEnumerable<TokenInfo> ReadTokens(int characterCount) {
             return _tokenizer.ReadTokens(characterCount);
@@ -95,7 +95,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Scan from startLocation to at least startLocation + length.
         /// </summary>
-        /// <param name="characterCount">The mininum number of characters to process while getting tokens.</param>
+        /// <param name="characterCount">Tokens are read until at least given amount of characters is read or the stream ends.</param>
         /// <remarks>
         /// This method is used to determine state at arbitrary startLocation.
         /// </remarks>

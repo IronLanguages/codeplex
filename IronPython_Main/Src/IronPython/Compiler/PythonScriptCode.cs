@@ -109,8 +109,8 @@ namespace IronPython.Compiler {
         private object EvalWrapper(CodeContext ctx) {
             try {
                 return RunWorker(ctx);
-            } catch (Exception) {
-                PythonOps.UpdateStackTrace(ctx, Code, _target.Method, "<module>", "<string>", 0);
+            } catch (Exception e) {
+                PythonOps.UpdateStackTrace(e, ctx, Code, _target.Method, "<module>", "<string>", 0);
                 throw;
             }
         }

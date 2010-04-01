@@ -175,8 +175,6 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
 
             MSAst.ParameterExpression exception;
-            MSAst.ParameterExpression nestedFrames = Ast.Variable(typeof(List<DynamicStackFrame>), "$nestedFrames");
-            variables.Add(nestedFrames);
             statements.Add(
                 // try:
                 AstUtils.Try(
@@ -204,10 +202,6 @@ namespace IronPython.Compiler.Ast {
                                         exc,
                                         AstUtils.Constant(false)
                                     ),
-                                    Ast.Assign(
-                                        nestedFrames,
-                                        Ast.Call(AstMethods.GetAndClearDynamicStackFrames)
-                                    ),
                 //  if not exit(*sys.exc_info()):
                 //      raise
                                     AstUtils.IfThen(
@@ -221,10 +215,6 @@ namespace IronPython.Compiler.Ast {
                                             )
                                         ),
                                         UpdateLineUpdated(true),
-                                        Ast.Call(
-                                            AstMethods.SetDynamicStackFrames,
-                                            nestedFrames
-                                        ),
                                         Ast.Throw(
                                             Ast.Call(
                                                 AstMethods.MakeRethrowExceptionWorker,
@@ -235,10 +225,6 @@ namespace IronPython.Compiler.Ast {
                                 ),
                                 _body.Span
                             )
-                        ),
-                        Ast.Call(
-                            AstMethods.SetDynamicStackFrames,
-                            nestedFrames
                         ),
                         PopLineUpdated(lineUpdated),
                         Ast.Empty()
