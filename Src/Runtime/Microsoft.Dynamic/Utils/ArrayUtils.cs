@@ -349,6 +349,26 @@ namespace Microsoft.Scripting.Utils {
             return true;
         }
 
+        public static int GetValueHashCode<T>(this T[] array) {
+            return GetValueHashCode<T>(array, 0, array.Length);
+        }
+
+        public static int GetValueHashCode<T>(this T[] array, int start, int count) {
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.RequiresArrayRange(array.Length, start, count, "start", "count");
+            
+            if (count == 0) {
+                return 0;
+            }
+
+            int result = array[start].GetHashCode();
+            for (int i = 1; i < count; i++) {
+                result = ((result << 5) | (result >> 27)) ^ array[start + i].GetHashCode();
+            }
+
+            return result;
+        }
+
         public static T[] Reverse<T>(this T[] array) {
             T[] res = new T[array.Length];
             for (int i = 0; i < array.Length; i++) {

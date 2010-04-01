@@ -48,7 +48,6 @@ namespace IronPython.Runtime {
                 PythonContext.GetContext(_context).DelIndex(_backing, key);
                 return true;
             } catch (KeyNotFoundException) {
-                ExceptionHelpers.DynamicStackFrames = null;
                 return false;
             }
         }
@@ -59,7 +58,6 @@ namespace IronPython.Runtime {
                 return true;
             } catch (KeyNotFoundException) {
                 // return false
-                ExceptionHelpers.DynamicStackFrames = null;
             }
             value = null;
             return false;

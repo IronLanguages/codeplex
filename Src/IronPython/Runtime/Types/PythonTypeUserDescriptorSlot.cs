@@ -42,7 +42,6 @@ namespace IronPython.Runtime.Types {
                 value = PythonOps.GetUserDescriptor(Value, instance, owner);
                 return true;
             } catch (MissingMemberException) {
-                ExceptionHelpers.DynamicStackFrames = null;
                 value = null;
                 return false;
             }

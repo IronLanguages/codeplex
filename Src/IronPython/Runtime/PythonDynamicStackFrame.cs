@@ -15,6 +15,7 @@
 
 using System;
 using System.Reflection;
+using System.Runtime.Serialization;
 
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -25,7 +26,12 @@ namespace IronPython.Runtime {
     /// includes the code context which may provide access to locals and the
     /// function code object which is needed to build frame objects from.
     /// </summary>
-    class PythonDynamicStackFrame : DynamicStackFrame {
+    [Serializable]
+    sealed class PythonDynamicStackFrame : DynamicStackFrame
+#if !SILVERLIGHT
+        , ISerializable 
+#endif
+    {
         private readonly CodeContext/*!*/ _context;
         private readonly FunctionCode/*!*/ _code;
 
@@ -36,6 +42,14 @@ namespace IronPython.Runtime {
             _context = context;
             _code = funcCode;
         }
+
+        
+#if !SILVERLIGHT
+        private PythonDynamicStackFrame(SerializationInfo info, StreamingContext context)
+            : base((MethodBase)info.GetValue("method", typeof(MethodBase)), (string)info.GetValue("funcName", typeof(string)), (string)info.GetValue("filename", typeof(string)), (int)info.GetValue("line", typeof(int))) {
+        }
+#endif
+
 
         /// <summary>
         /// Gets the code context of the function.
@@ -58,5 +72,17 @@ namespace IronPython.Runtime {
                 return _code;
             }
         }
+#if !SILVERLIGHT
+        #region ISerializable Members
+
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context) {
+            info.AddValue("method", GetMethod());
+            info.AddValue("funcName", GetMethodName());
+            info.AddValue("filename", GetFileName());
+            info.AddValue("line", GetFileLineNumber());
+        }
+
+        #endregion
+#endif
     }
 }

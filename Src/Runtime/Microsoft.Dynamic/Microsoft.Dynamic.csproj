@@ -446,7 +446,6 @@
     <Compile Include="Runtime\CustomSymbolDictionary.cs" />
     <Compile Include="Runtime\DlrCachedCodeAttribute.cs" />
     <Compile Include="Runtime\DocumentationAttribute.cs" />
-    <Compile Include="Runtime\DynamicStackFrame.cs" />
     <Compile Include="Runtime\ExceptionHelpers.cs" />
     <Compile Include="Runtime\ExplicitConversionMethodAttribute.cs" />
     <Compile Include="Runtime\Extensible.cs" />

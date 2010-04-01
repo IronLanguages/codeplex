@@ -244,7 +244,7 @@ namespace Microsoft.Scripting.Generation {
 
         }
 
-        internal bool IsSnippetsAssembly(Assembly asm) {
+        public bool IsSnippetsAssembly(Assembly asm) {
             return (_assembly != null && asm == _assembly.AssemblyBuilder) ||
                    (_debugAssembly != null && asm == _debugAssembly.AssemblyBuilder);
         }
