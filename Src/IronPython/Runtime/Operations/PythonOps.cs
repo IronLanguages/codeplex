@@ -4311,6 +4311,10 @@ namespace IronPython.Runtime.Operations {
         public static bool IsUnicode(object unicodeObj) {
             return unicodeObj == TypeCache.String;
         }
+
+        public static BuiltinFunction GetUnicodeFuntion() {
+            return UnicodeHelper.Function;
+        }
     }
 
     /// <summary>

@@ -27,9 +27,11 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Interpreter;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Compiler.Ast {
 
@@ -98,6 +100,8 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
+        private static MSAst.MethodCallExpression _GetUnicode = Expression.Call(AstMethods.GetUnicodeFunction);
+
         private MSAst.Expression UnicodeCall() {
             if (_target is NameExpression && ((NameExpression)_target).Name == "unicode") {
                 // NameExpressions are always typed to object
@@ -112,7 +116,7 @@ namespace IronPython.Compiler.Ast {
                             AstMethods.IsUnicode,
                             tmpVar
                         ),
-                        NormalCall(Expression.Constant(UnicodeHelper.Function)),
+                        NormalCall(_GetUnicode),
                         NormalCall(tmpVar)
                     )
                 );            
