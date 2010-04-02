@@ -24,6 +24,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Compiler.Ast {
     static class AstMethods {
@@ -94,6 +95,7 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo PushFrame = GetMethod((Func<CodeContext, FunctionCode, List<FunctionStack>>)PythonOps.PushFrame);
         public static readonly MethodInfo FormatUnicode = GetMethod((Func<CodeContext, string, object, string>)PythonOps.FormatUnicode);
         public static readonly MethodInfo FormatString = GetMethod((Func<CodeContext, string, object, string>)PythonOps.FormatString);
+        public static readonly MethodInfo GetUnicodeFunction = GetMethod((Func<BuiltinFunction>)PythonOps.GetUnicodeFuntion);
         
         private static MethodInfo GetMethod(Delegate x) {
             return x.Method;
