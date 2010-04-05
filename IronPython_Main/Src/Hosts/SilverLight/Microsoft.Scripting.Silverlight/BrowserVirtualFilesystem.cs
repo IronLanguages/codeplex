@@ -277,17 +277,56 @@ namespace Microsoft.Scripting.Silverlight {
         /// <returns>A stream for the URI</returns>
         protected override Stream GetFileInternal(object baseUri, Uri relativeUri) {
 
-            // check in the XAP first
-            // TODO: Can this check happen further up?
             if (!relativeUri.IsAbsoluteUri) {
+
+                // TODO: HttpVirtualFilesystem shouldn't manage all these checks,
+                // needs to be re-organized.
+
+                // check in the XAP first
                 var stream = XapPAL.PAL.VirtualFilesystem.GetFile(relativeUri);
                 if (stream != null) return stream;
+
+                // also check any ZIP files
+                if (HtmlPage.IsEnabled && (DynamicApplication.Current != null && DynamicApplication.Current.ScriptTags != null)) {
+                    foreach (var zip in DynamicApplication.Current.ScriptTags.ZipPackages) {
+                        var relUriStr = relativeUri.ToString();
+                        var dirname = Path.GetDirectoryName(relUriStr);
+                        if (dirname.Length == 0)
+                            continue;
+                        
+                        var dirs = dirname.Split('/');
+                        if (dirs.Length == 0)
+                            continue;
+
+                        var toplevelDir = dirs[0];
+                        if (toplevelDir != Path.GetFileNameWithoutExtension(zip.ToString()))
+                            continue;
+                        
+                        var rest = relUriStr.Split(new string[] { toplevelDir + "/" }, StringSplitOptions.None);
+                        if (rest.Length <= 1)
+                            continue;
+
+                        var pathToFileInZip = rest[1];
+                        var file = XapPAL.PAL.VirtualFilesystem.GetFile(
+                            new StreamResourceInfo(GetFileInternal(baseUri, zip), null), pathToFileInZip
+                        );
+                        
+                        if (file != null)
+                            return file;
+                    }
+                }
             }
 
             var fullUri = DynamicApplication.MakeUri((Uri)baseUri, relativeUri);
 
             if (_cache.Has(fullUri)) {
-                return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_cache[fullUri]));
+                byte[] bytes = _cache.GetBinary(fullUri);
+                string strContent = _cache.Get(fullUri);
+                return new MemoryStream(
+                    strContent != null ?
+                        System.Text.Encoding.UTF8.GetBytes(strContent) :
+                        bytes
+                );
             } else {
                 return null;
             }
@@ -311,7 +350,25 @@ namespace Microsoft.Scripting.Silverlight {
     /// </summary>
     public class DownloadCache {
 
-        private Dictionary<Uri, string> _cache = new Dictionary<Uri, string>();
+        // TODO: shouldn't differentiate between TextContent and BinaryContent,
+        // should just have BinaryContent and then convert to UTF8 for TextContent.
+        internal struct DownloadContent {
+            internal string TextContent;
+            internal byte[] BinaryContent;
+
+            internal DownloadContent(string tC, byte[] bC) {
+                TextContent = tC;
+                BinaryContent = bC;
+            }
+        }
+
+        private DownloadCacheDownloader _downloader;
+
+        public DownloadCache() {
+            _downloader = new DownloadCacheDownloader(this);
+        }
+
+        private Dictionary<Uri, DownloadContent> _cache = new Dictionary<Uri, DownloadContent>();
 
         /// <summary>
         /// Adds a URI/code pair to the cache if the URI doesn't not already
@@ -321,7 +378,13 @@ namespace Microsoft.Scripting.Silverlight {
         /// <param name="code"></param>
         public void Add(Uri uri, string code) {
             if (!Has(uri)) {
-                _cache.Add(uri, code);
+                _cache.Add(uri, new DownloadContent(code, null));
+            }
+        }
+
+        public void Add(Uri uri, byte[] data) {
+            if (!Has(uri)) {
+                _cache.Add(uri, new DownloadContent(null, data));
             }
         }
 
@@ -329,11 +392,22 @@ namespace Microsoft.Scripting.Silverlight {
         /// Gets a string from the cache from a URI. Returns null if the URI is
         /// not in the cache.
         /// </summary>
-        /// <param name="uri"></param>
-        /// <returns></returns>
+        /// <param name="uri">A URI to look-up</param>
+        /// <returns>Binary content associated with that URI.</returns>
         public string Get(Uri uri) {
             if (!Has(uri)) return null;
-            return _cache[uri];
+            return _cache[uri].TextContent;
+        }
+
+        /// <summary>
+        /// Get binary content from the cache from a URI. Returns null if the
+        /// URI is not in the cache.
+        /// </summary>
+        /// <param name="uri">A URI to look-up</param>
+        /// <returns>Binary content associated with that URI.</returns>
+        public byte[] GetBinary(Uri uri) {
+            if (!Has(uri)) return null;
+            return _cache[uri].BinaryContent;
         }
 
         /// <summary>
@@ -356,154 +430,357 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         public void Clear() {
             _cache = null;
-            _cache = new Dictionary<Uri, string>();
+            _cache = new Dictionary<Uri, DownloadContent>();
         }
-
-        private static readonly object _lock = new object();
-        private List<Uri> _downloadQueue = null;
 
         /// <summary>
         /// Downloads the list of URIs, caches the result of the download, and
         /// calls onComplete when finished.
         /// </summary>
         public void Download(List<Uri> uris, Action onComplete) {
-            if (uris.Count == 0) {
-                onComplete.Invoke();
-                return;
-            }
-            _downloadQueue = new List<Uri>(uris);
-            foreach (var uri in _downloadQueue) {
-                DownloadWithXmlHttpRequest(uri, onComplete);
-            }
+            _downloader.Download(uris, onComplete);
         }
 
-        private void DownloadComplete(Uri uri, string content, Action onComplete) {
-            Add(uri, content);
-            _downloadQueue.Remove(uri);
-            if (_downloadQueue.Count == 0) {
-                _downloadQueue = null;
-                onComplete.Invoke();
+        internal class DownloadCacheDownloader {
+
+            private List<Uri> _downloadQueue;
+            private DownloadCache _cache;
+
+            internal DownloadCacheDownloader(DownloadCache cache) {
+                _cache = cache;
             }
-        }
 
-        #region XMLHttpRequest
-        // XMLHttpRequest is used instead of WebClient because WebClient
-        // does not support this scenario:
-        // foo.com/index.html --> bar.com/dlr.xap --> foo.com/foo.py
-        //                                        ^^^
-        // WebClient refuses to do the marked request. XMLHttpRequest works
-        // because it runs as the HTML page's domain (foo.com in the above
-        // example), which is desired.
-        // 
-        // However, when the XAP is hosted cross-domain, all inbound HTML
-        // events and interactions are disabled. This can be re-enabled
-        // by both setting the ExternalCallersFromCrossDomain property in the
-        // AppManifest.xaml to "ScriptableOnly" and setting the "enableHtmlAccess"
-        // param on the Silverlight object tag to "true". This not only allows the
-        // "XMLHttpRequest.onreadstatechange" event to call back into managed
-        // code, but re-enabled all HTML events, like the REPL. See
-        // http://msdn.microsoft.com/en-us/library/cc645023(VS.95).aspx for
-        // more information.
-        //
-        // If for some reason you can't change the AppManifest's settings,
-        // you'll have to use polling to detect when the download is done
-        // (see "XMLHttpRequest with polling" region below.
-        //
-        // Also note that OnXmlHttpDownloadComplete catches ALL exceptions
-        // to make sure they don't leak out into JavaScript.
-
-        private bool _emittedXMLHttpRequestHander = false;
-        private Action _onComplete;
-
-        private void DownloadWithXmlHttpRequest(Uri uri, Action onComplete) {
-            _onComplete = onComplete;
-            var request = HtmlPage.Window.CreateInstance("XMLHttpRequest");
-            request.Invoke("open", "GET", uri.ToString());
-            if (!_emittedXMLHttpRequestHander) {
-                HtmlPage.Window.Eval(@"
-function OnXmlHttpRequest_ReadyStateChange(file) {
-    return function() {
-        this.currentSLObject.OnXmlHttpDownloadComplete(this, file);
-    }
-}
-");
-                _emittedXMLHttpRequestHander = true;
-            }
-            request.SetProperty("currentSLObject", this);
-            request.SetProperty("onreadystatechange", HtmlPage.Window.Eval("OnXmlHttpRequest_ReadyStateChange(\"" + uri.ToString() + "\")"));
-            request.Invoke("send");
-        }
-
-        [ScriptableMember]
-        public void OnXmlHttpDownloadComplete(ScriptObject handlerThis, string file) {
-            try {
-                object objReadyState = handlerThis.GetProperty("readyState");
-                object objStatus = handlerThis.GetProperty("status");
-
-                int readyState = 0;
-                int status = 0;
-
-                if (objStatus != null) status = (int)((double)objStatus / 1);
-                if (objReadyState != null) readyState = (int)((double)objReadyState / 1);
-
-                if (readyState == 4 && status == 200) {
-                    string content = (string)handlerThis.GetProperty("responseText");
-                    DownloadComplete(new Uri(file, UriKind.RelativeOrAbsolute), content, _onComplete);
-                } else if (readyState == 4 && status != 200) {
-                    throw new Exception(file + " download failed (status: " + status + ")");
+            internal void Download(List<Uri> uris, Action onComplete) {
+                if (uris.Count == 0) {
+                    onComplete.Invoke();
+                    return;
                 }
-            } catch (Exception e) {
-                // This catch-all is necessary since any unhandled exceptions
-                ErrorFormatter.DisplayError(Settings.ErrorTargetID, e);
-            }
-        }
-        #endregion
-
-        #region XMLHttpRequest with polling
-        private void DownloadWithXmlHttpRequestAndPolling(Uri uri, Action onComplete) {
-            var request = HtmlPage.Window.CreateInstance("XMLHttpRequest");
-            request.Invoke("open", "GET", uri.ToString());
-            request.SetProperty("onreadystatechange", HtmlPage.Window.Eval("DLR.__onDownloadCompleteToPoll(\"" + uri.ToString() + "\")"));
-            request.Invoke("send");
-            PollForDownloadComplete(uri, onComplete);
-        }
-
-        private void PollForDownloadComplete(Uri uri, Action onComplete) {
-            var pollCount = 0;
-            var timer = new DispatcherTimer();
-            timer.Interval = new TimeSpan(0, 0, 0, 0, 50);
-            timer.Tick += (sender, args) => {
-                object objStatus = null;
-                int status = 0;
-
-                var obj = HtmlPage.Document.GetElementById(uri.ToString());
-                if (obj != null) {
-                    objStatus = obj.GetProperty("status");
-                    if (objStatus != null) status = (int)((double)objStatus / 1);
+                _downloadQueue = new List<Uri>(uris);
+                var iteratingQueue = new List<Uri>(_downloadQueue);
+                foreach (var uri in iteratingQueue) {
+                    InternalDownload(uri, onComplete);
                 }
+            }
 
-                Action<Uri, int> onFailure = (duri, dstatus) => {
-                    timer.Stop();
-                    throw new Exception(duri.ToString() + " download failed (status: " + dstatus + ")");
-                };
-
-                if (status == 200) {
-                    var content = (string)obj.GetProperty("scriptContent");
-                    HtmlPage.Document.Body.RemoveChild(obj);
-                    timer.Stop();
-                    DownloadComplete(uri, content, onComplete);
-                } else if (status == 400) {
-                    onFailure(uri, status);
+            private void InternalDownload(Uri uri, Action onComplete) {
+                if (HasDomainFailed(uri.Host)) {
+                    DownloadWithXmlHttpRequest(uri, onComplete);
                 } else {
-                    if (pollCount < 50) pollCount++;
-                    else onFailure(uri, status);
+                    DownloadWithWebClient(uri, onComplete, () => {
+                        DomainFailed(uri.Host);
+                        DownloadWithXmlHttpRequest(uri, onComplete);
+                    });
                 }
-            };
-            timer.Start();
+            }
+
+            private void DownloadComplete(Uri uri, Stream content, Action onComplete) {
+                DownloadComplete(uri, StreamToByteArray(content), onComplete);
+            }
+
+            private void DownloadComplete(Uri uri, byte[] content, Action onComplete) {
+                _cache.Add(uri, content);
+                InternalDownloadComplete(uri, onComplete);
+            }
+
+            private byte[] StreamToByteArray(Stream stream) {
+                byte[] buffer = new byte[stream.Length];
+                int read = stream.Read(buffer, 0, buffer.Length);
+                return buffer;
+            }
+
+            private void DownloadComplete(Uri uri, string content, Action onComplete) {
+                _cache.Add(uri, content);
+                InternalDownloadComplete(uri, onComplete);
+            }
+
+            private void InternalDownloadComplete(Uri uri, Action onComplete) {
+                if (_downloadQueue != null) {
+                    lock (_downloadQueue) {
+                        if (_downloadQueue != null && _downloadQueue.Count > 0 && _downloadQueue.Contains(uri)) {
+                            _downloadQueue.Remove(uri);
+                            if (_downloadQueue.Count == 0) {
+                                _downloadQueue = null;
+                                onComplete.Invoke();
+                            }
+                        }
+                    }
+                }
+            }
+
+            #region WebRequest / XMLHttpRequest fail-over
+            private Dictionary<string, bool> _webClientDownloadFailureForDomain = new Dictionary<string, bool>();
+
+            private bool HasDomainFailed(string host) {
+                return _webClientDownloadFailureForDomain.ContainsKey(host) && _webClientDownloadFailureForDomain[host];
+            }
+
+            private void DomainFailed(string host) {
+                _webClientDownloadFailureForDomain[host] = true;
+            }
+            #endregion
+
+            #region WebRequest
+            private void DownloadWithWebClient(Uri uri, Action onComplete, Action onSecurityException) {
+                var webClient = new WebClient();
+                webClient.OpenReadCompleted += (s, e) => {
+                    if (e.Error == null && e.Cancelled == false) {
+                        var requestUri = (Uri)((object[])e.UserState)[0];
+                        var completeAction = (Action)((object[])e.UserState)[1];
+                        DownloadComplete(requestUri, e.Result, completeAction);
+                    } else {
+                        if (e.Error.InnerException.GetType() == typeof(System.Security.SecurityException)) {
+                            onSecurityException();
+                        } else {
+                            throw e.Error.InnerException;
+                        }
+                    }
+                };
+                webClient.OpenReadAsync(uri, new object[] { uri, onComplete });
+            }
+            #endregion
+
+            #region XMLHttpRequest
+            // XMLHttpRequest is used instead of WebClient when this 
+            // scenario happens:
+            // localhost/index.html --> bar.com/dlr.xap --> localhost/foo.py
+            //                                          ^^^
+            // WebClient refuses to do the marked request, because you cannot
+            // make a request from an internet-zone to a local-zone. XMLHttpRequest
+            // works though, since it executes in the local domain.
+            //
+            // Also, when the XAP is hosted cross-domain, all inbound HTML
+            // events and interactions are disabled. This can be re-enabled
+            // by both setting the ExternalCallersFromCrossDomain property in the
+            // AppManifest.xaml to "ScriptableOnly" and setting the "enableHtmlAccess"
+            // param on the Silverlight object tag to "true". This not only allows the
+            // "XMLHttpRequest.onreadstatechange" event to call back into managed
+            // code, but re-enabled all HTML events, like the REPL. See
+            // http://msdn.microsoft.com/en-us/library/cc645023(VS.95).aspx for
+            // more information.
+            //
+            // If for some reason you can't change the AppManifest's settings,
+            // you'll have to use polling to detect when the download is done
+            // (see "XMLHttpRequest with polling" region below). However this is
+            // not enabled anywhere, as the scenario is a bit limited.
+            //
+            // Also note that OnXmlHttpDownloadComplete catches ALL exceptions
+            // to make sure they don't leak out into JavaScript.
+
+            private bool _emittedXMLHttpRequestHander = false;
+
+            private void DownloadWithXmlHttpRequest(Uri uri, Action onComplete) {
+                if (!_emittedXMLHttpRequestHander) {
+                    if (HtmlPage.BrowserInformation.Name == "Microsoft Internet Explorer") {
+                        // IE's JavaScript API has no way of getting to binary data from XMLHttpRequest,
+                        // so resort to VBScript. However, the performance of this is horrible.
+                        AddScriptTag("vbscript", null, @"
+    Function BinaryArrayToAscCSV( aBytes )
+        Dim j, sOutput
+               sOutput = """"
+        For j = 1 to LenB(aBytes)
+            sOutput= sOutput & AscB( MidB(aBytes,j,1) )
+            sOutput= sOutput & "",""
+        Next
+        BinaryArrayToAscCSV = sOutput
+    End Function
+                        ");
+                        AddScriptTag(null, "text/javascript", @"
+    function request2csv(request) {
+        return BinaryArrayToAscCSV(request.responseBody);
+    }
+                        ");
+                    }
+
+                    HtmlPage.Window.Eval(@"
+    function OnXmlHttpRequest_ReadyStateChange(file) {
+        return function() {
+            this.currentSLObject.OnXmlHttpDownloadComplete(this, file);
         }
-        #endregion
     }
 
+    var isIE = false;
+
+    function DLR_DownloadResource(uri, binary) {
+        request = new XMLHttpRequest();
+
+        request.open('GET', uri, false);
+        if (binary && request.overrideMimeType)
+            request.overrideMimeType('text/plain; charset=x-user-defined');
+        request.send();
+        if (request.status != 200) return '';
+        var raw;
+        if (binary && typeof(request.responseBody) !== 'undefined') {
+            isIE = true;
+            raw = BinaryArrayToAscCSV(request.responseBody);
+            return raw.substring(0, raw.length - 2).split(',');
+        } else {
+            return request.responseText;
+        }
+    }
+
+    function DLR_DownloadTextResource(uri) {
+        return DLR_DownloadResource(uri, false);
+    }
+
+    function DLR_DownloadBinaryResource(uri) {
+        var raw = DLR_DownloadResource(uri, true);
+        var data = new Array(raw.length);
+        if (isIE) {
+          for(i = 0; i < raw.length; i++) {
+            data[i] = parseInt(raw[i]);
+          }
+        } else {
+          for(i = 0; i < raw.length; i++) {
+            data[i] = raw.charCodeAt(i) & 0xff;
+          }
+        }
+        return data;
+    }
+                    ");
+                    _emittedXMLHttpRequestHander = true;
+                }
+
+                var file = uri.ToString();
+
+                // HACK treat zip files as binary content
+                if (Path.GetExtension(file).Contains("zip")) {
+
+                    ScriptObject bin = (ScriptObject)HtmlPage.Window.Eval(string.Format(@"DLR_DownloadBinaryResource(""{0}"");", file));
+                    byte[] binaryContent = new byte[(int)(double)bin.GetProperty("length")];
+                    for (int i = 0; i < binaryContent.Length; i++) {
+                        binaryContent[i] = (byte)(double)bin.GetProperty(i.ToString());
+                    }
+
+                    DownloadComplete(new Uri(file, UriKind.RelativeOrAbsolute), binaryContent, onComplete);
+
+                } else {
+
+                    string content = (string)(HtmlPage.Window.GetProperty("DLR_DownloadTextResource") as ScriptObject).InvokeSelf(file);
+                    DownloadComplete(new Uri(file, UriKind.RelativeOrAbsolute), content, onComplete);
+
+                }
+            }
+
+            private void AddScriptTag(string lang, string type, string text) {
+                var scriptTag = HtmlPage.Document.CreateElement("script");
+                if (lang != null) scriptTag.SetAttribute("language", lang);
+                if (type != null) scriptTag.SetAttribute("type", type);
+                scriptTag.SetProperty("text", text);
+                (HtmlPage.Document.GetElementsByTagName("head")[0] as HtmlElement).AppendChild(scriptTag);
+            }
+
+#if false
+            private Action _onComplete;
+
+            // Managed handler of XmlHttpRequest.onreadstatechange; a JavaScript one is currently
+            // used, but switching back to this might be best for performance.
+            [ScriptableMember]
+            public void OnXmlHttpDownloadComplete(ScriptObject handlerThis, string file) {
+                try {
+                    object objReadyState = handlerThis.GetProperty("readyState");
+                    object objStatus = handlerThis.GetProperty("status");
+
+                    int readyState = 0;
+                    int status = 0;
+
+                    if (objStatus != null) status = (int)((double)objStatus / 1);
+                    if (objReadyState != null) readyState = (int)((double)objReadyState / 1);
+
+                    if (readyState == 4 && status == 200) {
+                        
+                        // HACK treat zip files as binary content
+                        if (Path.GetExtension(file).Contains("zip")) {
+                            
+                            string content;
+                            byte[] binaryContent;
+                            if (HtmlPage.BrowserInformation.UserAgent.IndexOf("MSIE") != -1) {
+                                content = (string)HtmlPage.Window.Invoke("request2csv", handlerThis);
+                                var strArray = content.Substring("BinaryArrayToAscCSV".Length).Split(',');
+                                binaryContent = new byte[strArray.Length];
+                                for (int i = 0; i < strArray.Length; i++) {
+                                    string strByte = strArray[i];
+                                    if (strByte.Length == 0) break;
+                                    binaryContent[i] = byte.Parse(strByte);
+                                }
+                            } else {
+                                content = (string)handlerThis.GetProperty("responseText");
+                                binaryContent = new byte[content.Length];
+                                for (int i = 0; i < content.Length; i++) {
+                                    binaryContent[i] = (byte)(((int)content[i]) & 0xff);
+                                }
+                            }
+                            DownloadComplete(new Uri(file, UriKind.RelativeOrAbsolute), binaryContent, _onComplete);
+
+                        } else {
+
+                            string content = (string)handlerThis.GetProperty("responseText");
+                            DownloadComplete(new Uri(file, UriKind.RelativeOrAbsolute), content, _onComplete);
+
+                        }
+                        
+                    } else if (readyState == 4 && status != 200) {
+                        throw new Exception(file + " download failed (status: " + status + ")");
+                    }
+                } catch (Exception e) {
+                    // This catch-all is necessary since any unhandled exceptions
+                    // will not be processed by Application.UnhandledException, so
+                    // call it directly if reporting errors is enabled.
+                    if (Settings.ReportUnhandledErrors)
+				        DynamicApplication.Current.HandleException(this, e);
+                }
+            }
+#endif
+            #endregion
+
+            #region XMLHttpRequest with polling
+#if false
+            private void DownloadWithXmlHttpRequestAndPolling(Uri uri, Action onComplete) {
+                var request = HtmlPage.Window.CreateInstance("XMLHttpRequest");
+                request.Invoke("open", "GET", uri.ToString());
+                request.SetProperty("onreadystatechange", HtmlPage.Window.Eval("DLR.__onDownloadCompleteToPoll(\"" + uri.ToString() + "\")"));
+                request.Invoke("send");
+                PollForDownloadComplete(uri, onComplete);
+            }
+
+            private void PollForDownloadComplete(Uri uri, Action onComplete) {
+                var pollCount = 0;
+                var timer = new DispatcherTimer();
+                timer.Interval = new TimeSpan(0, 0, 0, 0, 50);
+                timer.Tick += (sender, args) => {
+                    object objStatus = null;
+                    int status = 0;
+
+                    var obj = HtmlPage.Document.GetElementById(uri.ToString());
+                    if (obj != null) {
+                        objStatus = obj.GetProperty("status");
+                        if (objStatus != null) status = (int)((double)objStatus / 1);
+                    }
+
+                    Action<Uri, int> onFailure = (duri, dstatus) => {
+                        timer.Stop();
+                        throw new Exception(duri.ToString() + " download failed (status: " + dstatus + ")");
+                    };
+
+                    if (status == 200) {
+                        var content = (string)obj.GetProperty("scriptContent");
+                        HtmlPage.Document.Body.RemoveChild(obj);
+                        timer.Stop();
+                        DownloadComplete(uri, content, onComplete);
+                    } else if (status == 400) {
+                        onFailure(uri, status);
+                    } else {
+                        if (pollCount < 50) pollCount++;
+                        else onFailure(uri, status);
+                    }
+                };
+                timer.Start();
+            }
+#endif
+            #endregion
+        }
+    }
+
+#if false
     /// <summary>
     /// Read and write files from Isolated Storage
     /// </summary>
@@ -515,4 +792,5 @@ function OnXmlHttpRequest_ReadyStateChange(file) {
             throw new NotImplementedException("TODO");
         }
     }
+#endif
 }

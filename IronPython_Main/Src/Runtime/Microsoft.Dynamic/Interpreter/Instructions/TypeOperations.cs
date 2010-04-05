@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Interpreter {
             _creator = delegateCreator;
         }
 
-        public override int ConsumedStack { get { return _creator.Interpreter.Locals.ClosureSize; } }
+        public override int ConsumedStack { get { return _creator.Interpreter.ClosureSize; } }
         public override int ProducedStack { get { return 1; } }
 
         public override int Run(InterpretedFrame frame) {
@@ -114,6 +114,28 @@ namespace Microsoft.Scripting.Interpreter {
 
         public override string ToString() {
             return "TypeIs " + typeof(T).Name; 
+        }
+    }
+
+    internal sealed class TypeAsInstruction<T> : Instruction {
+        internal TypeAsInstruction() { }
+
+        public override int ConsumedStack { get { return 1; } }
+        public override int ProducedStack { get { return 1; } }
+
+        public override int Run(InterpretedFrame frame) {
+            // can't use as w/o generic constraint
+            object value = frame.Pop();
+            if (value is T) {
+                frame.Push(value);
+            } else {
+                frame.Push(null);
+            }
+            return +1;
+        }
+
+        public override string ToString() {
+            return "TypeAs " + typeof(T).Name;
         }
     }
 

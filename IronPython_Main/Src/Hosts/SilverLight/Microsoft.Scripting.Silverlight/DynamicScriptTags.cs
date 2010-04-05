@@ -49,6 +49,8 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         public List<ScriptCode> Code { get; private set; }
 
+        public List<Uri> ZipPackages { get; private set; }
+
         /// <summary>
         /// Holds onto the language config
         /// </summary>
@@ -59,51 +61,91 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         internal bool RunningScriptTags;
 
-        /// <summary>
-        /// Given a language config it processes the script-tags on the HTML
-        /// page (see "GetScriptTags").
-        /// </summary>
         public DynamicScriptTags(DynamicLanguageConfig langConfig) {
             RunningScriptTags = false;
             _LangConfig = langConfig;
             Code = new List<ScriptCode>();
-            GetScriptTags();
+            ZipPackages = new List<Uri>();
+        }
+
+        public void DownloadHtmlPage(Action onComplete) {
+            if (!HtmlPage.IsEnabled) {
+                onComplete();
+            } else {
+                DownloadAndCache(new List<Uri>() { DynamicApplication.HtmlPageUri }, onComplete);
+            }
         }
 
         /// <summary>
         /// Scrapes the HTML page and populates the "Code" structure.
         /// </summary>
-        public void GetScriptTags() {
+        public void FetchScriptTags() {
+            if (!HtmlPage.IsEnabled)
+                return;
+
             var scriptTags = HtmlPage.Document.GetElementsByTagName("script");
+
             foreach (ScriptObject scriptTag in scriptTags) {
                 var e = (HtmlElement)scriptTag;
                 var type = (string)e.GetAttribute("type");
-
-                if (type == null || !LanguageFound(GetLanguageNameFrom(type)))
-                    continue;
-
-                if (DynamicApplication.Current.InitParams.ContainsKey("xamlid")) {
-                    if (e.CssClass == null || !e.CssClass.Contains(DynamicApplication.Current.InitParams["xamlid"]))
-                        continue;
-                } else if (e.CssClass != string.Empty)
-                    continue;
-
                 var src = (string)e.GetAttribute("src");
-                bool defer = (bool)e.GetProperty("defer");
 
-                string language = GetLanguageNameFrom(type).ToLower();
+                string language = null;
 
-                _LangConfig.LanguagesUsed[language] = true;
+                // Find the language by either mime-type or script's file extension
+                if (type != null)
+                    language = GetLanguageByType(type);
+                else if (src != null)
+                    language = GetLanguageByExtension(Path.GetExtension(src));
 
-                var sc = new ScriptCode(language, defer);
-                if (src != null) {
-                    sc.External = DynamicApplication.MakeUri(src);
-                } else {
-                    var innerHtml = (string)e.GetProperty("innerHTML");
-                    if (innerHtml != null)
-                        sc.Inline = RemoveMargin(innerHtml);
+                // Only move on if the language was found
+                if (language != null) {
+
+                    var initParams = DynamicApplication.Current.InitParams;
+
+                    // Process this script-tag if ...
+                    if (
+                        // it's class is "*" ... OR
+                        (e.CssClass == "*") ||
+
+                        // the xamlid initparam is set and matches this tag's class ... OR
+                        (initParams.ContainsKey("xamlid") && initParams["xamlid"] != null &&
+                         e.CssClass != null && e.CssClass == initParams["xamlid"]) ||
+
+                        // the xamlid initparam is not set and this tag does not have a class
+                        (!initParams.ContainsKey("xamlid") && (e.CssClass == null || e.CssClass.Length == 0))
+                    ) {
+                        bool defer = (bool)e.GetProperty("defer");
+
+                        _LangConfig.LanguagesUsed[language] = true;
+
+                        var sc = new ScriptCode(language, defer);
+
+                        if (src != null) {
+                            sc.External = DynamicApplication.MakeUri(src);
+                        } else {
+
+                            var innerHtml = (string)e.GetProperty("innerHTML");
+                            if (innerHtml != null) {
+                                // IE BUG: inline script-tags have an extra newline at the front,
+                                // so remove it ...
+                                if (HtmlPage.BrowserInformation.Name == "Microsoft Internet Explorer" && innerHtml.IndexOf("\r\n") == 0) {
+                                    innerHtml = innerHtml.Substring(2);
+                                }
+
+                                sc.Inline = innerHtml;
+                            }
+                        }
+
+                        Code.Add(sc);
+                    }
+
+                // Lastly, check to see if this is a zip file
+                } else if (src != null && ((type != null && type == "application/x-zip-compressed") || Path.GetExtension(src) == ".zip")) {
+                    
+                    ZipPackages.Add(DynamicApplication.MakeUri(src));
+
                 }
-                Code.Add(sc);
             }
         }
 
@@ -115,10 +157,20 @@ namespace Microsoft.Scripting.Silverlight {
         public void DownloadExternalCode(Action onComplete) {
             var externalUris = new List<Uri>();
             foreach (var sc in Code)
-                if(sc.External != null)
+                if (sc.External != null)
                     externalUris.Add(sc.External);
-            ((HttpVirtualFilesystem)HttpPAL.PAL.VirtualFilesystem).
-                DownloadAndCache(externalUris, onComplete);
+            foreach (var zip in ZipPackages)
+                externalUris.Add(zip);
+            DownloadAndCache(externalUris, onComplete);
+        }
+
+        private void DownloadAndCache(List<Uri> uris, Action onComplete) {
+            if (!HtmlPage.IsEnabled) {
+                onComplete();
+            } else {
+                ((HttpVirtualFilesystem)HttpPAL.PAL.VirtualFilesystem).
+                    DownloadAndCache(uris, onComplete);
+            }
         }
 
         /// <summary>
@@ -149,15 +201,17 @@ namespace Microsoft.Scripting.Silverlight {
                         sourceCode =
                             engine.Engine.CreateScriptSourceFromString(
                                 code,
-                                sc.External.AbsoluteUri,
+                                DynamicApplication.BaseUri.MakeRelativeUri(sc.External).ToString(),
                                 SourceCodeKind.File
                             );
                         scope = engine.CreateScope();
                     } else if (sc.Inline != null) {
+                        var page = BrowserPAL.PAL.VirtualFilesystem.GetFileContents(DynamicApplication.HtmlPageUri);
+                        var code = AlignSourceLines(sc.Inline, page);
                         sourceCode =
                             engine.Engine.CreateScriptSourceFromString(
-                                sc.Inline,
-                                "main" + engine.LangConfig.GetLanguageByName(sc.Language).Extensions[0],
+                                RemoveMargin(code),
+                                DynamicApplication.HtmlPageUri.ToString(),
                                 SourceCodeKind.File
                             );
                         scope = inlineScope;
@@ -171,22 +225,44 @@ namespace Microsoft.Scripting.Silverlight {
             }
         }
 
+        private string AlignSourceLines(string partialSource, string fullSource) {
+            partialSource = partialSource.Replace("\r", "");
+            fullSource = fullSource.Replace("\r", "");
+            StringBuilder final = new StringBuilder();
+
+            if (fullSource.Contains(partialSource)) {
+                int offset = fullSource.IndexOf(partialSource);
+                int partialOffset = offset + partialSource.Length;
+                for (int i = 0; i < fullSource.Length; i++) {
+                    if ((i < offset || i >= partialOffset) ) {
+                        if (fullSource[i] == '\n') {
+                            final.Append('\n');
+                        }
+                    } else {
+                        final.Append(fullSource[i]);
+                    }
+                }
+            }
+
+            return final.ToString();
+        }
+
         /// <summary>
         /// Removes as much of a margin as possible from "text".
         /// </summary>
         public static string RemoveMargin(string text) {
-            return RemoveMargin(text, -1, true);
+            return RemoveMargin(text, -1, true, true);
         }
 
-        
         /// <summary>
-        /// Removes as much of a margin as possible from "text".
+        /// Removes as much of a margin as possible from "text". 
         /// </summary>
         /// <param name="text">"text" to remove margin from</param>
         /// <param name="firstLineMargin">What is the first line's margin. Set to "-1" to assume no margin.</param>
-        /// <param name="firstLine">has the "firstLine" already been processed?</param>
+        /// <param name="firstLine">does the "firstLine" need to be processed?</param>
+        /// <param name="keepLines">Should lines be kept (true) or removed (false)</param>
         /// <returns>the de-margined text</returns>
-        private static string RemoveMargin(string text, int firstLineMargin, bool firstLine) {
+        private static string RemoveMargin(string text, int firstLineMargin, bool firstLine, bool keepLines) {
             var reader = new StringReader(text);
             var writer = new StringWriter();
             string line;
@@ -194,8 +270,13 @@ namespace Microsoft.Scripting.Silverlight {
             while ((line = reader.ReadLine()) != null) {
                 if (firstLine) {
                     // skips all blank lines at the beginning of the string
-                    if(line == string.Empty)
+                    if (line.Length == 0) {
+                        if (keepLines) {
+                            writer.Write("\n");
+                            processedWriter.Write("\n");
+                        }
                         continue;
+                    }
 
                     // get the first real line's margin as a reference
                     if(firstLineMargin == -1)
@@ -211,7 +292,7 @@ namespace Microsoft.Scripting.Silverlight {
                     // margin.
                     var currentLineMargin = GetMarginSize(line);
                     if (currentLineMargin < firstLineMargin) {
-                        var processedText = RemoveMargin(processedWriter.ToString(), currentLineMargin, true);
+                        var processedText = RemoveMargin(processedWriter.ToString(), currentLineMargin, true, keepLines);
                         writer.Close();
                         writer = null;
                         writer = new StringWriter(new StringBuilder(processedText));
@@ -271,28 +352,39 @@ namespace Microsoft.Scripting.Silverlight {
         }
 
         /// <summary>
-        /// Is the given "languageName" represented by a avaliable language?
+        /// Get the language by name; if it exists get back the "main"
+        /// language name, otherwise null
         /// </summary>
-        public bool LanguageFound(string languageName) {
-            if (languageName == null) return false;
-            bool languageNameFound = false;
+        public string GetLanguageByType(string mimeType) {
+            return GetLanguage(GetLanguageNameFromType(mimeType), (dli) => { return dli.Names; });
+        }
+
+        /// <summary>
+        /// Get the language by file extension; if it exists get back the 
+        /// "main" language name, otherwise null
+        /// </summary>
+        /// <param name="extension"></param>
+        /// <returns></returns>
+        public string GetLanguageByExtension(string extension) {
+            return GetLanguage(extension, (dli) => { return dli.Extensions; });
+        }
+
+        private string GetLanguage(string token, Func<DynamicLanguageInfo, string[]> getProperty) {
+            if (token == null) return null;
             foreach (var l in _LangConfig.Languages) {
-                foreach (var n in l.Names) {
-                    if (n.ToLower() == languageName) {
-                        languageNameFound = true;
-                        break;
+                foreach (var n in getProperty(l)) {
+                    if (n.ToLower() == token.ToLower()) {
+                        return (l.Names.Length > 0 ? l.Names[0] : token).ToLower();
                     }
                 }
-                if (languageNameFound)
-                    break;
             }
-            return languageNameFound;
+            return null;
         }
 
         /// <summary>
         /// Given a mime-type, return the language name
         /// </summary>
-        public string GetLanguageNameFrom(string type) {
+        public string GetLanguageNameFromType(string type) {
             if (!type.StartsWith("application/x-") && 
                 !type.StartsWith("text/") && 
                 !type.StartsWith("application/")) return null;

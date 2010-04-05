@@ -212,7 +212,8 @@ namespace Microsoft.Scripting.Interpreter {
 
         internal LightDelegateCreator CompileTop(LambdaExpression node) {
             foreach (var p in node.Parameters) {
-                _locals.DefineLocal(p);
+                var local = _locals.DefineLocal(p, 0);
+                _instructions.EmitInitializeParameter(local.Index);
             }
 
             Compile(node.Body);
@@ -276,10 +277,9 @@ namespace Microsoft.Scripting.Interpreter {
 
         private LocalVariable EnsureAvailableForClosure(ParameterExpression expr) {
             LocalVariable local;
-            if (_locals.TryGetLocal(expr, out local)) {
+            if (_locals.TryGetLocalOrClosure(expr, out local)) {
                 if (!local.InClosure && !local.IsBoxed) {
-                    _locals.Box(expr);
-                    _instructions.SwitchToBoxed(local.Index);
+                    _locals.Box(expr, _instructions);
                 }
                 return local;
             } else if (_parent != null) {
@@ -290,17 +290,22 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
-        public void EnsureVariable(ParameterExpression variable) {
-            if (_locals.ContainsVariable(variable)) {
+        private void EnsureVariable(ParameterExpression variable) {
+            if (!_locals.ContainsVariable(variable)) {
                 EnsureAvailableForClosure(variable);
             }
         }
 
-        public void CompileGetVariable(ParameterExpression variable) {
+        private LocalVariable ResolveLocal(ParameterExpression variable) {
             LocalVariable local;
-            if (!_locals.TryGetLocal(variable, out local)) {
+            if (!_locals.TryGetLocalOrClosure(variable, out local)) {
                 local = EnsureAvailableForClosure(variable);
             }
+            return local;
+        }
+
+        public void CompileGetVariable(ParameterExpression variable) {
+            LocalVariable local = ResolveLocal(variable);
 
             if (local.InClosure) {
                 _instructions.EmitLoadLocalFromClosure(local.Index);
@@ -314,10 +319,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         public void CompileGetBoxedVariable(ParameterExpression variable) {
-            LocalVariable local;
-            if (!_locals.TryGetLocal(variable, out local)) {
-                local = EnsureAvailableForClosure(variable);
-            }
+            LocalVariable local = ResolveLocal(variable);
 
             if (local.InClosure) {
                 _instructions.EmitLoadLocalFromClosureBoxed(local.Index);
@@ -330,10 +332,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         public void CompileSetVariable(ParameterExpression variable, bool isVoid) {
-            LocalVariable local;
-            if (!_locals.TryGetLocal(variable, out local)) {
-                local = EnsureAvailableForClosure(variable);
-            }
+            LocalVariable local = ResolveLocal(variable);
 
             if (local.InClosure) {
                 if (isVoid) {
@@ -365,25 +364,42 @@ namespace Microsoft.Scripting.Interpreter {
 
         private void CompileBlockExpression(Expression expr, bool asVoid) {
             var node = (BlockExpression)expr;
-
-            // TODO: pop these off a stack when exiting
-            // TODO: basic flow analysis so we don't have to initialize all
-            // variables.
-            foreach (var variable in node.Variables) {
-                LocalVariable local = _locals.DefineLocal(variable);
-                _instructions.EmitInitializeLocal(local.Index, variable.Type);
-                _instructions.SetDebugCookie(variable.Name);
-            }
-
-            for (int i = 0; i < node.Expressions.Count - 1; i++) {
-                CompileAsVoid(node.Expressions[i]);
-            }
+            var end = CompileBlockStart(node);
 
             var lastExpression = node.Expressions[node.Expressions.Count - 1];
             if (asVoid) {
                 CompileAsVoid(lastExpression);
             } else {
                 Compile(lastExpression, asVoid);
+            }
+            CompileBlockEnd(end);
+        }
+
+        private LocalDefinition[] CompileBlockStart(BlockExpression node) {
+            var start = _instructions.Count;
+
+            // TODO: pop these off a stack when exiting
+            // TODO: basic flow analysis so we don't have to initialize all
+            // variables.
+            LocalDefinition[] locals = new LocalDefinition[node.Variables.Count];
+            int localCnt = 0;
+            foreach (var variable in node.Variables) {
+                var local = _locals.DefineLocal(variable, start);
+                locals[localCnt++] = local;
+
+                _instructions.EmitInitializeLocal(local.Index, variable.Type);
+                _instructions.SetDebugCookie(variable.Name);                
+            }
+
+            for (int i = 0; i < node.Expressions.Count - 1; i++) {
+                CompileAsVoid(node.Expressions[i]);
+            }
+            return locals;
+        }
+
+        private void CompileBlockEnd(LocalDefinition[] locals) {
+            foreach (var local in locals) {
+                _locals.UndefineLocal(local, _instructions.Count);
             }
         }
 
@@ -443,21 +459,19 @@ namespace Microsoft.Scripting.Interpreter {
 
             PropertyInfo pi = member.Member as PropertyInfo;
             if (pi != null) {
-                var method = pi.GetSetMethod();
+                var method = pi.GetSetMethod(true);
                 Compile(member.Expression);
                 Compile(node.Right);
 
-                int index = 0;
+                int start = _instructions.Count;
                 if (!asVoid) {
-                    index = _locals.DefineLocal(Expression.Parameter(node.Right.Type)).Index;
-                    _instructions.EmitAssignLocal(index);
-                    // TODO: free the variable when it goes out of scope
-                }
-
-                _instructions.EmitCall(method);
-
-                if (!asVoid) {
-                    _instructions.EmitLoadLocal(index);
+                    LocalDefinition local = _locals.DefineLocal(Expression.Parameter(node.Right.Type), start);
+                    _instructions.EmitAssignLocal(local.Index);
+                    _instructions.EmitCall(method);
+                    _instructions.EmitLoadLocal(local.Index);
+                    _locals.UndefineLocal(local, _instructions.Count);
+                } else {
+                    _instructions.EmitCall(method);
                 }
                 return;
             }
@@ -469,17 +483,15 @@ namespace Microsoft.Scripting.Interpreter {
                 }
                 Compile(node.Right);
 
-                int index = 0;
+                int start = _instructions.Count;
                 if (!asVoid) {
-                    index = _locals.DefineLocal(Expression.Parameter(node.Right.Type)).Index;
-                    _instructions.EmitAssignLocal(index);
-                    // TODO: free the variable when it goes out of scope
-                }
-
-                _instructions.EmitStoreField(fi);
-
-                if (!asVoid) {
-                    _instructions.EmitLoadLocal(index);
+                    LocalDefinition local = _locals.DefineLocal(Expression.Parameter(node.Right.Type), start);
+                    _instructions.EmitAssignLocal(local.Index);
+                    _instructions.EmitStoreField(fi);
+                    _instructions.EmitLoadLocal(local.Index);
+                    _locals.UndefineLocal(local, _instructions.Count);
+                } else {
+                    _instructions.EmitStoreField(fi);
                 }
                 return;
             }
@@ -671,12 +683,14 @@ namespace Microsoft.Scripting.Interpreter {
                     case ExpressionType.Not:
                         CompileNotExpression(node);
                         return;
+                    case ExpressionType.TypeAs:
+                        CompileTypeAsExpression(node);
+                        return;
                     default:
-                        throw new NotImplementedException();
+                        throw new NotImplementedException(node.NodeType.ToString());
                 }
             }
         }
-
 
         private void CompileAndAlsoBinaryExpression(Expression expr) {
             CompileLogicalBinaryExpression(expr, true);
@@ -745,7 +759,7 @@ namespace Microsoft.Scripting.Interpreter {
 
         private void CompileLoopExpression(Expression expr) {
             var node = (LoopExpression)expr;
-            var enterLoop = new EnterLoopInstruction(node, _compilationThreshold, _instructions.Count);
+            var enterLoop = new EnterLoopInstruction(node, _locals, _compilationThreshold, _instructions.Count);
             
             var continueLabel = node.ContinueLabel == null ? _instructions.MakeLabel() : MapLabel(node.ContinueLabel);
             _instructions.MarkLabel(continueLabel);
@@ -829,7 +843,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             var label = MapLabel(node.Target);
-            _instructions.EmitGoto(label, node.Type != typeof(void), node.Value != null);
+            _instructions.EmitGoto(label, node.Type != typeof(void), node.Value != null && node.Value.Type != typeof(void));
         }
 
         private void CompileThrowUnaryExpression(Expression expr, bool asVoid) {
@@ -877,18 +891,14 @@ namespace Microsoft.Scripting.Interpreter {
                 return;
             }
 
-            BlockExpression node = (BlockExpression)expr;
-            foreach (var variable in node.Variables) {
-                _locals.DefineLocal(variable);
-            }
-
-            for (int i = 0; i < node.Expressions.Count - 1; i++) {
-                CompileAsVoid(node.Expressions[i]);
-            }
+            var node = (BlockExpression)expr;
+            var end = CompileBlockStart(node);
 
             CompileAsVoidRemoveRethrow(node.Expressions[node.Expressions.Count - 1]);
 
             Debug.Assert(stackDepth == _instructions.CurrentStackDepth);
+
+            CompileBlockEnd(end);
         }
 
         private void CompileTryExpression(Expression expr) {
@@ -947,7 +957,8 @@ namespace Microsoft.Scripting.Interpreter {
                 foreach (var handler in node.Handlers) {
                     if (handler.Filter != null) throw new NotImplementedException();
                     var parameter = handler.Variable ?? Expression.Parameter(handler.Test);
-                    _locals.DefineLocal(parameter);
+
+                    var local = _locals.DefineLocal(parameter, _instructions.Count);
                     _exceptionForRethrowStack.Push(parameter);
 
                     // add a stack balancing nop instruction (exception handling pushes the current exception):
@@ -971,6 +982,8 @@ namespace Microsoft.Scripting.Interpreter {
                     _instructions.EmitLeaveExceptionHandler(hasValue, gotoEnd);
 
                     _handlers.Add(new ExceptionHandler(tryStart, tryEnd, handlerLabel, handlerStart, handler.Test));
+
+                    _locals.UndefineLocal(local, _instructions.Count);
                 }
 
                 if (node.Fault != null) {
@@ -1069,7 +1082,7 @@ namespace Microsoft.Scripting.Interpreter {
 
             PropertyInfo pi = member as PropertyInfo;
             if (pi != null) {
-                var method = pi.GetGetMethod();
+                var method = pi.GetGetMethod(true);
                 if (node.Expression != null) {
                     Compile(node.Expression);
                 }
@@ -1235,10 +1248,13 @@ namespace Microsoft.Scripting.Interpreter {
 
         private void CompileLambdaExpression(Expression expr) {
             var node = (LambdaExpression)expr;
-            var creator = new LightCompiler(this).CompileTop(node);
+            var compiler = new LightCompiler(this);
+            var creator = compiler.CompileTop(node);
 
-            foreach (ParameterExpression variable in creator.Interpreter.Locals.GetClosureVariables()) {
-                CompileGetBoxedVariable(variable);
+            if (compiler._locals.ClosureVariables != null) {
+                foreach (ParameterExpression variable in compiler._locals.ClosureVariables.Keys) {
+                    CompileGetBoxedVariable(variable);
+                }
             }
             _instructions.EmitCreateDelegate(creator);
         }
@@ -1314,6 +1330,11 @@ namespace Microsoft.Scripting.Interpreter {
             Compile(node.Expression);
             _instructions.EmitLoad(node.TypeOperand);
             _instructions.EmitTypeEquals();
+        }
+
+        private void CompileTypeAsExpression(UnaryExpression node) {
+            Compile(node.Operand);
+            _instructions.EmitTypeAs(node.Type);
         }
 
         private void CompileTypeIsExpression(Expression expr) {

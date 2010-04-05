@@ -207,7 +207,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             public override int Run(InterpretedFrame frame) {
-                // nop
+                frame.Data[_index] = null;
                 return 1;
             }
 
@@ -258,6 +258,40 @@ namespace Microsoft.Scripting.Interpreter {
 
             public override string InstructionName {
                 get { return "InitImmutableBox"; }
+            }
+        }
+
+        internal sealed class ParameterBox : InitializeLocalInstruction {
+            public ParameterBox(int index)
+                : base(index) {
+            }
+
+            public override int Run(InterpretedFrame frame) {
+                frame.Data[_index] = new StrongBox<object>(frame.Data[_index]);
+                return 1;
+            }
+
+        }
+
+        internal sealed class Parameter : InitializeLocalInstruction, IBoxableInstruction {
+            internal Parameter(int index)
+                : base(index) {
+            }
+
+            public override int Run(InterpretedFrame frame) {
+                // nop
+                return 1;
+            }
+
+            public Instruction BoxIfIndexMatches(int index) {
+                if (index == _index) {
+                    return InstructionList.ParameterBox(index);
+                }
+                return null;
+            }
+
+            public override string InstructionName {
+                get { return "InitParameter"; }
             }
         }
 

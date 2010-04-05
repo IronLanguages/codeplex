@@ -25,16 +25,22 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting.Interpreter {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")] // TODO: fix
-    public struct LocalVariable {
+    public sealed class LocalVariable {
         private const int IsBoxedFlag = 1;
         private const int InClosureFlag = 2;
 
         public readonly int Index;
-        private readonly int _flags;
+        private int _flags;
 
         public bool IsBoxed {
             get { return (_flags & IsBoxedFlag) != 0; }
+            set {
+                if (value) {
+                    _flags |= IsBoxedFlag;
+                } else {
+                    _flags &= ~IsBoxedFlag;
+                }
+            }
         }
 
         public bool InClosure {
@@ -60,91 +66,152 @@ namespace Microsoft.Scripting.Interpreter {
         }
     }
 
-    // TODO: variable shadowing:  block(x) { block(x) { ... x ... } } 
-    //       update LoopCompiler when implemented
-    // TODO: slot reusing:        block { block(x) { ... x ... } block(y) { ... y ... } }
-    public sealed class LocalVariables {
-        private readonly Dictionary<ParameterExpression, LocalVariable> _variables = new Dictionary<ParameterExpression, LocalVariable>();
+    struct LocalDefinition {
+        public int Index;
+        public ParameterExpression Parameter;
 
-        private int _localCount;
-        private int _closureSize;
-        private int _boxedCount;
+        public LocalDefinition(int localIndex, ParameterExpression parameter) {
+            Index = localIndex;
+            Parameter = parameter;
+        }
+    }
+        
+    public sealed class LocalVariables {
+        private readonly Dictionary<ParameterExpression, VariableScope> _variables = new Dictionary<ParameterExpression, VariableScope>();
+        private Dictionary<ParameterExpression, LocalVariable> _closureVariables;
+
+        private int _localCount, _maxLocalCount;
 
         internal LocalVariables() {
         }
 
-        internal LocalVariable AddClosureVariable(ParameterExpression variable) {
-            LocalVariable result = new LocalVariable(_closureSize++, true, false);
-            _variables.Add(variable, result);
-            return result;
-        }
+        internal LocalDefinition DefineLocal(ParameterExpression variable, int start) {
+            LocalVariable result = new LocalVariable(_localCount++, false, false);
+            _maxLocalCount = System.Math.Max(_localCount, _maxLocalCount);
 
-        public LocalVariable DefineLocal(ParameterExpression variable) {
-            // the current variable definition shadows the existing one:
-            if (_variables.ContainsKey(variable)) {
-                throw new NotSupportedException("Variable shadowing not supported");
+            VariableScope existing, newScope;
+            if (_variables.TryGetValue(variable, out existing)) {
+                newScope = new VariableScope(result, start, existing);
+                if (existing.ChildScopes == null) {
+                    existing.ChildScopes = new List<VariableScope>();
+                }
+                existing.ChildScopes.Add(newScope);
+            } else {
+                newScope = new VariableScope(result, start, null);
             }
 
-            LocalVariable result = new LocalVariable(_localCount++, false, false);
-            _variables.Add(variable, result);
-            return result;
+            _variables[variable] = newScope;
+            return new LocalDefinition(result.Index, variable);
         }
 
-        internal void Box(ParameterExpression variable) {
-            LocalVariable local = _variables[variable];
+        internal void UndefineLocal(LocalDefinition definition, int end) {
+            var scope = _variables[definition.Parameter];
+            scope.Stop = end;
+            if (scope.Parent != null) {
+                _variables[definition.Parameter] = scope.Parent;
+            } else {
+                _variables.Remove(definition.Parameter);
+            }
+            
+            _localCount--;
+        }
+
+        internal void Box(ParameterExpression variable, InstructionList instructions) {
+            var scope = _variables[variable];
+
+            LocalVariable local = scope.Variable;
             Debug.Assert(!local.IsBoxed && !local.InClosure);
-            _variables[variable] = new LocalVariable(local.Index, false, true);
-            _boxedCount++;
+            _variables[variable].Variable.IsBoxed = true;
+                
+            int curChild = 0;
+            for (int i = scope.Start; i < scope.Stop && i < instructions.Count; i++) {
+                if (scope.ChildScopes != null && scope.ChildScopes[curChild].Start == i) {
+                    // skip boxing in the child scope
+                    var child = scope.ChildScopes[curChild];
+                    i = child.Stop;
+
+                    curChild++;
+                    continue;
+                }
+
+                instructions.SwitchToBoxed(local.Index, i);
+            }
         }
 
         public int LocalCount {
-            get { return _localCount; }
+            get { return _maxLocalCount; }
         }
 
-        public int ClosureSize {
-            get { return _closureSize; }
+        public int GetLocalIndex(ParameterExpression var) {
+            VariableScope loc;
+            return _variables.TryGetValue(var, out loc) ? loc.Variable.Index : -1;
         }
 
-        internal int[] GetBoxed() {
-            if (_boxedCount == 0) {
-                return null;
+        public bool TryGetLocalOrClosure(ParameterExpression var, out LocalVariable local) {
+            VariableScope scope;
+            if (_variables.TryGetValue(var, out scope)) {
+                local = scope.Variable;
+                return true;
+            }
+            if (_closureVariables != null && _closureVariables.TryGetValue(var, out local)) {
+                return true;
             }
 
-            var result = new int[_boxedCount];
-            int j = 0;
-            foreach (LocalVariable local in _variables.Values) {
-                if (local.IsBoxed) {
-                    result[j++] = local.Index;
-                }
+            local = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Gets a copy of the local variables which are defined in the current scope.
+        /// </summary>
+        /// <returns></returns>
+        internal Dictionary<ParameterExpression, LocalVariable> CopyLocals() {
+            var res = new Dictionary<ParameterExpression, LocalVariable>(_variables.Count);
+            foreach (var keyValue in _variables) {
+                res[keyValue.Key] = keyValue.Value.Variable;
             }
-            Debug.Assert(j == result.Length);
-
-            return result;
+            return res;
         }
 
-        public int GetVariableIndex(ParameterExpression var) {
-            LocalVariable loc;
-            return _variables.TryGetValue(var, out loc) ? loc.Index : -1;
-        }
-
-        public bool TryGetLocal(ParameterExpression var, out LocalVariable local) {
-            return _variables.TryGetValue(var, out local);
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
-        public LocalVariable this[ParameterExpression var] {
-            get { return _variables[var]; }
-        }
-
-        public bool ContainsVariable(ParameterExpression variable) {
+        /// <summary>
+        /// Checks to see if the given variable is defined within the current local scope.
+        /// </summary>
+        internal bool ContainsVariable(ParameterExpression variable) {
             return _variables.ContainsKey(variable);
         }
 
-        internal IEnumerable<ParameterExpression> GetClosureVariables() {
-            foreach (var variable in _variables) {
-                if (variable.Value.InClosure) {
-                    yield return variable.Key;
-                }
+        /// <summary>
+        /// Gets the variables which are defined in an outer scope and available within the current scope.
+        /// </summary>
+        internal Dictionary<ParameterExpression, LocalVariable> ClosureVariables {
+            get {
+                return _closureVariables;
+            }
+        }
+        
+        internal LocalVariable AddClosureVariable(ParameterExpression variable) {
+            if (_closureVariables == null) {
+                _closureVariables = new Dictionary<ParameterExpression, LocalVariable>();
+            }
+            LocalVariable result = new LocalVariable(_closureVariables.Count, true, false);
+            _closureVariables.Add(variable, result);
+            return result;
+        }
+
+        /// <summary>
+        /// Tracks where a variable is defined and what range of instructions it's used in
+        /// </summary>
+        private sealed class VariableScope {
+            public readonly int Start;
+            public int Stop = Int32.MaxValue;
+            public readonly LocalVariable Variable;
+            public readonly VariableScope Parent;
+            public List<VariableScope> ChildScopes;
+
+            public VariableScope(LocalVariable variable, int start, VariableScope parent) {
+                Variable = variable;
+                Start = start;
+                Parent = parent;
             }
         }
     }

@@ -158,6 +158,15 @@ namespace Microsoft.Scripting.Silverlight {
             setup.DebugMode = debugMode;
             return setup;
         }
+
+        /// <summary>
+        /// Creates a new ScriptRuntimeSetup, given a list of assemblies.
+        /// </summary>
+        /// <param name="assemblies">List of assemblies to find DLR's language configuration</param>
+        /// <returns>new ScriptRuntimeSetup</returns>
+        public static ScriptRuntimeSetup CreateRuntimeSetup(List<Assembly> assemblies) {
+            return CreateRuntimeSetup(Settings.Debug, DynamicLanguageConfig.LoadFromAssemblies(assemblies));
+        }
         #endregion
 
         #region CreateRuntime
@@ -197,8 +206,10 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         public static ScriptScope CreateScope(ScriptRuntime runtime) {
             var scope = runtime.CreateScope();
-            scope.SetVariable("document", HtmlPage.Document);
-            scope.SetVariable("window", HtmlPage.Window);
+            if (HtmlPage.IsEnabled) {
+                scope.SetVariable("document", HtmlPage.Document);
+                scope.SetVariable("window", HtmlPage.Window);
+            }
             if (DynamicApplication.Current != null) {
                 scope.SetVariable("me", DynamicApplication.Current.RootVisual);
                 scope.SetVariable("xaml", DynamicApplication.Current.RootVisual);

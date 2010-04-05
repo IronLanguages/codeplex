@@ -99,7 +99,17 @@ module System::Windows::Browser
       set_attribute(index.to_s, value)
     end
 
+    def html
+      self.innerHTML
+    end
+
+    def html=(value)
+      self.innerHTML = value
+    end
+
     def method_missing(m, *args, &block)
+      super
+    rescue => e
       if block.nil?
         if m.to_s[-1..-1] == '='
           set_property(m.to_s[0..-2], args.first)
@@ -118,6 +128,16 @@ module System::Windows::Browser
     def style
       HtmlStyle.new(self)
     end
+  end
+
+  class System::Windows::Browser::ScriptObject
+    alias orig_set_property set_property
+    def set_property(name, value)
+      # Safari BUG: doesn't recognize MutableString as a String
+      value = value.to_clr_string if value.kind_of? String
+      orig_set_property name, value
+    end
+    alias SetProperty set_property
   end
 
   class HtmlStyle

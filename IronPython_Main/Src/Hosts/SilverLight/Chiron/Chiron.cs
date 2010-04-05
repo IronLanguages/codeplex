@@ -44,6 +44,8 @@ namespace Chiron {
         static Dictionary<string, LanguageInfo> _Languages;
         static string _UrlPrefix, _LocalAssemblyPath, _ExternalUrlPrefix;
         static Dictionary<string, string> _MimeMap;
+        static bool? _DetectLanguageFromXAP;
+        static bool? _UseExtensions;
 
         static int Main(string[] args) {
             ParseOptions(args);
@@ -59,7 +61,25 @@ namespace Chiron {
                 Console.WriteLine(
 @"Usage: Chiron [<options>]
 
+Common usages:
+
+  Chiron.exe /b
+    Starts the web-server on port 2060, and opens the default browser
+    to the root of the web-server. This is used for developing an
+    application, as Chiron will rexap you application's directory for
+    every request.
+    
+  Chiron.exe /d:app /z:app.xap
+    Takes the contents of the app directory and generates an app.xap 
+    from it, which embeds the DLR and language assemblies according to
+    the settings in Chiron.exe.config. This is used for deployment,
+    so you can take the generated app.xap, along with any other files,
+    and host them on any web-server.
+
 Options:
+
+  Note: forward-slashes (/) in option names can be substituted for dashes (-).
+        For example ""Chiron.exe -w"" instead of ""Chiron.exe /w"".
 
   /w[ebserver][:<port number>]
     Launches a development web server that automatically creates
@@ -72,7 +92,7 @@ Options:
     Implies /w, cannot be combined with /x or /z
 
   /z[ipdlr]:<file>
-    Generates a XAP file, including dynamic language DLLs, and
+    Generates a XAP file, including dynamic language dependencies, and
     auto-generates AppManifest.xaml (equivalent of /m in memory), 
     if it does not exist.
     Does not start the web server, cannot be combined with /w or /b
@@ -83,33 +103,38 @@ Options:
     Can only be combined with /d, /n and /s
 
   /d[ir[ectory]]:<path>
-    Specifies directory on disk (default: the current directory)
+    Specifies directory on disk (default: the current directory).
+    Implies /w.
 
   /r[efpath]:<path>
-    Path where assemblies are located.
-    Overrides appSettings.localAssemblyPath in Chiron.exe.config
+    Path where assemblies are located. Defaults to the same directory
+    where Chiron.exe exists.
+    Overrides appSettings.localAssemblyPath in Chiron.exe.config.
 
   /p[ath]:<path1;path2;..;pathn>
-    semi-color-separated directories to be included in the XAP file,
+    Semi-colon-separated directories to be included in the XAP file,
     in addition to what is specified by /d
-
-  /l[ocalAppRoot]:<relative path>
-    Path to look for script files on the web-server, rather than in
-    the XAP file (which is default). Path is relative to the XAP file.
-    If Chiron is generating the AppManifest.xaml, it will use this to 
-    find which languages the application depends on.
-
-  /e[xtUrlPrefix]:<absolute uri> (>= Silverlight 3 only)
-    Does not put the assemblies inside the XAP file, and references the
-    appropriate slvx files from the Uri provided.
-    Overrides appSettings.externalUrlPrefix in Chiron.exe.config
-
+    
   /u[rlprefix]:<relative or absolute uri>
-    appends a relative or absolute Uri to each language assembly added
-    to the AppManifest.xaml. Also does not put the assemblies inside the 
-    xap. If it's a relative Uri and /w is also given, Chiron will serve
-    the assemblies from the Uri, relative to the server root.
-    Overrides appSettings.urlPrefix in Chiron.exe.config
+    Appends a relative or absolute Uri to each language assembly or extension
+    added to the AppManifest.xaml. If a relative Uri is provided, Chiron 
+    will serve all files located in the /refpath at this Uri, relative to the
+    root of the web-server.
+    Overrides appSettings.urlPrefix in Chiron.exe.config.
+  
+  /l /detectLanguages:true|false (default true)
+    Scans the current application directory for files with a valid language's
+    file extension, and only makes those languages available to the XAP file.
+    See /useExtensions for whether the languages assemblies or extension files
+    are used.
+    If false, no language-specific assemblies/extensions are added to the XAP,
+    so the Silverlight application is responsible for parsing the languages.config
+    file in the XAP and downloading the languages it needs.
+    Overrides appSettings.detectLanguages in Chiron.exe.config.
+  
+  /e /useExtensions:true|false (default false)
+    Toggles whether or not language and DLR assemblies are embedded in
+    the XAP file, or whether their equivalent extension files are used.
 
   /x[ap[file]]:<file>
     Specifies XAP file to generate. Only XAPs a directory; does not
@@ -303,19 +328,27 @@ Options:
                     _browser = true;
                     _webserver = true;
                     break;
-                case "e": case "extUrlPrefix":
-                    try {
-                        ExternalUrlPrefix = val;
-                    } catch {
-                        _error = string.Format("Invalid externalUrlPrefix '{0}'", val);
-                        return;
-                    }
-                    break;
                 case "u": case "urlPrefix":
                     try {
                         UrlPrefix = val;
                     } catch {
                         _error = string.Format("Invalid urlPrefix '{0}'", val);
+                        return;
+                    }
+                    break;
+                case "e": case "useExtensions":
+                    try {
+                        UseExtensions = bool.Parse(val);
+                    } catch {
+                        _error = string.Format("useExtensions should be a boolean value, was '{0}'", val);
+                        return;
+                    }
+                    break;
+                case "l": case "detectLanguages":
+                    try {
+                        DetectLanguage = bool.Parse(val);
+                    } catch {
+                        _error = string.Format("detectLanguage should be a boolean value, was '{0}'", val);
                         return;
                     }
                     break;
@@ -433,27 +466,29 @@ Options:
             }
         }
 
-        /// <summary>
-        /// Optional Extension URL prefix for language extensions (Silverlight 3 only)
-        /// </summary>
-        internal static string ExternalUrlPrefix {
+        internal static bool DetectLanguage {
             get {
-                if (_ExternalUrlPrefix == null)
-                    ExternalUrlPrefix = ConfigurationManager.AppSettings["externalUrlPrefix"];
-                return _ExternalUrlPrefix;
+                if (_DetectLanguageFromXAP == null) {
+                    string value = ConfigurationManager.AppSettings["detectLanguage"] ?? "true";
+                    _DetectLanguageFromXAP = bool.Parse(value);
+                }
+                return _DetectLanguageFromXAP.Value;
             }
             set {
-                _ExternalUrlPrefix = value;
-                if (_ExternalUrlPrefix != null) {
-                    if (!_ExternalUrlPrefix.EndsWith("/")) _ExternalUrlPrefix += '/';
-                    // validate
-                    Uri uri = new Uri(_ExternalUrlPrefix, UriKind.RelativeOrAbsolute);
+                _DetectLanguageFromXAP = value;
+            }
+        }
 
-                    if (!uri.IsAbsoluteUri && !_ExternalUrlPrefix.StartsWith("/")) {
-                        _ExternalUrlPrefix = null;
-                        throw new ConfigurationErrorsException("externalUrlPrefix must be an absolute URI or start with a /");
-                    }
+        internal static bool UseExtensions {
+            get {
+                if (_UseExtensions == null) {
+                    string value = ConfigurationManager.AppSettings["useExtensions"] ?? "false";
+                    _UseExtensions = bool.Parse(value);
                 }
+                return _UseExtensions.Value;
+            }
+            set {
+                _UseExtensions = value;
             }
         }
 

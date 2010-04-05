@@ -163,6 +163,10 @@
   <ItemGroup>
     <EmbeddedResource Include="init.rb" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="repl_formatter.py" />
+    <EmbeddedResource Include="repl_formatter.rb" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -493,12 +493,16 @@ namespace Microsoft.Scripting.Interpreter {
 
     internal sealed class EnterLoopInstruction : Instruction {
         private readonly int _instructionIndex;
+        private Dictionary<ParameterExpression, LocalVariable> _variables;
+        private Dictionary<ParameterExpression, LocalVariable> _closureVariables;
         private LoopExpression _loop;
         private int _loopEnd;
         private int _compilationThreshold;
 
-        internal EnterLoopInstruction(LoopExpression loop, int compilationThreshold, int instructionIndex) {
+        internal EnterLoopInstruction(LoopExpression loop, LocalVariables locals, int compilationThreshold, int instructionIndex) {
             _loop = loop;
+            _variables = locals.CopyLocals();
+            _closureVariables = locals.ClosureVariables;
             _compilationThreshold = compilationThreshold;
             _instructionIndex = instructionIndex;
         }
@@ -547,7 +551,7 @@ namespace Microsoft.Scripting.Interpreter {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Interpreted loop compiled");
 
                 InterpretedFrame frame = (InterpretedFrame)frameObj;
-                var compiler = new LoopCompiler(_loop, frame.Interpreter.LabelMapping, frame.Interpreter.Locals, _instructionIndex, _loopEnd);
+                var compiler = new LoopCompiler(_loop, frame.Interpreter.LabelMapping, _variables, _closureVariables, _instructionIndex, _loopEnd);
                 var instructions = frame.Interpreter.Instructions.Instructions;
 
                 // replace this instruction with an optimized one:
@@ -555,6 +559,8 @@ namespace Microsoft.Scripting.Interpreter {
 
                 // invalidate this instruction, some threads may still hold on it:
                 _loop = null;
+                _variables = null;
+                _closureVariables = null;
             }
         }
     }

@@ -455,7 +455,7 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.ParameterExpression functionValueParam = variable as MSAst.ParameterExpression;
             if (functionValueParam != null) {
-                instructions.EmitStoreLocal(compiler.Locals.GetVariableIndex(functionValueParam));
+                instructions.EmitStoreLocal(compiler.Locals.GetLocalIndex(functionValueParam));
                 return;
             }
 

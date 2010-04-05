@@ -70,6 +70,8 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         internal void Mark(InstructionList instructions) {
+            // TODO: We need to support shadowed labels:
+            // Block( goto label; label: ), Block(goto label; label:)
             ContractUtils.Requires(_targetIndex == UnknownIndex && _stackDepth == UnknownDepth && _continuationStackDepth == UnknownDepth);
 
             _stackDepth = instructions.CurrentStackDepth;

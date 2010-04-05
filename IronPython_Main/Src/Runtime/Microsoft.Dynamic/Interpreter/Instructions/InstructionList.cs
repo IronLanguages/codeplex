@@ -378,15 +378,13 @@ namespace Microsoft.Scripting.Interpreter {
 
         #region Locals
 
-        internal void SwitchToBoxed(int index) {
-            for (int i = 0; i < _instructions.Count; i++) {
-                var instruction = _instructions[i] as IBoxableInstruction;
+        internal void SwitchToBoxed(int index, int instructionIndex) {
+            var instruction = _instructions[instructionIndex] as IBoxableInstruction;
 
-                if (instruction != null) {
-                    var newInstruction = instruction.BoxIfIndexMatches(index);
-                    if (newInstruction != null) {
-                        _instructions[i] = newInstruction;
-                    }
+            if (instruction != null) {
+                var newInstruction = instruction.BoxIfIndexMatches(index);
+                if (newInstruction != null) {
+                    _instructions[instructionIndex] = newInstruction;
                 }
             }
         }
@@ -404,6 +402,8 @@ namespace Microsoft.Scripting.Interpreter {
         private static Instruction[] _assignLocalToClosure;
         private static Instruction[] _initReference;
         private static Instruction[] _initImmutableRefBox;
+        private static Instruction[] _parameterBox;
+        private static Instruction[] _parameter;
 
         public void EmitLoadLocal(int index) {
             if (_loadLocal == null) {
@@ -541,7 +541,35 @@ namespace Microsoft.Scripting.Interpreter {
             }
         }
 
-        private static Instruction InitReference(int index) {
+        internal void EmitInitializeParameter(int index) {
+            Emit(Parameter(index));
+        }
+
+        internal static Instruction Parameter(int index) {
+            if (_parameter == null) {
+                _parameter = new Instruction[LocalInstrCacheSize];
+            }
+
+            if (index < _parameter.Length) {
+                return _parameter[index] ?? (_parameter[index] = new InitializeLocalInstruction.Parameter(index));
+            }
+
+            return new InitializeLocalInstruction.Parameter(index);
+        }
+
+        internal static Instruction ParameterBox(int index) {
+            if (_parameterBox == null) {
+                _parameterBox = new Instruction[LocalInstrCacheSize];
+            }
+
+            if (index < _parameterBox.Length) {
+                return _parameterBox[index] ?? (_parameterBox[index] = new InitializeLocalInstruction.ParameterBox(index));
+            }
+
+            return new InitializeLocalInstruction.ParameterBox(index);
+        }
+
+        internal static Instruction InitReference(int index) {
             if (_initReference == null) {
                 _initReference = new Instruction[LocalInstrCacheSize];
             }
@@ -701,6 +729,10 @@ namespace Microsoft.Scripting.Interpreter {
 
         public void EmitTypeIs(Type type) {
             Emit(InstructionFactory.GetFactory(type).TypeIs());
+        }
+
+        public void EmitTypeAs(Type type) {
+            Emit(InstructionFactory.GetFactory(type).TypeAs());
         }
 
         #endregion

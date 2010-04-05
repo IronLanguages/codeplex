@@ -45,12 +45,7 @@ namespace Chiron {
             string manifestPath = Path.Combine(dir, "AppManifest.xaml");
             if (File.Exists(manifestPath)) {
                 langs = FindSourceLanguages(dir);
-                assemblies = GetManifestAssemblies(manifestPath);
-
-                // Note: because the manifest file already exists, nothing 
-                // needs to be done to support TPEs: Chiron doesn't need to host
-                // them because they are assumed to be a well-known internet location.
-                externals = null;
+                GetManifestParts(manifestPath, out assemblies, out externals);
             } else {
                 using (Stream appManifest = zip.Create("AppManifest.xaml")) {
                     GenerateManifest(dir, out langs, out assemblies, out externals).Save(appManifest);
@@ -79,20 +74,26 @@ namespace Chiron {
             }
         }
 
-        // Get the URIs of the assemblies from the AppManifest.xaml file
-        private static IList<Uri> GetManifestAssemblies(string manifestPath) {
-            IList<Uri> assemblies = new List<Uri>();
-
+        // Get the URIs of the parts from the AppManifest.xaml file
+        private static void GetManifestParts(string manifestPath, out IList<Uri> assemblies, out IList<Uri> externals) {
+            assemblies = new List<Uri>();
+            externals = new List<Uri>();
+            
             XmlDocument doc = new XmlDocument();
             doc.Load(manifestPath);
-            foreach (XmlElement ap in doc.GetElementsByTagName("AssemblyPart")) {
-                string src = ap.GetAttribute("Source");
-                if (!string.IsNullOrEmpty(src)) {
-                    assemblies.Add(new Uri(src, UriKind.RelativeOrAbsolute));
-                }
-            }
 
-            return assemblies;
+            Action<XmlElement, IList<Uri>> processPart = (part, parts) => {
+                string src = part.GetAttribute("Source");
+                if (!string.IsNullOrEmpty(src)) {
+                    parts.Add(new Uri(src, UriKind.RelativeOrAbsolute));
+                }
+            };
+
+            foreach (XmlElement ap in doc.GetElementsByTagName("AssemblyPart"))
+                processPart(ap, assemblies);
+
+            foreach (XmlElement ap in doc.GetElementsByTagName("ExternalPart"))
+                processPart(ap, externals);
         }
 
         internal static XmlDocument GenerateManifest(string dir) {
@@ -103,10 +104,11 @@ namespace Chiron {
 
         private static XmlDocument GenerateManifest(string dir, out ICollection<LanguageInfo> langs, out IList<Uri> assemblies, out IList<Uri> externals) {
             langs = FindSourceLanguages(dir);
-            if (Chiron.ExternalUrlPrefix != null) {
+            if (Chiron.UseExtensions) {
                 externals = GetLanguageExternals(langs);
                 assemblies = new List<Uri>();
 #if DEBUG
+                // Put assembly in the XAP for easy debugging
                 assemblies.Add(GetAssemblyUri("Microsoft.Scripting.Silverlight.dll"));
 #endif
             } else {
@@ -116,25 +118,20 @@ namespace Chiron {
             return Chiron.ManifestTemplate.Generate(assemblies, externals);
         }
 
-        // Gets the list of DLR+language assemblies that could be automatically
-        //added to the XAP (if externalUrlPrefix is not set).
+        // Gets the list of DLR+language assemblies that should be added to the XAP
         private static IList<Uri> GetLanguageAssemblies(IEnumerable<LanguageInfo> langs) {
-            return GetLanguageAssemblies(langs, false);
-        }
-        private static IList<Uri> GetLanguageAssemblies(IEnumerable<LanguageInfo> langs, bool ooxDebug) {
             IList<Uri> assemblies = new List<Uri>();
             assemblies.Add(GetAssemblyUri("Microsoft.Scripting.Silverlight.dll"));
-            if(!ooxDebug) {
-#if CLR2                
-                assemblies.Add(GetAssemblyUri("Microsoft.Scripting.ExtensionAttribute.dll"));
-                assemblies.Add(GetAssemblyUri("Microsoft.Scripting.Core.dll"));
+#if CLR2
+            assemblies.Add(GetAssemblyUri("Microsoft.Scripting.ExtensionAttribute.dll"));
+            assemblies.Add(GetAssemblyUri("Microsoft.Scripting.Core.dll"));
 #else
-                assemblies.Add(GetAssemblyUri("System.Numerics.dll"));
-                assemblies.Add(GetAssemblyUri("Microsoft.CSharp.dll"));
+            assemblies.Add(GetAssemblyUri("System.Numerics.dll"));
 #endif
-                assemblies.Add(GetAssemblyUri("Microsoft.Scripting.dll"));
-                assemblies.Add(GetAssemblyUri("Microsoft.Dynamic.dll"));
+            assemblies.Add(GetAssemblyUri("Microsoft.Scripting.dll"));
+            assemblies.Add(GetAssemblyUri("Microsoft.Dynamic.dll"));
 
+            if (Chiron.DetectLanguage) {
                 foreach (LanguageInfo lang in langs) {
                     foreach (string asm in lang.Assemblies) {
                         assemblies.Add(GetAssemblyUri(asm));
@@ -148,24 +145,31 @@ namespace Chiron {
         private static IList<Uri> GetLanguageExternals(IEnumerable<LanguageInfo> langs) {
             IList<Uri> extensions = new List<Uri>();
             extensions.Add(GetExternalUri("Microsoft.Scripting.slvx"));
+            if (Chiron.DetectLanguage) {
+                foreach (LanguageInfo lang in langs) {
+                    foreach (string ext in lang.Extensions) {
+                        extensions.Add(GetExternalUri(ext));
+                    }
+                }
+            }
             return extensions;
         }
 
-        // prepends uriPrefix from the app.config file, unless the path is already absolute
         private static Uri GetAssemblyUri(string path) {
-            Uri uri = new Uri(path, UriKind.RelativeOrAbsolute);
-            string prefix = Chiron.UrlPrefix;
-            if (prefix != "" && !IsPathRooted(uri))
-                uri = new Uri(prefix + path, UriKind.RelativeOrAbsolute);
-            return uri;
+            return GetBuildUri(path, false);
         }
 
-        // prepends externalUriPrefix from the app.config file, unless the path is already absolute
         private static Uri GetExternalUri(string path) {
+            return GetBuildUri(path, true);
+        }
+
+        private static Uri GetBuildUri(string path, bool prependUri) {
             Uri uri = new Uri(path, UriKind.RelativeOrAbsolute);
-            string prefix = Chiron.ExternalUrlPrefix;
-            if (prefix != "" && !IsPathRooted(uri))
-                uri = new Uri(prefix + path, UriKind.RelativeOrAbsolute);
+            if (prependUri) {
+                string prefix = Chiron.UrlPrefix;
+                if (prefix != "" && !IsPathRooted(uri))
+                    uri = new Uri(prefix + path, UriKind.RelativeOrAbsolute);
+            }
             return uri;
         }
 
@@ -242,7 +246,7 @@ namespace Chiron {
         internal static ICollection<LanguageInfo> FindSourceLanguages(string dir) {
             Dictionary<LanguageInfo, bool> result = new Dictionary<LanguageInfo, bool>();
 
-            if (Chiron.ExternalUrlPrefix == null) {
+            if (Chiron.DetectLanguage) {
                 foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories)) {
                     string ext = Path.GetExtension(file);
                     LanguageInfo lang;

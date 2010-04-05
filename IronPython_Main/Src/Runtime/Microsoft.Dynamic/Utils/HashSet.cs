@@ -39,6 +39,13 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
+        public HashSet(ICollection<T> list) {
+            _data = new Dictionary<T, object>(list.Count);
+            foreach (T t in list) {
+                _data.Add(t, null);
+            }
+        }
+
         public void Add(T item) {
             _data[item] = null;
         }
