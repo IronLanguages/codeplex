@@ -282,15 +282,8 @@ namespace Chiron {
             sb.AppendFormat("HTTP/1.1 {0} {1}\r\n", statusCode, GetStatusCodeText(statusCode));
             sb.AppendFormat("Date: {0}\r\n", DateTime.Now.ToUniversalTime().ToString("R", DateTimeFormatInfo.InvariantInfo));
             sb.AppendFormat("Server: Chiron/{0}.{1}\r\n", ver.Major, ver.MajorRevision);
-            //Sending no-cache caused problem on IE, see Jolt Bugs 18219.
-            //Use max-age=0 for now as a work-around. 
-            //The bug was fixed.
+            
             sb.Append("Cache-Control: no-cache\r\nPragma: no-cache\r\nExpires: -1\r\n");
-
-            //Have to work-around another issue: Jolt Bug #18337 by extending caching. 
-            //NOTE: This will cause issue for developing scenario. Need to revert it as soon as bug is fixed!
-            //sb.Append("Cache-Control: max-age=1\r\n");
-            // end of work-around
 
             if (contentLength >= 0) sb.AppendFormat("Content-Length: {0}\r\n", contentLength);
             if (extraHeaders != null) sb.Append(extraHeaders);

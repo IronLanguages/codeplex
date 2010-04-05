@@ -27,6 +27,7 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Interpreter {
     using AstUtils = Microsoft.Scripting.Ast.Utils;
     using LoopFunc = Func<object[], StrongBox<object>[], InterpretedFrame, int>;
+    using System.Collections.ObjectModel;
 
     internal sealed class LoopCompiler : ExpressionVisitor {
         private struct LoopVariable {
@@ -49,19 +50,24 @@ namespace Microsoft.Scripting.Interpreter {
         private readonly ParameterExpression _frameClosureVar;
         private readonly ParameterExpression _frameVar;
         private readonly LabelTarget _returnLabel;
-        private readonly LocalVariables _locals;
+        // locals and closure variables defined outside the loop
+        private readonly Dictionary<ParameterExpression, LocalVariable> _outerVariables, _closureVariables; 
         private readonly LoopExpression _loop;
         private ReadOnlyCollectionBuilder<ParameterExpression> _temps;
+        // tracks variables that flow in and flow out for initialization and 
         private readonly Dictionary<ParameterExpression, LoopVariable> _loopVariables;
+        // variables which are defined and used within the loop
+        private HashSet<ParameterExpression> _loopLocals;  
 
         private readonly Dictionary<LabelTarget, BranchLabel> _labelMapping;
         private readonly int _loopStartInstructionIndex;
         private readonly int _loopEndInstructionIndex;
-        
-        internal LoopCompiler(LoopExpression loop, Dictionary<LabelTarget, BranchLabel> labelMapping, LocalVariables locals,
-            int loopStartInstructionIndex, int loopEndInstructionIndex) {
+
+        internal LoopCompiler(LoopExpression loop, Dictionary<LabelTarget, BranchLabel> labelMapping, Dictionary<ParameterExpression, LocalVariable> locals,
+            Dictionary<ParameterExpression, LocalVariable> closureVariables, int loopStartInstructionIndex, int loopEndInstructionIndex) {
             _loop = loop;
-            _locals = locals;
+            _outerVariables = locals;
+            _closureVariables = closureVariables;
             _frameDataVar = Expression.Parameter(typeof(object[]));
             _frameClosureVar = Expression.Parameter(typeof(StrongBox<object>[]));
             _frameVar = Expression.Parameter(typeof(InterpretedFrame));
@@ -78,7 +84,10 @@ namespace Microsoft.Scripting.Interpreter {
             var finallyClause = new ReadOnlyCollectionBuilder<Expression>();
 
             foreach (var variable in _loopVariables) {
-                LocalVariable local = _locals[variable.Key];
+                LocalVariable local;
+                if (!_outerVariables.TryGetValue(variable.Key, out local)) {
+                    local = _closureVariables[variable.Key];
+                }
                 Expression elemRef = local.LoadFromArray(_frameDataVar, _frameClosureVar);
 
                 if (local.InClosureOrBoxed) {
@@ -163,31 +172,48 @@ namespace Microsoft.Scripting.Interpreter {
         // the first operation might actually always be "write". We could do better if we had CFG.
 
         protected override Expression VisitBlock(BlockExpression node) {
-            var result = (BlockExpression)base.VisitBlock(node);
+            var variables = ((BlockExpression)node).Variables;
+            var prevLocals = EnterVariableScope(variables);
+            
+            var res = base.VisitBlock(node);
 
-            // TODO: variable shadowing
-            // block(x) { block(x) { ... x ... } block(x) { ... x ... } }
+            ExitVariableScope(prevLocals);
+            return res;
+        }
 
-            // variables declared by the block are not outer variables:
-            foreach (var local in result.Variables) {
-                _loopVariables.Remove(local);
+        private HashSet<ParameterExpression> EnterVariableScope(ICollection<ParameterExpression> variables) {
+            if (_loopLocals == null) {
+                _loopLocals = new HashSet<ParameterExpression>(variables);
+                return null;
             }
+           
+            var prevLocals = new HashSet<ParameterExpression>(_loopLocals);
+            _loopLocals.UnionWith(variables);
+            return prevLocals;
+        }
 
-            return result;
+        protected override CatchBlock VisitCatchBlock(CatchBlock node) {
+            if (node.Variable != null) {
+                var prevLocals = EnterVariableScope(new[] { node.Variable });
+                var res = base.VisitCatchBlock(node);
+                ExitVariableScope(prevLocals);
+                return res;
+            } else {
+                return base.VisitCatchBlock(node);
+            }
         }
 
         protected override Expression VisitLambda<T>(Expression<T> node) {
-            var result = (Expression<T>)base.VisitLambda<T>(node);
-
-            // TODO: variable shadowing
-            // block(x) { lambda(x) { ... x ... } }
-
-            // variables declared by the block are not outer variables:
-            foreach (var local in result.Parameters) {
-                _loopVariables.Remove(local);
+            var prevLocals = EnterVariableScope(node.Parameters);
+            try {
+                return base.VisitLambda<T>(node);
+            } finally {
+                ExitVariableScope(prevLocals);
             }
+        }
 
-            return result;
+        private void ExitVariableScope(HashSet<ParameterExpression> prevLocals) {
+            _loopLocals = prevLocals;
         }
 
         protected override Expression VisitBinary(BinaryExpression node) {
@@ -250,10 +276,16 @@ namespace Microsoft.Scripting.Interpreter {
             LoopVariable existing;
             LocalVariable loc;
 
-            if (_loopVariables.TryGetValue(node, out existing)) {
+            if (_loopLocals.Contains(node)) {
+                // local to the loop - not propagated in or out
+                return node;
+            } else if (_loopVariables.TryGetValue(node, out existing)) {
+                // existing outer variable that we are already tracking
                 box = existing.BoxStorage;
                 _loopVariables[node] = new LoopVariable(existing.Access | access, box);
-            } else if (_locals.TryGetLocal(node, out loc)) {
+            } else if (_outerVariables.TryGetValue(node, out loc) || 
+                (_closureVariables != null && _closureVariables.TryGetValue(node, out loc))) {
+                // not tracking this variable yet, but defined in outer scope and seen for the 1st time
                 box = loc.InClosureOrBoxed ? Expression.Parameter(typeof(StrongBox<object>), node.Name) : null;
                 _loopVariables[node] = new LoopVariable(access, box);
             } else {

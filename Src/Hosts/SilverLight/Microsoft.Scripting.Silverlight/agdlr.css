@@ -72,10 +72,17 @@ div.silverlightDlrWindowMenu a.active {
   border-bottom: 2px solid black;
   border-left: 2px solid black;
   border-right: 2px solid black;
-  padding-top: 7px;
+  padding-top: 8px;
   color: white;
   background-color: black;
   font-weight: bold;
+}
+
+/* hack for only targeting CSS at Mozilla */
+@-moz-document url-prefix() {
+    div.silverlightDlrWindowMenu a.active {
+        padding-top: 7px;
+    }
 }
 
 div.silverlightDlrWindowMenu a#silverlightDlrErrorReportLink.active {
@@ -185,13 +192,13 @@ div.silverlightDlrErrorStackTraceLine {
 
 .silverlightDlrReplCode {
   width: 90%;
-  height: 20px;
   position: relative;
   left: -1px; top: 0px;
 }
 .silverlightDlrReplCode:focus {
   border: 0px;
   outline: none;
+  background: #333;
 }
 
 .silverlightDlrReplRun {
@@ -199,4 +206,59 @@ div.silverlightDlrErrorStackTraceLine {
 }
 form.silverlightDlrReplRunForm {
   color: black;
+  margin: 0;
+  padding: 0;
+  height: 16px;
+  margin-bottom: 5px;
+}
+
+/*
+ * REPL demo mode: just make sure the repl is inside a #demo element
+ */
+
+#demo div.silverlightDlrWindow,
+#demo div.silverlightDlrWindowMenu,
+#demo .silverlightDlrRepl, 
+#demo .silverlightDlrReplCode, 
+#demo .silverlightDlrReplResult, 
+#demo .silverlightDlrReplPrompt {
+  font-size: 20px;
+}
+
+#demo .silverlightDlrRepl {
+    height: 300px;
+}
+
+#demo div.silverlightDlrWindow {
+  bottom: 40px;
+  border: 4px solid black;
+}
+
+#demo div.silverlightDlrWindowMenu {
+  height: 30px;
+}
+
+#demo div.silverlightDlrWindowMenu a.active {
+  border-bottom: 4px solid black;
+  border-left: 4px solid black;
+  border-right: 4px solid black;
+  padding-top: 9px;
+}
+
+/* hack for only targeting CSS at Mozilla */
+@-moz-document url-prefix() {
+    #demo div.silverlightDlrWindowMenu a.active {
+        padding-top: 9px;
+    }
+}
+
+#demo .silverlightDlrRepl {
+  padding: 10px;
+}
+
+#demo .silverlightDlrRepl,
+#demo .silverlightDlrReplCode,
+#demo .silverlightDlrReplResult,
+#demo .silverlightDlrReplPrompt {
+  line-height: 24px;
 }

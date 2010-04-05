@@ -21,6 +21,7 @@ using System.IO;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using System.Windows.Threading;
+using Microsoft.Scripting.Silverlight;
 #if CLR4
 using System.Core;
 #endif
@@ -47,7 +48,7 @@ namespace Microsoft.Scripting.Silverlight {
         private static Func<string> _replHtmlTemplate = delegate() {
             return string.Format(@"
 <div id=""{1}"" class=""{0}""></div>
-<span id=""{3}"" class=""{2}""></span><form id=""{5}"" class=""{4}"" action=""javascript:void(0)""><input type=""text"" id=""{7}"" class=""{6}"" autocomplete=""off"" /><input type=""submit"" id=""{9}"" class=""{8}"" value=""Run"" /></form>",
+<form id=""{5}"" class=""{4}"" action=""javascript:void(0)""><span id=""{3}"" class=""{2}""></span><input type=""text"" id=""{7}"" class=""{6}"" autocomplete=""off"" /><input type=""submit"" id=""{9}"" class=""{8}"" value=""Run"" /></form>",
                 _sdlrResult,  GetId(_sdlrResult),
                 _sdlrPrompt,  GetId(_sdlrPrompt),
                 _sdlrRunForm, GetId(_sdlrRunForm),
@@ -75,6 +76,7 @@ namespace Microsoft.Scripting.Silverlight {
         private ScriptScope         _currentScope;
         private static int          _count;
         private ReplHistory         _history = new ReplHistory();
+        private LanguageNeutralFormatter _neutralFormatter;
         #endregion
 
         #region Public properties
@@ -106,6 +108,8 @@ namespace Microsoft.Scripting.Silverlight {
         public HtmlElement Input {
             get { return _silverlightDlrReplCode; }
         }
+
+        public IReplFormatter Formatter { get; private set; }
         #endregion
 
         #region Console management
@@ -198,6 +202,28 @@ namespace Microsoft.Scripting.Silverlight {
         private Repl(ScriptEngine engine, ScriptScope scope) {
             _engine = engine;
             _currentScope = scope;
+            Formatter = GetReplFormatter(this);
+        }
+
+        private IReplFormatter GetReplFormatter(Repl instance) {
+            _neutralFormatter = new LanguageNeutralFormatter(this);
+            if (_engine.Setup.FileExtensions.Count > 0) {
+                string path = string.Format("repl_formatter{0}", _engine.Setup.FileExtensions[0]);
+                string code = DynamicApplication.GetResource(path);
+                if (code != null) {
+                    var scope = _engine.CreateScope();
+                    try {
+                        _engine.CreateScriptSourceFromString(code, path).Execute(scope);
+                        var CreateReplFormatter = scope.GetVariable<Func<Repl, IReplFormatter, IReplFormatter>>("create_repl_formatter");
+                        if (CreateReplFormatter != null) {
+                            return CreateReplFormatter(this, _neutralFormatter);
+                        }
+                    } catch (Exception e) {
+                        DynamicApplication.Current.HandleException(this, e);
+                    }
+                }
+            }
+            return _neutralFormatter;
         }
 
         /// <summary>
@@ -209,6 +235,7 @@ namespace Microsoft.Scripting.Silverlight {
             _silverlightDlrReplCode = HtmlPage.Document.GetElementById(GetId(_sdlrCode));
             _silverlightDlrReplResult = HtmlPage.Document.GetElementById(GetId(_sdlrResult));
             _silverlightDlrReplPrompt = HtmlPage.Document.GetElementById(GetId(_sdlrPrompt));
+            ProcessPromptElement(_silverlightDlrReplPrompt);
             _inputBuffer = new ReplInputBuffer(this);
             _outputBuffer = new ReplOutputBuffer(_silverlightDlrReplResult, _sdlrOutput);
             ShowDefaults();
@@ -443,7 +470,6 @@ namespace Microsoft.Scripting.Silverlight {
         /// <param name="forceExecute">Forces the statement to execute, regardless of it's validity</param>
         /// <returns>The result of the _code execution</returns>
         private object DoSingleLine(bool forceExecute) {
-
             var valid = TryExpression(_code);
             if (valid != null) {
                 var source = _engine.CreateScriptSourceFromString(_code, SourceCodeKind.Expression);
@@ -550,6 +576,7 @@ namespace Microsoft.Scripting.Silverlight {
         /// </summary>
         internal void ShowDefaults() {
             _silverlightDlrReplCode.SetProperty("value", "");
+            _outputBuffer.ScrollToBottom();
             try {
                 _silverlightDlrReplPrompt.Focus();
                 _silverlightDlrReplCode.Focus();
@@ -586,14 +613,26 @@ namespace Microsoft.Scripting.Silverlight {
         /// Normal prompt
         /// </summary>
         internal string PromptHtml() {
-            return String.Format("{0}> ", _engine.Setup.FileExtensions[0].Substring(1));
+            try {
+                var html = Formatter.PromptHtml();
+                if (html != null) return html;
+            } catch (Exception e) {
+                DynamicApplication.Current.HandleException(this, e);
+            }
+            return _neutralFormatter.PromptHtml();
         }
 
         /// <summary>
         /// Multi-line prompt
         /// </summary>
         internal string SubPromptHtml() {
-            return "... ";
+            try {
+                var html = Formatter.SubPromptHtml();
+                if (html != null) return html;
+            } catch (Exception e) {
+                DynamicApplication.Current.HandleException(this, e);
+            }
+            return _neutralFormatter.SubPromptHtml();
         }
         #endregion
 
@@ -614,6 +653,7 @@ namespace Microsoft.Scripting.Silverlight {
         /// Render the prompt in the results section of the Repl.
         /// </summary>
         internal void ShowPromptInResultDiv() {
+            _outputBuffer.ElementProcessor = Formatter.PromptElement;
             _outputBuffer.ElementClass = _sdlrPrompt;
             _outputBuffer.Write(_multiLinePrompt ? SubPromptHtml() : PromptHtml());
             _outputBuffer.Reset();
@@ -622,15 +662,33 @@ namespace Microsoft.Scripting.Silverlight {
             }
         }
 
+        internal void ProcessPromptElement(HtmlElement element) {
+            try {
+                Formatter.PromptElement(element);
+            } catch (Exception e) {
+                DynamicApplication.Current.HandleException(this, e);
+            }
+            _neutralFormatter.PromptElement(element);
+        }
+
         /// <summary>
         /// Render the language-specific result representation in the results
         /// section of the Repl.
         /// </summary>
         /// <param name="result"></param>
         internal void ShowValueInResultDiv(object result) {
+            string format = null;
+            try {
+                format = Formatter.Format(result);
+            } catch (Exception e) {
+                DynamicApplication.Current.HandleException(this, e);
+                format = _neutralFormatter.Format(result);
+            }
             _outputBuffer.ElementClass = _sdlrValue;
             _outputBuffer.ElementName = "div";
-            _outputBuffer.Write("=> " + _engine.Operations.Format(result));
+            if (format != null) {
+                _outputBuffer.Write(format);
+            }
             _outputBuffer.Reset();
         }
 
@@ -661,12 +719,46 @@ namespace Microsoft.Scripting.Silverlight {
         #endregion
     }
 
+    #region Language Formatting
+    public interface IReplFormatter {
+        void PromptElement(HtmlElement element);
+        string PromptHtml();
+        string SubPromptHtml();
+        string Format(object obj);
+    }
+
+    public class LanguageNeutralFormatter : IReplFormatter {
+        public Repl CurrentRepl { get; private set; }
+
+        public LanguageNeutralFormatter(Repl repl) {
+            CurrentRepl = repl;
+        }
+
+        public void PromptElement(HtmlElement element) {
+            // no-op
+        }
+
+        public string PromptHtml() {
+            return ">>> ";
+        }
+
+        public string SubPromptHtml() {
+            return "... ";
+        }
+
+        public string Format(object obj) {
+            return CurrentRepl.Engine.Operations.Format(obj);
+        }
+    }
+    #endregion
+
     #region Text Buffer
     /// <summary>
     /// Repl's output buffer
     /// </summary>
     public class ReplOutputBuffer : ConsoleWriter {
 
+        public Action<HtmlElement> ElementProcessor;
         public string ElementClass;
         public string ElementName;
         public bool UserOutput;
@@ -697,26 +789,34 @@ namespace Microsoft.Scripting.Silverlight {
         }
 
         public void Reset() {
+            ElementProcessor = null;
             ElementClass = null;
             ElementName = "span";
             UserOutput = false;
+            ScrollToBottom();
         }
 
         public override void Flush() {
             if (_queue != string.Empty) {
-                AppendToResults(_queue, _outputClass);
+                AppendToResults(_queue, _outputClass, null);
                 _queue = string.Empty;
             }
+            ScrollToBottom();
         }
 
         #region HTML Helpers
         private void AppendToResults(string str) {
-            AppendToResults(str, null);
+            AppendToResults(str, null, null);
         }
 
-        private void AppendToResults(string str, string outputClass) {
+        private void AppendToResults(string str, string outputClass, Action<HtmlElement> process) {
             str = str == String.Empty ? " " : str;
-            _results.AppendChild(PutTextInNewElement(str, ElementName, outputClass ?? ElementClass));
+            _results.AppendChild(PutTextInNewElement(
+                str, ElementName, 
+                outputClass ?? ElementClass,
+                process ?? ElementProcessor
+            ));
+
         }
 
         // TODO any library I can use to do this?
@@ -730,10 +830,13 @@ namespace Microsoft.Scripting.Silverlight {
                 Replace(ConsoleWriter.NewLineChar.ToString(), "<br />");
         }
 
-        private HtmlElement PutTextInNewElement(string str, string tagName, string className) {
+        private HtmlElement PutTextInNewElement(string str, string tagName, string className, Action<HtmlElement> process) {
             var element = HtmlPage.Document.CreateElement(tagName == null ? "span" : tagName);
             if (className != null) {
                 element.CssClass = className;
+            }
+            if (process != null) {
+                process(element);
             }
             PutTextInElement(str, element);
             return element;
@@ -746,6 +849,12 @@ namespace Microsoft.Scripting.Silverlight {
         internal void AppendTextInElement(string str, HtmlElement e) {
             var toPrepend = e.GetProperty("innerHTML").ToString();
             e.SetProperty("innerHTML", toPrepend + EscapeHtml(str));
+        }
+
+        internal void ScrollToBottom() {
+            if (_results != null && _results.Parent != null) {
+                _results.Parent.SetProperty("scrollTop", _results.Parent.GetProperty("scrollHeight"));
+            }
         }
         #endregion
     }

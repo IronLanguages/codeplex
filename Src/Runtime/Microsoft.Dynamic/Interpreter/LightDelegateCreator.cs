@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         private bool HasClosure {
-            get { return _interpreter != null && _interpreter.Locals.ClosureSize > 0; }
+            get { return _interpreter != null && _interpreter.ClosureSize > 0; }
         }
 
         internal bool HasCompiled {
@@ -143,7 +143,7 @@ namespace Microsoft.Scripting.Interpreter {
                 }
 
                 if (HasClosure) {
-                    _compiled = LightLambdaClosureVisitor.BindLambda(lambda, _interpreter.Locals);
+                    _compiled = LightLambdaClosureVisitor.BindLambda(lambda, _interpreter.ClosureVariables);
                 } else {
                     _compiled = lambda.Compile();
                 }

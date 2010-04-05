@@ -100,6 +100,7 @@ namespace Microsoft.Scripting.Silverlight {
         internal static Uri _HtmlPageUri;
         internal static Uri HtmlPageUri {
             get {
+                if (!HtmlPage.IsEnabled) return new Uri("", UriKind.Relative);
                 if (_HtmlPageUri == null) {
                     _HtmlPageUri = HtmlPage.Document.DocumentUri;
                 }
@@ -132,6 +133,25 @@ namespace Microsoft.Scripting.Silverlight {
         [Obsolete("Use DynamicEngine.CreateRuntimeSetup() instead")]
         public static ScriptRuntimeSetup CreateRuntimeSetup() {
             return DynamicEngine.CreateRuntimeSetup();
+        }
+
+        [Obsolete("Use DynamicEngine.LoadDefaultAssemblies(ScriptRuntime) instead")]
+        public static void LoadDefaultAssemblies(ScriptRuntime runtime) {
+            DynamicEngine.LoadDefaultAssemblies(runtime);
+        }
+
+        [Obsolete("Use DynamicEngine.CreateRuntimeSetup(List<Assembly>) instead")]
+        public static ScriptRuntimeSetup CreateRuntimeSetup(List<Assembly> assemblies) {
+            return DynamicEngine.CreateRuntimeSetup(assemblies);
+        }
+
+        public static StreamResourceInfo XapFile {
+            get { return XapPAL.PAL.CurrentStorageUnit as StreamResourceInfo; }
+            set { XapPAL.PAL.CurrentStorageUnit = value; }
+        }
+
+        public static BrowserVirtualFilesystem VirtualFilesystem {
+            get { return BrowserPAL.PAL.VirtualFilesystem; }
         }
 
         // not really used anymore ...
@@ -314,15 +334,18 @@ namespace Microsoft.Scripting.Silverlight {
         void DynamicApplication_Startup(object sender, StartupEventArgs e) {
             Settings.Parse(InitParams = NormalizeInitParams(e.InitParams));
             ScriptTags = new DynamicScriptTags(LanguagesConfig);
-            XamlScriptTags.Load();
-            LanguagesConfig.DownloadLanguages(AppManifest, () => {
-                ScriptTags.DownloadExternalCode(() => {
-                    Engine = new DynamicEngine();
-                    if (Settings.ConsoleEnabled && LanguagesConfig.LanguagesUsed.Count > 0)
-                        Console = Repl.Show();
-                    LanguageTypeExtensions.Load(Engine.LangConfig);
-                    ScriptTags.Run(Engine);
-                    Engine.Run(Settings.EntryPoint);
+            ScriptTags.DownloadHtmlPage(() => {
+                ScriptTags.FetchScriptTags();
+                XamlScriptTags.Load();
+                LanguagesConfig.DownloadLanguages(AppManifest, () => {
+                    ScriptTags.DownloadExternalCode(() => {
+                        Engine = new DynamicEngine();
+                        if (HtmlPage.IsEnabled && Settings.ConsoleEnabled && LanguagesConfig.LanguagesUsed.Count > 0)
+                            Console = Repl.Show();
+                        LanguageTypeExtensions.Load(Engine.LangConfig);
+                        if (HtmlPage.IsEnabled) ScriptTags.Run(Engine);
+                        Engine.Run(Settings.EntryPoint);
+                    });
                 });
             });
         }
@@ -338,6 +361,11 @@ namespace Microsoft.Scripting.Silverlight {
                 result[pair.Key.Trim()] = pair.Value.Trim();
             }
             return result;
+        }
+
+        internal void HandleException(object sender, Exception e) {
+            if (Settings.ReportUnhandledErrors)
+                OnUnhandledException(this, new ApplicationUnhandledExceptionEventArgs(e, false));
         }
 
         /// <summary>

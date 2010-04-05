@@ -47,9 +47,9 @@ namespace Microsoft.Scripting.Interpreter {
         // negative: default
         internal readonly int _compilationThreshold;
 
-        private readonly LocalVariables _locals;
-        internal readonly int[] _boxedLocals;
+        private readonly int _localCount;
         private readonly Dictionary<LabelTarget, BranchLabel> _labelMapping;
+        private readonly Dictionary<ParameterExpression, LocalVariable> _closureVariables;
 
         private readonly InstructionArray _instructions;
         internal readonly object[] _objects;
@@ -63,8 +63,8 @@ namespace Microsoft.Scripting.Interpreter {
             InstructionArray instructions, ExceptionHandler[] handlers, DebugInfo[] debugInfos, int compilationThreshold) {
 
             _lambda = lambda;
-            _locals = locals;
-            _boxedLocals = locals.GetBoxed();
+            _localCount = locals.LocalCount;
+            _closureVariables = locals.ClosureVariables;
                 
             _instructions = instructions;
             _objects = instructions.Objects;
@@ -76,6 +76,21 @@ namespace Microsoft.Scripting.Interpreter {
             _compilationThreshold = compilationThreshold;
         }
 
+        internal int ClosureSize {
+            get {
+                if (_closureVariables == null) {
+                    return 0;
+                }
+                return _closureVariables.Count;
+            }
+        }
+
+        internal int LocalCount {
+            get {
+                return _localCount;
+            }
+        }
+
         internal bool CompileSynchronously {
             get { return _compilationThreshold <= 1; }
         }
@@ -84,8 +99,8 @@ namespace Microsoft.Scripting.Interpreter {
             get { return _instructions; }
         }
 
-        internal LocalVariables Locals {
-            get { return _locals; } 
+        internal Dictionary<ParameterExpression, LocalVariable> ClosureVariables {
+            get { return _closureVariables; } 
         }
 
         internal Dictionary<LabelTarget, BranchLabel> LabelMapping {

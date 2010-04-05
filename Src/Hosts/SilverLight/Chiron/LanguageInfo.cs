@@ -76,8 +76,8 @@ namespace Chiron {
 
             foreach (XmlElement elem in ((XmlElement)section).GetElementsByTagName("Language")) {
                 var external = elem.GetAttribute("external");
-                if (Chiron.ExternalUrlPrefix != null) {
-                    external = string.Format("{0}{1}", Chiron.ExternalUrlPrefix, external);
+                if (Chiron.UrlPrefix != null) {
+                    external = string.Format("{0}{1}", Chiron.UrlPrefix, external);
                 }
 
                 LanguageInfo info = new LanguageInfo(

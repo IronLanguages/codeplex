@@ -59,7 +59,7 @@ namespace Microsoft.Scripting.Interpreter {
 
         internal InterpretedFrame(Interpreter interpreter, StrongBox<object>[] closure) {
             Interpreter = interpreter;
-            StackIndex = interpreter.Locals.LocalCount;
+            StackIndex = interpreter.LocalCount;
             Data = new object[StackIndex + interpreter.Instructions.MaxStackDepth];
 
             int c = interpreter.Instructions.MaxContinuationDepth;
@@ -68,14 +68,6 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             Closure = closure;
-        }
-
-        internal void BoxLocals() {
-            var boxedLocals = Interpreter._boxedLocals;
-            for (int i = 0; i < boxedLocals.Length; i++) {
-                int index = boxedLocals[i];
-                Data[index] = new StrongBox<object>(Data[index]);
-            }
         }
 
         public DebugInfo GetDebugInfo(int instructionIndex) {
@@ -105,7 +97,7 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         internal void SetStackDepth(int depth) {
-            StackIndex = Interpreter.Locals.LocalCount + depth;
+            StackIndex = Interpreter.LocalCount + depth;
         }
 
         public object Peek() {
@@ -186,9 +178,6 @@ namespace Microsoft.Scripting.Interpreter {
             var currentFrame = InterpretedFrame.CurrentFrame.GetStorageInfo();
             _parent = currentFrame.Value;
             currentFrame.Value = this;
-            if (Interpreter._boxedLocals != null) {
-                BoxLocals();
-            }
             return currentFrame;
         }
 

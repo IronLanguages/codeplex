@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Interpreter {
         /// <summary>
         /// Local variable mapping.
         /// </summary>
-        private readonly LocalVariables _locals;
+        private readonly Dictionary<ParameterExpression, LocalVariable> _closureVars;
 
         /// <summary>
         /// The variable that holds onto the StrongBox{object}[] closure from
@@ -54,10 +54,10 @@ namespace Microsoft.Scripting.Interpreter {
         /// </summary>
         private readonly Stack<HashSet<ParameterExpression>> _shadowedVars = new Stack<HashSet<ParameterExpression>>();
 
-        private LightLambdaClosureVisitor(LocalVariables locals, ParameterExpression closureArray) {
-            Assert.NotNull(locals, closureArray);
+        private LightLambdaClosureVisitor(Dictionary<ParameterExpression, LocalVariable> closureVariables, ParameterExpression closureArray) {
+            Assert.NotNull(closureVariables, closureArray);
             _closureArray = closureArray;
-            _locals = locals;
+            _closureVars = closureVariables;
         }
 
         /// <summary>
@@ -65,12 +65,12 @@ namespace Microsoft.Scripting.Interpreter {
         /// used to bind the lambda to a closure array from the interpreter.
         /// </summary>
         /// <param name="lambda">The lambda to bind.</param>
-        /// <param name="locals">Local variables.</param>
+        /// <param name="closureVariables">Variables which are being accessed defined in the outer scope.</param>
         /// <returns>A delegate that can be called to produce a delegate bound to the passed in closure array.</returns>
-        internal static Func<StrongBox<object>[], Delegate> BindLambda(LambdaExpression lambda, LocalVariables locals) {
+        internal static Func<StrongBox<object>[], Delegate> BindLambda(LambdaExpression lambda, Dictionary<ParameterExpression, LocalVariable> closureVariables) {
             // 1. Create rewriter
             var closure = Expression.Parameter(typeof(StrongBox<object>[]), "closure");
-            var visitor = new LightLambdaClosureVisitor(locals, closure);
+            var visitor = new LightLambdaClosureVisitor(closureVariables, closure);
 
             // 2. Visit the lambda
             lambda = (LambdaExpression)visitor.Visit(lambda);
@@ -197,7 +197,7 @@ namespace Microsoft.Scripting.Interpreter {
             }
 
             LocalVariable loc;
-            if (!_locals.TryGetLocal(variable, out loc)) {
+            if (!_closureVars.TryGetValue(variable, out loc)) {
                 throw new InvalidOperationException("unbound variable: " + variable.Name);
             }
 

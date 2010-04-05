@@ -20,9 +20,12 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Silverlight;
 using System;
 using System.Dynamic;
+using Microsoft.Scripting.Utils;
 
 [assembly: ExtensionType(typeof(HtmlDocument), typeof(HtmlDocumentExtension))]
 [assembly: ExtensionType(typeof(HtmlElement), typeof(HtmlElementExtension))]
+[assembly: ExtensionType(typeof(HtmlObject), typeof(HtmlObjectExtension))]
+[assembly: ExtensionType(typeof(ScriptObject), typeof(ScriptObjectExtension))]
 [assembly: ExtensionType(typeof(FrameworkElement), typeof(FrameworkElementExtension))]
 
 namespace Microsoft.Scripting.Silverlight {
@@ -56,11 +59,28 @@ namespace Microsoft.Scripting.Silverlight {
     public static class HtmlDocumentExtension {
         [SpecialName]
         public static object GetBoundMember(HtmlDocument doc, string name) {
-            HtmlElement result = doc.GetElementById(name);
-            if (result == null) {
-                return OperationFailed.Value;
-            }
-            return result;
+            return (object)doc.GetElementById(name) ??
+                HtmlElementExtension.GetBoundMember(doc.DocumentElement, name);
+        }
+
+        [SpecialName]
+        public static void SetMember(HtmlDocument doc, string name, object value) {
+            HtmlElementExtension.SetMember(doc.DocumentElement, name, value);
+        }
+    }
+
+    /// <summary>
+    /// Injects properties for getting/setting the attributes of HtmlWindow
+    /// </summary>
+    public static class HtmlWindowExtension {
+        [SpecialName]
+        public static object GetBoundMember(HtmlWindow win, string name) {
+            return HtmlObjectExtension.GetBoundMember(win, name);
+        }
+
+        [SpecialName]
+        public static void SetMember(HtmlWindow win, string name, object value) {
+            HtmlObjectExtension.SetMember(win, name, value);
         }
     }
 
@@ -69,14 +89,103 @@ namespace Microsoft.Scripting.Silverlight {
     /// </summary>
     public static class HtmlElementExtension {
         [SpecialName]
-        public static object GetBoundMember(HtmlElement element, string name) {
-            return element.GetProperty(name);
+        public static object GetBoundMember(HtmlObject obj, string name) {
+            return HtmlObjectExtension.GetBoundMember(obj, name);
         }
 
-        // TODO: should this be SetMemberAfter?
         [SpecialName]
-        public static void SetMember(HtmlElement element, string name, string value) {
-            element.SetProperty(name, value);
+        public static void SetMember(HtmlObject obj, string name, object value) {
+            HtmlObjectExtension.SetMember(obj, name, value);
+        }
+    }
+
+    public static class HtmlObjectExtension {
+        [SpecialName]
+        public static object GetBoundMember(HtmlObject obj, string name) {
+            if (name == "events" || name == "Events") {
+                return Events(obj);
+            }
+            return ScriptObjectExtension.GetBoundMember(obj, name);
+        }
+
+        [SpecialName]
+        public static void SetMember(HtmlObject obj, string name, object value) {
+            ScriptObjectExtension.SetMember(obj, name, value);
+        }
+
+        public static DynamicHtmlEvents Events(HtmlObject obj) {
+            return new DynamicHtmlEvents(obj);
+        }
+    }
+
+    public static class ScriptObjectExtension {
+        [SpecialName]
+        public static object GetBoundMember(ScriptObject obj, string name) {
+            return obj.GetProperty(name);
+        }
+
+        [SpecialName]
+        public static void SetMember(ScriptObject obj, string name, object value) {
+            obj.SetProperty(name, value);
+        }
+
+        [SpecialName]
+        public static object Invoke(ScriptObject obj, params object[] args) {
+            return obj.InvokeSelf(args);
+        }
+    }
+
+    public class DynamicHtmlEvents {
+
+        private HtmlObject _obj;
+
+        internal DynamicHtmlEvents(HtmlObject obj) {
+            _obj = obj;
+        }
+
+        [SpecialName]
+        public static object GetBoundMember(DynamicHtmlEvents events, string name) {
+            return new DynamicHtmlEvent(events._obj, name);
+        }
+
+        [SpecialName]
+        public static void SetMember(DynamicHtmlEvents events, string name, object value) {
+            // no-op
+        }
+    }
+
+    public class DynamicHtmlEvent {
+        
+        private readonly HtmlObject _object;
+        private readonly string _name;
+
+        internal DynamicHtmlEvent(HtmlObject obj, string name) {
+            _object = obj;
+            _name = name;
+        }
+
+        public static DynamicHtmlEvent operator +(DynamicHtmlEvent @event, object func) {
+            var handler = DynamicApplication.Current.Engine.Engine.Operations.ConvertTo<EventHandler<HtmlEventArgs>>(func);
+            @event.Add(handler);
+            return @event;
+        }
+
+        public static DynamicHtmlEvent operator +(DynamicHtmlEvent @event, EventHandler handler) {
+            @event.Add(handler);
+            return @event;
+        }
+
+        public static DynamicHtmlEvent operator +(DynamicHtmlEvent @event, EventHandler<HtmlEventArgs> handler) {
+            @event.Add(handler);
+            return @event;
+        }
+
+        private void Add(EventHandler handler) {
+            _object.AttachEvent(_name, handler);
+        }
+
+        private void Add(EventHandler<HtmlEventArgs> handler) {
+            _object.AttachEvent(_name, handler);
         }
     }
 
@@ -86,11 +195,7 @@ namespace Microsoft.Scripting.Silverlight {
     public static class FrameworkElementExtension {
         [SpecialName]
         public static object GetBoundMember(FrameworkElement element, string name) {
-            object result = element.FindName(name);
-            if (result == null) {
-                return OperationFailed.Value;
-            }
-            return result;
+            return (object) element.FindName(name) ?? OperationFailed.Value;
         }
     }
     #endregion
