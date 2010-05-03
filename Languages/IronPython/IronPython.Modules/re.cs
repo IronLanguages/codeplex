@@ -1214,6 +1214,13 @@ namespace IronPython.Modules {
                 return buf.ToString();
             }
 
+#if !CLR2
+            MmapModule.mmap mmapFile = str as MmapModule.mmap;
+            if (mmapFile != null) {
+                return mmapFile.GetSearchString();
+            }
+#endif
+
             throw PythonOps.TypeError("expected string for parameter '{0}' but got '{1}'", param, PythonOps.GetPythonTypeName(str));
         }
 

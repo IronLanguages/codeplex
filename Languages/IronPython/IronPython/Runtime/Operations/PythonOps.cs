@@ -1217,8 +1217,17 @@ namespace IronPython.Runtime.Operations {
             return v;
         }
 
-        public static void FixSlice(int length, object start, object stop, object step,
-                                    out int ostart, out int ostop, out int ostep, out int ocount) {
+        public static long FixSliceIndex(long v, long len) {
+            if (v < 0) v = len + v;
+            if (v < 0) return 0;
+            if (v > len) return len;
+            return v;
+        }
+
+        public static void FixSlice(
+            int length, object start, object stop, object step,
+            out int ostart, out int ostop, out int ostep
+        ) {
             if (step == null) {
                 ostep = 1;
             } else {
@@ -1255,9 +1264,50 @@ namespace IronPython.Runtime.Operations {
                     ostop = ostep > 0 ? length : length - 1;
                 }
             }
+        }
 
-            ocount = ostep > 0 ? (ostop - ostart + ostep - 1) / ostep
-                               : (ostop - ostart + ostep + 1) / ostep;
+        public static void FixSlice(
+            long length, long? start, long? stop, long? step,
+            out long ostart, out long ostop, out long ostep, out long ocount
+        ) {
+            if (step == null) {
+                ostep = 1;
+            } else if (step == 0) {
+                throw PythonOps.ValueError("step cannot be zero");
+            } else {
+                ostep = step.Value;
+            }
+
+            if (start == null) {
+                ostart = ostep > 0 ? 0 : length - 1;
+            } else {
+                ostart = start.Value;
+                if (ostart < 0) {
+                    ostart += length;
+                    if (ostart < 0) {
+                        ostart = ostep > 0 ? Math.Min(length, 0) : Math.Min(length - 1, -1);
+                    }
+                } else if (ostart >= length) {
+                    ostart = ostep > 0 ? length : length - 1;
+                }
+            }
+
+            if (stop == null) {
+                ostop = ostep > 0 ? length : -1;
+            } else {
+                ostop = stop.Value;
+                if (ostop < 0) {
+                    ostop += length;
+                    if (ostop < 0) {
+                        ostop = ostep > 0 ? Math.Min(length, 0) : Math.Min(length - 1, -1);
+                    }
+                } else if (ostop >= length) {
+                    ostop = ostep > 0 ? length : length - 1;
+                }
+            }
+
+            ocount = Math.Max(0, ostep > 0 ? (ostop - ostart + ostep - 1) / ostep
+                                           : (ostop - ostart + ostep + 1) / ostep);
         }
 
         public static int FixIndex(int v, int len) {

@@ -835,7 +835,11 @@ for k, v in toError.iteritems():
             internal const int ERROR_NESTING_NOT_ALLOWED = 215;
             internal const int ERROR_NOT_ENOUGH_QUOTA = 1816;
 
+            // These map to POSIX errno 22 and are added by hand as needed.
+            internal const int ERROR_INVALID_PARAMETER = 87;
             internal const int ERROR_INVALID_NAME = 123;
+            internal const int ERROR_FILE_INVALID = 1006;
+            internal const int ERROR_MAPPED_ALIGNMENT = 1132;
         }
 
         public partial class _UnicodeDecodeError : BaseException {

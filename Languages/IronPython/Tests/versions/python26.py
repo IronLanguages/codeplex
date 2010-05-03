@@ -17,6 +17,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from iptest.assert_util import *
+import os
 
 
 def test_class_decorators():
@@ -884,7 +885,6 @@ def test_pep19546():
                     (0o17777777777, "0b1111111111111111111111111111111", "0o17777777777"),
                     ]
     for val, bin_exp, oct_exp in test_cases:
-        print(val)
         AreEqual(bin(val), bin_exp)
         AreEqual(fb_oct(val), oct_exp)
         
@@ -1033,7 +1033,6 @@ def test_generatorexit():
     
 
 def test_nt_environ_clear_unsetenv():
-    import os
     bak = eval(str(os.environ))
     os.environ["BLAH"] = "BLAH"
     magic_command = "echo %BLAH%"
@@ -1058,6 +1057,156 @@ def test_socket_error_inheritance():
     import socket
     e = socket.error()
     Assert(isinstance(e, IOError))
-        
+
+
+##mmap#######################################################################
+# These should be added to CPython's test_mmap.py when merging
+if is_net40 or not is_cli:
+    import mmap, gc
+    PAGESIZE = mmap.PAGESIZE
+
+    # use str() to get around unicode_literals
+    TESTFN = str('testfile.tmp')
+    a = str("a")
+    b = str("b")
+    c = str("c")
+
+    def force_gc_collect():
+        import gc
+        for i in xrange(10):
+            gc.collect()
+
+    def mmap_tearDown():
+        force_gc_collect()
+        try:
+            os.unlink(TESTFN)
+        except OSError:
+            pass
+
+    def test_mmap_move_large():
+        P5 = PAGESIZE * 5
+        P10 = PAGESIZE * 10
+
+        f = open(TESTFN, 'w+')
+
+        f.write(a * P5)
+        f.write(b * P5)
+        f.flush()
+
+        try:
+            m = mmap.mmap(f.fileno(), P10)
+        finally:
+            f.close()
+
+        try:
+            # non-overlapping move
+            src = P5 + 301
+            dest = 153
+            length = PAGESIZE + 179
+            m[src] = c
+            m.move(dest, src, length)
+            AreEqual(m.find(c), dest)
+            AreEqual(m.find(b), dest + 1)
+            AreEqual(m.find(a, dest), dest + length)
+            AreEqual(m.rfind(c), src)
+            AreEqual(m.rfind(c, 0, src), dest)
+
+            m.write(a * P5)
+            m.write(b * P5)
+            m.seek(0)
+
+            # overlapping forward move
+            a_span = 117
+            src = P5 - a_span
+            dest = P5 + 289
+            length = PAGESIZE + 158
+            m[src] = c
+            m.move(dest, src, length)
+            AreEqual(m.find(c), src)
+            AreEqual(m.find(b), src + a_span)
+            AreEqual(m.find(c, src + 1), dest)
+            AreEqual(m.find(a, dest), dest + 1)
+            AreEqual(m.find(b, dest), dest + a_span)
+            AreEqual(m.find(a, dest + a_span), -1)
+
+            m.write(a * P5)
+            m.write(b * P5)
+            m.seek(0)
+
+            # overlapping backward move
+            a_span = 131
+            src = P5 - a_span
+            dest = src - a_span - 60
+            length = PAGESIZE + 267
+            m[src] = c
+            m.move(dest, src, length)
+            AreEqual(m.find(c), dest)
+            AreEqual(m.find(b), dest + a_span)
+            AreEqual(m.find(c, dest + 1), -1)
+            AreEqual(m.find(a, dest + a_span), -1)
+
+        finally:
+            m.close()
+
+        mmap_tearDown();
+
+    def test_mmap_find_large():
+        P10 = PAGESIZE * 10
+        P11 = PAGESIZE * 11
+        f = open(TESTFN, 'w+')
+        try:
+            f.write((P10 - 1) * '\0')
+            f.write('foofoo')
+            f.write('\0' * PAGESIZE)
+            f.write('foo')
+            f.flush()
+            m = mmap.mmap(f.fileno(), P11 + 8)
+            f.close()
+
+            AreEqual(m.find('foo'), P10 - 1)
+            AreEqual(m.find('foo', P10 - 1), P10 - 1)
+            AreEqual(m.find('foo', P10), P10 + 2)
+            AreEqual(m.find('foo', P10 + 173), P11 + 5)
+            AreEqual(m.find('foo', P10 + 173, P11 + 7), -1)
+
+        finally:
+            m.close()
+            try:
+                f.close()
+            except OSError:
+                pass
+
+        mmap_tearDown()
+
+    def test_mmap_rfind_large():
+        P10 = PAGESIZE * 10
+        P11 = PAGESIZE * 11
+        f = open(TESTFN, 'w+')
+        try:
+            f.write((P10 - 1) * '\0')
+            f.write('foofoo')
+            f.write('\0' * PAGESIZE)
+            f.write('foo')
+            f.flush()
+            m = mmap.mmap(f.fileno(), P11 + 8)
+            f.close()
+
+            AreEqual(m.rfind('foo'), P11 + 5)
+            AreEqual(m.rfind('foo', 651, P11 - 117), P10 + 2)
+            AreEqual(m.rfind('foo', 475, P10 + 5), P10 + 2)
+            AreEqual(m.rfind('foo', 475, P10 + 4), P10 - 1)
+            AreEqual(m.rfind('foo', P10 + 4, P11 + 7), -1)
+            AreEqual(m.rfind('foo', P10 + 4), P11 + 5)
+
+        finally:
+            m.close()
+            try:
+                f.close()
+            except OSError:
+                pass
+
+        mmap_tearDown()
+
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

@@ -324,6 +324,7 @@
     <Compile Include="Runtime\PythonModuleAttribute.cs" />
     <Compile Include="Runtime\PythonTypeAttribute.cs" />
     <Compile Include="Runtime\RuntimeVariablesDictionaryStorage.cs" />
+    <Compile Include="Runtime\SetStorage.cs" />
     <Compile Include="Runtime\SiteLocalStorage.cs" />
     <Compile Include="Runtime\StringFormatSpec.cs" />
     <Compile Include="Runtime\Types\BuiltinFunction.Generated.cs" />

@@ -57,13 +57,11 @@ namespace IronPython.Runtime {
         }
 
         public void indices(int len, out int ostart, out int ostop, out int ostep) {
-            int count;
-            PythonOps.FixSlice(len, _start, _stop, _step, out ostart, out ostop, out ostep, out count);
+            PythonOps.FixSlice(len, _start, _stop, _step, out ostart, out ostop, out ostep);
         }
 
         public void indices(object len, out int ostart, out int ostop, out int ostep) {
-            int count;
-            PythonOps.FixSlice(Converter.ConvertToIndex(len), _start, _stop, _step, out ostart, out ostop, out ostep, out count);
+            PythonOps.FixSlice(Converter.ConvertToIndex(len), _start, _stop, _step, out ostart, out ostop, out ostep);
         }
 
         public PythonTuple __reduce__() {
@@ -121,6 +119,11 @@ namespace IronPython.Runtime {
         #region Internal Implementation details
 
         internal static void FixSliceArguments(int size, ref int start, ref int stop) {
+            start = start < 0 ? 0 : start > size ? size : start;
+            stop = stop < 0 ? 0 : stop > size ? size : stop;
+        }
+
+        internal static void FixSliceArguments(long size, ref long start, ref long stop) {
             start = start < 0 ? 0 : start > size ? size : start;
             stop = stop < 0 ? 0 : stop > size ? size : stop;
         }

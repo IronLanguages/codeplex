@@ -20,6 +20,7 @@ using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -419,7 +420,7 @@ namespace IronPython.Modules {
                         if (ps.StackType == StackType.Tuple) {
                             res = PythonTuple.Make(res);
                         } else if (ps.StackType == StackType.FrozenSet) {
-                            res = FrozenSetCollection.Make(res);
+                            res = FrozenSetCollection.Make(TypeCache.FrozenSet, res);
                         }
 
                         if (_stack.Count > 0) {
@@ -526,7 +527,7 @@ namespace IronPython.Modules {
                         curStack.StackCount--;
                         if (curStack.StackCount == 0) {
                             _stack.Pop();
-                            object frozenSet = FrozenSetCollection.Make(ofs);
+                            object frozenSet = FrozenSetCollection.Make(TypeCache.FrozenSet, ofs);
                             if (_stack.Count == 0) {
                                 _result = frozenSet;
                             }

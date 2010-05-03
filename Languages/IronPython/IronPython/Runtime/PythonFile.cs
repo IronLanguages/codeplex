@@ -824,6 +824,14 @@ namespace IronPython.Runtime {
 
         public PythonFile GetFileFromId(PythonContext context, int id) {
             PythonFile pf;
+            if (!TryGetFileFromId(context, id, out pf)) {
+                throw PythonOps.OSError("Bad file descriptor");
+            }
+
+            return pf;
+        }
+
+        public bool TryGetFileFromId(PythonContext context, int id, out PythonFile pf) {
             switch (id) {
                 case 0:
                     pf = (context.GetSystemStateValue("__stdin__") as PythonFile);
@@ -839,10 +847,7 @@ namespace IronPython.Runtime {
                     break;
             }
 
-            if (pf == null) {
-                throw PythonOps.OSError("Bad file descriptor");
-            }
-            return pf;
+            return pf != null;
         }
 
         public object GetObjectFromId(PythonContext context, int id) {
@@ -1474,7 +1479,7 @@ namespace IronPython.Runtime {
             lock (this) {
                 FileStream fs = _stream as FileStream;
                 if (fs != null) {
-                    if (_mode.Contains("w")) {
+                    if (fs.CanWrite) {
                         fs.SetLength(size);
                     } else {
                         throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 13, "Permission denied");

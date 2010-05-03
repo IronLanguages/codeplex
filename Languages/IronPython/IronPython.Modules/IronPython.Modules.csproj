@@ -141,6 +141,7 @@
     <Compile Include="cmath.cs" />
     <Compile Include="NativeSignal.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="mmap.cs" />
     <Compile Include="signal.cs" />
     <Compile Include="_codecs.cs" />
     <Compile Include="ModuleOps.cs" />
