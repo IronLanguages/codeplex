@@ -220,12 +220,40 @@ class BlockReplacer:
         startIndex = text.find(self.start)
         if startIndex != -1:
             origStart = startIndex
-            # search backwards and fine the new line...
-            while startIndex > 0 and text[startIndex] != '\n':
-                startIndex = startIndex - 1
-            startIndex = startIndex + 1
+            # go to the beginning of the line on which self.start appears
+            startIndex = text.rfind('\n', 0, startIndex) + 1
             
-            endIndex = text.find(self.end, startIndex)
+            # Some simple parsing logic that allows us to use regions within
+            # our generated code
+            if self.end == '#endregion':
+                start = origStart + len(self.start)
+                regionIndex = -1
+                endregionIndex = -1
+                count = 0 # number of '#region' encountered minus '#endregion'
+                while True:
+                    regionIndex = text.find('#region', start)
+                    endregionIndex = text.find('#endregion', start)
+                    if (endregionIndex >= 0 and
+                        (endregionIndex < regionIndex or regionIndex == -1)):
+                        if count == 0:
+                            endIndex = endregionIndex
+                            break
+                        else:
+                            count -= 1
+                            start = endregionIndex + len("#endregion")
+                            continue
+                    if (regionIndex >= 0 and
+                        (regionIndex < endregionIndex or endregionIndex == -1)):
+                        count += 1
+                        start = regionIndex + len("#region")
+                        continue
+                    if regionIndex == -1 and endregionIndex == -1:
+                        # occurrences of '#region' outnumber #endregion"
+                        endIndex = -1
+                        break
+            else:
+                endIndex = text.find(self.end, startIndex)
+                
             if endIndex != -1:
                 indent = text[startIndex:origStart]
                 return (indent, startIndex, endIndex+len(self.end))

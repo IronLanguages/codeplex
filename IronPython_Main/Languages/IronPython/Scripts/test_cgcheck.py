@@ -32,6 +32,7 @@ def test_main(level='full'):
         'generate_math', 
         'generate_ops',
         'generate_reflected_calls',
+        'generate_set',
         'generate_walker',
         'generate_typecache',
         'generate_tree',

@@ -588,14 +588,15 @@ namespace IronPython.Runtime {
             }
 
             int res;
-            ISet pairs = new FrozenSetCollection();
+            SetStorage pairs = new SetStorage();
             foreach (KeyValuePair<object, object> kvp in _storage.GetItems()) {
-                pairs.PrivAdd(PythonTuple.MakeTuple(kvp.Key, kvp.Value));
+                pairs.AddNoLock(PythonTuple.MakeTuple(kvp.Key, kvp.Value));
             }
 
             CompareUtil.Push(this);
             try {
-                res = pairs.GetHashCode(comparer);
+                IStructuralEquatable eq = FrozenSetCollection.Make(TypeCache.FrozenSet, pairs);
+                res = eq.GetHashCode(comparer);
             } finally {
                 CompareUtil.Pop(this);
             }

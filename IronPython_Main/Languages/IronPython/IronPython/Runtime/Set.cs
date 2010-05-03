@@ -28,282 +28,38 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
-
-    /// <summary>
-    /// Common interface shared by both Set and FrozenSet
-    /// </summary>
-    public interface ISet : IEnumerable, IEnumerable<object>, ICollection, IStructuralEquatable, ICodeFormattable
-#if CLR2
-        , IValueEquality
-#endif
-    {
-        int __len__();
-        bool __contains__(object value);
-        PythonTuple __reduce__();
-
-        // private methods used for operations between set types.
-        void PrivAdd(object adding);
-        void PrivRemove(object removing);
-        void SetData(IEnumerable set);
-
-        #region NonOperator Operations
-
-        bool isdisjoint(object s); 
-        bool issubset(object set);
-        bool issuperset(object set);
-
-        ISet union();
-        ISet union(object s);
-        ISet union([NotNull] params object[] ss);
-
-        ISet intersection();
-        ISet intersection(object s);
-        ISet intersection([NotNull] params object[] ss);
-
-        ISet difference();
-        ISet difference(object s);
-        ISet difference([NotNull] params object[] ss);
-
-        ISet symmetric_difference(object s);
-
-        #endregion
-    }
-
-    /// <summary>
-    /// Contains common set functionality between set and frozenSet
-    /// </summary>
-    static class SetHelpers {
-        public static string SetToString(CodeContext/*!*/ context, object set, CommonDictionaryStorage items) {
-            string setTypeStr;
-            Type setType = set.GetType();
-            if (setType == typeof(SetCollection)) {
-                setTypeStr = "set";
-            } else if (setType == typeof(FrozenSetCollection)) {
-                setTypeStr = "frozenset";
-            } else {
-                setTypeStr = PythonTypeOps.GetName(set);
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.Append(setTypeStr);
-            sb.Append("([");
-            string comma = "";
-            foreach (object o in items.GetKeys()) {
-                sb.Append(comma);
-                sb.Append(PythonOps.Repr(context, o));
-                comma = ", ";
-            }
-            sb.Append("])");
-
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// Creates a set that can be hashable.  If the set is currently a FrozenSet the
-        /// set is returned.  If the set is a normal Set then a FrozenSet is returned
-        /// with its contents.
-        /// </summary>
-        /// <param name="o"></param>
-        /// <returns></returns>
-        public static object GetHashableSetIfSet(object o) {
-            SetCollection asSet = o as SetCollection;
-            if (asSet != null) {
-                if (asSet.GetType() != typeof(SetCollection)) {
-                    // subclass of set, need to check if it is hashable
-                    if (IsHashable(asSet)) {
-                        return o;
-                    }
-                }
-                return FrozenSetCollection.Make(((IEnumerable)asSet).GetEnumerator());
-            }
-            return o;
-        }
-
-        private static bool IsHashable(SetCollection asSet) {
-            PythonTypeSlot pts;
-            PythonType pt = DynamicHelpers.GetPythonType(asSet);
-            object slotValue;
-
-            return pt.TryResolveSlot(DefaultContext.Default, "__hash__", out pts) &&
-                   pts.TryGetValue(DefaultContext.Default, asSet, pt, out slotValue) && slotValue != null;
-        }
-
-        public static ISet MakeSet(object setObj) {
-            Type t = setObj.GetType();
-            if (t == typeof(SetCollection)) {
-                return new SetCollection();
-            } else if (t == typeof(FrozenSetCollection)) {
-                return new FrozenSetCollection();
-            } else {
-                // subclass                
-                PythonType dt = DynamicHelpers.GetPythonType(setObj);
-
-                ISet set = PythonCalls.Call(dt) as ISet;
-                Debug.Assert(set != null);
-
-                return set;
-            }
-        }
-
-        public static ISet MakeSet(object setObj, ISet set) {
-            Type t = setObj.GetType();
-            if (t == typeof(SetCollection)) {
-                return new SetCollection(set);
-            } else if (t == typeof(FrozenSetCollection)) {
-                return new FrozenSetCollection(set);
-            } else {
-                // subclass                
-                PythonType dt = DynamicHelpers.GetPythonType(setObj);
-
-                ISet res = PythonCalls.Call(dt) as ISet;
-
-                Debug.Assert(res != null);
-                res.SetData(set);
-                return res;
-            }
-        }
-
-        public static ISet Intersection(ISet x, object y) {
-            ISet res = SetHelpers.MakeSet(x);
-
-            IEnumerator ie = PythonOps.GetEnumerator(y);
-            while (ie.MoveNext()) {
-                if (x.__contains__(ie.Current))
-                    res.PrivAdd(ie.Current);
-            }
-            return res;
-        }
-
-        public static ISet Difference(ISet x, object y) {
-            ISet res = SetHelpers.MakeSet(x, x);
-
-            IEnumerator ie = PythonOps.GetEnumerator(y);
-            while (ie.MoveNext()) {
-                if (res.__contains__(ie.Current)) {
-                    res.PrivRemove(ie.Current);
-                }
-            }
-            return res;
-        }
-
-        public static ISet SymmetricDifference(ISet x, object y) {
-            SetCollection otherSet = new SetCollection(PythonOps.GetEnumerator(y));       //make a set to deal w/ dups in the enumerator
-            ISet res = SetHelpers.MakeSet(x, x) as ISet;
-            Debug.Assert(res != null);
-
-            foreach (object o in otherSet) {
-                if (res.__contains__(o)) {
-                    res.PrivRemove(o);
-                } else {
-                    res.PrivAdd(o);
-                }
-            }
-            return res;
-        }
-
-        public static ISet Union(ISet x, object y) {
-            ISet set = SetHelpers.MakeSet(x, x);
-            IEnumerator ie = PythonOps.GetEnumerator(y);
-            while (ie.MoveNext()) {
-                set.PrivAdd(ie.Current);
-            }
-            return set;
-        }
-
-        public static bool IsSubset(ISet x, object y) {
-            ISet set = y as ISet;
-            if (set == null) {
-                set = new SetCollection(PythonOps.GetEnumerator(y));
-            }
-
-            return IsSubset(x, set, false);
-        }
-
-        public static bool IsSuperset(ISet x, object y) {
-            ISet set = y as ISet;
-            if (set == null) {
-                set = new SetCollection(PythonOps.GetEnumerator(y));
-            }
-
-            return IsSubset(set, x, false);
-        }
-
-        public static bool IsSubset(ISet x, ISet y, bool strict) {
-            if (x.Count > y.Count || strict && x.Count == y.Count) {
-                return false;
-            }
-            foreach (object o in x) {
-                if (!y.__contains__(o)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        public static PythonTuple Reduce(CommonDictionaryStorage items, PythonType type) {
-            object[] keys = new object[items.Count];
-            int i = 0;
-            foreach (object key in items.GetKeys()) {
-                keys[i++] = key;
-            }
-            return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(List.FromArrayNoCopy(keys)), null);
-        }
-
-        public static bool Equals(ISet x, ISet y, IEqualityComparer comparer) {
-            if (x.Count != y.Count) {
-                return false;
-            }
-
-            // optimization when we know the behavior of the comparer
-            if (comparer is PythonContext.PythonEqualityComparer) {
-                foreach (object o in x) {
-                    if (!y.__contains__(o)) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            // slower comparison using comparer
-            List yItems = new List(y.GetEnumerator());
-            foreach (object o in x) {
-                bool found = false;
-                for (int i = 0; i < yItems.Count; i++) {
-                    if (comparer.Equals(o, yItems[i])) {
-                        found = true;
-                        yItems.RemoveAt(i);
-                        break;
-                    }
-                }
-                if (!found) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-
     /// <summary>
     /// Mutable set class
     /// </summary>
     [PythonType("set"), DebuggerDisplay("set, {Count} items", TargetTypeName = "set"), DebuggerTypeProxy(typeof(CollectionDebugProxy))]
-    public class SetCollection : ISet {
-        private CommonDictionaryStorage _items;
+    public class SetCollection : IEnumerable, IEnumerable<object>, ICollection, IStructuralEquatable, ICodeFormattable
+#if CLR2
+        , IValueEquality
+#endif
+ {
+        internal SetStorage _items;
 
-        #region Set contruction
+        #region Set Construction
 
         public void __init__() {
             clear();
         }
 
-        public void __init__(object setData) {
-            CommonDictionaryStorage newStorage = new CommonDictionaryStorage();
+        public void __init__(SetCollection set) {
+            _items = set._items.Clone();
+        }
 
-            IEnumerator ie = PythonOps.GetEnumerator(setData);
-            while (ie.MoveNext()) {
-                object current = ie.Current;
-                newStorage.AddNoLock(current, current);
+        public void __init__(FrozenSetCollection set) {
+            _items = set._items.Clone();
+        }
+
+        public void __init__(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                _items = items.Clone();
+            } else {
+                _items = items;
             }
-            _items = newStorage;
         }
 
         public static object __new__(CodeContext/*!*/ context, PythonType cls) {
@@ -327,321 +83,76 @@ namespace IronPython.Runtime {
         }
 
         public SetCollection() {
-            _items = new CommonDictionaryStorage();
+            _items = new SetStorage();
         }
 
-        internal SetCollection(object setData) {
-            Init(setData);
+        private SetCollection(SetStorage items) {
+            _items = items;
         }
 
-        internal SetCollection(IEnumerator setData) {
-            _items = new CommonDictionaryStorage();
-            while (setData.MoveNext()) {
-                add(setData.Current);
-            }
-        }
-
-        private void Init(params object[] o) {
-            if (o.Length > 1) {
-                throw PythonOps.TypeError("set expected at most 1 arguments, got {0}", o.Length);
-            }
-
-            _items = new CommonDictionaryStorage();
-            if (o.Length != 0) {
-                IEnumerator setData = PythonOps.GetEnumerator(o[0]);
-                while (setData.MoveNext()) {
-                    add(setData.Current);
+        private SetCollection Empty {
+            get {
+                if (this.GetType() == typeof(SetCollection)) {
+                    return new SetCollection();
                 }
+
+                return Make(DynamicHelpers.GetPythonType(this), new SetStorage());
             }
+        }
+
+        private SetCollection Make(SetStorage items) {
+            if (this.GetType() == typeof(SetCollection)) {
+                return new SetCollection(items);
+            }
+
+            return Make(DynamicHelpers.GetPythonType(this), items);
+        }
+
+        private static SetCollection Make(PythonType/*!*/ cls, SetStorage items) {
+            if (cls == TypeCache.Set) {
+                return new SetCollection(items);
+            }
+
+            SetCollection res = PythonCalls.Call(cls) as SetCollection;
+            Debug.Assert(res != null);
+
+            if (items.Count > 0) {
+                res._items = items;
+            }
+            return res;
+        }
+
+        internal static SetCollection Make(PythonType/*!*/ cls, object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = items.Clone();
+            }
+
+            return Make(cls, items);
         }
 
         public SetCollection copy() {
-            return new SetCollection(((IEnumerable)this).GetEnumerator());
+            return Make(_items.Clone());
         }
 
         #endregion
 
-        #region ISet
+        #region Protocol Methods
 
         public int __len__() {
             return Count;
         }
 
-        public bool __contains__(object value) {
-            // promote sets to FrozenSets for contains checks (so we get a hash code)
-            value = SetHelpers.GetHashableSetIfSet(value);
-
-            if (_items.Count == 0) {
-                PythonOps.Hash(DefaultContext.Default, value);    // make sure we have a hashable item
+        public bool __contains__(object item) {
+            if (!SetStorage.GetHashableSetIfSet(ref item)) {
+                // make sure we have a hashable item
+                return _items.ContainsAlwaysHash(item);
             }
-            return _items.Contains(value);
+            return _items.Contains(item);
         }
 
         public PythonTuple __reduce__() {
-            return SetHelpers.Reduce(_items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
-        }
-
-        void ISet.PrivAdd(object adding) {
-            add(adding);
-        }
-
-        void ISet.PrivRemove(object removing) {
-            remove(removing);
-        }
-
-        void ISet.SetData(IEnumerable set) {
-            _items = new CommonDictionaryStorage();
-            foreach (object o in set) {
-                _items.Add(o, o);
-            }
-        }
-
-        #endregion
-
-        #region NonOperator Operations
-
-        public bool isdisjoint(object s) {
-            return SetHelpers.Intersection(this, s).Count == 0;
-        }
-
-        public bool issubset(object set) {
-            return SetHelpers.IsSubset(this, set);
-        }
-
-        public bool issuperset(object set) {
-            return SetHelpers.IsSuperset(this, set);
-        }
-
-        public ISet union() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet union(object s) {
-            return SetHelpers.Union(this, s);
-        }
-
-        public ISet union([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Union(res, s);
-            }
-            return res;
-        }
-
-        public ISet intersection() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet intersection(object s) {
-            return SetHelpers.Intersection(this, s);
-        }
-
-        public ISet intersection([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Intersection(res, s);
-            }
-            return res;
-        }
-
-        public ISet difference() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet difference(object s) {
-            return SetHelpers.Difference(this, s);
-        }
-
-        public ISet difference([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Difference(res, s);
-            }
-            return res;
-        }
-
-        public ISet symmetric_difference(object s) {
-            return SetHelpers.SymmetricDifference(this, s);
-        }
-
-        #endregion
-
-        #region Mutating Members
-
-        /// <summary>
-        /// Appends one IEnumerable to an existing set
-        /// </summary>
-        /// <param name="s"></param>
-        public void update(object s) {
-            if (Object.ReferenceEquals(s, this)) {
-                return;
-            }
-
-            IEnumerator ie = PythonOps.GetEnumerator(s);
-            while (ie.MoveNext()) {
-                add(ie.Current);
-            }
-        }
-
-        /// <summary>
-        /// Appends one or more IEnumerables to an existing set
-        /// </summary>
-        public void update([NotNull] params object[] ss) {
-            foreach (object s in ss) {
-                update(s);
-            }
-        }
-
-        public void add(object o) {
-            _items.Add(o, o);
-        }
-
-        public void intersection_update(object s) {
-            SetCollection set = intersection(s) as SetCollection;
-            _items = set._items;
-        }
-
-        public void intersection_update([NotNull] params object[] ss) {
-            foreach (object s in ss) {
-                intersection_update(s);
-            }
-        }
-
-        public void difference_update(object s) {
-            SetCollection set = new SetCollection(PythonOps.GetEnumerator(s));
-            foreach (object o in set) {
-                if (__contains__(o)) {
-                    remove(o);
-                }
-            }
-        }
-
-        public void difference_update([NotNull] params object[] ss) {
-            foreach (object s in ss) {
-                difference_update(s);
-            }
-        }
-
-        public void symmetric_difference_update(object s) {
-            SetCollection set = new SetCollection(PythonOps.GetEnumerator(s));
-            foreach (object o in set) {
-                if (__contains__(o)) {
-                    remove(o);
-                } else {
-                    add(o);
-                }
-            }
-        }
-
-        public void remove([NotNull]SetCollection o) {
-            var set = SetHelpers.GetHashableSetIfSet(o);
-            if (!_items.RemoveAlwaysHash(set)) {
-                throw PythonOps.KeyError(o);
-            }
-        }
-
-        public void remove(object o) {
-            if (!_items.RemoveAlwaysHash(o)) {
-                throw PythonOps.KeyError(o);
-            }
-        }
-
-        public void discard(object o) {
-            o = SetHelpers.GetHashableSetIfSet(o);
-
-            _items.Remove(o);
-        }
-
-        public object pop() {
-            foreach (object o in _items.GetKeys()) {
-                _items.Remove(o);
-                return o;
-            }
-            throw PythonOps.KeyError("pop from an empty set");
-        }
-
-        public void clear() {
-            _items.Clear();
-        }
-
-        #endregion
-
-        #region Operators
-
-        [SpecialName]
-        public SetCollection InPlaceBitwiseAnd(object s) {
-            ISet set = s as ISet;
-            if (set == null) {
-                throw PythonOps.TypeError("unsupported operand type(s) for &=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
-            }
-
-            intersection_update(set);
-            return this;
-        }
-
-        [SpecialName]
-        public SetCollection InPlaceBitwiseOr(object s) {
-            ISet set = s as ISet;
-            if (set == null) {
-                throw PythonOps.TypeError("unsupported operand type(s) for |=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
-            }
-
-            update(set);
-            return this;
-        }
-
-        [SpecialName]
-        public SetCollection InPlaceSubtract(object s) {
-            ISet set = s as ISet;
-            if (set == null) {
-                throw PythonOps.TypeError("unsupported operand type(s) for -=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
-            }
-
-            difference_update(set);
-            return this;
-        }
-
-        [SpecialName]
-        public SetCollection InPlaceExclusiveOr(object s) {
-            ISet set = s as ISet;
-            if (set == null) {
-                throw PythonOps.TypeError("unsupported operand type(s) for ^=: '{0}' and '{1}'", PythonTypeOps.GetName(s), PythonTypeOps.GetName(this));
-            }
-
-            symmetric_difference_update(set);
-            return this;
-        }
-
-        public static object operator &(ISet y, SetCollection x) {
-            return y.intersection(x);
-        }
-
-        public static object operator |(ISet y, SetCollection x) {
-            return y.union(x);
-        }
-
-        public static object operator ^(ISet y, SetCollection x) {
-            return y.symmetric_difference(x);
-        }
-
-        public static object operator -(ISet y, SetCollection x) {
-            return y.difference(x);
-        }
-
-        public static ISet operator &(SetCollection x, ISet y) {
-            return x.intersection(y);
-        }
-
-        public static ISet operator |(SetCollection x, ISet y) {
-            return x.union(y);
-        }
-
-        public static ISet operator ^(SetCollection x, ISet y) {
-            return x.symmetric_difference(y);
-        }
-
-        public static ISet operator -(SetCollection x, ISet y) {
-            return x.difference(y);
+            return SetStorage.Reduce(_items, TypeCache.Set);
         }
 
         #endregion
@@ -662,7 +173,7 @@ namespace IronPython.Runtime {
 
         public const object __hash__ = null;
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer/*!*/ comparer) {
             if (CompareUtil.Check(this)) {
                 return 0;
             }
@@ -670,7 +181,7 @@ namespace IronPython.Runtime {
             int res;
             CompareUtil.Push(this);
             try {
-                res = ((IStructuralEquatable)new FrozenSetCollection(this)).GetHashCode(comparer);
+                res = ((IStructuralEquatable)new FrozenSetCollection(_items)).GetHashCode(comparer);
             } finally {
                 CompareUtil.Pop(this);
             }
@@ -678,80 +189,648 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        bool IStructuralEquatable.Equals(object other, IEqualityComparer comparer) {
-            ISet set = other as ISet;
-            if (set != null) {
-                return SetHelpers.Equals(this, set, comparer);
-            }
-            return false;
+        bool IStructuralEquatable.Equals(object other, IEqualityComparer/*!*/ comparer) {
+            SetStorage items;
+            return SetStorage.GetItemsIfSet(other, out items) &&
+                SetStorage.Equals(_items, items, comparer);
         }
 
         // default conversion of protocol methods only allows our specific type for equality,
-        // sets can do __eq__ / __ne__ against any type though.  That's why we have a seperate
+        // but sets can do __eq__ / __ne__ against any type. This is why we define a separate
         // __eq__ / __ne__ here.
 
         public bool __eq__(object other) {
-            ISet set = other as ISet;
-            if (set != null) {
-                if (set.Count != Count) {
-                    return false;
-                }
-                return issubset(set);
-            }
-            return false;
+            SetStorage items;
+            return SetStorage.GetItemsIfSet(other, out items) &&
+                _items.Count == items.Count &&
+                _items.IsSubset(items);
         }
 
         public bool __ne__(object other) {
-            return !__eq__(other);
+            SetStorage items;
+            return !SetStorage.GetItemsIfSet(other, out items) ||
+                _items.Count != items.Count ||
+                !_items.IsSubset(items);
         }
 
         #endregion
 
+        #region Mutating Members
+
+        public void add(object item) {
+            _items.Add(item);
+        }
+
+        public void clear() {
+            _items.Clear();
+        }
+
+        public void discard(object item) {
+            SetStorage.GetHashableSetIfSet(ref item);
+
+            _items.Remove(item);
+        }
+
+        public object pop() {
+            object res;
+            if (_items.Pop(out res)) {
+                return res;
+            }
+            throw PythonOps.KeyError("pop from an empty set");
+        }
+
+        public void remove(object item) {
+            bool res;
+            object hashableItem = item;
+            if (SetStorage.GetHashableSetIfSet(ref hashableItem)) {
+                res = _items.Remove(hashableItem);
+            } else {
+                res = _items.RemoveAlwaysHash(hashableItem);
+            }
+
+            if (!res) {
+                throw PythonOps.KeyError(item);
+            }
+        }
+
+        public void update(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return;
+            }
+
+            lock (_items) {
+                _items.UnionUpdate(set._items);
+            }
+        }
+
+        public void update(FrozenSetCollection set) {
+            lock (_items) {
+                _items.UnionUpdate(set._items);
+            }
+        }
+
+        /// <summary>
+        /// Appends an IEnumerable to an existing set
+        /// </summary>
+        public void update(object set) {
+            if (object.ReferenceEquals(set, this)) {
+                return;
+            }
+
+            SetStorage items = SetStorage.GetItems(set);
+            lock (_items) {
+                _items.UnionUpdate(items);
+            }
+        }
+
+        public void update([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+            if (sets.Length == 0) {
+                return;
+            }
+
+            lock (_items) {
+                foreach (object set in sets) {
+                    if (object.ReferenceEquals(set, this)) {
+                        continue;
+                    }
+
+                    _items.UnionUpdate(SetStorage.GetItems(set));
+                }
+            }
+        }
+
+        public void intersection_update(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return;
+            }
+
+            lock (_items) {
+                _items.IntersectionUpdate(set._items);
+            }
+        }
+
+        public void intersection_update(FrozenSetCollection set) {
+            lock (_items) {
+                _items.IntersectionUpdate(set._items);
+            }
+        }
+
+        public void intersection_update(object set) {
+            if (object.ReferenceEquals(set, this)) {
+                return;
+            }
+
+            SetStorage items = SetStorage.GetItems(set);
+            lock (_items) {
+                _items.IntersectionUpdate(items);
+            }
+        }
+
+        public void intersection_update([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+            if (sets.Length == 0) {
+                return;
+            }
+
+            lock (_items) {
+                foreach (object set in sets) {
+                    if (object.ReferenceEquals(set, this)) {
+                        continue;
+                    }
+
+                    _items.IntersectionUpdate(SetStorage.GetItems(set));
+                }
+            }
+        }
+
+        public void difference_update(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                _items.Clear();
+                return;
+            }
+
+            lock (_items) {
+                _items.DifferenceUpdate(set._items);
+            }
+        }
+
+        public void difference_update(FrozenSetCollection set) {
+            lock (_items) {
+                _items.DifferenceUpdate(set._items);
+            }
+        }
+
+        public void difference_update(object set) {
+            if (object.ReferenceEquals(set, this)) {
+                _items.Clear();
+                return;
+            }
+
+            SetStorage items = SetStorage.GetItems(set);
+            lock (_items) {
+                _items.DifferenceUpdate(items);
+            }
+        }
+
+        public void difference_update([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+            if (sets.Length == 0) {
+                return;
+            }
+
+            lock (_items) {
+                foreach (object set in sets) {
+                    if (object.ReferenceEquals(set, this)) {
+                        _items.ClearNoLock();
+                        return;
+                    }
+
+                    _items.DifferenceUpdate(SetStorage.GetItems(set));
+                }
+            }
+        }
+
+        public void symmetric_difference_update(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                _items.Clear();
+                return;
+            }
+
+            lock (_items) {
+                _items.SymmetricDifferenceUpdate(set._items);
+            }
+        }
+
+        public void symmetric_difference_update(FrozenSetCollection set) {
+            lock (_items) {
+                _items.SymmetricDifferenceUpdate(set._items);
+            }
+        }
+
+        public void symmetric_difference_update(object set) {
+            if (object.ReferenceEquals(set, this)) {
+                _items.Clear();
+                return;
+            }
+
+            SetStorage items = SetStorage.GetItems(set);
+            lock (_items) {
+                _items.SymmetricDifferenceUpdate(items);
+            }
+        }
+
+        #endregion
+
+        #region Generated NonOperator Operations (SetCollection)
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_setops from: generate_set.py
+
+        public bool isdisjoint(SetCollection set) {
+            return _items.IsDisjoint(set._items);
+        }
+
+        public bool isdisjoint(FrozenSetCollection set) {
+            return _items.IsDisjoint(set._items);
+        }
+
+        public bool isdisjoint(object set) {
+            return _items.IsDisjoint(SetStorage.GetItems(set));
+        }
+
+        public bool issubset(SetCollection set) {
+            return _items.IsSubset(set._items);
+        }
+
+        public bool issubset(FrozenSetCollection set) {
+            return _items.IsSubset(set._items);
+        }
+
+        public bool issubset(object set) {
+            return _items.IsSubset(SetStorage.GetItems(set));
+        }
+
+        public bool issuperset(SetCollection set) {
+            return set._items.IsSubset(_items);
+        }
+
+        public bool issuperset(FrozenSetCollection set) {
+            return set._items.IsSubset(_items);
+        }
+
+        public bool issuperset(object set) {
+            return SetStorage.GetItems(set).IsSubset(_items);
+        }
+
+        public SetCollection union() {
+            return copy();
+        }
+
+        public SetCollection union(SetCollection set) {
+            return Make(SetStorage.Union(_items, set._items));
+        }
+
+        public SetCollection union(FrozenSetCollection set) {
+            return Make(SetStorage.Union(_items, set._items));
+        }
+
+        public SetCollection union(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.Union(_items, items);
+            } else {
+                items.UnionUpdate(_items);
+            }
+            return Make(items);
+        }
+
+        public SetCollection union([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            SetStorage res = _items.Clone();
+            foreach (object set in sets) {
+                res.UnionUpdate(SetStorage.GetItems(set));
+            }
+
+            return Make(res);
+        }
+
+        public SetCollection intersection() {
+            return copy();
+        }
+
+        public SetCollection intersection(SetCollection set) {
+            return Make(SetStorage.Intersection(_items, set._items));
+        }
+
+        public SetCollection intersection(FrozenSetCollection set) {
+            return Make(SetStorage.Intersection(_items, set._items));
+        }
+
+        public SetCollection intersection(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.Intersection(_items, items);
+            } else {
+                items.IntersectionUpdate(_items);
+            }
+            return Make(items);
+        }
+
+        public SetCollection intersection([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            if (sets.Length == 0) {
+                return copy();
+            }
+
+            SetStorage res = _items;
+            foreach (object set in sets) {
+                SetStorage items, x = res, y;
+                if (SetStorage.GetItems(set, out items)) {
+                    y = items;
+                    SetStorage.SortBySize(ref x, ref y);
+
+                    if (object.ReferenceEquals(x, items) || object.ReferenceEquals(x, _items)) {
+                        x = x.Clone();
+                    }
+                } else {
+                    y = items;
+                    SetStorage.SortBySize(ref x, ref y);
+
+                    if (object.ReferenceEquals(x, _items)) {
+                        x = x.Clone();
+                    }
+                }
+                x.IntersectionUpdate(y);
+                res = x;
+            }
+
+            Debug.Assert(!object.ReferenceEquals(res, _items));
+            return Make(res);
+        }
+
+        public SetCollection difference() {
+            return copy();
+        }
+
+        public SetCollection difference(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return Empty;
+            }
+
+            return Make(
+                SetStorage.Difference(_items, set._items)
+            );
+        }
+
+        public SetCollection difference(FrozenSetCollection set) {
+            return Make(
+                SetStorage.Difference(_items, set._items)
+            );
+        }
+
+        public SetCollection difference(object set) {
+            return Make(
+                SetStorage.Difference(_items, SetStorage.GetItems(set))
+            );
+        }
+
+        public SetCollection difference([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            if (sets.Length == 0) {
+                return copy();
+            }
+
+            SetStorage res = _items;
+            foreach (object set in sets) {
+                if (object.ReferenceEquals(set, this)) {
+                    return Empty;
+                }
+
+                SetStorage items = SetStorage.GetItems(set);
+                if (object.ReferenceEquals(res, _items)) {
+                    res = SetStorage.Difference(_items, items);
+                } else {
+                    res.DifferenceUpdate(items);
+                }
+            }
+
+            Debug.Assert(!object.ReferenceEquals(res, _items));
+            return Make(res);
+        }
+
+        public SetCollection symmetric_difference(SetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return Empty;
+            }
+
+            return Make(SetStorage.SymmetricDifference(_items, set._items));
+        }
+
+        public SetCollection symmetric_difference(FrozenSetCollection set) {
+            return Make(SetStorage.SymmetricDifference(_items, set._items));
+        }
+
+        public SetCollection symmetric_difference(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.SymmetricDifference(_items, items);
+            } else {
+                items.SymmetricDifferenceUpdate(_items);
+            }
+            return Make(items);
+        }
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated Mutating Operators
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: gen_mutating_ops from: generate_set.py
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseOr(SetCollection set) {
+            update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseOr(FrozenSetCollection set) {
+            update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseOr(object set) {
+            if (set is FrozenSetCollection || set is SetCollection) {
+                update(set);
+                return this;
+            }
+
+            throw PythonOps.TypeError(
+                "unsupported operand type(s) for |=: '{0}' and '{1}'",
+                PythonTypeOps.GetName(this), PythonTypeOps.GetName(set)
+            );
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseAnd(SetCollection set) {
+            intersection_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseAnd(FrozenSetCollection set) {
+            intersection_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceBitwiseAnd(object set) {
+            if (set is FrozenSetCollection || set is SetCollection) {
+                intersection_update(set);
+                return this;
+            }
+
+            throw PythonOps.TypeError(
+                "unsupported operand type(s) for &=: '{0}' and '{1}'",
+                PythonTypeOps.GetName(this), PythonTypeOps.GetName(set)
+            );
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceExclusiveOr(SetCollection set) {
+            symmetric_difference_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceExclusiveOr(FrozenSetCollection set) {
+            symmetric_difference_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceExclusiveOr(object set) {
+            if (set is FrozenSetCollection || set is SetCollection) {
+                symmetric_difference_update(set);
+                return this;
+            }
+
+            throw PythonOps.TypeError(
+                "unsupported operand type(s) for ^=: '{0}' and '{1}'",
+                PythonTypeOps.GetName(this), PythonTypeOps.GetName(set)
+            );
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceSubtract(SetCollection set) {
+            difference_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceSubtract(FrozenSetCollection set) {
+            difference_update(set);
+            return this;
+        }
+
+        [SpecialName]
+        public SetCollection InPlaceSubtract(object set) {
+            if (set is FrozenSetCollection || set is SetCollection) {
+                difference_update(set);
+                return this;
+            }
+
+            throw PythonOps.TypeError(
+                "unsupported operand type(s) for -=: '{0}' and '{1}'",
+                PythonTypeOps.GetName(this), PythonTypeOps.GetName(set)
+            );
+        }
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated Operators (SetCollection)
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_ops from: generate_set.py
+
+        public static SetCollection operator |(SetCollection x, SetCollection y) {
+            return x.union(y);
+        }
+
+        public static SetCollection operator &(SetCollection x, SetCollection y) {
+            return x.intersection(y);
+        }
+
+        public static SetCollection operator ^(SetCollection x, SetCollection y) {
+            return x.symmetric_difference(y);
+        }
+
+        public static SetCollection operator -(SetCollection x, SetCollection y) {
+            return x.difference(y);
+        }
+
+        public static SetCollection operator |(SetCollection x, FrozenSetCollection y) {
+            return x.union(y);
+        }
+
+        public static SetCollection operator &(SetCollection x, FrozenSetCollection y) {
+            return x.intersection(y);
+        }
+
+        public static SetCollection operator ^(SetCollection x, FrozenSetCollection y) {
+            return x.symmetric_difference(y);
+        }
+
+        public static SetCollection operator -(SetCollection x, FrozenSetCollection y) {
+            return x.difference(y);
+        }
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated Interface Implementations (SetCollection)
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_interfaces from: generate_set.py
+
         #region IRichComparable
 
         public static bool operator >(SetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return items.IsStrictSubset(self._items);
             }
 
-            return SetHelpers.IsSubset(s, self, true);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator <(SetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return self._items.IsStrictSubset(items);
             }
 
-            return SetHelpers.IsSubset(self, s, true);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator >=(SetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return items.IsSubset(self._items);
             }
 
-            return SetHelpers.IsSubset(s, self, false);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator <=(SetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return self._items.IsSubset(items);
             }
 
-            return SetHelpers.IsSubset(self, s, false);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic") ,System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
         [SpecialName]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic") ,System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
         public int __cmp__(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
@@ -777,7 +856,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(context, this, _items);
+            return SetStorage.SetToString(context, this, _items);
         }
 
         #endregion
@@ -804,19 +883,28 @@ namespace IronPython.Runtime {
             get { return this; }
         }
 
-        #endregion      
-    }
+        #endregion
 
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+    }
 
     /// <summary>
     /// Immutable set class
     /// </summary>
     [PythonType("frozenset"), DebuggerDisplay("frozenset, {Count} items", TargetTypeName = "frozenset"), DebuggerTypeProxy(typeof(CollectionDebugProxy))]
-    public class FrozenSetCollection : ISet {
-        internal static readonly FrozenSetCollection EMPTY = new FrozenSetCollection();
-
-        private CommonDictionaryStorage _items;
+    public class FrozenSetCollection : IEnumerable, IEnumerable<object>, ICollection, IStructuralEquatable, ICodeFormattable
+#if CLR2
+        , IValueEquality
+#endif
+    {
+        internal SetStorage _items;
         private HashCache _hashCache;
+
+        private static readonly FrozenSetCollection _empty = new FrozenSetCollection();
 
         #region Set Construction
 
@@ -824,33 +912,12 @@ namespace IronPython.Runtime {
         public void __init__(params object[] o) {
             // nop
         }
-        
-        public static FrozenSetCollection __new__(CodeContext context, object cls) {
-            if (cls == TypeCache.FrozenSet) {
-                return EMPTY;
-            } else {
-                PythonType dt = cls as PythonType;
-                object res = dt.CreateInstance(context);
-                FrozenSetCollection fs = res as FrozenSetCollection;
-                if (fs == null) {
-                    throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
-                }
-                return fs;
-            }
-        }
 
-        public static FrozenSetCollection __new__(CodeContext context, object cls, object setData) {
+        public static FrozenSetCollection __new__(CodeContext/*!*/ context, object cls) {
             if (cls == TypeCache.FrozenSet) {
-                FrozenSetCollection fs = setData as FrozenSetCollection;
-                if (fs != null) {
-                    // constructing frozen set from frozen set, we return the original frozen set.
-                    return fs;
-                }
-
-                fs = FrozenSetCollection.Make(setData);
-                return fs;
+                return _empty;
             } else {
-                object res = ((PythonType)cls).CreateInstance(context, setData);
+                object res = ((PythonType)cls).CreateInstance(context);
                 FrozenSetCollection fs = res as FrozenSetCollection;
                 if (fs == null) {
                     throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
@@ -860,204 +927,121 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal static FrozenSetCollection Make(object setData) {
-            FrozenSetCollection fs = setData as FrozenSetCollection;
-            if (fs != null) {
-                // constructing frozen set from frozen set, we return the original frozen set.
+        public static FrozenSetCollection __new__(CodeContext/*!*/ context, object cls, object set) {
+            if (cls == TypeCache.FrozenSet) {
+                return Make(TypeCache.FrozenSet, set);
+            } else {
+                object res = ((PythonType)cls).CreateInstance(context, set);
+                FrozenSetCollection fs = res as FrozenSetCollection;
+                if (fs == null) {
+                    throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
+                }
+
                 return fs;
             }
-
-            CommonDictionaryStorage items = ListToDictionary(setData);
-
-            if (items.Count == 0) {
-                fs = EMPTY;
-            } else {
-                fs = new FrozenSetCollection(items);
-            }
-
-            return fs;
         }
 
-        private static CommonDictionaryStorage ListToDictionary(object set) {
-            IEnumerator setData = PythonOps.GetEnumerator(set);
-            CommonDictionaryStorage items = new CommonDictionaryStorage();
-            while (setData.MoveNext()) {
-                object o = setData.Current;
-                items.Add(o, o);
-            }
-            return items;
-        }
+        public FrozenSetCollection() : this(new SetStorage()) { }
 
-        public FrozenSetCollection()
-            : this(new CommonDictionaryStorage()) {
-        }
-
-        private FrozenSetCollection(CommonDictionaryStorage set) {
+        internal FrozenSetCollection(SetStorage set) {
             _items = set;
         }
 
-        protected FrozenSetCollection(object set)
-            : this(ListToDictionary(set)) {
+        protected internal FrozenSetCollection(object set) : this(SetStorage.GetItems(set)) { }
+
+        private FrozenSetCollection Empty {
+            get {
+                if (this.GetType() == typeof(FrozenSetCollection)) {
+                    return _empty;
+                }
+
+                return Make(DynamicHelpers.GetPythonType(this), new SetStorage());
+            }
         }
 
-        internal FrozenSetCollection(ISet set)
-            : this((object)set) {
+        private FrozenSetCollection Make(SetStorage items) {
+            if (items.Count == 0) {
+                return Empty;
+            }
+
+            if (this.GetType() == typeof(FrozenSetCollection)) {
+                return new FrozenSetCollection(items);
+            }
+
+            return Make(DynamicHelpers.GetPythonType(this), items);
+        }
+
+        private static FrozenSetCollection Make(PythonType/*!*/ cls, SetStorage items) {
+            if (cls == TypeCache.FrozenSet) {
+                if (items.Count == 0) {
+                    return _empty;
+                }
+                return new FrozenSetCollection(items);
+            }
+
+            FrozenSetCollection res = PythonCalls.Call(cls) as FrozenSetCollection;
+            Debug.Assert(res != null);
+
+            if (items.Count > 0) {
+                res._items = items;
+            }
+            return res;
+        }
+
+        internal static FrozenSetCollection Make(PythonType/*!*/ cls, object set) {
+            FrozenSetCollection fs = set as FrozenSetCollection;
+            if (fs != null && cls == TypeCache.FrozenSet) {
+                // constructing frozen set from frozen set, we return the original
+                return fs;
+            }
+
+            return Make(cls, SetStorage.GetItems(set));
         }
 
         public FrozenSetCollection copy() {
-            // Python behavior: If we're a non-derived frozen set, we return ourselves. 
-            // If we're a derived frozen set we make a new set of our type that contains our
-            // contents.
+            // Python behavior: If we're a non-derived frozen set, set return the original
+            // frozen set. If we're derived from a frozen set, we make a new set of this type
+            // which contains the same elements.
             if (this.GetType() == typeof(FrozenSetCollection)) {
                 return this;
             }
-            FrozenSetCollection set = (FrozenSetCollection)SetHelpers.MakeSet(this, this);
-            return set;
+
+            // subclass
+            return Make(DynamicHelpers.GetPythonType(this), _items);
         }
 
         #endregion
 
-        #region ISet
+        #region Protocol Methods
 
         public int __len__() {
             return Count;
         }
 
-        public bool __contains__(object value) {
-            // promote sets to FrozenSets for contains checks (so we get a hash code)
-            value = SetHelpers.GetHashableSetIfSet(value);
-
-            if (_items.Count == 0) {
-                PythonOps.Hash(DefaultContext.Default, value);    // make sure we have a hashable item
+        public bool __contains__(object item) {
+            if (!SetStorage.GetHashableSetIfSet(ref item)) {
+                // make sure we have a hashable item
+                return _items.ContainsAlwaysHash(item);
             }
-            return _items.Contains(value);
+            return _items.Contains(item);
         }
 
         public PythonTuple __reduce__() {
-            return SetHelpers.Reduce(_items, DynamicHelpers.GetPythonTypeFromType(typeof(FrozenSetCollection)));
-        }
-
-        void ISet.PrivAdd(object adding) {
-            PythonOps.Hash(DefaultContext.Default, adding);// make sure we're hashable
-            _items.Add(adding, adding);
-        }
-
-        void ISet.PrivRemove(object removing) {
-            PythonOps.Hash(DefaultContext.Default, removing);// make sure we're hashable
-            _items.Remove(removing);
-        }
-
-        void ISet.SetData(IEnumerable set) {
-            _items = new CommonDictionaryStorage();
-            foreach (object o in set) {
-                _items.Add(o, o);
-            }
+            return SetStorage.Reduce(_items, TypeCache.FrozenSet);
         }
 
         #endregion
 
-        #region NonOperator Operations
-
-        public bool isdisjoint(object s) {
-            return SetHelpers.Intersection(this, s).Count == 0;
+        #region IValueEquality Members
+#if CLR2
+        int IValueEquality.GetValueHashCode() {
+            return CalculateHashCode(DefaultContext.DefaultPythonContext.EqualityComparerNonGeneric);
         }
 
-        public bool issubset(object set) {
-            return SetHelpers.IsSubset(this, set);
+        bool IValueEquality.ValueEquals(object o) {
+            return __eq__(o);
         }
-
-        public bool issuperset(object set) {
-            return SetHelpers.IsSuperset(this, set);
-        }
-
-        public ISet union() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet union(object s) {
-            return SetHelpers.Union(this, s);
-        }
-
-        public ISet union([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Union(res, s);
-            }
-            return res;
-        }
-
-        public ISet intersection() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet intersection(object s) {
-            return SetHelpers.Intersection(this, s);
-        }
-
-        public ISet intersection([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Intersection(res, s);
-            }
-            return res;
-        }
-
-        public ISet difference() {
-            return SetHelpers.MakeSet(this, this);
-        }
-
-        public ISet difference(object s) {
-            return SetHelpers.Difference(this, s);
-        }
-
-        public ISet difference([NotNull] params object[] ss) {
-            ISet res = this;
-            foreach (object s in ss) {
-                res = SetHelpers.Difference(res, s);
-            }
-            return res;
-        }
-
-        public ISet symmetric_difference(object s) {
-            return SetHelpers.SymmetricDifference(this, s);
-        }
-
-        #endregion
-
-        #region Operators
-
-        public static object operator &(ISet y, FrozenSetCollection x) {
-            return y.intersection(x);
-        }
-
-        public static object operator |(ISet y, FrozenSetCollection x) {
-            return y.intersection(x);
-        }
-
-        public static object operator ^(ISet y, FrozenSetCollection x) {
-            return y.intersection(x);
-        }
-
-        public static object operator -(ISet y, FrozenSetCollection x) {
-            return y.difference(x);
-        }
-
-        public static ISet operator &(FrozenSetCollection x, ISet y) {
-            return x.intersection(y);
-        }
-
-        public static ISet operator |(FrozenSetCollection x, ISet y) {
-            return x.union(y);
-        }
-
-        public static ISet operator ^(FrozenSetCollection x, ISet y) {
-            return x.symmetric_difference(y);
-        }
-
-        public static ISet operator -(FrozenSetCollection x, ISet y) {
-            return x.difference(y);
-        }
-
+#endif
         #endregion
 
         #region IStructuralEquatable Members
@@ -1080,34 +1064,10 @@ namespace IronPython.Runtime {
                 return curHashCache.HashCode;
             }
 
-            // hash code needs be stable across collections (even if keys are
-            // added in different order) and needs to be fairly collision free.
+            int hash = SetStorage.GetHashCode(_items, comparer);
 
-            int[] hash_codes = new int[_items.Count];
-
-            int i = 0;
-            foreach (object o in _items.GetKeys()) {
-                hash_codes[i++] = comparer.GetHashCode(o);
-            }
-
-            Array.Sort(hash_codes);
-
-            int hash1 = 6551;
-            int hash2 = hash1;
-
-            for (i = 0; i < hash_codes.Length; i += 2) {
-                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ hash_codes[i];
-
-                if (i == hash_codes.Length - 1) {
-                    break;
-                }
-                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ hash_codes[i + 1];
-            }
-
-            hash1 += hash2 * 1566083941;
-
-            _hashCache = new HashCache(hash1, comparer);
-            return hash1;
+            _hashCache = new HashCache(hash, comparer);
+            return hash;
         }
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer/*!*/ comparer) {
@@ -1115,92 +1075,330 @@ namespace IronPython.Runtime {
         }
 
         bool IStructuralEquatable.Equals(object other, IEqualityComparer comparer) {
-            ISet set = other as ISet;
-            if (set != null) {
-                return SetHelpers.Equals(this, set, comparer);
-            }
-            return false;
+            SetStorage items;
+            return SetStorage.GetItemsIfSet(other, out items) &&
+                SetStorage.Equals(_items, items, comparer);
         }
 
         // default conversion of protocol methods only allows our specific type for equality,
-        // sets can do __eq__ / __ne__ against any type though.  That's why we have a seperate
+        // but sets can do __eq__ / __ne__ against any type. This is why we define a separate
         // __eq__ / __ne__ here.
 
         public bool __eq__(object other) {
-            ISet set = other as ISet;
-            if (set != null) {
-                if (set.Count != Count) {
-                    return false;
-                }
-                return issubset(set);
-            }
-            return false;
+            SetStorage items;
+            return SetStorage.GetItemsIfSet(other, out items) &&
+                _items.Count == items.Count &&
+                _items.IsSubset(items);
         }
 
         public bool __ne__(object other) {
-            return !__eq__(other);
+            SetStorage items;
+            return !SetStorage.GetItemsIfSet(other, out items) ||
+                _items.Count != items.Count ||
+                !_items.IsSubset(items);
         }
 
         #endregion
 
-        #region IValueEquality Members
+        #region Generated NonOperator Operations (FrozenSetCollection)
 
-#if CLR2
-        int IValueEquality.GetValueHashCode() {
-            return CalculateHashCode(DefaultContext.DefaultPythonContext.EqualityComparerNonGeneric);
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_setops from: generate_set.py
+
+        public bool isdisjoint(FrozenSetCollection set) {
+            return _items.IsDisjoint(set._items);
         }
 
-        bool IValueEquality.ValueEquals(object o) {
-            return __eq__(o);
+        public bool isdisjoint(SetCollection set) {
+            return _items.IsDisjoint(set._items);
         }
-#endif
+
+        public bool isdisjoint(object set) {
+            return _items.IsDisjoint(SetStorage.GetItems(set));
+        }
+
+        public bool issubset(FrozenSetCollection set) {
+            return _items.IsSubset(set._items);
+        }
+
+        public bool issubset(SetCollection set) {
+            return _items.IsSubset(set._items);
+        }
+
+        public bool issubset(object set) {
+            return _items.IsSubset(SetStorage.GetItems(set));
+        }
+
+        public bool issuperset(FrozenSetCollection set) {
+            return set._items.IsSubset(_items);
+        }
+
+        public bool issuperset(SetCollection set) {
+            return set._items.IsSubset(_items);
+        }
+
+        public bool issuperset(object set) {
+            return SetStorage.GetItems(set).IsSubset(_items);
+        }
+
+        public FrozenSetCollection union() {
+            return Make(_items);
+        }
+
+        public FrozenSetCollection union(FrozenSetCollection set) {
+            return Make(SetStorage.Union(_items, set._items));
+        }
+
+        public FrozenSetCollection union(SetCollection set) {
+            return Make(SetStorage.Union(_items, set._items));
+        }
+
+        public FrozenSetCollection union(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.Union(_items, items);
+            } else {
+                items.UnionUpdate(_items);
+            }
+            return Make(items);
+        }
+
+        public FrozenSetCollection union([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            SetStorage res = _items.Clone();
+            foreach (object set in sets) {
+                res.UnionUpdate(SetStorage.GetItems(set));
+            }
+
+            return Make(res);
+        }
+
+        public FrozenSetCollection intersection() {
+            return Make(_items);
+        }
+
+        public FrozenSetCollection intersection(FrozenSetCollection set) {
+            return Make(SetStorage.Intersection(_items, set._items));
+        }
+
+        public FrozenSetCollection intersection(SetCollection set) {
+            return Make(SetStorage.Intersection(_items, set._items));
+        }
+
+        public FrozenSetCollection intersection(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.Intersection(_items, items);
+            } else {
+                items.IntersectionUpdate(_items);
+            }
+            return Make(items);
+        }
+
+        public FrozenSetCollection intersection([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            if (sets.Length == 0) {
+                return Make(_items);
+            }
+
+            SetStorage res = _items;
+            foreach (object set in sets) {
+                SetStorage items, x = res, y;
+                if (SetStorage.GetItems(set, out items)) {
+                    y = items;
+                    SetStorage.SortBySize(ref x, ref y);
+
+                    if (object.ReferenceEquals(x, items) || object.ReferenceEquals(x, _items)) {
+                        x = x.Clone();
+                    }
+                } else {
+                    y = items;
+                    SetStorage.SortBySize(ref x, ref y);
+
+                    if (object.ReferenceEquals(x, _items)) {
+                        x = x.Clone();
+                    }
+                }
+                x.IntersectionUpdate(y);
+                res = x;
+            }
+
+            Debug.Assert(!object.ReferenceEquals(res, _items));
+            return Make(res);
+        }
+
+        public FrozenSetCollection difference() {
+            return Make(_items);
+        }
+
+        public FrozenSetCollection difference(FrozenSetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return Empty;
+            }
+
+            return Make(
+                SetStorage.Difference(_items, set._items)
+            );
+        }
+
+        public FrozenSetCollection difference(SetCollection set) {
+            return Make(
+                SetStorage.Difference(_items, set._items)
+            );
+        }
+
+        public FrozenSetCollection difference(object set) {
+            return Make(
+                SetStorage.Difference(_items, SetStorage.GetItems(set))
+            );
+        }
+
+        public FrozenSetCollection difference([NotNull]params object[]/*!*/ sets) {
+            Debug.Assert(sets != null);
+
+            if (sets.Length == 0) {
+                return Make(_items);
+            }
+
+            SetStorage res = _items;
+            foreach (object set in sets) {
+                if (object.ReferenceEquals(set, this)) {
+                    return Empty;
+                }
+
+                SetStorage items = SetStorage.GetItems(set);
+                if (object.ReferenceEquals(res, _items)) {
+                    res = SetStorage.Difference(_items, items);
+                } else {
+                    res.DifferenceUpdate(items);
+                }
+            }
+
+            Debug.Assert(!object.ReferenceEquals(res, _items));
+            return Make(res);
+        }
+
+        public FrozenSetCollection symmetric_difference(FrozenSetCollection set) {
+            if (object.ReferenceEquals(set, this)) {
+                return Empty;
+            }
+
+            return Make(SetStorage.SymmetricDifference(_items, set._items));
+        }
+
+        public FrozenSetCollection symmetric_difference(SetCollection set) {
+            return Make(SetStorage.SymmetricDifference(_items, set._items));
+        }
+
+        public FrozenSetCollection symmetric_difference(object set) {
+            SetStorage items;
+            if (SetStorage.GetItems(set, out items)) {
+                items = SetStorage.SymmetricDifference(_items, items);
+            } else {
+                items.SymmetricDifferenceUpdate(_items);
+            }
+            return Make(items);
+        }
+
+
+        // *** END GENERATED CODE ***
+
         #endregion
+
+        #region Generated Operators (FrozenSetCollection)
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_ops from: generate_set.py
+
+        public static FrozenSetCollection operator |(FrozenSetCollection x, FrozenSetCollection y) {
+            return x.union(y);
+        }
+
+        public static FrozenSetCollection operator &(FrozenSetCollection x, FrozenSetCollection y) {
+            return x.intersection(y);
+        }
+
+        public static FrozenSetCollection operator ^(FrozenSetCollection x, FrozenSetCollection y) {
+            return x.symmetric_difference(y);
+        }
+
+        public static FrozenSetCollection operator -(FrozenSetCollection x, FrozenSetCollection y) {
+            return x.difference(y);
+        }
+
+        public static FrozenSetCollection operator |(FrozenSetCollection x, SetCollection y) {
+            return x.union(y);
+        }
+
+        public static FrozenSetCollection operator &(FrozenSetCollection x, SetCollection y) {
+            return x.intersection(y);
+        }
+
+        public static FrozenSetCollection operator ^(FrozenSetCollection x, SetCollection y) {
+            return x.symmetric_difference(y);
+        }
+
+        public static FrozenSetCollection operator -(FrozenSetCollection x, SetCollection y) {
+            return x.difference(y);
+        }
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated Interface Implementations (FrozenSetCollection)
+
+        // *** BEGIN GENERATED CODE ***
+        // generated by function: _gen_interfaces from: generate_set.py
 
         #region IRichComparable
 
         public static bool operator >(FrozenSetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return items.IsStrictSubset(self._items);
             }
 
-            return SetHelpers.IsSubset(s, self, true);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator <(FrozenSetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return self._items.IsStrictSubset(items);
             }
 
-            return SetHelpers.IsSubset(self, s, true);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator >=(FrozenSetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return items.IsSubset(self._items);
             }
 
-            return SetHelpers.IsSubset(s, self, false);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
         public static bool operator <=(FrozenSetCollection self, object other) {
-            ISet s = other as ISet;
-            if (s == null) {
-                throw PythonOps.TypeError("can only compare to a set");
+            SetStorage items;
+            if (SetStorage.GetItemsIfSet(other, out items)) {
+                return self._items.IsSubset(items);
             }
 
-            return SetHelpers.IsSubset(self, s, false);
+            throw PythonOps.TypeError("can only compare to a set");
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic") ,System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
         [SpecialName]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic") ,System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
         public int __cmp__(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
@@ -1226,7 +1424,7 @@ namespace IronPython.Runtime {
         #region ICodeFormattable Members
 
         public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
-            return SetHelpers.SetToString(context, this, _items);
+            return SetStorage.SetToString(context, this, _items);
         }
 
         #endregion
@@ -1254,6 +1452,11 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
     }
 
     /// <summary>
@@ -1261,20 +1464,20 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType("setiterator")]
     public sealed class SetIterator : IEnumerable, IEnumerable<object>, IEnumerator, IEnumerator<object> {
-        private readonly CommonDictionaryStorage _items;
+        private readonly SetStorage _items;
         private readonly IEnumerator<object> _enumerator;
         private readonly int _version;
 
-        internal SetIterator(CommonDictionaryStorage items, bool mutable) {
+        internal SetIterator(SetStorage items, bool mutable) {
             _items = items;
             if (mutable) {
                 lock (items) {
-                    _version = _items.Version;
-                    _enumerator = items.GetKeys().GetEnumerator();
+                    _version = items.Version;
+                    _enumerator = items.GetEnumerator();
                 }
             } else {
-                _version = _items.Version;
-                _enumerator = items.GetKeys().GetEnumerator();
+                _version = items.Version;
+                _enumerator = items.GetEnumerator();
             }
         }
 

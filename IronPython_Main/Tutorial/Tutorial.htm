@@ -498,7 +498,7 @@ list(set1-set2)
 	<p class="HiddenOutput">
 
 
-	['Tan','Sin','__builtins__','E','Cosh','Ceiling','DivRem','Tanh','Log10','Sign','Max','PI','Sinh','Sqrt','Acos','Abs','Round','Pow','Floor','Log','Exp','Atan2','IEEERemainder','Atan','Asin','System','__name__','BigMul','Cos','Truncate','Min']</p>
+	['Tan','Sin','Ceiling','Sinh','Atan','Tanh','__name__','Pow','Cos','Cosh','Abs','Round','Atan2','BigMul','Acos','DivRem','Truncate','E','Max','__builtins__','Log','Asin','Floor','PI','Log10','System','Sign','Exp','Min','IEEERemainder','Sqrt']</p>
     <p class="Stepnonumbering">Now you can call Math methods without having to specify
     the namespace and class name prefix:</p>
     <p class="TypedExample">Sin(PI/2)</p>
@@ -533,7 +533,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
     
-    ['ContainsValue','hcp','__setitem__','IsSynchronized','GetHash','ContainsKey','__iter__','Synchronized','comparer','__len__','Clear','IsReadOnly','CopyTo','GetObjectData','__add__','Clone','SyncRoot','__contains__','KeyEquals','GetEnumerator','Contains','Item','Values','Remove','OnDeserialization','Add','EqualityComparer','Keys','IsFixedSize','Count','__getitem__']</p>
+    ['Keys','ContainsValue','GetObjectData','Count','Contains','__getitem__','Add','__add__','EqualityComparer','KeyEquals','GetHash','IsFixedSize','ContainsKey','hcp','CopyTo','Clone','SyncRoot','__setitem__','GetEnumerator','Remove','Synchronized','Clear','__iter__','comparer','IsReadOnly','__len__','__contains__','Item','Values','IsSynchronized','OnDeserialization']</p>
     <ol start="3">
         <li>
         <p class="Step">Insert&nbsp;a few elements into the hash table:</p>
@@ -955,7 +955,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
     
-    ['Submatrix','Trace','__ne__','InfinityNorm','Rows','__neg__','__setitem__','Subtract','FrobeniusNorm','__radd__','__mul__','__add__','Norm1','Transpose','Symmetric','Clone','__sub__','Columns','Multiply','Diagonal','Random','Square','Item','Solve','__rmul__','Negate','Add','Inverse','__rsub__','Determinant','__eq__','__getitem__']</p>
+    ['FrobeniusNorm','InfinityNorm','Rows','Diagonal','__neg__','Trace','Negate','__radd__','Columns','__getitem__','Add','Determinant','Symmetric','Norm1','__sub__','__add__','__rmul__','Inverse','__rsub__','Solve','Clone','__setitem__','Multiply','Transpose','Submatrix','Subtract','Random','Square','Item','__eq__','__mul__','__ne__']</p>
     <ol start="7">
         <li>
         <p class="Step">Make simple calculations with the matrices:</p>
@@ -1123,7 +1123,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-['GetLifetimeService','IncludeSubdirectories','Filter','WaitForChanged','Disposed','DesignMode','NotifyFilter','Created','EnableRaisingEvents','Site','Error','CanRaiseEvents','Renamed','EndInit','OnChanged','InitializeLifetimeService','GetService','Path','InternalBufferSize','SynchronizingObject','OnError','BeginInit','Deleted','Dispose','__enter__','Events','Changed','__exit__','Container','OnRenamed','CreateObjRef','OnCreated','OnDeleted']</p>
+['SynchronizingObject','InternalBufferSize','Deleted','EnableRaisingEvents','DesignMode','GetLifetimeService','OnRenamed','OnChanged','CanRaiseEvents','InitializeLifetimeService','IncludeSubdirectories','WaitForChanged','Dispose','Disposed','NotifyFilter','Filter','__enter__','__exit__','Renamed','BeginInit','Container','OnCreated','Site','Error','Changed','Path','Events','EndInit','Created','CreateObjRef','OnDeleted','GetService','OnError']</p>
     <p class="TypedExample">w.Path = '.'</p>
     <p class="Code-Background"></p>
     <ol start="4">
@@ -1221,7 +1221,7 @@ list(set1-set2)</p>
     <p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; dir(FileSystemEventArgs)</p>
     <p class="Code-Background">
 
-['FullPath', 'Name', 'Empty', 'ChangeType']</p>
+['FullPath', 'ChangeType', 'Name', 'Empty']</p>
     <ol start="2">
         <li>
         <p class="Step">Now with more knowledge of the FileSystemEventArgs object's
@@ -1429,7 +1429,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-['Location','Button','Y','X','Clicks','Empty','Delta']</p>
+['Button','Empty','Clicks','X','Y','Location','Delta']</p>
     <ol start="8">
         <li>
         <p class="Step" style="page-break-after:avoid">Knowing the contents of the
@@ -2317,7 +2317,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-['__iter__','GetEnumerator']</p>
+['GetEnumerator','__iter__']</p>
     <p class="TypedExample">s = Simple(10)</p>
     <p class="Code-Background"></p>
     <p class="TypedExample">for i in s: print i</p>
@@ -2395,7 +2395,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-    ['__iter__','__radd__','__add__','GetEnumerator']</p>
+    ['__add__','GetEnumerator','__iter__','__radd__']</p>
     <p class="TypedExample">a = Simple(10)</p>
         <p class="Code-Background"></p>
     <p class="TypedExample">b = Simple(20)</p>
@@ -2691,7 +2691,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-['__iter__','GetEnumerator']</p>
+['GetEnumerator','__iter__']</p>
     <p class="TypedExample">s = Simple(10)</p>
     <p class="Code-Background"></p>
     <p class="TypedExample">for i in s: print i</p>
@@ -2772,7 +2772,7 @@ set2 = set(dir(object))
 list(set1-set2)</p>
     <p class="HiddenOutput">
 
-    ['__iter__','__radd__','__add__','GetEnumerator']</p>
+    ['__add__','GetEnumerator','__iter__','__radd__']</p>
     <p class="TypedExample">a = Simple(10)</p>
     <p class="Code-Background"></p>
     <p class="TypedExample">b = Simple(20)</p>

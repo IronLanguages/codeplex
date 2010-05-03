@@ -414,16 +414,25 @@ namespace IronPython.Runtime.Types {
 
                 int origIndex = GetOriginalIndex(pis, overrideParams, i);
                 if (origIndex >= 0) {
-                    if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
+                    ParameterInfo pi = pis[origIndex];
+
+                    if (pi.IsDefined(typeof(ParamArrayAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
                             typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects));
-                    } else if (pis[origIndex].IsDefined(typeof(ParamDictionaryAttribute), false)) {
+                    } else if (pi.IsDefined(typeof(ParamDictionaryAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
                             typeof(ParamDictionaryAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects));
                     }
 
-                    if ((pis[origIndex].Attributes & ParameterAttributes.HasDefault) != 0) {
-                        pb.SetConstant(pis[origIndex].DefaultValue);
+                    if ((pi.Attributes & ParameterAttributes.HasDefault) != 0) {
+                        if (pi.DefaultValue == null || pi.ParameterType.IsAssignableFrom(pi.DefaultValue.GetType())) {
+                            pb.SetConstant(pi.DefaultValue);
+                        } else {
+                            pb.SetConstant(Convert.ChangeType(
+                                pi.DefaultValue, pi.ParameterType,
+                                System.Threading.Thread.CurrentThread.CurrentCulture
+                            ));
+                        }
                     }
                 }
             }

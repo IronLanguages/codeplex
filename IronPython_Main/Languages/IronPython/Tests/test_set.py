@@ -239,5 +239,69 @@ def test_iteration_no_mutation_bad_hash():
     for x in b:
         pass
 
+def test_null_elements():
+    class SetSubclass(set):
+        pass
+    class FrozenSetSubclass(frozenset):
+        pass
+    
+    for thetype in [set, frozenset, SetSubclass, FrozenSetSubclass]:
+        s = thetype([None])
+        
+        AreEqual(s, set([None]))
+        AreEqual(s.copy(), set([None]))
+        
+        AreEqual(s.isdisjoint(set()), True)
+        AreEqual(s.isdisjoint(set([None])), False)
+        AreEqual(s.isdisjoint(set([42])), True)
+        AreEqual(s.isdisjoint(set([None, 42])), False)
+        AreEqual(s.issubset(set()), False)
+        AreEqual(s.issubset(set([42])), False)
+        AreEqual(s.issubset(set([None])), True)
+        AreEqual(s.issubset(set([None, 42])), True)
+        AreEqual(s.issuperset(set()), True)
+        AreEqual(s.issuperset(set([42])), False)
+        AreEqual(s.issuperset(set([None])), True)
+        AreEqual(s.issuperset(set([None, 42])), False)
+        
+        AreEqual(s.union(), set([None]))
+        AreEqual(s.union(set([None])), set([None]))
+        AreEqual(s.union(set()), set([None]))
+        AreEqual(s.intersection(), set([None]))
+        AreEqual(s.intersection(set([None])), set([None]))
+        AreEqual(s.intersection(set()), set())
+        AreEqual(s.difference(), set([None]))
+        AreEqual(s.difference(set([None])), set())
+        AreEqual(s.difference(set()), set([None]))
+        AreEqual(s.symmetric_difference(set([None])), set())
+        AreEqual(s.symmetric_difference(set()), set([None]))
+        
+        # Test mutating operations
+        if 'add' in dir(s):
+            s.remove(None)
+            AreEqual(s, set())
+            s.add(None)
+            AreEqual(s, set([None]))
+            s.discard(None)
+            AreEqual(s, set())
+            s.discard(None) # make sure we don't raise exception
+            AssertError(KeyError, s.remove, None)
+            s.add(None)
+            s.clear()
+            AreEqual(s, set())
+            s.add(None)
+            AreEqual(s.pop(), None)
+            AreEqual(s, set())
+            
+            s.update(set([None]))
+            AreEqual(s, set([None]))
+            s.intersection_update(set([42]))
+            AreEqual(s, set())
+            s.update(set([None, 42]))
+            s.difference_update(set([None]))
+            AreEqual(s, set([42]))
+            s.symmetric_difference_update(set([None, 42]))
+            AreEqual(s, set([None]))
+
 #--MAIN------------------------------------------------------------------------    
 run_test(__name__)
