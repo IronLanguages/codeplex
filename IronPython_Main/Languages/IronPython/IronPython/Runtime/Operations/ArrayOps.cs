@@ -277,11 +277,12 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        internal static object[] GetSlice(object[] data, Slice slice) {
-            int start, stop, step;
-            slice.indices(data.Length, out start, out stop, out step);
+        internal static object[] GetSlice(object[] data, int start, int stop, int step) {
+            Debug.Assert(step != 0);
 
-            if (step == 1) return GetSlice(data, start, stop);
+            if (step == 1) {
+                return GetSlice(data, start, stop);
+            }
 
             int size = GetSliceSize(start, stop, step);
             if (size <= 0) return ArrayUtils.EmptyObjects;
@@ -291,6 +292,13 @@ namespace IronPython.Runtime.Operations {
                 res[i] = data[index];
             }
             return res;
+        }
+
+        internal static object[] GetSlice(object[] data, Slice slice) {
+            int start, stop, step;
+            slice.indices(data.Length, out start, out stop, out step);
+
+            return GetSlice(data, start, stop, step);
         }
 
         internal static Array GetSlice(Array data, int size, Slice slice) {

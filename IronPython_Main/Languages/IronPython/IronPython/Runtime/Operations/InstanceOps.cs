@@ -110,7 +110,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object DefaultNew(CodeContext context, PythonType type\u00F8, params object[] args\u00F8) {
-            if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.Repr(context, DynamicHelpers.GetPythonType(type\u00F8)));
+            if (type\u00F8 == null) {
+                throw PythonOps.TypeError(
+                    "__new__ expected type object, got {0}",
+                    PythonOps.Repr(context, DynamicHelpers.GetPythonType(type\u00F8))
+                );
+            }
 
             CheckNewArgs(context, null, args\u00F8, type\u00F8);
 

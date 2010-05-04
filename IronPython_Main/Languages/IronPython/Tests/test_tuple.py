@@ -194,7 +194,13 @@ def test_tuple_equality():
     
     a = x()
     AreEqual((a, ), (a, ))
-
+    
+def test_tuple_reuse():
+    t = (2,4,6)
+    AreEqual(id(t), id(tuple(t)))
+    AreEqual(id(t), id(t[:]))
+    AreEqual(id(t), id(t[0:]))
+    AreEqual(id(t), id(t[0::1]))
 
 def test_index_error():
     x = ()

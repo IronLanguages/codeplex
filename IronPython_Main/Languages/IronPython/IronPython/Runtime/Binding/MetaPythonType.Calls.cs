@@ -164,6 +164,8 @@ namespace IronPython.Runtime.Binding {
                 return MakeIncorrectArgumentsForCallError(call, ai, valInfo);
             } else if (Value.UnderlyingSystemType.IsGenericTypeDefinition) {
                 return MakeGenericTypeDefinitionError(call, ai, valInfo);
+            } else if (Value.HasAbstractMethods(PythonContext.GetPythonContext(call).SharedContext)) {
+                return MakeAbstractInstantiationError(call, ai, valInfo);
             }
 
             DynamicMetaObject translated = BuiltinFunction.TranslateArguments(call, codeContext, self, args, false, Value.Name);
@@ -657,6 +659,28 @@ namespace IronPython.Runtime.Binding {
         private DynamicMetaObject/*!*/ MakeGenericTypeDefinitionError(DynamicMetaObjectBinder/*!*/ call, ArgumentValues/*!*/ ai, ValidationInfo/*!*/ valInfo) {
             Debug.Assert(Value.IsSystemType);
             string message = "cannot create instances of " + Value.Name + " because it is a generic type definition";
+
+            return BindingHelpers.AddDynamicTestAndDefer(
+                call,
+                new DynamicMetaObject(
+                    Ast.Throw(
+                        Ast.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            AstUtils.Constant(message)
+                        ),
+                        typeof(object)
+                    ),
+                    GetErrorRestrictions(ai)
+                ),
+                ai.Arguments,
+                valInfo
+            );
+        }
+
+        private DynamicMetaObject/*!*/ MakeAbstractInstantiationError(DynamicMetaObjectBinder/*!*/ call, ArgumentValues/*!*/ ai, ValidationInfo/*!*/ valInfo) {
+            CodeContext context = PythonContext.GetPythonContext(call).SharedContext;
+            string message = Value.GetAbstractErrorMessage(context);
+            Debug.Assert(message != null);
 
             return BindingHelpers.AddDynamicTestAndDefer(
                 call,

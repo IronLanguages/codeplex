@@ -386,7 +386,7 @@ namespace IronPython.Modules {
         }
 
         public static PythonTuple unicode_internal_decode(object input, [Optional]string errors) {
-            return utf_16_decode(input, errors);
+            return utf_16_decode(input, errors, false);
         }
 
         public static PythonTuple unicode_internal_encode(object input, [Optional]string errors) {
@@ -423,10 +423,10 @@ namespace IronPython.Modules {
         #region Utf-16 Functions
 
         public static PythonTuple utf_16_decode(object input) {
-            return utf_16_decode(input, "strict");
+            return utf_16_decode(input, "strict", false);
         }
 
-        public static PythonTuple utf_16_decode(object input, string errors) {
+        public static PythonTuple utf_16_decode(object input, string errors, [Optional]bool ignored) {
             return DoDecode(Encoding.Unicode, input, errors);
         }
 
@@ -476,7 +476,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            PythonTuple res = utf_16_decode(input, errors) as PythonTuple;
+            PythonTuple res = utf_16_decode(input, errors, false) as PythonTuple;
             return PythonTuple.MakeTuple(res[0], res[1], 0);
         }
 
@@ -487,7 +487,7 @@ namespace IronPython.Modules {
         }
 
         public static PythonTuple utf_16_le_decode(object input, string errors, [Optional]bool ignored) {
-            return utf_16_decode(input, errors);
+            return utf_16_decode(input, errors, false);
         }
 
         public static PythonTuple utf_16_le_encode(object input) {

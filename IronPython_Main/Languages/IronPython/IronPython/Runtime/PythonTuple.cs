@@ -203,12 +203,23 @@ namespace IronPython.Runtime {
         public virtual object __getslice__(int start, int stop) {
             Slice.FixSliceArguments(_data.Length, ref start, ref stop);
 
+            if (start == 0 && stop == _data.Length &&
+                this.GetType() == typeof(PythonTuple)) {
+                return this;
+            }
             return MakeTuple(ArrayOps.GetSlice(_data, start, stop));
         }
 
         public virtual object this[Slice slice] {
             get {
-                return MakeTuple(ArrayOps.GetSlice(_data, slice));
+                int start, stop, step;
+                slice.indices(_data.Length, out start, out stop, out step);
+
+                if (start == 0 && stop == _data.Length && step == 1 &&
+                    this.GetType() == typeof(PythonTuple)) {
+                    return this;
+                }
+                return MakeTuple(ArrayOps.GetSlice(_data, start, stop, step));
             }
         }
 
