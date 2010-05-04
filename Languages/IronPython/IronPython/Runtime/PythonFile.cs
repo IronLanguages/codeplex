@@ -1264,13 +1264,12 @@ namespace IronPython.Runtime {
                     return;
                 }
 
-                FlushWorker();
+                FlushNoLock();
+                _isOpen = false;
 
                 if (!IsConsole) {
                     _stream.Close();
                 }
-
-                _isOpen = false;
 
                 PythonFileManager myManager = _context.RawFileManager;
                 if (myManager != null) {
@@ -1293,17 +1292,18 @@ namespace IronPython.Runtime {
         }
 
         void ThrowIfClosed() {
-            if (!_isOpen)
+            if (!_isOpen) {
                 throw PythonOps.ValueError("I/O operation on closed file");
+            }
         }
 
         public virtual void flush() {
             lock (this) {
-                FlushWorker();
+                FlushNoLock();
             }
         }
 
-        private void FlushWorker() {
+        private void FlushNoLock() {
             ThrowIfClosed();
             if (_writer != null) {
                 _writer.Flush();
@@ -1388,7 +1388,10 @@ namespace IronPython.Runtime {
         }
 
         public void seek(long offset, int whence) {
-            if (_mode == "a") return;    // nop when seeking on stream's opened for append.
+            if (_mode == "a") {
+                // nop when seeking on streams opened for append.
+                return;
+            }
 
             ThrowIfClosed();
 
@@ -1396,10 +1399,10 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError("Can not seek on file " + _name);
             }
 
-            // flush before saving our position to ensure it's accurate.
-            flush();
-
             lock (this) {
+                // flush before saving our position to ensure it's accurate.
+                FlushNoLock();
+
                 SavePositionPreSeek();
 
                 SeekOrigin origin;
@@ -1456,9 +1459,10 @@ namespace IronPython.Runtime {
         /// Truncates the file to the current length as indicated by tell().
         /// </summary>
         public void truncate() {
-            flush();
-
-            TruncateWorker(GetCurrentPosition());
+            lock (this) {
+                FlushNoLock();
+                TruncateNoLock(GetCurrentPosition());
+            }
         }
 
         /// <summary>
@@ -1466,12 +1470,13 @@ namespace IronPython.Runtime {
         /// </summary>
         /// <param name="size"></param>
         public void truncate(long size) {
-            flush();
-
-            TruncateWorker(size);
+            lock (this) {
+                FlushNoLock();
+                TruncateNoLock(size);
+            }
         }
 
-        private void TruncateWorker(long size) {
+        private void TruncateNoLock(long size) {
             if (size < 0) {
                 throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 22, "Invalid argument");
             }
@@ -1492,25 +1497,39 @@ namespace IronPython.Runtime {
 
         public virtual void write([BytesConversion]string s) {
             lock (this) {
-                PythonStreamWriter writer = GetWriter();
-                int bytesWritten = writer.Write(s);
-                if (!IsConsole && _reader != null && _stream.CanSeek) {
-                    _reader.Position += bytesWritten;
-                }
+                WriteNoLock(s);
+            }
+        }
+
+        private void WriteNoLock(string s) {
+            PythonStreamWriter writer = GetWriter();
+            int bytesWritten = writer.Write(s);
+            if (!IsConsole && _reader != null && _stream.CanSeek) {
+                _reader.Position += bytesWritten;
             }
 
             if (IsConsole) {
-                flush();
+                FlushNoLock();
             }
         }
 
         public void write([NotNull]PythonBuffer buf) {
+            WriteWorker(buf, true);
+        }
+
+        private void WriteWorker(PythonBuffer/*!*/ buf, bool locking) {
+            Debug.Assert(buf != null);
+
             PythonStreamWriter writer = GetWriter();
             string str = buf._object as string;
             IPythonArray pyArr;
             Array arr;
             if (str != null || buf._object is IList<byte>) {
-                write(buf.ToString());
+                if (locking) {
+                    write(buf.ToString());
+                } else {
+                    WriteNoLock(buf.ToString());
+                }
             } else if ((arr = buf._object as Array) != null) {
                 throw new NotImplementedException("writing buffer of .NET array to file");
             } else if ((pyArr = buf._object as IPythonArray) != null) {
@@ -1518,13 +1537,23 @@ namespace IronPython.Runtime {
                     throw PythonOps.TypeError("char buffer type not available");
                 }
 
-                write(pyArr.tostring());
+                if (locking) {
+                    write(pyArr.tostring());
+                } else {
+                    WriteNoLock(pyArr.tostring());
+                }
             } else {
                 Debug.Assert(false, "unsupported buffer object");
             }
         }
 
         public void write([NotNull]object arr) {
+            WriteWorker(arr, true);
+        }
+
+        private void WriteWorker(object/*!*/ arr, bool locking) {
+            Debug.Assert(arr != null);
+
             IPythonArray array = arr as IPythonArray;
             if (array == null) {
                 throw PythonOps.TypeError("file.write() argument must be string or read-only character buffer, not {0}", DynamicHelpers.GetPythonType(arr).Name);
@@ -1532,36 +1561,47 @@ namespace IronPython.Runtime {
                 throw PythonOps.TypeError("file.write() argument must be string or buffer, not {0}", DynamicHelpers.GetPythonType(arr).Name);
             }
 
-            write(array.tostring());
+            if (locking) {
+                write(array.tostring());
+            } else {
+                WriteNoLock(array.tostring());
+            }
         }
 
         public void writelines(object o) {
             System.Collections.IEnumerator e = PythonOps.GetEnumerator(o);
-            while (e.MoveNext()) {
-                string line = e.Current as string;
-                if (line == null) {
-                    Bytes b = e.Current as Bytes;
-                    if (b != null) {
-                        write(b);
-                        continue;
+
+            if (!e.MoveNext()) {
+                return;
+            }
+
+            lock (this) {
+                do {
+                    string line = e.Current as string;
+                    if (line == null) {
+                        Bytes b = e.Current as Bytes;
+                        if (b != null) {
+                            WriteWorker(b, false);
+                            continue;
+                        }
+
+                        PythonBuffer buf = e.Current as PythonBuffer;
+                        if (buf != null) {
+                            WriteWorker(buf, false);
+                            continue;
+                        }
+
+                        IPythonArray arr = e.Current as IPythonArray;
+                        if (arr != null) {
+                            WriteWorker(arr, false);
+                            continue;
+                        }
+
+                        throw PythonOps.TypeError("writelines() argument must be a sequence of strings");
+
                     }
-
-                    PythonBuffer buf = e.Current as PythonBuffer;
-                    if (buf != null) {
-                        write(buf);
-                        continue;
-                    }
-
-                    IPythonArray arr = e.Current as IPythonArray;
-                    if (arr != null) {
-                        write(arr);
-                        continue;
-                    }
-
-                    throw PythonOps.TypeError("writelines() argument must be a sequence of strings");
-
-                }
-                write(line);
+                    WriteNoLock(line);
+                } while (e.MoveNext());
             }
         }
 

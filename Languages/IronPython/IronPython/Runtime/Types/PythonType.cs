@@ -30,6 +30,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Dynamic;
+using System.Text;
 using System.Threading;
 
 using Microsoft.Scripting;
@@ -55,6 +56,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private string _name;                               // the name of the type
         private Dictionary<string, PythonTypeSlot> _dict;   // type-level slots & attributes
         private PythonTypeAttributes _attrs;                // attributes of the type
+        private int _flags;                                 // CPython-like flags on the type
         private int _version = GetNextVersion();            // version of the type
         private List<WeakReference> _subtypes;              // all of the subtypes of the PythonType
         private PythonContext _pythonContext;               // the context the type was created from, or null for system types.
@@ -83,7 +85,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private Dictionary<CallSignature, LateBoundInitBinder> _lateBoundInitBinders;
         private string[] _optimizedInstanceNames;           // optimized names stored in a custom dictionary
         private int _optimizedInstanceVersion;
-
+        
         private PythonSiteCache _siteCache = new PythonSiteCache();
 
         private PythonTypeSlot _lenSlot;                    // cached length slot, cleared when the type is mutated
@@ -311,15 +313,105 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         /// 
         /// Set if the type is user defined
         /// </summary>
-        private const int TypeFlagHeapType = 1 << 9;
+        private const int TypeFlagHeapType = 0x00000200;
+
+        /// <summary>
+        /// Set if the type has __abstractmethods__ defined
+        /// </summary>
+        private const int TypeFlagAbstractMethodsDefined = 0x00080000;
+        private const int TypeFlagAbstractMethodsNonEmpty = 0x00100000;
+
+        private bool SetAbstractMethodFlags(string name, object value) {
+            if (name != "__abstractmethods__") {
+                return false;
+            }
+
+            int res = _flags | TypeFlagAbstractMethodsDefined;
+
+            IEnumerator enumerator;
+            if (value == null ||
+                !PythonOps.TryGetEnumerator(DefaultContext.Default, value, out enumerator) ||
+                !enumerator.MoveNext()) {
+                // CPython treats None, non-iterables, and empty iterables as empty sets
+                // of abstract methods, and sets this flag accordingly
+                res &= ~(TypeFlagAbstractMethodsNonEmpty);
+            } else {
+                res |= TypeFlagAbstractMethodsNonEmpty;
+            }
+
+            _flags = res;
+            return true;
+        }
+
+        private void ClearAbstractMethodFlags(string name) {
+            if (name == "__abstractmethods__") {
+                _flags &= ~(TypeFlagAbstractMethodsDefined | TypeFlagAbstractMethodsNonEmpty);
+            }
+        }
+
+        internal bool HasAbstractMethods(CodeContext/*!*/ context) {
+            object abstractMethods;
+            IEnumerator en;
+            return (_flags & TypeFlagAbstractMethodsNonEmpty) != 0 &&
+                TryGetBoundCustomMember(context, "__abstractmethods__", out abstractMethods) &&
+                PythonOps.TryGetEnumerator(context, abstractMethods, out en) &&
+                en.MoveNext();
+        }
+
+        internal string GetAbstractErrorMessage(CodeContext/*!*/ context) {
+            if ((_flags & TypeFlagAbstractMethodsNonEmpty) == 0) {
+                return null;
+            }
+
+            object abstractMethods;
+            IEnumerator en;
+            if (!TryGetBoundCustomMember(context, "__abstractmethods__", out abstractMethods) ||
+                !PythonOps.TryGetEnumerator(context, abstractMethods, out en) ||
+                !en.MoveNext()) {
+                return null;
+            }
+
+            string comma = "";
+            StringBuilder error = new StringBuilder("Can't instantiate abstract class ");
+            error.Append(Name);
+            error.Append(" with abstract methods ");
+
+            int i = 0;
+            do {
+                string s = en.Current as string;
+
+                if (s == null) {
+                    Extensible<string> es = en.Current as Extensible<string>;
+                    if (es != null) {
+                        s = es.Value;
+                    }
+                }
+
+                if (s == null) {
+                    return string.Format(
+                        "sequence item {0}: expected string, {1} found",
+                        i, PythonTypeOps.GetName(en.Current)
+                    );
+                }
+
+                error.Append(comma);
+                error.Append(en.Current);
+
+                comma = ", ";
+                i++;
+            } while (en.MoveNext());
+
+            return error.ToString();
+        }
 
         [SpecialName, PropertyMethod, WrapperDescriptor]
         public static int Get__flags__(CodeContext/*!*/ context, PythonType/*!*/ type) {
-            if (type.IsSystemType) {
-                return 0;
-            }
+            int res = type._flags;
 
-            return TypeFlagHeapType;
+            if (type.IsSystemType) {
+                res |= TypeFlagHeapType;
+            }
+            return res;
         }
 
         [SpecialName, PropertyMethod, WrapperDescriptor]
@@ -1227,13 +1319,15 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
             PythonTypeSlot dts;
             if (TryResolveSlot(context, name, out dts)) {
-                if (dts.TrySetValue(context, null, this, value))
+                if (dts.TrySetValue(context, null, this, value)) {
                     return;
+                }
             }
 
             if (PythonType._pythonTypeType.TryResolveSlot(context, name, out dts)) {
-                if (dts.TrySetValue(context, this, PythonType._pythonTypeType, value))
+                if (dts.TrySetValue(context, this, PythonType._pythonTypeType, value)) {
                     return;
+                }
             }
 
             if (IsSystemType) {
@@ -1242,8 +1336,12 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
             PythonTypeSlot curSlot;
             if (!(value is PythonTypeSlot) && _dict.TryGetValue(name, out curSlot) && curSlot is PythonTypeUserDescriptorSlot) {
+                if (SetAbstractMethodFlags(name, value)) {
+                    UpdateVersion();
+                }
                 ((PythonTypeUserDescriptorSlot)curSlot).Value = value;
             } else {
+                SetAbstractMethodFlags(name, value);
                 AddSlot(name, ToTypeSlot(value));
                 UpdateVersion();
             }
@@ -1293,24 +1391,23 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                 ClearObjectInitInSubclasses(this);
             }*/
 
+            ClearAbstractMethodFlags(name);
             UpdateVersion();
             return true;
         }
 
         internal bool TryGetBoundCustomMember(CodeContext context, string name, out object value) {
             PythonTypeSlot dts;
-            if (TryResolveSlot(context, name, out dts)) {
-                if (dts.TryGetValue(context, null, this, out value)) {
-                    return true;
-                }
+            if (TryResolveSlot(context, name, out dts) &&
+                dts.TryGetValue(context, null, this, out value)) {
+                return true;
             }
 
             // search the type
             PythonType myType = DynamicHelpers.GetPythonType(this);
-            if (myType.TryResolveSlot(context, name, out dts)) {
-                if (dts.TryGetValue(context, this, myType, out value)) {
-                    return true;
-                }
+            if (myType.TryResolveSlot(context, name, out dts) &&
+                dts.TryGetValue(context, this, myType, out value)) {
+                return true;
             }
 
             value = null;
@@ -2514,6 +2611,10 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
                     return (T)(object)MakeFastSet<PythonTuple>(context, name);
                 } else if (setType == typeof(Func<CallSite, object, PythonDictionary, object>)) {
                     return (T)(object)MakeFastSet<PythonDictionary>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, SetCollection, object>)) {
+                    return (T)(object)MakeFastSet<SetCollection>(context, name);
+                } else if (setType == typeof(Func<CallSite, object, FrozenSetCollection, object>)) {
+                    return (T)(object)MakeFastSet<FrozenSetCollection>(context, name);
                 }
             }
 

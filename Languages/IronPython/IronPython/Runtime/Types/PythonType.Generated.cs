@@ -63,15 +63,14 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            if (IsSystemType ||                                         // limited numbers of these, just generate optimal code
-                IsMixedNewStyleOldStyle() ||                            // old-style classes shouldn't be commonly used
-                args.Length > 5 ||                                      // and we only generate optimal code for a small number of calls.
-                HasSystemCtor ||                                        // __clrtype__ overridden and ctor doesn't take PythonType as 1st arg
-                GetType() != typeof(PythonType)) {                      // and we don't handle meta classes yet (they could override __call__)...
+            if (IsSystemType ||                          // limited numbers of these, just generate optimal code
+                IsMixedNewStyleOldStyle() ||             // old-style classes shouldn't be commonly used
+                args.Length > 5 ||                       // and we only generate optimal code for a small number of calls.
+                HasSystemCtor ||                         // __clrtype__ overridden and ctor doesn't take PythonType as 1st arg
+                GetType() != typeof(PythonType) ||       // and we don't handle meta classes yet (they could override __call__)...
+                HasAbstractMethods(context)) {           // presence of abstract methods always results in an exception
                 return new FastBindResult<T>();
             }
-
-
             
             Type[] genTypeArgs = new Type[paramTypes.Length - 3]; // minus CallSite, CodeContext, type
             for (int i = 0; i < paramTypes.Length - 3; i++) {
