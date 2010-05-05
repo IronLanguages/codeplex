@@ -50,5 +50,13 @@ namespace IronPython.Runtime {
         public override List<KeyValuePair<object, object>> GetItems() {
             return new List<KeyValuePair<object, object>>();
         }
+
+        public override DictionaryStorage Clone() {
+            return this;
+        }
+
+        public override bool HasNonStringAttributes() {
+            return false;
+        }
     }
 }
