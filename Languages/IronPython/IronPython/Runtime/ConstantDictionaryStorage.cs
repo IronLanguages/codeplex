@@ -101,6 +101,14 @@ namespace IronPython.Runtime {
             return _storage.GetItems();
         }
 
+        public override DictionaryStorage Clone() {
+            return _storage.Clone();
+        }
+
+        public override bool HasNonStringAttributes() {
+            return _storage.HasNonStringAttributes();
+        }
+
         #region IExpressionSerializable Members
 
         public MSAst.Expression CreateExpression() {
