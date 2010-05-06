@@ -48,16 +48,20 @@ namespace Chiron {
             // Listen to IPv6 and IPv4 at the same time.
             // (Otherwise Firefox is very slow because it will try IPv6 first for
             // every single download & time out)
+
             bool ipv6Works = false;
+            var ipAddress = Chiron.AnyAddress ? IPAddress.Any : IPAddress.Loopback;
+            var ipv6Address = Chiron.AnyAddress ? IPAddress.IPv6Any : IPAddress.IPv6Loopback;
+
             try {
-                _socketIPv6 = Connect(AddressFamily.InterNetworkV6, IPAddress.IPv6Loopback);
+                _socketIPv6 = Connect(AddressFamily.InterNetworkV6, ipv6Address);
                 Accept(_socketIPv6);
                 ipv6Works = true;
             }
             catch { }
 
             try {
-                _socketIPv4 = Connect(AddressFamily.InterNetwork, IPAddress.Loopback);
+                _socketIPv4 = Connect(AddressFamily.InterNetwork, ipAddress);
                 Accept(_socketIPv4);
             }
             catch {

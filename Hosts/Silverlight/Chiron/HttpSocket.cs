@@ -282,8 +282,6 @@ namespace Chiron {
             sb.AppendFormat("HTTP/1.1 {0} {1}\r\n", statusCode, GetStatusCodeText(statusCode));
             sb.AppendFormat("Date: {0}\r\n", DateTime.Now.ToUniversalTime().ToString("R", DateTimeFormatInfo.InvariantInfo));
             sb.AppendFormat("Server: Chiron/{0}.{1}\r\n", ver.Major, ver.MajorRevision);
-            
-            sb.Append("Cache-Control: no-cache\r\nPragma: no-cache\r\nExpires: -1\r\n");
 
             if (contentLength >= 0) sb.AppendFormat("Content-Length: {0}\r\n", contentLength);
             if (extraHeaders != null) sb.Append(extraHeaders);

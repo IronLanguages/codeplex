@@ -47,10 +47,10 @@ namespace IronPython.Runtime {
         , ISerializable, IDeserializationCallback
 #endif
     {
-        private Bucket[] _buckets;
-        private int _count;
+        internal Bucket[] _buckets;
+        internal int _count;
         private int _version;
-        private bool _hasNull;
+        internal bool _hasNull;
 
         private Func<object, int> _hashFunc;
         private Func<object, object, bool> _eqFunc;
@@ -62,13 +62,14 @@ namespace IronPython.Runtime {
 
         private const int InitialBuckets = 8;
         private const double Load = 0.7;
+        private const double MinLoad = 0.5; // dictates Clone() behavior
 
         // marker type to indicate we've gone megamorphic (SetStorage happens to be a a type we'll
         // never see as a set element
         private static readonly Type HeterogeneousType = typeof(SetStorage);
 
         // marker object used to indicate we have a removed value
-        private static readonly object Removed = new object();
+        internal static readonly object Removed = new object();
 
         /// <summary>
         /// Creates a new set storage with no buckets
@@ -145,31 +146,16 @@ namespace IronPython.Runtime {
                     UpdateHelperFunctions(item.GetType(), item);
                 }
 
-                AddWorker(_buckets, item, Hash(item));
+                AddWorker(item, Hash(item));
             } else {
                 _hasNull = true;
             }
         }
 
-        /// <summary>
-        /// Adds a non-null item with a pre-computed hash lock-free
-        /// </summary>
-        private void AddNoHash(object/*!*/ item, int hashCode) {
-            if (_buckets == null) {
-                Initialize();
-            }
+        private void AddWorker(object/*!*/ item, int hashCode) {
+            Debug.Assert(_buckets != null && _count < _buckets.Length);
 
-            if (item.GetType() != _itemType && _itemType != HeterogeneousType) {
-                UpdateHelperFunctions(item.GetType(), item);
-            }
-
-            AddWorker(_buckets, item, hashCode);
-        }
-
-        private void AddWorker(Bucket[]/*!*/ buckets, object/*!*/ item, int hashCode) {
-            Debug.Assert(buckets != null && _count < buckets.Length);
-
-            if (AddWorker(buckets, item, hashCode, _eqFunc, ref _version)) {
+            if (AddWorker(_buckets, item, hashCode, _eqFunc, ref _version)) {
                 _count++;
                 if (_count > _maxCount) {
                     Grow();
@@ -187,25 +173,49 @@ namespace IronPython.Runtime {
         ) {
             Debug.Assert(buckets != null);
             Debug.Assert(item != null);
-            
-            int index = hashCode & (buckets.Length - 1);
 
-            for (; ; ) {
-                Bucket cur = buckets[index];
-                if (cur.Item == null || cur.Item == Removed) {
-                    break;
-                } else if (cur.HashCode == hashCode && eqFunc(item, cur.Item)) {
+            for (int index = hashCode & (buckets.Length - 1); ; ProbeNext(buckets, ref index)) {
+                Bucket bucket = buckets[index];
+                if (bucket.Item == null || bucket.Item == Removed) {
+                    version++;
+                    buckets[index].HashCode = hashCode;
+                    buckets[index].Item = item;
+                    return true;
+                } else if (bucket.HashCode == hashCode && eqFunc(item, bucket.Item)) {
                     return false;
                 }
-
-                ProbeNext(buckets, ref index);
             }
+        }
 
-            version++;
-            buckets[index].HashCode = hashCode;
-            Thread.MemoryBarrier();
-            buckets[index].Item = item;
-            return true;
+        /// <summary>
+        /// Lock-free helper on a non-null item with a pre-calculated hash code. Removes the item
+        /// if it is present in the set, otherwise adds it.
+        /// </summary>
+        private void AddOrRemoveWorker(object/*!*/ item, int hashCode) {
+            Debug.Assert(_buckets != null);
+            Debug.Assert(item != null);
+            
+            for (int index = hashCode & (_buckets.Length - 1); ; ProbeNext(_buckets, ref index)) {
+                Bucket bucket = _buckets[index];
+                if (bucket.Item == null) {
+                    _version++;
+                    _buckets[index].HashCode = hashCode;
+                    _buckets[index].Item = item;
+                    _count++;
+                    if (_count > _maxCount) {
+                        Grow();
+                    }
+                    return;
+                } else if (
+                    bucket.Item != Removed && bucket.HashCode == hashCode &&
+                    _eqFunc(item, bucket.Item)
+                ) {
+                    _version++;
+                    _buckets[index].Item = Removed;
+                    _count--;
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -230,21 +240,39 @@ namespace IronPython.Runtime {
         /// Clones the set, returning a new SetStorage object
         /// </summary>
         public SetStorage Clone() {
-            SetStorage res;
-            if (_count > InitialBuckets) {
-                res = new SetStorage(_count);
-            } else {
-                res = new SetStorage();
-            }
-
+            SetStorage res = new SetStorage();
             res._hasNull = _hasNull;
 
-            if (_count > 0) {
-                Bucket[] buckets = _buckets;
+            if (_count == 0) {
+                return res;
+            }
+
+            Bucket[] buckets = _buckets;
+            if (_count < _buckets.Length * MinLoad) {
+                // If the set is sparsely populated, create a cleaner copy
+                res.Initialize(_count);
+                res.UpdateHelperFunctions(this);
+
                 for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed) {
-                        res.AddNoHash(item, buckets[i].HashCode);
+                    Bucket bucket = buckets[i];
+                    if (bucket.Item != null && bucket.Item != Removed) {
+                        res.AddWorker(bucket.Item, bucket.HashCode);
+                    }
+                }
+            } else {
+                // Otherwise, perform a faster copy
+                res._maxCount = (int)(buckets.Length * Load);
+                res._buckets = new Bucket[buckets.Length];
+                res._hashFunc = _hashFunc;
+                res._eqFunc = _eqFunc;
+                res._itemType = _itemType;
+
+                for (int i = 0; i < buckets.Length; i++) {
+                    Bucket bucket = buckets[i];
+                    if (bucket.Item != null) {
+                        res._buckets[i].Item = bucket.Item;
+                        res._buckets[i].HashCode = bucket.HashCode;
+                        res._count++;
                     }
                 }
             }
@@ -256,25 +284,25 @@ namespace IronPython.Runtime {
         /// Checks to see if the given item exists in the set
         /// </summary>
         public bool Contains(object item) {
-            if (item != null) {
-                if (_count > 0) {
-                    int hashCode;
-                    Func<object, object, bool> eqFunc;
-                    if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
-                        hashCode = _hashFunc(item);
-                        eqFunc = _eqFunc;
-                    } else {
-                        hashCode = _genericHash(item);
-                        eqFunc = _genericEquals;
-                    }
+            if (item == null) {
+                return _hasNull;
+            }
 
-                    return ContainsWorker(_buckets, item, hashCode, eqFunc);
-                }
-
+            if (_count == 0) {
                 return false;
             }
 
-            return _hasNull;
+            int hashCode;
+            Func<object, object, bool> eqFunc;
+            if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
+                hashCode = _hashFunc(item);
+                eqFunc = _eqFunc;
+            } else {
+                hashCode = _genericHash(item);
+                eqFunc = _genericEquals;
+            }
+
+            return ContainsWorker(_buckets, item, hashCode, eqFunc);
         }
 
         /// <summary>
@@ -284,45 +312,21 @@ namespace IronPython.Runtime {
         /// <param name="item"></param>
         /// <returns></returns>
         public bool ContainsAlwaysHash(object item) {
-            if (item != null) {
-                int hashCode;
-                Func<object, object, bool> eqFunc;
-                if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
-                    hashCode = _hashFunc(item);
-                    eqFunc = _eqFunc;
-                } else {
-                    hashCode = _genericHash(item);
-                    eqFunc = _genericEquals;
-                }
-
-                if (_count > 0) {
-                    return ContainsWorker(_buckets, item, hashCode, eqFunc);
-                }
-
-                return false;
+            if (item == null) {
+                return _hasNull;
             }
 
-            return _hasNull;
-        }
-
-        /// <summary>
-        /// Helper to try and find a non-null item with precomputed hash code in the set.
-        /// </summary>
-        private bool ContainsNoHash(Bucket[] buckets, object/*!*/ item, int hashCode) {
-            Debug.Assert(item != null);
-
-            if (_count > 0 && buckets != null) {
-                Func<object, object, bool> eqFunc;
-                if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
-                    eqFunc = _eqFunc;
-                } else {
-                    eqFunc = _genericEquals;
-                }
-
-                return ContainsWorker(buckets, item, hashCode, eqFunc);
+            int hashCode;
+            Func<object, object, bool> eqFunc;
+            if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
+                hashCode = _hashFunc(item);
+                eqFunc = _eqFunc;
+            } else {
+                hashCode = _genericHash(item);
+                eqFunc = _genericEquals;
             }
-
-            return false;
+            
+            return _count > 0 && ContainsWorker(_buckets, item, hashCode, eqFunc);
         }
 
         private static bool ContainsWorker(
@@ -331,6 +335,7 @@ namespace IronPython.Runtime {
         ) {
             Debug.Assert(item != null);
             Debug.Assert(buckets != null);
+            Debug.Assert(eqFunc != null);
 
             int index = hashCode & (buckets.Length - 1);
             int startIndex = index;
@@ -339,9 +344,8 @@ namespace IronPython.Runtime {
                 if (bucket.Item == null) {
                     break;
                 } else if (
-                    bucket.Item != Removed &&
-                    bucket.HashCode == hashCode &&
-                    (object.ReferenceEquals(item, bucket.Item) || eqFunc(item, bucket.Item))
+                    bucket.Item != Removed && bucket.HashCode == hashCode &&
+                    eqFunc(item, bucket.Item)
                 ) {
                     return true;
                 }
@@ -359,10 +363,7 @@ namespace IronPython.Runtime {
             Debug.Assert(into != null);
 
             lock (into) {
-                Bucket[] buckets = _buckets;
-                for (int i = 0; i < buckets.Length; i++) {
-                    into.AddNoHash(buckets[i].Item, buckets[i].HashCode);
-                }
+                into.UnionUpdate(this);
             }
         }
 
@@ -375,13 +376,15 @@ namespace IronPython.Runtime {
                 yield return null;
             }
 
-            if (_count > 0) {
-                Bucket[] buckets = _buckets;
-                for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed) {
-                        yield return item;
-                    }
+            if (_count == 0) {
+                yield break;
+            }
+
+            Bucket[] buckets = _buckets;
+            for (int i = 0; i < buckets.Length; i++) {
+                object item = buckets[i].Item;
+                if (item != null && item != Removed) {
+                    yield return item;
                 }
             }
         }
@@ -390,7 +393,7 @@ namespace IronPython.Runtime {
             List res = new List(Count);
 
             if (_hasNull) {
-                res.Add(null);
+                res.AddNoLock(null);
             }
 
             if (_count > 0) {
@@ -398,7 +401,7 @@ namespace IronPython.Runtime {
                 for (int i = 0; i < buckets.Length; i++) {
                     object item = buckets[i].Item;
                     if (item != null && item != Removed) {
-                        res.Add(item);
+                        res.AddNoLock(item);
                     }
                 }
             }
@@ -417,30 +420,24 @@ namespace IronPython.Runtime {
                 return true;
             }
 
-            if (_count > 0) {
-                lock (this) {
-                    return PopWorker(out item);
-                }
+            if (_count == 0) {
+                return false;
             }
 
-            return false;
-        }
-
-        private bool PopWorker(out object item) {
-            Debug.Assert(_buckets != null);
-
-            for (int i = 0; i < _buckets.Length; i++) {
-                if (_buckets[i].Item != null && _buckets[i].Item != Removed) {
-                    item = _buckets[i].Item;
-                    _version++;
-                    _buckets[i].Item = Removed;
-                    _count--;
-                    return true;
+            lock (this) {
+                for (int i = 0; i < _buckets.Length; i++) {
+                    if (_buckets[i].Item != null && _buckets[i].Item != Removed) {
+                        item = _buckets[i].Item;
+                        _version++;
+                        _buckets[i].Item = Removed;
+                        _count--;
+                        return true;
+                    }
                 }
-            }
 
-            item = null;
-            return false;
+                item = null;
+                return false;
+            }
         }
 
         /// <summary>
@@ -458,11 +455,11 @@ namespace IronPython.Runtime {
                 return RemoveNull();
             }
 
-            if (_count > 0) {
-                return RemoveItem(item);
+            if (_count == 0) {
+                return false;
             }
 
-            return false;
+            return RemoveItem(item);
         }
 
         /// <summary>
@@ -502,36 +499,15 @@ namespace IronPython.Runtime {
                 eqFunc = _genericEquals;
             }
 
-            return _count > 0 && RemoveWorker(item, hashCode, eqFunc);
-        }
-
-        /// <summary>
-        /// Lock-free helper to remove a non-null item with a pre-calculated hash code
-        /// </summary>
-        private bool RemoveNoHash(object/*!*/ item, int hashCode) {
-            Debug.Assert(item != null);
-
-            if (_count > 0) {
-                Func<object, object, bool> eqFunc;
-                if (item.GetType() == _itemType || _itemType == HeterogeneousType) {
-                    eqFunc = _eqFunc;
-                } else {
-                    eqFunc = _genericEquals;
-                }
-
-                return RemoveWorker(item, hashCode, eqFunc);
-            }
-
-            return false;
+            return RemoveWorker(item, hashCode, eqFunc);
         }
 
         private bool RemoveWorker(
             object/*!*/ item, int hashCode, Func<object, object, bool> eqFunc
         ) {
-            Debug.Assert(_buckets != null);
             Debug.Assert(item != null);
 
-            if (_buckets == null) {
+            if (_count == 0) {
                 return false;
             }
 
@@ -542,9 +518,8 @@ namespace IronPython.Runtime {
                 if (bucket.Item == null) {
                     break;
                 } else if (
-                    bucket.Item != Removed &&
-                    bucket.HashCode == hashCode &&
-                    (object.ReferenceEquals(item, bucket.Item) || eqFunc(item, bucket.Item))
+                    bucket.Item != Removed && bucket.HashCode == hashCode &&
+                    eqFunc(item, bucket.Item)
                 ) {
                     _version++;
                     _buckets[index].Item = Removed;
@@ -568,23 +543,29 @@ namespace IronPython.Runtime {
         /// Determines whether the current set shares no elements with the given set
         /// </summary>
         public bool IsDisjoint(SetStorage other) {
-            if (other._count < _count) {
-                return other.IsDisjoint(this);
-            }
+            return IsDisjoint(this, other);
+        }
 
-            if (_hasNull && other._hasNull) {
+        public static bool IsDisjoint(SetStorage self, SetStorage other) {
+            SortBySize(ref self, ref other);
+            
+            if (self._hasNull && other._hasNull) {
                 return false;
             }
 
-            if (_count > 0 && other._count > 0) {
-                Bucket[] buckets = _buckets;
-                Bucket[] otherBuckets = other._buckets;
-                for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed &&
-                        other.ContainsNoHash(otherBuckets, item, buckets[i].HashCode)) {
-                        return false;
-                    }
+            if (self._count == 0 || other._count == 0) {
+                return true;
+            }
+
+            Bucket[] buckets = self._buckets;
+            Bucket[] otherBuckets = other._buckets;
+            var eqFunc = GetEqFunc(self, other);
+
+            for (int i = 0; i < buckets.Length; i++) {
+                Bucket bucket = buckets[i];
+                if (bucket.Item != null && bucket.Item != Removed &&
+                    ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                    return false;
                 }
             }
 
@@ -617,15 +598,23 @@ namespace IronPython.Runtime {
         }
 
         private bool IsSubsetWorker(SetStorage other) {
+            if (_count == 0) {
+                return true;
+            }
+
+            if (other._count == 0) {
+                return false;
+            }
+
+            Bucket[] buckets = _buckets;
             Bucket[] otherBuckets = other._buckets;
-            if (_count > 0) {
-                Bucket[] buckets = _buckets;
-                for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed &&
-                        !other.ContainsNoHash(otherBuckets, item, buckets[i].HashCode)) {
-                        return false;
-                    }
+            var eqFunc = GetEqFunc(this, other);
+
+            for (int i = 0; i < buckets.Length; i++) {
+                Bucket bucket = buckets[i];
+                if (bucket.Item != null && bucket.Item != Removed &&
+                    !ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                    return false;
                 }
             }
 
@@ -639,13 +628,21 @@ namespace IronPython.Runtime {
         public void UnionUpdate(SetStorage other) {
             _hasNull |= other._hasNull;
 
-            if (other._count > 0) {
-                Bucket[] otherBuckets = other._buckets;
-                for (int i = 0; i < otherBuckets.Length; i++) {
-                    object item = otherBuckets[i].Item;
-                    if (item != null && item != Removed) {
-                        AddNoHash(item, otherBuckets[i].HashCode);
-                    }
+            if (other._count == 0) {
+                return;
+            }
+
+            if (_buckets == null) {
+                Initialize(other._count);
+            }
+            Bucket[] otherBuckets = other._buckets;
+            UpdateHelperFunctions(other);
+
+                
+            for (int i = 0; i < otherBuckets.Length; i++) {
+                Bucket bucket = otherBuckets[i];
+                if (bucket.Item != null && bucket.Item != Removed) {
+                    AddWorker(bucket.Item, bucket.HashCode);
                 }
             }
         }
@@ -655,19 +652,28 @@ namespace IronPython.Runtime {
         /// current set if synchronization is desired.
         /// </summary>
         public void IntersectionUpdate(SetStorage other) {
+            if (other._count == 0) {
+                ClearNoLock();
+                _hasNull &= other._hasNull;
+                return;
+            }
+
             _hasNull &= other._hasNull;
+            if (_count == 0) {
+                return;
+            }
 
             Bucket[] buckets = _buckets;
             Bucket[] otherBuckets = other._buckets;
-            if (_count > 0) {
-                for (int i = 0; i < buckets.Length; i++) {
-                    Bucket bucket = buckets[i];
-                    if (bucket.Item != null && bucket.Item != Removed &&
-                        !other.ContainsNoHash(otherBuckets, bucket.Item, bucket.HashCode)) {
-                            _version++;
-                            buckets[i].Item = Removed;
-                            _count--;
-                    }
+            var eqFunc = GetEqFunc(this, other);
+
+            for (int i = 0; i < buckets.Length; i++) {
+                Bucket bucket = buckets[i];
+                if (bucket.Item != null && bucket.Item != Removed &&
+                    !ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                    _version++;
+                    buckets[i].Item = Removed;
+                    _count--;
                 }
             }
         }
@@ -679,19 +685,20 @@ namespace IronPython.Runtime {
         public void SymmetricDifferenceUpdate(SetStorage other) {
             _hasNull ^= other._hasNull;
 
-            Bucket[] buckets = _buckets;
-            if (other._count > 0) {
-                Bucket[] otherBuckets = other._buckets;
-                for (int i = 0; i < otherBuckets.Length; i++) {
-                    object item = otherBuckets[i].Item;
-                    if (item != null && item != Removed) {
-                        int hashCode = otherBuckets[i].HashCode;
-                        if (ContainsNoHash(buckets, item, hashCode)) {
-                            RemoveNoHash(item, hashCode);
-                        } else {
-                            AddNoHash(item, hashCode);
-                        }
-                    }
+            if (other._count == 0) {
+                return;
+            }
+
+            if (_buckets == null) {
+                Initialize();
+            }
+            Bucket[] otherBuckets = other._buckets;
+            UpdateHelperFunctions(other);
+
+            for (int i = 0; i < otherBuckets.Length; i++) {
+                Bucket bucket = otherBuckets[i];
+                if (bucket.Item != null && bucket.Item != Removed) {
+                    AddOrRemoveWorker(bucket.Item, bucket.HashCode);
                 }
             }
         }
@@ -709,21 +716,23 @@ namespace IronPython.Runtime {
 
             Bucket[] buckets = _buckets;
             Bucket[] otherBuckets = other._buckets;
+            var eqFunc = GetEqFunc(this, other);
+
             if (buckets.Length < otherBuckets.Length) {
                 // iterate through self, removing anything in other
                 for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed &&
-                        other.ContainsNoHash(otherBuckets, item, buckets[i].HashCode)) {
-                        RemoveNoHash(item, buckets[i].HashCode);
+                    Bucket bucket = buckets[i];
+                    if (bucket.Item != null && bucket.Item != Removed &&
+                        ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                            RemoveWorker(bucket.Item, bucket.HashCode, eqFunc);
                     }
                 }
             } else {
                 // iterate through other, removing anything we find
                 for (int i = 0; i < otherBuckets.Length; i++) {
-                    object item = otherBuckets[i].Item;
-                    if (item != null && item != Removed) {
-                        RemoveNoHash(item, otherBuckets[i].HashCode);
+                    Bucket bucket = otherBuckets[i];
+                    if (bucket.Item != null && bucket.Item != Removed) {
+                        RemoveWorker(bucket.Item, bucket.HashCode, eqFunc);
                     }
                 }
             }
@@ -753,7 +762,7 @@ namespace IronPython.Runtime {
         /// method is thread-safe and makes no modifications to self or other.
         /// </summary>
         public static SetStorage Intersection(SetStorage self, SetStorage other) {
-            SetStorage res = new SetStorage();
+            SetStorage res = new SetStorage(Math.Min(self._count, other._count));
 
             res._hasNull = self._hasNull && other._hasNull;
 
@@ -764,11 +773,19 @@ namespace IronPython.Runtime {
             SortBySize(ref self, ref other);
             Bucket[] buckets = self._buckets;
             Bucket[] otherBuckets = other._buckets;
+            var eqFunc = GetEqFunc(self, other);
+            // if either set is homogeneous, then the resulting set must be
+            if (other._itemType != HeterogeneousType) {
+                res.UpdateHelperFunctions(other);
+            } else {
+                res.UpdateHelperFunctions(self);
+            }
+
             for (int i = 0; i < buckets.Length; i++) {
-                object item = buckets[i].Item;
-                if (item != null && item != Removed &&
-                    other.ContainsNoHash(otherBuckets, item, buckets[i].HashCode)) {
-                        res.AddNoHash(item, buckets[i].HashCode);
+                Bucket bucket = buckets[i];
+                if (bucket.Item != null && bucket.Item != Removed &&
+                    ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                    res.AddWorker(bucket.Item, bucket.HashCode);
                 }
             }
 
@@ -780,16 +797,10 @@ namespace IronPython.Runtime {
         /// This method is thread-safe and makes no modifications to self or other.
         /// </summary>
         public static SetStorage SymmetricDifference(SetStorage self, SetStorage other) {
-            SetStorage res;
-
             // SymmetricDifferenceUpdate iterates through its arg, so clone the larger set
-            if (self._count < other._count) {
-                res = other.Clone();
-                res.SymmetricDifferenceUpdate(self);
-            } else {
-                res = self.Clone();
-                res.SymmetricDifferenceUpdate(other);
-            }
+            SortBySize(ref self, ref other);
+            SetStorage res = other.Clone();
+            res.SymmetricDifferenceUpdate(self);
 
             return res;
         }
@@ -801,25 +812,31 @@ namespace IronPython.Runtime {
         public static SetStorage Difference(SetStorage self, SetStorage other) {
             SetStorage res;
 
-            if (other._count == 0) {
+            if (self._count == 0 || other._count == 0) {
                 res = self.Clone();
                 res._hasNull &= !other._hasNull;
                 return res;
             }
 
-            res = new SetStorage();
-            res._hasNull &= !other._hasNull;
+            if (self._buckets.Length <= other._buckets.Length) {
+                res = new SetStorage(self._count);
+                res._hasNull &= !other._hasNull;
 
-            Bucket[] buckets = self._buckets;
-            Bucket[] otherBuckets = other._buckets;
-            if (self._count > 0) {
+                Bucket[] buckets = self._buckets;
+                Bucket[] otherBuckets = other._buckets;
+                var eqFunc = GetEqFunc(self, other);
+                res.UpdateHelperFunctions(self);
+
                 for (int i = 0; i < buckets.Length; i++) {
-                    object item = buckets[i].Item;
-                    if (item != null && item != Removed &&
-                        !other.ContainsNoHash(otherBuckets, item, buckets[i].HashCode)) {
-                            res.AddNoHash(item, buckets[i].HashCode);
+                    Bucket bucket = buckets[i];
+                    if (bucket.Item != null && bucket.Item != Removed &&
+                        !ContainsWorker(otherBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
+                        res.AddWorker(bucket.Item, bucket.HashCode);
                     }
                 }
+            } else {
+                res = self.Clone();
+                res.DifferenceUpdate(other);
             }
 
             return res;
@@ -839,6 +856,7 @@ namespace IronPython.Runtime {
             }
 
             if (x._count == 0) {
+                // we know y._count == 0
                 return true;
             }
 
@@ -848,10 +866,12 @@ namespace IronPython.Runtime {
             if (comparer is PythonContext.PythonEqualityComparer) {
                 Bucket[] xBuckets = x._buckets;
                 Bucket[] yBuckets = y._buckets;
+                var eqFunc = GetEqFunc(x, y);
+
                 for (int i = 0; i < xBuckets.Length; i++) {
-                    object item = xBuckets[i].Item;
-                    if (item != null && item != Removed &&
-                        !y.ContainsNoHash(yBuckets, item, xBuckets[i].HashCode)) {
+                    Bucket bucket = xBuckets[i];
+                    if (bucket.Item != null && bucket.Item != Removed &&
+                        !ContainsWorker(yBuckets, bucket.Item, bucket.HashCode, eqFunc)) {
                         return false;
                     }
                 }
@@ -1021,7 +1041,26 @@ namespace IronPython.Runtime {
         }
 
         private static bool GenericEquals(object o1, object o2) {
-            return PythonOps.EqualRetBool(o1, o2);
+            return object.ReferenceEquals(o1, o2) || PythonOps.EqualRetBool(o1, o2);
+        }
+
+        private void UpdateHelperFunctions(SetStorage other) {
+            if (_itemType == HeterogeneousType || _itemType == other._itemType) {
+                return;
+            }
+
+            if (other._itemType == HeterogeneousType) {
+                SetHeterogeneousSites();
+                return;
+            }
+
+            if (_itemType == null) {
+                _hashFunc = other._hashFunc;
+                _eqFunc = other._eqFunc;
+                return;
+            }
+
+            SetHeterogeneousSites();
         }
 
         private void UpdateHelperFunctions(Type t, object item) {
@@ -1056,15 +1095,15 @@ namespace IronPython.Runtime {
             } else if (_itemType != HeterogeneousType) {
                 // 2nd time through, we're adding a new type, so the set is heterogeneous
                 SetHeterogeneousSites();
-
-                // we need to clone the buckets so any lock-free readers will only see the
-                // old, homogeneous buckets
-                _buckets = (Bucket[])_buckets.Clone();
             }
             // else this set has already created a new heterogeneous site
         }
 
         private void SetHeterogeneousSites() {
+            // we need to clone the buckets so any lock-free readers will only see the
+            // old, homogeneous buckets
+            _buckets = (Bucket[])_buckets.Clone();
+
             AssignSiteDelegates(
                 DefaultContext.DefaultPythonContext.MakeHashSite(),
                 DefaultContext.DefaultPythonContext.MakeEqualSite()
@@ -1092,6 +1131,15 @@ namespace IronPython.Runtime {
             return _hashFunc(item);
         }
 
+        private static Func<object, object, bool> GetEqFunc(SetStorage self, SetStorage other) {
+            if (self._itemType == other._itemType || self._itemType == HeterogeneousType) {
+                return self._eqFunc;
+            } else if (other._itemType == HeterogeneousType) {
+                return other._eqFunc;
+            }
+            return _genericEquals;
+        }
+
         #endregion
 
         #region Internal Set Helpers
@@ -1100,8 +1148,8 @@ namespace IronPython.Runtime {
         /// Helper which ensures that the first argument x requires the least work to enumerate
         /// </summary>
         internal static void SortBySize(ref SetStorage x, ref SetStorage y) {
-            if ((x._count > 0 && y._count > 0 && x._buckets.Length > y._buckets.Length) ||
-                y._count == 0) {
+            if (x._count > 0 &&
+                ((y._count > 0 && x._buckets.Length > y._buckets.Length) || y._count == 0)) {
                     SetStorage temp = x;
                     x = y;
                     y = temp;
@@ -1135,6 +1183,27 @@ namespace IronPython.Runtime {
 
             items = GetItemsWorker(set);
             return false;
+        }
+
+        /// <summary>
+        /// A factory which creates a SetStorage object from any Python iterable. It extracts
+        /// the underlying storage of a set or frozen set, copying in the former case, to return
+        /// a SetStorage object that is guaranteed not to receive any outside mutations.
+        /// </summary>
+        internal static SetStorage GetFrozenItems(object o) {
+            Debug.Assert(!(o is SetStorage));
+
+            FrozenSetCollection frozenset = o as FrozenSetCollection;
+            if (frozenset != null) {
+                return frozenset._items;
+            }
+
+            SetCollection set = o as SetCollection;
+            if (set != null) {
+                return set._items.Clone();
+            }
+
+            return GetItemsWorker(o);
         }
 
         internal static SetStorage GetItemsWorker(object set) {
@@ -1258,9 +1327,9 @@ namespace IronPython.Runtime {
 
             Bucket[] newBuckets = new Bucket[_buckets.Length << 1];
             for (int i = 0; i < _buckets.Length; i++) {
-                object item = _buckets[i].Item;
-                if (item != null && item != Removed) {
-                    AddWorker(newBuckets, item, _buckets[i].HashCode, _eqFunc, ref _version);
+                Bucket bucket = _buckets[i];
+                if (bucket.Item != null && bucket.Item != Removed) {
+                    AddWorker(newBuckets, bucket.Item, bucket.HashCode, _eqFunc, ref _version);
                 }
             }
 

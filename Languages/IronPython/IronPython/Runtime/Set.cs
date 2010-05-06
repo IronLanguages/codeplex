@@ -100,6 +100,13 @@ namespace IronPython.Runtime {
             }
         }
 
+        internal SetCollection(object[] items) {
+            _items = new SetStorage(items.Length);
+            foreach (var o in items) {
+                _items.AddNoLock(o);
+            }
+        }
+
         private SetCollection Make(SetStorage items) {
             if (this.GetType() == typeof(SetCollection)) {
                 return new SetCollection(items);
@@ -947,7 +954,7 @@ namespace IronPython.Runtime {
             _items = set;
         }
 
-        protected internal FrozenSetCollection(object set) : this(SetStorage.GetItems(set)) { }
+        protected internal FrozenSetCollection(object set) : this(SetStorage.GetFrozenItems(set)) { }
 
         private FrozenSetCollection Empty {
             get {
@@ -995,7 +1002,7 @@ namespace IronPython.Runtime {
                 return fs;
             }
 
-            return Make(cls, SetStorage.GetItems(set));
+            return Make(cls, SetStorage.GetFrozenItems(set));
         }
 
         public FrozenSetCollection copy() {
@@ -1465,28 +1472,27 @@ namespace IronPython.Runtime {
     [PythonType("setiterator")]
     public sealed class SetIterator : IEnumerable, IEnumerable<object>, IEnumerator, IEnumerator<object> {
         private readonly SetStorage _items;
-        private readonly IEnumerator<object> _enumerator;
         private readonly int _version;
+        private readonly int _maxIndex;
+        private int _index = -2;
 
         internal SetIterator(SetStorage items, bool mutable) {
             _items = items;
             if (mutable) {
                 lock (items) {
                     _version = items.Version;
-                    _enumerator = items.GetEnumerator();
+                    _maxIndex = items._count > 0 ? items._buckets.Length : 0;
                 }
             } else {
                 _version = items.Version;
-                _enumerator = items.GetEnumerator();
+                _maxIndex = items._count > 0 ? items._buckets.Length : 0;
             }
         }
 
         #region IDisposable Members
 
         [PythonHidden]
-        public void Dispose() {
-            _enumerator.Dispose();
-        }
+        public void Dispose() { }
 
         #endregion
 
@@ -1495,22 +1501,51 @@ namespace IronPython.Runtime {
         public object Current {
             [PythonHidden]
             get {
+                if (_index < 0) {
+                    return null;
+                }
+
+                object res = _items._buckets[_index].Item;
+
                 if (_items.Version != _version) {
                     throw PythonOps.RuntimeError("set changed during iteration");
                 }
 
-                return _enumerator.Current;
+                return res;
             }
         }
 
         [PythonHidden]
         public bool MoveNext() {
-            return _enumerator.MoveNext();
+            if (_index == _maxIndex) {
+                return false;
+            }
+
+            _index++;
+            if (_index < 0) {
+                if (_items._hasNull) {
+                    return true;
+                } else {
+                    _index++;
+                }
+            }
+
+            if (_maxIndex > 0) {
+                SetStorage.Bucket[] buckets = _items._buckets;
+                for (; _index < buckets.Length; _index++) {
+                    object item = buckets[_index].Item;
+                    if (item != null && item != SetStorage.Removed) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         [PythonHidden]
         public void Reset() {
-            _enumerator.Reset();
+            _index = -2;
         }
 
         #endregion

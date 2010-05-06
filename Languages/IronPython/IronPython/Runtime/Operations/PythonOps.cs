@@ -105,6 +105,10 @@ namespace IronPython.Runtime.Operations {
             return new ConstantDictionaryStorage(new CommonDictionaryStorage(data, false));
         }
 
+        public static SetCollection MakeSet(params object[] items) {
+            return new SetCollection(items);
+        }
+
         /// <summary>
         /// Creates a new dictionary extracting the keys and values from the
         /// provided data array.  Keys/values are adjacent in the array with

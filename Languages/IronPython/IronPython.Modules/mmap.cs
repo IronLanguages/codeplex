@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-#if !CLR2
+#if !CLR2 && !SILVERLIGHT
 
 using System;
 using System.Diagnostics;

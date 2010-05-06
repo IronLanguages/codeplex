@@ -71,6 +71,18 @@ namespace IronPython.Runtime {
             _size = i;
         }
 
+        public void __init__([NotNull] SetCollection sequence) {
+            List list = sequence._items.GetItems();
+            _size = list._size;
+            _data = list._data;
+        }
+
+        public void __init__([NotNull] FrozenSetCollection sequence) {
+            List list = sequence._items.GetItems();
+            _size = list._size;
+            _data = list._data;
+        }
+
         public void __init__([NotNull] List sequence) {
             if (this == sequence) {
                 // list.__init__(l, l) resets l

@@ -119,7 +119,10 @@ namespace Microsoft.Scripting.Silverlight {
 
             string debugStr;
             bool debug = false;
-            if (args.TryGetValue("debug", out debugStr)) {
+            if (System.Diagnostics.Debugger.IsAttached) {
+                // force debug mode if a debugger is attached ...
+                debug = true;
+            } else if (args.TryGetValue("debug", out debugStr)) {
                 if (!bool.TryParse(debugStr, out debug)) {
                     throw new ArgumentException("You must set 'debug' to 'true' or 'false', for example: initParams: \"..., debug=true\"");
                 }
