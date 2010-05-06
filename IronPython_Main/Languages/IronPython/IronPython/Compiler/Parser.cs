@@ -1430,9 +1430,54 @@ namespace IronPython.Compiler {
             return ret;
         }
 
-        //with_stmt: 'with' expression [ 'as' with_var ] ':' suite
+        struct WithItem {
+            public readonly SourceLocation Start;
+            public readonly Expression ContextManager;
+            public readonly Expression Variable;
+
+            public WithItem(SourceLocation start, Expression contextManager, Expression variable) {
+                Start = start;
+                ContextManager = contextManager;
+                Variable = variable;
+            }
+        }
+
+        //with_stmt: 'with' with_item (',' with_item)* ':' suite
+        //with_item: test ['as' expr]
         private WithStatement ParseWithStmt() {
             Eat(TokenKind.KeywordWith);
+
+            var withItem = ParseWithItem();
+            List<WithItem> items = null;
+            while (MaybeEat(TokenKind.Comma)) {
+                if (items == null) {
+                    items = new List<WithItem>();
+                }
+
+                items.Add(ParseWithItem());
+            }
+            
+
+            SourceLocation header = GetEnd();
+            Statement body = ParseSuite();
+            if (items != null) {
+                for (int i = items.Count - 1; i >= 0; i--) {
+                    var curItem = items[i];
+                    var innerWith = new WithStatement(curItem.ContextManager, curItem.Variable, body);
+                    innerWith.Header = header;
+                    innerWith.SetLoc(withItem.Start, GetEnd());
+                    body = innerWith;
+                    header = GetEnd();
+                }
+            }
+
+            WithStatement ret = new WithStatement(withItem.ContextManager, withItem.Variable, body);
+            ret.Header = header;
+            ret.SetLoc(withItem.Start, GetEnd());
+            return ret;
+        }
+
+        private WithItem ParseWithItem() {
             SourceLocation start = GetStart();
             Expression contextManager = ParseExpression();
             Expression var = null;
@@ -1440,12 +1485,7 @@ namespace IronPython.Compiler {
                 var = ParseExpression();
             }
 
-            SourceLocation header = GetEnd();
-            Statement body = ParseSuite();
-            WithStatement ret = new WithStatement(contextManager, var, body);
-            ret.Header = header;
-            ret.SetLoc(start, GetEnd());
-            return ret;
+            return new WithItem(start, contextManager, var);
         }
 
         //for_stmt: 'for' target_list 'in' expression_list ':' suite ['else' ':' suite]
@@ -2565,14 +2605,17 @@ namespace IronPython.Compiler {
         }
 
 
-        // dict_display: '{' [key_datum_list] '}'
-        // key_datum_list: key_datum (',' key_datum)* [","]
-        // key_datum: expression ':' expression
+        // dict_display: '{' dictorsetmaker '}'
+        // dictorsetmaker: ( (test ':' test (',' test ':' test)* [',']) |
+        //          (test (',' test)* [',']) )
+
+
         private Expression FinishDictValue() {
             SourceLocation oStart = GetStart();
             SourceLocation oEnd = GetEnd();
 
-            List<SliceExpression> l = new List<SliceExpression>();
+            List<SliceExpression> dictMembers = null;
+            List<Expression> setMembers = null;
             bool prevAllow = _allowIncomplete;
             try {
                 _allowIncomplete = true;
@@ -2581,11 +2624,28 @@ namespace IronPython.Compiler {
                         break;
                     }
                     Expression e1 = ParseExpression();
-                    Eat(TokenKind.Colon);
-                    Expression e2 = ParseExpression();
-                    SliceExpression se = new SliceExpression(e1, e2, null, false);
-                    se.SetLoc(e1.Start, e2.End);
-                    l.Add(se);
+                    if (MaybeEat(TokenKind.Colon)) {
+                        if (setMembers != null) {
+                            ReportSyntaxError("invalid syntax");
+                        } else if (dictMembers == null) {
+                            dictMembers = new List<SliceExpression>();
+                        }
+                        Expression e2 = ParseExpression();
+                        SliceExpression se = new SliceExpression(e1, e2, null, false);
+                        se.SetLoc(e1.Start, e2.End);
+                        dictMembers.Add(se);
+                    } else {
+                        if (dictMembers != null) {
+                            ReportSyntaxError("invalid syntax");
+                        } else if (setMembers == null) {
+                            setMembers = new List<Expression>();
+                        }
+
+                        // error recovery
+                        if (setMembers != null) {
+                            setMembers.Add(e1);
+                        }
+                    }
 
                     if (!MaybeEat(TokenKind.Comma)) {
                         Eat(TokenKind.RightBrace);
@@ -2595,16 +2655,28 @@ namespace IronPython.Compiler {
             } finally {
                 _allowIncomplete = prevAllow;
             }
+            
 
             SourceLocation cStart = GetStart();
             SourceLocation cEnd = GetEnd();
 
             _sink.MatchPair(new SourceSpan(oStart, oEnd), new SourceSpan(cStart, cEnd), 1);
 
-            SliceExpression[] exprs = l.ToArray();
-            DictionaryExpression ret = new DictionaryExpression(exprs);
-            ret.SetLoc(oStart, cEnd);
-            return ret;
+            if (dictMembers != null || setMembers == null) {
+                SliceExpression[] exprs;
+                if (dictMembers != null) {
+                    exprs = dictMembers.ToArray();
+                } else {
+                    exprs = new SliceExpression[0];
+                }
+                DictionaryExpression ret = new DictionaryExpression(exprs);
+                ret.SetLoc(oStart, cEnd);
+                return ret;
+            } else {
+                SetExpression ret = new SetExpression(setMembers.ToArray());
+                ret.SetLoc(oStart, cEnd);
+                return ret;
+            }
         }
 
 

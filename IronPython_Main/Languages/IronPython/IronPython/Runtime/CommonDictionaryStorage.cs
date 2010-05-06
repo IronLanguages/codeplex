@@ -272,9 +272,11 @@ namespace IronPython.Runtime {
                 return;
             }
 
+            Bucket[] oldBuckets = _buckets;
             Bucket[] newBuckets = new Bucket[newSize];
 
-            foreach (Bucket curBucket in _buckets ) {
+            for (int i = 0; i < oldBuckets.Length; i++ ) {
+                Bucket curBucket = oldBuckets[i];
                 if (curBucket.Key != null && curBucket.Key != _removed) {
                     AddWorker(newBuckets, curBucket.Key, curBucket.Value, curBucket.HashCode);
                 }
@@ -565,7 +567,8 @@ namespace IronPython.Runtime {
             lock (this) {
                 List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>(Count);
                 if (_count > 0) {
-                    foreach (Bucket curBucket in _buckets) {
+                    for (int i = 0; i < _buckets.Length; i++) {
+                        Bucket curBucket = _buckets[i];
                         if (curBucket.Key != null && curBucket.Key != _removed) {
                             res.Add(new KeyValuePair<object, object>(curBucket.Key, curBucket.Value));
                         }

@@ -289,7 +289,8 @@ namespace Microsoft.Scripting.Silverlight {
                 ContractUtils.RequiresNotNull(e, "e");
 
                 _exception = e;
-                _dynamicStackFrames = ArrayUtils.ToArray(DynamicApplication.Current.Engine.Engine.GetService<ExceptionOperations>().GetStackFrames(e));
+                if (DynamicApplication.Current != null && DynamicApplication.Current.Engine != null && DynamicApplication.Current.Engine.Engine != null)
+                    _dynamicStackFrames = ArrayUtils.ToArray(DynamicApplication.Current.Engine.Engine.GetService<ExceptionOperations>().GetStackFrames(e));
 
                 // We can get the file name and line number from either the 
                 // DynamicStackFrame or from a SyntaxErrorException
@@ -319,10 +320,17 @@ namespace Microsoft.Scripting.Silverlight {
                 }
 
                 // If we have the file name and the engine, use ExceptionOperations
-                // to generate the exception message. Otherwise, create it by hand
+                // to generate the exception message.
                 if (_sourceFileName != null && engine != null) {
                     ExceptionOperations es = engine.GetService<ExceptionOperations>();
                     es.GetExceptionMessage(_exception, out _message, out _errorTypeName);
+                    
+                // Special case error message for needing to upgrade to SL4
+                } else if (_exception.Message.Contains("Method not found: 'Void System.Threading.Monitor.Enter(System.Object, Boolean ByRef)'")) {
+                    _errorTypeName = "Silverlight 4 required";
+                    _message = "Silverlight version error: this Silverlight application requires Silverlight 4 to run, please upgrade.";
+                
+                // Otherwise, create it by hand
                 } else {
                     _errorTypeName = _exception.GetType().Name;
                     _message = _errorTypeName + ": " + _exception.Message;

@@ -47,6 +47,15 @@ namespace IronPython.Runtime.Types {
             _info = info;
         }
 
+        /// <summary>
+        /// True if generating code for gets can result in more optimal accesses.
+        /// </summary>
+        internal override bool CanOptimizeGets {
+            get {
+                return true;
+            }
+        }
+
         public ReflectedProperty(PropertyInfo info, MethodInfo[] getters, MethodInfo[] setters, NameType nt)
             : base(getters, setters, nt) {
             Debug.Assert(info != null);

@@ -183,8 +183,6 @@ def foo():
 def test_all_together():        
     expected = [   
         ('assignment to None', 'None', 80,FatalError),
-        ("unexpected token '}'", "}", 16, FatalError),
-        ("unexpected token '}'", "}", 16, FatalError),
     ]        
     code = """\
 None = 2

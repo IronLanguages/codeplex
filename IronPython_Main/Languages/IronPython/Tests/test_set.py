@@ -303,5 +303,11 @@ def test_null_elements():
             s.symmetric_difference_update(set([None, 42]))
             AreEqual(s, set([None]))
 
+def test_frozenness():
+    s = set([1,2,3])
+    f = frozenset(s)
+    s.add(4)
+    AreEqual(4 in f, False)
+
 #--MAIN------------------------------------------------------------------------    
 run_test(__name__)
