@@ -250,20 +250,46 @@ def test_tokenizer_restart_multistring():
         t.StringLiteral(From(4, 1, 5), To(10, 1, 11)),
     ]
     expected2 = [
-        t.StringLiteral(From(0, 1, 1), To(6, 1, 7)),
+        t.Keyword(From(0, 1, 1), To(3, 1, 4)),
+        t.StringLiteral(From(3, 1, 4), To(6, 1, 7)),
     ]
     
     categorizer = engine.GetService[TokenCategorizer]()
-    
+
     source = engine.CreateScriptSourceFromString('''s = """abc''')
     categorizer.Initialize(None, source, SourceLocation.MinValue)
     actual = list(categorizer.ReadTokens(len(source.GetCode())))
-
     AreEqual(actual, expected1)
 
     state = categorizer.CurrentState
     
     source = engine.CreateScriptSourceFromString('''def"""''')
+    categorizer.Initialize(state, source, SourceLocation.MinValue)
+    actual = list(categorizer.ReadTokens(len(source.GetCode())))
+    
+    AreEqual(actual, expected2)
+
+def test_tokenizer_unterminated_string_literal():
+    expected1 = [
+        t.Identifier(From(0,1,1), To(1,1,2)),
+        t.Operator(From(2, 1, 3), To(3, 1, 4)),
+        t.StringLiteral(From(4, 1, 5), To(8, 1, 9)),
+    ]
+    expected2 = [
+        t.Keyword(From(0, 1, 1), To(3, 1, 4)),
+        t.StringLiteral(From(3, 1, 4), To(4, 1, 5)),
+    ]
+    
+    categorizer = engine.GetService[TokenCategorizer]()
+
+    source = engine.CreateScriptSourceFromString('''s = "abc''')
+    categorizer.Initialize(None, source, SourceLocation.MinValue)
+    actual = list(categorizer.ReadTokens(len(source.GetCode())))
+    AreEqual(actual, expected1)
+
+    state = categorizer.CurrentState
+    
+    source = engine.CreateScriptSourceFromString('''def"''')
     categorizer.Initialize(state, source, SourceLocation.MinValue)
     actual = list(categorizer.ReadTokens(len(source.GetCode())))
 

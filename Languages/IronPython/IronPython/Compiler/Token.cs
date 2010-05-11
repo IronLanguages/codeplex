@@ -89,6 +89,27 @@ namespace IronPython.Compiler {
         }
     }
 
+    public class IncompleteStringErrorToken : ErrorToken {
+        private readonly string _value;
+
+        public IncompleteStringErrorToken(string message, string value)
+            : base(message) {
+            _value = value;
+        }
+
+        public override string Image {
+            get {
+                return _value;
+            }
+        }
+
+        public override object Value {
+            get {
+                return _value;
+            }
+        }
+    }
+
     public class ConstantValueToken : Token {
         private readonly object _value;
 
@@ -115,49 +136,6 @@ namespace IronPython.Compiler {
     sealed class UnicodeStringToken : ConstantValueToken {
         public UnicodeStringToken(object value)
             : base(value) {
-        }
-    }
-
-    public class IncompleteStringToken : ConstantValueToken {
-        private readonly bool _quote;
-        private readonly bool _isRaw;
-        private readonly bool _isUni;
-        private readonly bool _isTri;
-
-        public IncompleteStringToken(object value, bool quote, bool isRaw, bool isUnicode, bool isTripleQuoted)
-            : base(value) {
-            _quote = quote;
-            _isRaw = isRaw;
-            _isUni = isUnicode;
-            _isTri = isTripleQuoted;
-        }
-
-        /// <summary>
-        /// True if the quotation is written using ', false if written using "
-        /// </summary>
-        public bool IsSingleTickQuote {
-            get { return _quote; }
-        }
-
-        /// <summary>
-        /// True if the string is a raw-string (preceeded w/ r character)
-        /// </summary>
-        public bool IsRaw {
-            get { return _isRaw; }
-        }
-
-        /// <summary>
-        /// True if the string is Unicode string (preceeded w/ a u character)
-        /// </summary>
-        public bool IsUnicode {
-            get { return _isUni; }
-        }
-
-        /// <summary>
-        /// True if the string is triple quoted (''' or """)
-        /// </summary>
-        public bool IsTripleQuoted {
-            get { return _isTri; }
         }
     }
 

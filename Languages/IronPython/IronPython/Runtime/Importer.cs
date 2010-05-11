@@ -19,19 +19,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Dynamic;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Modules;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using IronPython.Runtime.Binding;
 
 namespace IronPython.Runtime {
 
@@ -193,7 +191,13 @@ namespace IronPython.Runtime {
             }
 
             object newmod = null;
-            string[] parts = modName.Split('.');
+            string firstName;
+            int firstDot = modName.IndexOf('.');
+            if (firstDot == -1) {
+                firstName = modName;
+            } else {
+                firstName = modName.Substring(0, firstDot);
+            }
             string finalName = null;
 
             if (level != 0) {
@@ -203,15 +207,20 @@ namespace IronPython.Runtime {
                 string name;    // name of the module we are to import in relation to the current module
                 PythonModule parentModule;
                 List path;      // path to search
-                if (TryGetNameAndPath(context, globals, parts[0], level, package, out name, out path, out parentModule)) {
+                if (TryGetNameAndPath(context, globals, firstName, level, package, out name, out path, out parentModule)) {
                     finalName = name;
                     // import relative
                     if (!TryGetExistingOrMetaPathModule(context, name, path, out newmod)) {
-                        newmod = ImportFromPath(context, parts[0], name, path);
-                        if (newmod != null && parentModule != null) {
+                        newmod = ImportFromPath(context, firstName, name, path);
+                        if (newmod == null) {
+                            // add an indirection entry saying this module does not exist
+                            // see http://www.python.org/doc/essays/packages.html "Dummy Entries"
+                            context.LanguageContext.SystemStateModules[name] = null;
+                        } else if (parentModule != null) {
                             parentModule.__dict__[modName] = newmod;
                         }
-                    } else if (parts.Length == 1) {
+                        
+                    } else if (firstDot == -1) {
                         // if we imported before having the assembly
                         // loaded and then loaded the assembly we want
                         // to make the assembly available now.
@@ -239,17 +248,24 @@ namespace IronPython.Runtime {
                             package);
                     }
 
-                    newmod = ImportTopAbsolute(context, parts[0]);
-                    finalName = parts[0];
+                    newmod = ImportTopAbsolute(context, firstName);
+                    finalName = firstName;
                     if (newmod == null) {
                         return null;
                     }
                 }
             }
 
+            // avoid allocating a bunch of strings if we can...
+            object ret;
+            if (bottom && TryGetExistingModule(context, modName, out ret)) {
+                return ret;
+            }
+
             // now import the a.b.c etc.  a needs to be included here
             // because the process of importing could have modified
             // sys.modules.
+            string[] parts = modName.Split('.');
             object next = newmod;
             string curName = null;
             for (int i = 0; i < parts.Length; i++) {
@@ -348,8 +364,8 @@ namespace IronPython.Runtime {
 
                 // importing sibling. The name of the imported module replaces
                 // the last element in the importing module name
-                string[] names = modName.Split('.');
-                if (names.Length == 1) {
+                int lastDot = modName.LastIndexOf('.');
+                if (lastDot == -1) {
                     // name doesn't include dot, only absolute import possible
                     if (level > 0) {
                         throw PythonOps.ValueError("Attempted relative import in non-package");
@@ -358,7 +374,18 @@ namespace IronPython.Runtime {
                     return false;
                 }
 
-                pn = GetParentPackageName(level, names);
+                // need to remove more than one name
+                int tmpLevel = level;
+                while (tmpLevel > 1 && lastDot != -1) {
+                    lastDot = modName.LastIndexOf('.', lastDot - 1);
+                    tmpLevel--;
+                }
+
+                if (lastDot == -1) {
+                    pn = modName;
+                } else {
+                    pn = modName.Substring(0, lastDot);
+                }
             } else {
                 // __package__ doesn't include module name, so level is - 1.
                 pn = GetParentPackageName(level - 1, package.Split('.'));
@@ -551,9 +578,8 @@ namespace IronPython.Runtime {
         }
 
         internal static bool TryGetExistingModule(CodeContext/*!*/ context, string/*!*/ fullName, out object ret) {
-            // Python uses None/null as a key here to indicate a missing module
             if (PythonContext.GetContext(context).SystemStateModules.TryGetValue(fullName, out ret)) {
-                return ret != null;
+                return true;
             }
             return false;
         }
