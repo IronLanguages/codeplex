@@ -232,7 +232,11 @@ namespace IronPython.Compiler {
                     break;
 
                 case TokenKind.Error:
-                    result.Category = TokenCategory.Error;
+                    if (token is IncompleteStringErrorToken) {
+                        result.Category = TokenCategory.StringLiteral;
+                    } else {
+                        result.Category = TokenCategory.Error;
+                    }
                     break;
 
                 case TokenKind.Constant:
@@ -353,12 +357,6 @@ namespace IronPython.Compiler {
 
         private Token Next() {
             bool at_beginning = _buffer.AtBeginning;
-
-            if (_state.IncompleteString != null && _buffer.Peek() != EOF) {
-                IncompleteStringToken prev = _state.IncompleteString;
-                _state.IncompleteString = null;
-                return ContinueString(prev.IsSingleTickQuote ? '\'' : '"', prev.IsRaw, prev.IsUnicode, false, prev.IsTripleQuoted, 0);
-            }
 
             _buffer.DiscardToken();
 
@@ -599,7 +597,6 @@ namespace IronPython.Compiler {
         }
 
         private Token ContinueString(char quote, bool isRaw, bool isUnicode, bool isBytes, bool isTriple, int startAdd) {
-            bool complete = true;
             bool multi_line = false;
             int end_add = 0;
             int eol_size = 0;
@@ -608,26 +605,23 @@ namespace IronPython.Compiler {
                 int ch = NextChar();
 
                 if (ch == EOF) {
-
-                    if (_verbatim) {
-                        complete = !isTriple;
-                        break;
-                    }
                     _buffer.Back();
 
-                    // CPython reports the multi-line string error as if it is a single line
-                    // ending at the last char in the file.
                     if (isTriple) {
-                        _buffer.Back();
+                        // CPython reports the multi-line string error as if it is a single line
+                        // ending at the last char in the file.
+
                         _buffer.MarkTokenEnd(false);
-                        ReportSyntaxError(new SourceSpan(_buffer.TokenEnd, _buffer.TokenEnd), Resources.EofInTripleQuotedString, ErrorCodes.SyntaxError | ErrorCodes.IncompleteToken);
+                        var errorEnd = new SourceLocation(_buffer.TokenEnd.Index - 1, _buffer.TokenEnd.Line, _buffer.TokenEnd.Column - 1);
+                        ReportSyntaxError(new SourceSpan(errorEnd, errorEnd), Resources.EofInTripleQuotedString, ErrorCodes.SyntaxError | ErrorCodes.IncompleteToken);
                     } else {
                         _buffer.MarkTokenEnd(multi_line);
                     }
                     
                     UnexpectedEndOfString(isTriple, isTriple);
-                    return new ErrorToken(Resources.EofInString);
-
+                    string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add);
+                    incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
+                    return new IncompleteStringErrorToken(Resources.EofInString, incompleteContents);
                 } else if (ch == quote) {
 
                     if (isTriple) {
@@ -647,15 +641,13 @@ namespace IronPython.Compiler {
                     if (ch == EOF) {
                         _buffer.Back();
 
-                        if (_verbatim) {
-                            complete = false;
-                            break;
-                        }
-
                         _buffer.MarkTokenEnd(multi_line);
                         UnexpectedEndOfString(isTriple, isTriple);
-                        return new ErrorToken(Resources.EofInString);
 
+                        string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add - 1);
+                        incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
+                        
+                        return new IncompleteStringErrorToken(Resources.EofInString, incompleteContents);
                     } else if ((eol_size = _buffer.ReadEolnOpt(ch)) > 0) {
 
                         // skip \<eoln> unless followed by EOF:
@@ -667,15 +659,11 @@ namespace IronPython.Compiler {
 
                             // incomplete string in the form "abc\
 
-                            if (_verbatim && isTriple) {
-                                // return the partial string in verbatim mode
-                                string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add - 1);
-                                incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
-                                return MakeStringToken(quote, isRaw, isUnicode, isBytes, isTriple, false, incompleteContents);
-                            } else {
-                                UnexpectedEndOfString(isTriple, true);
-                                return new ErrorToken(Resources.EofInString);
-                            }
+                            string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add - 1);
+                            incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
+
+                            UnexpectedEndOfString(isTriple, true);
+                            return new IncompleteStringErrorToken(Resources.EofInString, incompleteContents);
                         }
 
                         multi_line = true;
@@ -686,13 +674,15 @@ namespace IronPython.Compiler {
 
                 } else if ((eol_size = _buffer.ReadEolnOpt(ch)) > 0) {
                     if (!isTriple) {
-
                         // backup over the eoln:
                         _buffer.SeekRelative(-eol_size);
 
                         _buffer.MarkTokenEnd(multi_line);
                         UnexpectedEndOfString(isTriple, false);
-                        return new ErrorToken((quote == '"') ? Resources.NewLineInDoubleQuotedString : Resources.NewLineInSingleQuotedString);
+
+                        string incompleteContents = _buffer.GetTokenSubstring(startAdd, _buffer.TokenLength - startAdd - end_add);
+                        incompleteContents = NormalizeMultiLineEndings(isTriple, multi_line, incompleteContents);
+                        return new IncompleteStringErrorToken((quote == '"') ? Resources.NewLineInDoubleQuotedString : Resources.NewLineInSingleQuotedString, incompleteContents);
                     }
 
                     multi_line = true;
@@ -706,7 +696,7 @@ namespace IronPython.Compiler {
 
             contents = NormalizeMultiLineEndings(isTriple, multi_line, contents);
 
-            return MakeStringToken(quote, isRaw, isUnicode, isBytes, isTriple, complete, contents);
+            return MakeStringToken(quote, isRaw, isUnicode, isBytes, isTriple, contents);
         }
 
         private string NormalizeMultiLineEndings(bool isTriple, bool multi_line, string contents) {
@@ -718,30 +708,20 @@ namespace IronPython.Compiler {
             return contents;
         }
 
-        private Token MakeStringToken(char quote, bool isRaw, bool isUnicode, bool isBytes, bool isTriple, bool complete, string contents) {
+        private Token MakeStringToken(char quote, bool isRaw, bool isUnicode, bool isBytes, bool isTriple, string contents) {
             if (!isBytes) {
-                contents = LiteralParser.ParseString(contents, isRaw, isUnicode || UnicodeLiterals, complete);
-                if (complete) {
-                    if (isUnicode) {
-                        return new UnicodeStringToken(contents);
-                    }
-                    return new ConstantValueToken(contents);
-                } else {
-                    _state.IncompleteString = new IncompleteStringToken(contents, quote == '\'', isRaw, isUnicode, isTriple);
-                    return _state.IncompleteString;
+                contents = LiteralParser.ParseString(contents, isRaw, isUnicode || UnicodeLiterals);
+                if (isUnicode) {
+                    return new UnicodeStringToken(contents);
                 }
+                return new ConstantValueToken(contents);
             } else {
-                List<byte> data = LiteralParser.ParseBytes(contents, isRaw, complete);
-                if (complete) {
-                    if (data.Count == 0) {
-                        return new ConstantValueToken(Bytes.Empty);
-                    }
-
-                    return new ConstantValueToken(new Bytes(data));
-                } else {
-                    _state.IncompleteString = new IncompleteStringToken(data, quote == '\'', isRaw, false, isTriple);
-                    return _state.IncompleteString;
+                List<byte> data = LiteralParser.ParseBytes(contents, isRaw);
+                if (data.Count == 0) {
+                    return new ConstantValueToken(Bytes.Empty);
                 }
+
+                return new ConstantValueToken(new Bytes(data));
             }
         }
 
@@ -1313,7 +1293,6 @@ namespace IronPython.Compiler {
             public int IndentLevel;
             public int PendingDedents;
             public bool LastNewLine;        // true if the last token we emitted was a new line.
-            public IncompleteStringToken IncompleteString;
 
             // Indentation state used only when we're reporting on inconsistent identation format.
             public StringBuilder[] IndentFormat;
@@ -1330,7 +1309,6 @@ namespace IronPython.Compiler {
                 PendingDedents = state.PendingDedents;
                 IndentLevel = state.IndentLevel;
                 IndentFormat = (state.IndentFormat != null) ? (StringBuilder[])state.IndentFormat.Clone() : null;
-                IncompleteString = state.IncompleteString;
             }
 
             public State(object dummy) {
@@ -1338,7 +1316,6 @@ namespace IronPython.Compiler {
                 LastNewLine = false;
                 BracketLevel = ParenLevel = BraceLevel = PendingDedents = IndentLevel = 0;
                 IndentFormat = null;
-                IncompleteString = null;
             }
 
             public override bool Equals(object obj) {
@@ -1359,12 +1336,6 @@ namespace IronPython.Compiler {
 
                 return left.BraceLevel == right.BraceLevel &&
                        left.BracketLevel == right.BracketLevel &&
-                       ((left.IncompleteString == null && right.IncompleteString == null) ||
-                       (left.IncompleteString != null && right.IncompleteString != null &&
-                       left.IncompleteString.IsRaw == right.IncompleteString.IsRaw &&
-                       left.IncompleteString.IsSingleTickQuote == right.IncompleteString.IsSingleTickQuote &&
-                       left.IncompleteString.IsTripleQuoted == right.IncompleteString.IsTripleQuoted &&
-                       left.IncompleteString.IsUnicode == right.IncompleteString.IsUnicode)) &&
                        left.IndentLevel == right.IndentLevel &&
                        left.ParenLevel == right.ParenLevel &&
                        left.PendingDedents == right.PendingDedents &&

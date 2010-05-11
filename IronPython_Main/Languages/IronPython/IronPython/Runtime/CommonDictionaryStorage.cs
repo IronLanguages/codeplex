@@ -317,7 +317,7 @@ namespace IronPython.Runtime {
                 Bucket cur = buckets[index];
                 if (cur.Key == null || cur.Key == _removed) {
                     break;
-                } else if (cur.HashCode == hc && _eqFunc(key, cur.Key)) {
+                } else if (Object.ReferenceEquals(key, cur.Key) || (cur.HashCode == hc && _eqFunc(key, cur.Key))) {
                     _version++;
                     buckets[index].Value = value;
                     return false;
@@ -437,9 +437,10 @@ namespace IronPython.Runtime {
                 if (bucket.Key == null) {
                     break;
                 } else if (
-                    bucket.Key != _removed &&
+                    Object.ReferenceEquals(key, bucket.Key) ||
+                    (bucket.Key != _removed &&
                     bucket.HashCode == hc &&
-                    (Object.ReferenceEquals(key, bucket.Key) || eqFunc(key, bucket.Key))) {
+                    eqFunc(key, bucket.Key))) {
                     value = bucket.Value;
                     _version++;
                     _buckets[index].Key = _removed;
@@ -518,9 +519,10 @@ namespace IronPython.Runtime {
                 if (bucket.Key == null) {
                     break;
                 } else if (
-                    bucket.Key != _removed &&
+                    Object.ReferenceEquals(key, bucket.Key) ||
+                    (bucket.Key != _removed &&
                     bucket.HashCode == hc &&
-                    (Object.ReferenceEquals(key, bucket.Key) || eqFunc(key, bucket.Key))) {
+                    eqFunc(key, bucket.Key))) {
                     value = bucket.Value;
                     return true;
                 }

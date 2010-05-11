@@ -36,9 +36,6 @@ namespace IronPython.Runtime {
     /// </summary>
     public static class LiteralParser {
         public static string ParseString(string text, bool isRaw, bool isUni) {
-            return ParseString(text, isRaw, isUni, true);
-        }
-        public static string ParseString(string text, bool isRaw, bool isUni, bool complete) {
             Debug.Assert(text != null);
 
             if (isRaw && !isUni) return text;
@@ -52,9 +49,7 @@ namespace IronPython.Runtime {
                 char ch = text[i++];
                 if (ch == '\\') {
                     if (i >= l) {
-                        if (!complete) {
-                            break;
-                        } else if (isRaw) {
+                        if (isRaw) {
                             buf.Append('\\');
                             break;
                         } else {
@@ -139,7 +134,7 @@ namespace IronPython.Runtime {
             return buf.ToString();
         }
 
-        internal static List<byte> ParseBytes(string text, bool isRaw, bool complete) {
+        internal static List<byte> ParseBytes(string text, bool isRaw) {
             Debug.Assert(text != null);
 
             //PERFORMANCE-ISSUE ??? maybe optimize for the 0-escapes case
@@ -152,11 +147,7 @@ namespace IronPython.Runtime {
                 char ch = text[i++];
                 if (!isRaw && ch == '\\') {
                     if (i >= l) {
-                        if (!complete) {
-                            break;
-                        } else {
-                            throw PythonOps.ValueError("Trailing \\ in string");
-                        }
+                        throw PythonOps.ValueError("Trailing \\ in string");
                     }
                     ch = text[i++];
                     switch (ch) {

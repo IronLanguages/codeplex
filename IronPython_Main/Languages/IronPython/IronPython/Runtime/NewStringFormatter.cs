@@ -313,6 +313,7 @@ namespace IronPython.Runtime {
             private readonly PythonTuple/*!*/ _args;
             private readonly IDictionary<object, object>/*!*/ _kwArgs;
             private readonly int _depth;
+            private int _autoNumberedIndex;
 
             private Formatter(PythonContext/*!*/ context, PythonTuple/*!*/ args, IDictionary<object, object>/*!*/ kwArgs, int depth)
                 : this(context, args, kwArgs) {
@@ -431,7 +432,17 @@ namespace IronPython.Runtime {
                 object argValue;
 
                 // get the object
-                if (Int32.TryParse(fieldName.ArgumentName, out argIndex)) {
+                if (fieldName.ArgumentName == "") {
+                    // auto-numbering of format specifiers
+                    if (_autoNumberedIndex == -1) {
+                        throw PythonOps.ValueError("cannot switch from manual field specification to automatic field numbering");
+                    }
+                    argValue = _args[_autoNumberedIndex++];
+                } else if (Int32.TryParse(fieldName.ArgumentName, out argIndex)) {
+                    if (_autoNumberedIndex > 0) {
+                        throw PythonOps.ValueError("cannot switch from automatic field numbering to manual field specification");
+                    }
+                    _autoNumberedIndex = -1;
                     argValue = _args[argIndex];
                 } else {
                     argValue = _kwArgs[fieldName.ArgumentName];
