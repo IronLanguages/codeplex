@@ -20,11 +20,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Compiler;
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
@@ -197,7 +196,8 @@ namespace IronPython.Runtime {
                 !binder.Signature.HasDictionaryArgument() &&
                 !binder.Signature.HasKeywordArgument() &&
                 !binder.Signature.HasListArgument() &&
-                (Flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0;
+                (Flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0 &&
+                !binder.SupportsLightThrow();
         }
 
         private static FunctionCaller/*!*/ GetFunctionCaller(Type/*!*/ callerType, int funcCompat) {

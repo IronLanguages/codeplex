@@ -90,12 +90,16 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
 
         private PythonTypeSlot _lenSlot;                    // cached length slot, cleared when the type is mutated
 
+        internal Func<string, Exception> _makeException = DefaultMakeException;
+
         [MultiRuntimeAware]
         private static int MasterVersion = 1;
         private static readonly CommonDictionaryStorage _pythonTypes = new CommonDictionaryStorage();
         internal static PythonType _pythonTypeType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
         private static readonly WeakReference[] _emptyWeakRef = new WeakReference[0];
         private static object _subtypesLock = new object();
+        internal static Func<string, Exception> DefaultMakeException = (message) => new Exception(message);
+
         /// <summary>
         /// Provides delegates that will invoke a parameterless type ctor.  The first key provides
         /// the dictionary for a specific type, the 2nd key provides the delegate for a specific
@@ -150,7 +154,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         /// Used for runtime defined new-style classes which require multiple inheritance.  The
         /// primary example of this is the exception system.
         /// </summary>
-        internal PythonType(PythonType baseType, string name) {
+        internal PythonType(PythonType baseType, string name, Func<string, Exception> exceptionMaker) {
             _underlyingSystemType = baseType.UnderlyingSystemType;
 
             IsSystemType = baseType.IsSystemType;
@@ -159,6 +163,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             _bases = new PythonType[] { baseType };
             ResolutionOrder = Mro.Calculate(this, _bases);
             _attrs |= PythonTypeAttributes.HasDictionary;
+            _makeException = exceptionMaker;
         }
 
         /// <summary>
@@ -167,8 +172,8 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         /// Used for runtime defined new-style classes which require multiple inheritance.  The
         /// primary example of this is the exception system.
         /// </summary>
-        internal PythonType(PythonContext context, PythonType baseType, string name, string module, string doc)
-            : this(baseType, name) {
+        internal PythonType(PythonContext context, PythonType baseType, string name, string module, string doc, Func<string, Exception> exceptionMaker)
+            : this(baseType, name, exceptionMaker) {
             EnsureDict();
 
             _dict["__doc__"] = new PythonTypeUserDescriptorSlot(doc, true);
@@ -1372,7 +1377,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             }
 
             if (IsSystemType) {
-                throw new MissingMemberException(String.Format("can't delete attributes of built-in/extension type '{0}'", Name, name));
+                throw new MissingMemberException(String.Format("can't delete attributes of built-in/extension type '{0}'", Name));
             }
 
             if (!_dict.Remove(name)) {

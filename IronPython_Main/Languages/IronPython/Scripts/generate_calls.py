@@ -81,92 +81,6 @@ def gen_args_paramscall(nparams):
         comma = ","
     return args
 
-builtin_function_switch_template = """case %(argCount)d:
-    if (IsUnbound) {
-        return typeof(BuiltinFunctionCaller<%(typeParams)s>);
-    }
-    return typeof(BuiltinMethodCaller<%(typeParams)s>);"""
-
-def builtin_function_callers_switch(cw):
-    for nparams in range(MAX_ARGS-2):        
-        cw.write(builtin_function_switch_template % {
-                  'argCount' : nparams,
-                  'typeParams' : ',' * nparams,
-                  'dlgParams' : ',' * (nparams + 3),
-                 })
-
-builtin_function_caller_template = """class BuiltinFunctionCaller<TFuncType, %(typeParams)s> where TFuncType : class {
-    private readonly OptimizingInfo _info;
-    public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
-    private readonly BuiltinFunction _func;
-%(typeVars)s
-
-    public BuiltinFunctionCaller(OptimizingInfo info, BuiltinFunction func, %(typeCheckParams)s) {
-        _func = func;
-        _info = info;
-        MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
-%(argsAssign)s
-    }
-
-    public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
-        if (func == _func &&
-            !_info.ShouldOptimize && 
-%(typeCheck)s
-           ) {
-            return _info.Caller(new object[] { context, %(callArgs)s }, out _info.ShouldOptimize);
-        }
-
-        return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
-    }
-}
-
-class BuiltinMethodCaller<TFuncType, %(typeParams)s> where TFuncType : class {
-    private readonly OptimizingInfo _info;
-    public readonly Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object> MyDelegate;
-    private readonly Type _selfType;
-    private readonly BuiltinFunctionData _data;
-%(typeVars)s
-
-    public BuiltinMethodCaller(OptimizingInfo info, BuiltinFunction func, Type selfType, %(typeCheckParams)s) {
-        _selfType = selfType;
-        _data = func._data;
-        _info = info;
-        MyDelegate = new Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>(Call%(argCount)d);
-%(argsAssign)s
-    }
-
-    public object Call%(argCount)d(CallSite site, CodeContext context, TFuncType func, %(callParams)s) {
-        BuiltinFunction bf = func as BuiltinFunction;
-        if (bf != null && !bf.IsUnbound && bf._data == _data &&
-            !_info.ShouldOptimize &&
-            (_selfType == null || CompilerHelpers.GetType(bf.__self__) == _selfType) &&
-%(typeCheck)s
-            ) {
-            return _info.Caller(new object[] { context, bf.__self__, %(callArgs)s }, out _info.ShouldOptimize);
-        }
-
-        return ((CallSite<Func<CallSite, CodeContext, TFuncType, %(typeParams)s, object>>)site).Update(site, context, func, %(callArgs)s);
-    }
-}
-"""
-
-def builtin_function_callers(cw):
-    for nparams in range(1, MAX_ARGS-2):       
-        assignTemplate = "        _type%d = type%d;"
-        typeCheckTemplate = "            (_type%d == null || CompilerHelpers.GetType(arg%d) == _type%d)"
-        typeVarTemplate = "    private readonly Type " + ', '.join(('_type%d' % i for i in xrange(nparams))) + ';'
-        cw.write(builtin_function_caller_template % {
-                  'argCount' : nparams,
-                  'ctorArgs' : ',' * nparams,
-                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
-                  'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
-                  'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
-                  'typeCheckParams': ', '.join(('Type type%d' % (d,) for d in xrange(nparams))),
-                  'argsAssign' : '\n'.join((assignTemplate % (d,d) for d in xrange(nparams))),
-                  'typeCheck' : ' &&\n'.join((typeCheckTemplate % (d,d,d) for d in xrange(nparams))),
-                  'dlgParams' : ',' * (nparams + 3),
-                  'typeVars' : typeVarTemplate,
-                 })
 
 function_caller_template = """
 class FunctionCaller<%(typeParams)s> : FunctionCaller {
@@ -625,8 +539,6 @@ def main():
         ("Python Recursion Enforcement", gen_recursion_checks),
         ("Python Recursion Delegate Switch", gen_recursion_delegate_switch),
         ("Python Lazy Call Targets", gen_lazy_call_targets),
-        ("Python Builtin Function Optimizable Callers", builtin_function_callers),
-        ("Python Builtin Function Optimizable Switch", builtin_function_callers_switch),
         ("Python Zero Arg Function Callers", function_callers_0),
         ("Python Function Callers", function_callers),
         ("Python Function Caller Switch", function_caller_switch),

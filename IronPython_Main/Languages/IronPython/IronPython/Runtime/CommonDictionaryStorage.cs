@@ -567,7 +567,7 @@ namespace IronPython.Runtime {
 
         public override List<KeyValuePair<object, object>> GetItems() {
             lock (this) {
-                List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>(Count);
+                List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>(_count + (_nullValue != null ? 1 : 0));
                 if (_count > 0) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
@@ -648,7 +648,7 @@ namespace IronPython.Runtime {
 
                 NullValue nv = null;
                 if (_nullValue != null) {
-                    nv = new NullValue(nv.Value);
+                    nv = new NullValue(_nullValue.Value);
                 }
                 return new CommonDictionaryStorage(resBuckets, _count, _keyType, _hashFunc, _eqFunc, nv);
             }

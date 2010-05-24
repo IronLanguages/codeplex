@@ -402,6 +402,53 @@ def test_eval():
         pass
     else:
         AssertUnreachable()
+        
+    # test one of each expression in all sorts of combinations
+    foo = 1
+    bar = 2
+    def f(): return 42
+    exprs = ['foo', 
+             '23', 
+             '$inp and $inp', 
+             '$inp or $inp', 
+             '`42`', 
+             '$inp + $inp', 
+             'f()', 
+             'lambda :42',  
+             '$inp if $inp else $inp', 
+             '[$inp]', 
+             '{$inp:$inp}', 
+             '($inp).__class__', 
+             '{$inp}', 
+             '($inp, )', 
+             '($inp)', 
+             '[x for x in (2, 3, 4)]']
+    
+    def process(depth):
+        if(depth > 2):
+            yield '42'
+        else:
+            for x in exprs:
+                processors = [process(depth + 1)] * x.count('$inp')
+                if processors:
+                    while 1:
+                        try:
+                            newx = x
+                            for i in xrange(len(processors)):
+                                new = processors[i].next()
+                                newx = newx.replace('$inp', new, 1)
+                            yield newx
+                        except StopIteration:
+                            break
+                    
+                else:
+                    yield x
+            
+    for x in process(0):
+        try:
+            print eval(x)
+        except SyntaxError: pass            
+        except TypeError: pass
 
 def test_len():
     # old-style classes throw AttributeError, new-style classes throw

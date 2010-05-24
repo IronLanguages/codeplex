@@ -81,6 +81,10 @@ namespace IronPython.Runtime {
         /// Include comments in the parse tree
         /// </summary>
         Verbatim = 0x4000,
+        /// <summary>
+        /// Generated code should support light exceptions
+        /// </summary>
+        LightThrow = 0x8000
     }
 
 }

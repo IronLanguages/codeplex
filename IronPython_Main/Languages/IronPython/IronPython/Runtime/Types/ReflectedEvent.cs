@@ -14,17 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Dynamic;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
 
@@ -182,7 +178,7 @@ namespace IronPython.Runtime.Types {
                 if (CompilerHelpers.IsVisible(add) || context.LanguageContext.DomainManager.Configuration.PrivateBinding) {
                     _event.Tracker.AddHandler(_instance, func, context.LanguageContext.DelegateCreator);
                 } else {
-                    throw new ArgumentTypeException("Cannot add handler to a private event.");
+                    throw new TypeErrorException("Cannot add handler to a private event.");
                 }
 
                 return this;
@@ -206,7 +202,7 @@ namespace IronPython.Runtime.Types {
                 if (CompilerHelpers.IsVisible(remove) || context.LanguageContext.DomainManager.Configuration.PrivateBinding) {
                     _event.Tracker.RemoveHandler(_instance, func, PythonContext.GetContext(context).EqualityComparer);
                 } else {
-                    throw new ArgumentTypeException("Cannot add handler to a private event.");
+                    throw new TypeErrorException("Cannot add handler to a private event.");
                 }
                 return this;
             }

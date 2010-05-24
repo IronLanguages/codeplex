@@ -65,7 +65,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal override MSAst.LambdaExpression GetLambda() {
+        internal override Microsoft.Scripting.Ast.LightLambdaExpression GetLambda() {
             throw new InvalidOperationException();
         }
 

@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Ast {
             // Temporary variable for the IEnumerator object
             MSAst.ParameterExpression enumerator = Ast.Variable(typeof(KeyValuePair<IEnumerator, IDisposable>), "foreach_enumerator");
 
-            return Ast.Block(new[] { enumerator }, TransformForStatement(Parent, enumerator, _list, _left, _body, _else, Span, _header, _break, _continue));
+            return Ast.Block(new[] { enumerator }, TransformFor(Parent, enumerator, _list, _left, _body, _else, Span, _header, _break, _continue, true));
         }
 
         public override void Walk(PythonWalker walker) {
@@ -113,10 +113,10 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        internal static MSAst.Expression TransformForStatement(ScopeStatement parent, MSAst.ParameterExpression enumerator,
+        internal static MSAst.Expression TransformFor(ScopeStatement parent, MSAst.ParameterExpression enumerator,
                                                     Expression list, Expression left, MSAst.Expression body,
                                                     Statement else_, SourceSpan span, SourceLocation header,
-                                                    MSAst.LabelTarget breakLabel, MSAst.LabelTarget continueLabel) {
+                                                    MSAst.LabelTarget breakLabel, MSAst.LabelTarget continueLabel, bool isStatement) {
             // enumerator, isDisposable = Dynamic(GetEnumeratorBinder, list)
             MSAst.Expression init = Ast.Assign(
                     enumerator,
@@ -157,7 +157,7 @@ namespace IronPython.Compiler.Ast {
                             PythonOperationKind.None
                         ),
                         body,
-                        UpdateLineNumber(list.Start.Line),
+                        isStatement ? UpdateLineNumber(list.Start.Line) : AstUtils.Empty(),
                         AstUtils.Empty()
                     ),
                     else_,

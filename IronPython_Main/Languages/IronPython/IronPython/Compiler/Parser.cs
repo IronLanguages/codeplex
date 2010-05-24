@@ -114,8 +114,9 @@ namespace IronPython.Compiler {
                 context.Errors.Add(context.SourceUnit, e.Message, SourceSpan.Invalid, 0, Severity.Error);
                 throw;
             }
-
+            
             Tokenizer tokenizer = new Tokenizer(context.Errors, compilerOptions, verbatim);
+            
             tokenizer.Initialize(null, reader, context.SourceUnit, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
@@ -211,7 +212,7 @@ namespace IronPython.Compiler {
             try {
                 // TODO: move from source unit  .TrimStart(' ', '\t')
                 ReturnStatement ret = new ReturnStatement(ParseTestListAsExpression());
-                ret.SetLoc(SourceSpan.None);
+                ret.SetLoc(new SourceSpan(new SourceLocation(0, 1, 1), GetEnd()));
                 return new PythonAst(ret, false, _languageFeatures, false, _context);
             } catch (BadSourceException bse) {
                 throw BadSourceError(bse);

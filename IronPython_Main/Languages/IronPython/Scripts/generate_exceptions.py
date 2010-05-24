@@ -43,7 +43,7 @@ pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDe
 
 
 class ExceptionInfo(object):
-    def __init__(self, name, clrException, args, fields, subclasses, silverlightSupported = True):
+    def __init__(self, name, clrException, args, fields, subclasses, silverlightSupported = True, baseMapping = None):
         self.name = name
         self.clrException = clrException
         self.args = args
@@ -51,6 +51,7 @@ class ExceptionInfo(object):
         self.subclasses = subclasses
         self.silverlightSupported = silverlightSupported
         self.parent = None
+        self.baseMapping = baseMapping
         for child in subclasses:
             child.parent = self
     
@@ -79,6 +80,12 @@ class ExceptionInfo(object):
             return self.name
     
     @property
+    def ExceptionMappingName(self):
+        if self.baseMapping:
+            return self.baseMapping[self.baseMapping.rfind('.')+1:]
+        return self.DotNetExceptionName
+
+    @property
     def DotNetExceptionName(self):
         return self.clrException[self.clrException.rfind('.')+1:]
     
@@ -99,14 +106,19 @@ class ExceptionInfo(object):
             cw.writeline('#endif // !SILVERLIGHT')
             cw.writeline('');
     
-    
+    def MakeNewException(self):
+        if self.fields or self.name == 'BaseException':        
+            return 'new PythonExceptions._%s()' % (self.name)
+        else:
+            return 'new PythonExceptions.%s(PythonExceptions.%s)' % (self.ConcreteParent.ClrType, self.name)
+
 
     # format is name, args, (fields, ...), (subclasses, ...)
-exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, None, (
+exceptionHierarchy = ExceptionInfo('BaseException', 'IronPython.Runtime.Exceptions.PythonException', None, None, (
             ExceptionInfo('GeneratorExit', 'IronPython.Runtime.Exceptions.GeneratorExitException', None, (), ()),
             ExceptionInfo('SystemExit', 'IronPython.Runtime.Exceptions.SystemExitException', None, ('code',), ()),
             ExceptionInfo('KeyboardInterrupt', 'Microsoft.Scripting.KeyboardInterruptException', None, (), ()),
-            ExceptionInfo('Exception', 'System.Exception', None, (), (
+            ExceptionInfo('Exception', 'IronPython.Runtime.Exceptions.PythonException', None, (), (
                     ExceptionInfo('StopIteration', 'IronPython.Runtime.Exceptions.StopIterationException', None, (), ()),
                     ExceptionInfo('StandardError', 'System.ApplicationException', None, (), (
                             ExceptionInfo('BufferError', 'IronPython.Runtime.Exceptions.BufferException', None, (), ()),
@@ -115,9 +127,9 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                     ExceptionInfo('OverflowError', 'System.OverflowException', None, (), ()),
                                     ExceptionInfo('ZeroDivisionError', 'System.DivideByZeroException', None, (), ()),                                    
                                 ),
-                            ),
+                            ),                            
                             ExceptionInfo('AssertionError', 'IronPython.Runtime.Exceptions.AssertionException', None, (), ()),
-                            ExceptionInfo('AttributeError', 'System.MissingMemberException', None, (), ()),
+                            ExceptionInfo('AttributeError', 'IronPython.Runtime.Exceptions.AttributeErrorException', None, (), (), baseMapping = 'System.MissingMemberException'),
                             ExceptionInfo('EnvironmentError', 'System.Runtime.InteropServices.ExternalException', None, ('errno', 'strerror', 'filename'), (
                                     ExceptionInfo('IOError', 'System.IO.IOException', None, (), ()),
                                     ExceptionInfo('OSError', 'IronPython.Runtime.Exceptions.OSException', None, (), (
@@ -151,7 +163,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                 ),                                
                             ),
                             ExceptionInfo('SystemError', 'System.SystemException', None, (), ()),
-                            ExceptionInfo('TypeError', 'Microsoft.Scripting.ArgumentTypeException', None, (), ()),
+                            ExceptionInfo('TypeError', 'IronPython.Runtime.Exceptions.TypeErrorException', None, (), (), baseMapping = 'Microsoft.Scripting.ArgumentTypeException'),
                             ExceptionInfo('ValueError', 'System.ArgumentException', None, (), (
                                     ExceptionInfo('UnicodeError', 'IronPython.Runtime.Exceptions.UnicodeException', None, (), 
                                         (
@@ -181,6 +193,15 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
         ),
     )
 
+
+def get_exception_info(pythonName, curHierarchy):
+    for exception in curHierarchy.subclasses:
+        if exception.name == pythonName:
+            return exception
+    for exception in curHierarchy.subclasses:
+        res = get_exception_info(pythonName, exception)
+        if res is not None:
+            return res
 
 def get_all_exceps(l, curHierarchy):
     # if we have duplicate CLR exceptions (e.g. VMSError and Exception)
@@ -221,8 +242,11 @@ def exception_distance(a):
         distance += 1
     return distance
      
+def get_compare_name(ex_info):
+    return ex_info.baseMapping or ex_info.clrException
+
 def compare_exceptions(a, b):
-    a, b = a.clrException, b.clrException
+    a, b = get_compare_name(a), get_compare_name(b)
     
     ta = get_type(a)
     tb = get_type(b)
@@ -252,26 +276,12 @@ def gen_topython_helper(cw):
     
     for x in allExceps[:-1]:    # skip System.Exception which is last...
         if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
-        if x.fields or x.name == 'BaseException':        
-            cw.writeline('if (clrException is %s) return new _%s();' % (x.DotNetExceptionName, x.name))
-        else:
-            cw.writeline('if (clrException is %s) return new %s(%s);' % (x.DotNetExceptionName, x.ConcreteParent.ClrType, x.name))
+        cw.writeline('if (clrException is %s) return %s;' % (x.ExceptionMappingName, x.MakeNewException()))
         if not x.silverlightSupported: cw.writeline('#endif')
         
     cw.writeline('return new BaseException(Exception);')    
     cw.exit_block()
-    
-    cw.enter_block("private static System.Exception/*!*/ ToClrHelper(PythonType/*!*/ type, string message)")
-    for x in allExceps:
-        if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
-        #if not x.fields:
-        cw.writeline('if (type == %s) return new %s(message);' % (x.name, x.DotNetExceptionName))
-        #else:
-        #    cw.writeline('if (type == DynamicHelpers.GetPythonTypeFromType(typeof(%s))) return new %s(message);' % (x.name, x.clrException))  
-        if not x.silverlightSupported: cw.writeline('#endif')  
-    cw.writeline('return new Exception(message);')
-    cw.exit_block()
-    
+
         
 def get_clr_name(e):
     return e.replace('Error', '') + 'Exception'
@@ -287,7 +297,11 @@ def factory_gen(cw):
 
 CLASS1 = """
 [Serializable]
-public class %(name)s : %(supername)s {
+public class %(name)s : %(supername)s, IPythonAwareException {
+    private object _pyExceptionObject;
+    private List<DynamicStackFrame> _frames;
+    private TraceBack _traceback;
+    
     public %(name)s() : base() { }
     public %(name)s(string msg) : base(msg) { }
     public %(name)s(string message, Exception innerException)
@@ -295,7 +309,36 @@ public class %(name)s : %(supername)s {
     }
 #if !SILVERLIGHT // SerializationInfo
     protected %(name)s(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2123:OverrideLinkDemandsShouldBeIdenticalToBase")]
+    public override void GetObjectData(SerializationInfo info, StreamingContext context) {
+        info.AddValue("frames", _frames);
+        info.AddValue("traceback", _traceback);
+        base.GetObjectData(info, context);
+    }
 #endif
+
+    object IPythonAwareException.PythonException {
+        get { 
+            if (_pyExceptionObject == null) {
+                var newEx = %(make_new_exception)s;
+                newEx.InitializeFromClr(this);
+                _pyExceptionObject = newEx;
+            }
+            return _pyExceptionObject; 
+        }
+        set { _pyExceptionObject = value; }
+    }
+    
+    List<DynamicStackFrame> IPythonAwareException.Frames {
+        get { return _frames; }
+        set { _frames = value; }
+    }
+    
+    TraceBack IPythonAwareException.TraceBack {
+        get { return _traceback; }
+        set { _traceback = value; }
+    }
 }
 """
 
@@ -303,7 +346,7 @@ def gen_one_exception(cw, e):
     supername = getattr(exceptions, e).__bases__[0].__name__
     if not supername in pythonExcs and supername != 'Warning':
         supername = ''
-    cw.write(CLASS1, name=get_clr_name(e), supername=get_clr_name(supername))
+    cw.write(CLASS1, name=get_clr_name(e), supername=get_clr_name(supername), make_new_exception = get_exception_info(e, exceptionHierarchy).MakeNewException())
 
 def gen_one_exception_maker(e):
     def gen_one_exception_specialized(x):
@@ -325,7 +368,7 @@ def gen_one_new_exception(cw, exception, parent):
         cw.enter_block('get')
         cw.enter_block('if (%sStorage == null)' % (exception.name, ))
         cw.enter_block('lock (_pythonExceptionsLock)')
-        cw.writeline('%sStorage = CreateSubType(%s, typeof(_%s));' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.writeline('%sStorage = CreateSubType(%s, typeof(_%s), msg => new %s(msg));' % (exception.name, exception.parent.PythonType, exception.name, exception.DotNetExceptionName))
         cw.exit_block() # lock
         cw.exit_block() # if
         cw.writeline('return %sStorage;' % (exception.name, ))
@@ -389,7 +432,7 @@ def gen_one_new_exception(cw, exception, parent):
         cw.enter_block('get')
         cw.enter_block('if (%sStorage == null)' % (exception.name, ))
         cw.enter_block('lock (_pythonExceptionsLock)')
-        cw.writeline('%sStorage = CreateSubType(%s, "%s");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.writeline('%sStorage = CreateSubType(%s, "%s", msg => new %s(msg));' % (exception.name, exception.parent.PythonType, exception.name, exception.DotNetExceptionName))
         cw.exit_block() # lock
         cw.exit_block() # if
         cw.writeline('return %sStorage;' % (exception.name, ))

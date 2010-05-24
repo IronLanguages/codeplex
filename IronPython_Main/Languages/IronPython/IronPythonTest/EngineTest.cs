@@ -35,6 +35,7 @@ using System.Text;
 using System.Threading;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -296,6 +297,57 @@ namespace IronPythonTest {
             catch (IronPython.Runtime.Exceptions.ImportException) { }
         }
 #endif
+
+        public void ScenarioInterpterNestedVariables() {
+            ParameterExpression arg = Expression.Parameter(typeof(object), "tmp");
+            var argBody = Expression.Lambda<Func<object, IRuntimeVariables>>(
+                Expression.RuntimeVariables(
+                    arg
+                ),
+                arg
+            );
+
+            var vars = CompilerHelpers.LightCompile(argBody)(42);
+            AreEqual(vars[0], 42);
+
+            ParameterExpression tmp = Expression.Parameter(typeof(object), "tmp");
+            var body = Expression.Lambda<Func<object>>(
+                Expression.Block(
+                    Expression.Block(
+                        new[] { tmp },
+                        Expression.Assign(tmp, Expression.Constant(42, typeof(object)))
+                    ),
+                    Expression.Block(
+                        new[] { tmp },
+                        tmp
+                    )
+                )
+            );
+
+            AreEqual(body.Compile()(), null);
+            AreEqual(CompilerHelpers.LightCompile(body)(), null);
+
+            body = Expression.Lambda<Func<object>>(
+                Expression.Block(
+                    Expression.Block(
+                        new[] { tmp },
+                        Expression.Block(
+                            Expression.Assign(tmp, Expression.Constant(42, typeof(object))),
+                            Expression.Block(
+                                new[] { tmp },
+                                tmp
+                            )
+                        )
+                    )
+                )
+            );
+            AreEqual(CompilerHelpers.LightCompile(body)(), null);
+            AreEqual(body.Compile()(), null);
+        }
+
+        public void ScenarioLightExceptions() {
+            LightExceptionTests.RunTests();
+        }
 
         public class TestCodePlex23562 {
             public bool MethodCalled = false;

@@ -36,6 +36,7 @@ using MSAst = System.Linq.Expressions;
 using MSAst = Microsoft.Scripting.Ast;
 #endif
 
+using LightLambdaExpression = Microsoft.Scripting.Ast.LightLambdaExpression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 using Debugging = Microsoft.Scripting.Debugging;
@@ -58,7 +59,7 @@ namespace IronPython.Compiler.Ast {
 
         private PythonVariable _variable;               // The variable corresponding to the function name or null for lambdas
         internal PythonVariable _nameVariable;          // the variable that refers to the global __name__
-        private MSAst.LambdaExpression _dlrBody;       // the transformed body including all of our initialization, etc...
+        private LightLambdaExpression _dlrBody;       // the transformed body including all of our initialization, etc...
         internal bool _hasReturn;
 
         private static int _lambdaId;
@@ -350,7 +351,7 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.Expression ret;
             if (EmitDebugFunction()) {
-                MSAst.LambdaExpression code = EnsureFunctionLambda();
+                LightLambdaExpression code = CreateFunctionLambda();
 
                 // we need to compile all of the debuggable code together at once otherwise mdbg gets confused.  If we're
                 // in tracing mode we'll still compile things one off though just to keep things simple.  The code will still
@@ -528,7 +529,7 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// Creates the LambdaExpression which is the actual function body.
         /// </summary>
-        private MSAst.LambdaExpression EnsureFunctionLambda() {
+        private LightLambdaExpression EnsureFunctionLambda() {
             if (_dlrBody == null) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Creating FunctionBody");
                 _dlrBody = CreateFunctionLambda();
@@ -560,7 +561,7 @@ namespace IronPython.Compiler.Ast {
         /// object Function(PythonFunction, object[]) for functions which take more
         /// than PythonCallTargets.MaxArgs arguments.
         /// </summary>
-        private MSAst.LambdaExpression CreateFunctionLambda() {
+        private LightLambdaExpression CreateFunctionLambda() {
             bool needsWrapperMethod = _parameters.Length > PythonCallTargets.MaxArgs;
             Delegate originalDelegate;
             Type delegateType = GetDelegateType(_parameters, needsWrapperMethod, out originalDelegate);
@@ -687,7 +688,8 @@ namespace IronPython.Compiler.Ast {
             // wrap a scope if needed
             bodyStmt = Ast.Block(locals.ToReadOnlyCollection(), bodyStmt);
 
-            return Ast.Lambda(
+            return AstUtils.LightLambda(
+                typeof(object),
                 delegateType,
                 AddDefaultReturn(bodyStmt, typeof(object)),
                 Name + "$" + Interlocked.Increment(ref _lambdaId),
@@ -695,7 +697,7 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        internal override MSAst.LambdaExpression GetLambda() {
+        internal override LightLambdaExpression GetLambda() {
             return EnsureFunctionLambda();
         }
 

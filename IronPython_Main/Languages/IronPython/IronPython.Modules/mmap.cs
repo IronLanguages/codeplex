@@ -770,17 +770,6 @@ namespace IronPython.Modules {
                 return (BigInteger)l;
             }
 
-            private static string GetString(byte[] buffer0, byte[] buffer1) {
-                StringBuilder sb = new StringBuilder(buffer0.Length + buffer1.Length);
-                foreach (byte b in buffer0) {
-                    sb.Append((char)b);
-                }
-                foreach (byte b in buffer1) {
-                    sb.Append((char)b);
-                }
-                return sb.ToString();
-            }
-
             private static string GetString(byte[] buffer0, byte[] buffer1, int length1) {
                 StringBuilder sb = new StringBuilder(buffer0.Length + length1);
                 foreach (byte b in buffer0) {

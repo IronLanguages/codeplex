@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 #endif
@@ -44,16 +45,18 @@ namespace IronPython.Runtime {
     [PythonType("code")]
     public class FunctionCode : IExpressionSerializable {
         [PythonHidden]
-        public Delegate Target;                                     // the current target for the function.  This can change based upon adaptive compilation, recursion enforcement, and tracing.
-        private Delegate _normalDelegate;                           // the normal delegate - this can be a compiled or interpreted delegate.
+        internal Delegate Target, LightThrowTarget;                 // the current target for the function.  This can change based upon adaptive compilation, recursion enforcement, and tracing.
+        internal Delegate _normalDelegate;                          // the normal delegate - this can be a compiled or interpreted delegate.
         private Compiler.Ast.ScopeStatement _lambda;                // the original DLR lambda that contains the code
         internal readonly string _initialDoc;                       // the initial doc string
         private readonly int _localCount;                           // the number of local variables in the code
         private readonly int _argCount;                             // cached locally because it's used during calls w/ defaults
+        private bool _compilingLight;                               // true if we're compiling for light exceptions
+        private int _exceptionCount;
 
         // debugging/tracing support
         private LambdaExpression _tracingLambda;                    // the transformed lambda used for tracing/debugging
-        private Delegate _tracingDelegate;                          // the delegate used for tracing/debugging, if one has been created.  This can be interpreted or compiled.
+        internal Delegate _tracingDelegate;                         // the delegate used for tracing/debugging, if one has been created.  This can be interpreted or compiled.
 
         /// <summary>
         /// This is both the lock that is held while enumerating the threads or updating the thread accounting
@@ -80,7 +83,7 @@ namespace IronPython.Runtime {
 
             // need to take this lock to ensure sys.settrace/sys.setprofile is not actively changing
             lock (_CodeCreateAndUpdateDelegateLock) {
-                Target = AddRecursionCheck(context, code);
+                SetTarget(AddRecursionCheck(context, code));
             }
 
             RegisterFunctionCode(context);
@@ -96,14 +99,23 @@ namespace IronPython.Runtime {
         /// 
         /// the initial delegate provided here should NOT be the actual code.  It should always be a delegate which updates our Target lazily.
         /// </summary>
-        internal FunctionCode(PythonContext context, Delegate initialDelegate, Compiler.Ast.ScopeStatement scope, string documentation) {
+        internal FunctionCode(PythonContext context, Delegate initialDelegate, Compiler.Ast.ScopeStatement scope, string documentation, bool? tracing, bool register) {
             _lambda = scope;
-            Target = initialDelegate;
+            Target = LightThrowTarget = initialDelegate;
             _initialDoc = documentation;
             _localCount = scope.Variables == null ? 0 : scope.Variables.Count;
             _argCount = CalculateArgumentCount();
+            if (tracing.HasValue) {
+                if (tracing.Value) {
+                    _tracingDelegate = initialDelegate;
+                } else {
+                    _normalDelegate = initialDelegate;
+                }
+            }
 
-            RegisterFunctionCode(context);
+            if (register) {
+                RegisterFunctionCode(context);
+            }
         }
 
         private static PythonTuple SymbolListToTuple(IList<string> vars) {
@@ -172,6 +184,34 @@ namespace IronPython.Runtime {
                 CodeCleanup(context);
             } else {
                 ThreadPool.QueueUserWorkItem(CodeCleanup, context);
+            }
+        }
+
+        internal void SetTarget(Delegate target) {
+            Target = LightThrowTarget = target;
+        }
+
+        internal void LightThrowCompile() {
+            if (++_exceptionCount > 20) {
+                if (!_compilingLight && (object)Target == (object)LightThrowTarget) {
+                    _compilingLight = true;
+                    if (!IsOnDiskCode) {
+                        ThreadPool.QueueUserWorkItem(x => {
+                            LightThrowTarget = ((LambdaExpression)LightExceptions.Rewrite(GetGeneratorOrNormalLambda().Reduce())).Compile();
+                        });
+                    }
+                }
+            }
+        }
+
+        private bool IsOnDiskCode {
+            get {
+                if (_lambda is Compiler.Ast.SerializedScopeStatement) {
+                    return true;
+                } else if (_lambda is Compiler.Ast.PythonAst) {
+                    return ((Compiler.Ast.PythonAst)_lambda).OnDiskProxy;
+                }
+                return false;
             }
         }
 
@@ -502,7 +542,7 @@ namespace IronPython.Runtime {
 
         #region Internal API Surface
 
-        internal LambdaExpression Code {
+        internal LightLambdaExpression Code {
             get {
                 return _lambda.GetLambda();
             }
@@ -528,7 +568,7 @@ namespace IronPython.Runtime {
                 return classTarget(context);
             }
 
-            Func<CodeContext, FunctionCode, object> moduleCode = Target as Func<CodeContext, FunctionCode, object>;
+            LookupCompilationDelegate moduleCode = Target as LookupCompilationDelegate;
             if (moduleCode != null) {
                 return moduleCode(context, this);
             }
@@ -547,11 +587,14 @@ namespace IronPython.Runtime {
         /// Creates a FunctionCode object for exec/eval/execfile'd/compile'd code.
         /// 
         /// The code is then executed in a specific CodeContext by calling the .Call method.
+        /// 
+        /// If the code is being used for compile (vs. exec/eval/execfile) then it needs to be
+        /// registered incase our tracing mode changes.
         /// </summary>
-        internal static FunctionCode FromSourceUnit(SourceUnit sourceUnit, PythonCompilerOptions options) {
+        internal static FunctionCode FromSourceUnit(SourceUnit sourceUnit, PythonCompilerOptions options, bool register) {
             var code = PythonContext.CompilePythonCode(sourceUnit, options, ThrowingErrorSink.Default);
 
-            return ((RunnableScriptCode)code).GetFunctionCode();
+            return ((RunnableScriptCode)code).GetFunctionCode(register);
         }
 
         #endregion
@@ -643,6 +686,7 @@ namespace IronPython.Runtime {
                         // the user just called sys.settrace(), don't force re-compilation of every method in the system.  Instead
                         // we'll just re-compile them as they're invoked.
                         PythonCallTargets.GetPythonTargetType(_lambda.ParameterNames.Length > PythonCallTargets.MaxArgs, _lambda.ParameterNames.Length, out Target);
+                        LightThrowTarget = Target;
                         return;
                     }
                     _tracingLambda = GetGeneratorOrNormalLambdaTracing(context);
@@ -660,6 +704,7 @@ namespace IronPython.Runtime {
                         // _CodeCreateAndUpdateDelegateLock and compiling the delegate may create a FunctionCode
                         // object which requires the lock.
                         PythonCallTargets.GetPythonTargetType(_lambda.ParameterNames.Length > PythonCallTargets.MaxArgs, _lambda.ParameterNames.Length, out Target);
+                        LightThrowTarget = Target;
                         return;
                     }
                     _normalDelegate = CompileLambda(GetGeneratorOrNormalLambda(), new TargetUpdaterForCompilation(context, this).SetCompiledTarget);
@@ -670,7 +715,7 @@ namespace IronPython.Runtime {
 
             finalTarget = AddRecursionCheck(context, finalTarget);
 
-            Target = finalTarget;
+            SetTarget(finalTarget);
         }
 
         /// <summary>
@@ -680,7 +725,7 @@ namespace IronPython.Runtime {
         internal void SetDebugTarget(PythonContext context, Delegate target) {
             _normalDelegate = target;
 
-            Target = AddRecursionCheck(context, target);
+            SetTarget(AddRecursionCheck(context, target));
         }
 
         /// <summary>
@@ -727,8 +772,8 @@ namespace IronPython.Runtime {
         /// 
         /// This is either just _lambda or _lambda re-written to be a generator expression.
         /// </summary>
-        private LambdaExpression GetGeneratorOrNormalLambda() {
-            LambdaExpression finalCode;
+        private LightLambdaExpression GetGeneratorOrNormalLambda() {
+            LightLambdaExpression finalCode;
             if ((Flags & FunctionAttributes.Generator) == 0) {
                 finalCode = Code;
             } else {
@@ -739,6 +784,26 @@ namespace IronPython.Runtime {
                 );
             }
             return finalCode;
+        }
+
+        private Delegate CompileLambda(LightLambdaExpression code, EventHandler<LightLambdaCompileEventArgs> handler) {
+            if (_lambda.EmitDebugSymbols) {
+                return CompilerHelpers.CompileToMethod((LambdaExpression)code.Reduce(), DebugInfoGenerator.CreatePdbGenerator(), true);
+            } else if (_lambda.ShouldInterpret) {
+                Delegate result = code.Compile(_lambda.GlobalParent.PyContext.Options.CompilationThreshold);
+
+                // If the adaptive compiler decides to compile this function, we
+                // want to store the new compiled target. This saves us from going
+                // through the interpreter stub every call.
+                var lightLambda = result.Target as LightLambda;
+                if (lightLambda != null) {
+                    lightLambda.Compile += handler;
+                }
+
+                return result;
+            }
+
+            return code.Compile();
         }
 
         private Delegate CompileLambda(LambdaExpression code, EventHandler<LightLambdaCompileEventArgs> handler) {
@@ -763,8 +828,10 @@ namespace IronPython.Runtime {
 
         internal Delegate AddRecursionCheck(PythonContext context, Delegate finalTarget) {
             if (context.RecursionLimit != Int32.MaxValue) {
-                if (finalTarget is Func<CodeContext, CodeContext>) {
-                    // no recursion enforcement on classes
+                if (finalTarget is Func<CodeContext, CodeContext> || 
+                    finalTarget is Func<FunctionCode, object> ||
+                    finalTarget is LookupCompilationDelegate) {
+                    // no recursion enforcement on classes or modules
                     return finalTarget;
                 }
 
@@ -845,11 +912,11 @@ namespace IronPython.Runtime {
             }
 
             public void SetCompiledTarget(object sender, Microsoft.Scripting.Interpreter.LightLambdaCompileEventArgs e) {
-                _code.Target = _code.AddRecursionCheck(_context, _code._normalDelegate = e.Compiled);
+                _code.SetTarget(_code.AddRecursionCheck(_context, _code._normalDelegate = e.Compiled));
             }
 
             public void SetCompiledTargetTracing(object sender, Microsoft.Scripting.Interpreter.LightLambdaCompileEventArgs e) {
-                _code.Target = _code.AddRecursionCheck(_context, _code._tracingDelegate = e.Compiled);
+                _code.SetTarget(_code.AddRecursionCheck(_context, _code._tracingDelegate = e.Compiled));
             }
         }
 

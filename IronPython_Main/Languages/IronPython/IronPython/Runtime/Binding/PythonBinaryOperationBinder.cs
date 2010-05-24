@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 #endif
@@ -34,9 +35,11 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Binding {
     using Ast = Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
-    
-    class PythonBinaryOperationBinder : BinaryOperationBinder, IPythonSite, IExpressionSerializable {
+    using Microsoft.Scripting.Actions;
+
+    class PythonBinaryOperationBinder : BinaryOperationBinder, IPythonSite, IExpressionSerializable, ILightExceptionBinder {
         private readonly PythonContext/*!*/ _context;
+        private PythonBinaryOperationBinder _lightThrowBinder;
 
         public PythonBinaryOperationBinder(PythonContext/*!*/ context, ExpressionType operation)
             : base(operation) {
@@ -876,6 +879,37 @@ namespace IronPython.Runtime.Binding {
                 BindingHelpers.CreateBinderStateExpression(),
                 AstUtils.Constant(Operation)
             );
+        }
+
+        #endregion
+
+        #region ILightExceptionBinder Members
+
+        public virtual bool SupportsLightThrow {
+            get { return false; }
+        }
+
+        public virtual CallSiteBinder GetLightExceptionBinder() {
+            if (_lightThrowBinder == null) {
+                _lightThrowBinder = new LightThrowBinder(_context, Operation);
+            }
+            return _lightThrowBinder;
+        }
+
+        class LightThrowBinder : PythonBinaryOperationBinder {
+            public LightThrowBinder(PythonContext/*!*/ context, ExpressionType operation)
+                : base(context, operation) {
+            }
+
+            public override bool SupportsLightThrow {
+                get {
+                    return true;
+                }
+            }
+
+            public override CallSiteBinder GetLightExceptionBinder() {
+                return this;
+            }
         }
 
         #endregion

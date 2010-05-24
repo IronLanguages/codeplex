@@ -32,7 +32,6 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Actions.Calls;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -362,17 +361,10 @@ namespace IronPython.Runtime.Types {
         internal class BindingResult {
             public readonly BindingTarget Target;
             public readonly DynamicMetaObject MetaObject;
-            public readonly OptimizingCallDelegate Function;
 
             public BindingResult(BindingTarget target, DynamicMetaObject meta) {
                 Target = target;
                 MetaObject = meta;
-            }
-
-            public BindingResult(BindingTarget target, DynamicMetaObject meta, OptimizingCallDelegate function) {
-                Target = target;
-                MetaObject = meta;
-                Function = function;
             }
         }
 
@@ -583,98 +575,6 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        internal KeyValuePair<OptimizingCallDelegate, Type[]> MakeBuiltinFunctionDelegate(DynamicMetaObjectBinder/*!*/ call, Expression/*!*/ codeContext, DynamicMetaObject/*!*/[] args, bool hasSelf, Func<DynamicMetaObject/*!*/[]/*!*/, BindingResult/*!*/> bind) {
-            OptimizingCallDelegate res = null;
-
-            // swap the arguments if we have a reversed operator
-            if (IsReversedOperator) {
-                ArrayUtils.SwapLastTwo(args);
-            }
-
-            // if we have a user defined operator for **args then transform it into a PythonDictionary (not supported here)
-            Debug.Assert(!BindingHelpers.GetCallSignature(call).HasDictionaryArgument());
-
-            // do the appropriate calling logic
-            BindingResult result = bind(args);
-
-            // validate the result
-            BindingTarget target = result.Target;
-            res = result.Function;
-
-            if (target.Overload != null && target.Overload.IsProtected) {
-                Type declaringType = target.Overload.DeclaringType;
-                string methodName = target.Overload.Name;
-
-                string name = target.Overload.Name;
-                // report an error when calling a protected member
-                res = delegate(object[] callArgs, out bool shouldOptimize) { 
-                    shouldOptimize = false;
-                    throw PythonOps.TypeErrorForProtectedMember(declaringType, name);
-                };
-            } else if (result.MetaObject.Expression.NodeType == ExpressionType.Throw) {
-                if (IsBinaryOperator && args.Length == 2) {
-                    // Binary Operators return NotImplemented on failure.
-                    res = delegate(object[] callArgs, out bool shouldOptimize) {
-                        shouldOptimize = false;
-                        return PythonOps.NotImplemented;
-                    };
-                } 
-
-                // error, we don't optimize this yet.
-                return new KeyValuePair<OptimizingCallDelegate, Type[]>(null, null);
-            }
-
-            if (res == null) {
-                return new KeyValuePair<OptimizingCallDelegate, Type[]>();
-            }
-            // add any warnings that are applicable for calling this function
-            WarningInfo info;
-
-            if (target.Overload != null && BindingWarnings.ShouldWarn(PythonContext.GetPythonContext(call), target.Overload, out info)) {
-                res = info.AddWarning(res);
-            }
-
-            // finally add the restrictions for the built-in function and return the result.
-            Type[] typeRestrictions = ArrayUtils.MakeArray(result.Target.RestrictedArguments.GetTypes());
-            
-            // The function can return something typed to boolean or int.
-            // If that happens, we need to apply Python's boxing rules.
-            var returnType = result.Target.Overload.ReturnType;
-            if (returnType == typeof(bool)) {
-                var tmp = res;
-                res = delegate(object[] callArgs, out bool shouldOptimize) {
-                    return ScriptingRuntimeHelpers.BooleanToObject((bool)tmp(callArgs, out shouldOptimize));
-                };
-            } else if (returnType == typeof(int)) {
-                var tmp = res;
-                res = delegate(object[] callArgs, out bool shouldOptimize) {
-                    return ScriptingRuntimeHelpers.Int32ToObject((int)tmp(callArgs, out shouldOptimize));
-                };
-            }
-
-            if (IsReversedOperator) {
-                var tmp = res;
-                // add the swapping code for the caller
-                res = delegate(object[] callArgs, out bool shouldOptimize) {
-                    ArrayUtils.SwapLastTwo(callArgs);
-                    return tmp(callArgs, out shouldOptimize);
-                };
-
-                // and update the type restrictions
-                if (typeRestrictions != null) {
-                    ArrayUtils.SwapLastTwo(typeRestrictions);
-                }
-            }
-
-            var pc = PythonContext.GetContext(PythonContext.GetPythonContext(call).SharedContext);
-            var po = pc.Options as PythonOptions;
-            if (po != null && po.EnableProfiler) {
-                Profiler profiler = Profiler.GetProfiler(pc);
-                res = profiler.AddProfiling(res, target.Overload.ReflectionInfo);
-            }
-            return new KeyValuePair<OptimizingCallDelegate, Type[]>(res, typeRestrictions);
-        }
-        
         #endregion
                         
         #region Public Python APIs
@@ -925,7 +825,6 @@ namespace IronPython.Runtime.Types {
             public FunctionType Type;
             public Dictionary<TypeList, BuiltinFunction> BoundGenerics;
             public Dictionary<BuiltinFunction.TypeList, BuiltinFunction> OverloadDictionary;
-            public Dictionary<CallKey, OptimizingInfo> FastCalls;
 
             public BuiltinFunctionData(string name, MethodBase[] targets, Type declType, FunctionType functionType) {
                 Name = name;
@@ -948,238 +847,17 @@ namespace IronPython.Runtime.Types {
 
         #region IFastInvokable Members
 
-        internal class CallKey : IEquatable<CallKey> {
-            public readonly Type DelegateType;
-            public readonly CallSignature Signature;
-            public readonly Type[] Types;
-            public readonly Type SelfType;
-            public bool IsUnbound;
-
-            public CallKey(CallSignature signature, Type selfType, Type delegateType, Type[] types, bool isUnbound) {
-                Signature = signature;
-                Types = types;
-                SelfType = selfType;
-                IsUnbound = isUnbound;
-                DelegateType = delegateType;
-            }
-
-            #region IEquatable<CallKey> Members
-
-            public bool Equals(CallKey other) {
-                if (DelegateType != other.DelegateType ||
-                    Signature != other.Signature ||
-                    IsUnbound != other.IsUnbound ||
-                    SelfType != other.SelfType ||
-                    Types.Length != other.Types.Length) {
-                    return false;
-                }
-
-                for (int i = 0; i < Types.Length; i++) {
-                    if (Types[i] != other.Types[i]) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            #endregion
-
-            public override bool Equals(object obj) {
-                CallKey other = obj as CallKey;
-                if (other == null) {
-                    return false;
-                }
-
-                return Equals(other);
-            }
-
-            public override int GetHashCode() {
-                int res = Signature.GetHashCode() ^ (IsUnbound ? 0x01 : 0x00);
-                foreach (Type t in Types) {
-                    res ^= t.GetHashCode();
-                }
-                res ^= DelegateType.GetHashCode();
-                if (SelfType != null) {
-                    res ^= SelfType.GetHashCode();
-                }
-
-                return res;
-            }
-        }
-
         FastBindResult<T> IFastInvokable.MakeInvokeBinding<T>(CallSite<T> site, PythonInvokeBinder binder, CodeContext state, object[] args) {
-            if (binder.Signature.HasDictionaryArgument() || 
-                binder.Signature.HasListArgument() ||
-                !IsUnbound && __self__ is IStrongBox || 
-                typeof(T).GetMethod("Invoke").ReturnType != typeof(object)) {
-                return new FastBindResult<T>();
-            }
-
-            Type[] callTypes = CompilerHelpers.GetTypes(args);
-            CallKey callKey = new CallKey(binder.Signature, IsUnbound ? null : CompilerHelpers.GetType(__self__), typeof(T), callTypes, IsUnbound);
-            if (_data.FastCalls == null) {
-                Interlocked.CompareExchange(
-                    ref _data.FastCalls,
-                    new Dictionary<CallKey, OptimizingInfo>(),
-                    null);
-            }
-
-            lock (_data.FastCalls) {
-                OptimizingInfo optInfo = null;
-
-                if (!_data.FastCalls.TryGetValue(callKey, out optInfo)) {
-                    KeyValuePair<OptimizingCallDelegate, Type[]> call = MakeCall<T>(binder, args);
-
-                    if (call.Key != null) {
-                        _data.FastCalls[callKey] = optInfo = new OptimizingInfo(call.Key, call.Value, binder.Signature);
-                    }
-                }
-
-                if (optInfo != null) {
-                    if (optInfo.ShouldOptimize) {
-                        // if we've already produced an optimal rule don't go and produce an
-                        // unoptimal rule (which will not hit any targets anyway - it's hit count
-                        // has been exceeded and now it always fails).
-                        return new FastBindResult<T>();
-                    }
-
-                    ParameterInfo[] prms = typeof(T).GetMethod("Invoke").GetParameters();
-                    Type[] allParams = ArrayUtils.ConvertAll(prms, (inp) => inp.ParameterType);
-                    allParams = ArrayUtils.Append(allParams, typeof(object));
-
-                    Type[] typeParams = new Type[prms.Length - 2];  // skip site, context
-                    for (int i = 2; i < prms.Length; i++) {
-                        typeParams[i - 2] = prms[i].ParameterType;
-                    }
-                    int argCount = typeParams.Length - 1;// no func
-                    Type callerType = GetCallerType(argCount); 
-
-                    if (callerType != null) {
-                        callerType = callerType.MakeGenericType(typeParams);
-
-                        object[] createArgs = new object[argCount + 2 + (!IsUnbound ? 1 : 0)];
-                        createArgs[0] = optInfo;
-                        createArgs[1] = this;
-                        if (optInfo.TypeTest != null) {
-                            for (int i = 2; i < createArgs.Length; i++) {
-                                createArgs[i] = optInfo.TypeTest[i - 2];
-                            }
-                        }
-                        if (!IsUnbound) {
-                            // force a type test on self
-                            createArgs[2] = CompilerHelpers.GetType(__self__);
-                        }
-
-                        object fc = Activator.CreateInstance(callerType, createArgs);
-
-                        PerfTrack.NoteEvent(PerfTrack.Categories.BindingFast, "BuiltinFunction");
-                        return new FastBindResult<T>((T)(object)fc.GetType().GetField("MyDelegate").GetValue(fc), false);
-                    }
-                }
-
-                return new FastBindResult<T>();
-            }
+            return new FastBindResult<T>(
+                binder.LightBind<T>(ArrayUtils.Insert(state, this, args), 100),
+                true
+            );
         }
-
-        private KeyValuePair<OptimizingCallDelegate, Type[]> MakeCall<T>(PythonInvokeBinder binder, object[] args) where T : class {
-            Expression codeContext = Expression.Parameter(typeof(CodeContext), "context");
-            var pybinder = PythonContext.GetPythonContext(binder).Binder;
-            KeyValuePair<OptimizingCallDelegate, Type[]> call;
-            if (IsUnbound) {
-                call = MakeBuiltinFunctionDelegate(
-                    binder,
-                    codeContext,
-                    GetMetaObjects<T>(args),
-                    false,  // no self
-                    (newArgs) => {
-                        var resolver = new PythonOverloadResolver(
-                            pybinder,
-                            newArgs,
-                            BindingHelpers.GetCallSignature(binder),
-                            codeContext
-                        );
-
-                        BindingTarget target;
-                        DynamicMetaObject res = pybinder.CallMethod(
-                            resolver, 
-                            Targets, 
-                            BindingRestrictions.Empty, 
-                            Name,
-                            PythonNarrowing.None,
-                            IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All,
-                            out target
-                        );
-
-                        return new BuiltinFunction.BindingResult(target, 
-                            BindingHelpers.AddPythonBoxing(res), 
-                            target.Success ? target.MakeDelegate() : null);
-                    }
-                );
-            } else {
-                DynamicMetaObject self = new DynamicMetaObject(Expression.Parameter(CompilerHelpers.GetType(__self__), "self"), BindingRestrictions.Empty, __self__);
-                DynamicMetaObject[] metaArgs = GetMetaObjects<T>(args);
-                call = MakeBuiltinFunctionDelegate(
-                    binder,
-                    codeContext,
-                    ArrayUtils.Insert(self, metaArgs),
-                    true,
-                    (newArgs) => {
-                        CallSignature signature = BindingHelpers.GetCallSignature(binder);
-                        DynamicMetaObject res;
-                        BindingTarget target;
-                        PythonOverloadResolver resolver;
-
-                        if (IsReversedOperator) {
-                            resolver = new PythonOverloadResolver(
-                                pybinder,
-                                newArgs,
-                                MetaBuiltinFunction.GetReversedSignature(signature),
-                                codeContext
-                            );
-                        } else {
-                            resolver = new PythonOverloadResolver(
-                                pybinder,
-                                self,
-                                metaArgs,
-                                signature,
-                                codeContext
-                            );
-                        }
-
-                        res = pybinder.CallMethod(
-                            resolver, 
-                            Targets, 
-                            self.Restrictions, 
-                            Name,
-                            NarrowingLevel.None,
-                            IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All,
-                            out target
-                        );
-                        return new BuiltinFunction.BindingResult(target, BindingHelpers.AddPythonBoxing(res), target.Success ? target.MakeDelegate() : null);
-                    }
-                );
-            }
-            return call;
-        }
-
-        private static DynamicMetaObject[] GetMetaObjects<T>(object[] args) {
-            ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
-            DynamicMetaObject[] res = new DynamicMetaObject[args.Length];   // remove CodeContext, func
-
-            for (int i = 0; i < res.Length; i++) {
-                res[i] = DynamicMetaObject.Create(
-                    args[i],
-                    Expression.Parameter(pis[i + 3].ParameterType, "arg" + i)  // +3 == skipping callsite, codecontext, func
-                );
-            }
-
-            return res;
-        }        
 
         #endregion
     }
 
+    
     /// <summary>
     /// A custom built-in function which supports indexing 
     /// </summary>

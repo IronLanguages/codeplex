@@ -16,6 +16,7 @@
 using System;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Binding;
@@ -33,7 +34,7 @@ using AstUtils = Microsoft.Scripting.Ast.Utils;
 namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
-    public class ConstantExpression : Expression {
+    public class ConstantExpression : Expression, IInstructionProvider {
         private readonly object _value;
 
         public ConstantExpression(object value) {
@@ -61,18 +62,18 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
+        private static readonly MSAst.Expression EllipsisExpr = Ast.Property(null, typeof(PythonOps).GetProperty("Ellipsis"));
+        private static readonly MSAst.Expression TrueExpr = Ast.Field(null, typeof(ScriptingRuntimeHelpers).GetField("True"));
+        private static readonly MSAst.Expression FalseExpr = Ast.Field(null, typeof(ScriptingRuntimeHelpers).GetField("False"));
         public override MSAst.Expression Reduce() {
             UnicodeWrapper wrapper;
             if (_value == Ellipsis.Value) {
-                return Ast.Property(
-                    null,
-                    typeof(PythonOps).GetProperty("Ellipsis")
-                );
+                return EllipsisExpr;
             } else if (_value is bool) {
                 if ((bool)_value) {
-                    return Ast.Field(null, typeof(ScriptingRuntimeHelpers).GetField("True"));
+                    return TrueExpr;
                 } else {
-                    return Ast.Field(null, typeof(ScriptingRuntimeHelpers).GetField("False"));
+                    return FalseExpr;
                 }
             } else if ((wrapper = _value as UnicodeWrapper) != null) {
                 return GlobalParent.Constant(wrapper.Value);
@@ -134,5 +135,19 @@ namespace IronPython.Compiler.Ast {
                 Value = value;
             }
         }
+
+        #region IInstructionProvider Members
+
+        void IInstructionProvider.AddInstructions(LightCompiler compiler) {
+            if (_value is bool) {
+                compiler.Instructions.EmitLoad((bool)_value);
+            } else if (_value is UnicodeWrapper) {
+                compiler.Instructions.EmitLoad(((UnicodeWrapper)_value).Value);
+            } else {
+                compiler.Instructions.EmitLoad(_value);
+            }
+        }
+
+        #endregion
     }
 }

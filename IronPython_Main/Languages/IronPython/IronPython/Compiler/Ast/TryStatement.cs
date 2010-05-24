@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -131,16 +132,19 @@ namespace IronPython.Compiler.Ast {
                         Ast.Assign(runElse, AstUtils.Constant(true)),
                         // save existing line updated, we could choose to do this only for nested exception handlers.
                         PushLineUpdated(false, lineUpdated),
-                        AstUtils.Try(
-                            Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
-                            body
-                        ).Catch(exception,
-                            Ast.Assign(runElse, AstUtils.Constant(false)),
-                            @catch,
-                            // restore existing line updated after exception handler completes
-                            PopLineUpdated(lineUpdated),
-                            Ast.Assign(exception, Ast.Constant(null, typeof(Exception))),
-                            AstUtils.Default(body.Type)
+                        LightExceptions.RewriteExternal(
+                            AstUtils.Try(
+                                Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
+                                body,
+                                AstUtils.Constant(null)
+                            ).Catch(exception,
+                                Ast.Assign(runElse, AstUtils.Constant(false)),
+                                @catch,
+                                // restore existing line updated after exception handler completes
+                                PopLineUpdated(lineUpdated),
+                                Ast.Assign(exception, Ast.Constant(null, typeof(Exception))),
+                                AstUtils.Constant(null)
+                            )
                         ),
                         AstUtils.IfThen(runElse,
                             @else
@@ -155,27 +159,31 @@ namespace IronPython.Compiler.Ast {
                 //      ... catch handling ...
                 //  }
                 //
-                result =
-                    AstUtils.Try(
-                        GlobalParent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
-                        // save existing line updated
-                        PushLineUpdated(false, lineUpdated),
-                        body
-                    ).Catch(exception,
-                        @catch,
-                        // restore existing line updated after exception handler completes
-                        PopLineUpdated(lineUpdated),
-                        Ast.Call(AstMethods.ExceptionHandled, Parent.LocalContext),
-                        Ast.Assign(exception, Ast.Constant(null, typeof(Exception))),
-                        AstUtils.Default(body.Type)
+                result = 
+                    LightExceptions.RewriteExternal(
+                        AstUtils.Try(
+                            GlobalParent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
+                            // save existing line updated
+                            PushLineUpdated(false, lineUpdated),
+                            body,
+                            AstUtils.Constant(null)
+                        ).Catch(exception,
+                            @catch,
+                            // restore existing line updated after exception handler completes
+                            PopLineUpdated(lineUpdated),
+                            Ast.Call(AstMethods.ExceptionHandled, Parent.LocalContext),
+                            Ast.Assign(exception, Ast.Constant(null, typeof(Exception))),
+                            AstUtils.Constant(null)
+                        )
                     );
             } else {
                 result = body;
             }
-
+            
             return Ast.Block(
-                GetVariables(lineUpdated, runElse),
-                AddFinally(result)
+                GetVariables(lineUpdated, runElse), 
+                AddFinally(result),
+                AstUtils.Default(typeof(void))
             );
         }
 
@@ -209,7 +217,8 @@ namespace IronPython.Compiler.Ast {
                     AstUtils.Try(
                         Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
                         Ast.Assign(tryThrows, AstUtils.Constant(null, typeof(Exception))),
-                        body
+                        body,
+                        AstUtils.Empty()
                     ).Catch(
                         locException,
                         Expression.Block(

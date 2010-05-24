@@ -108,7 +108,7 @@ namespace IronPython.Runtime.Binding {
                         out target
                     );
 
-                    return new BuiltinFunction.BindingResult(target, res);
+                    return BindingHelpers.CheckLightThrow(call, res, target);
                 });            
         }
 

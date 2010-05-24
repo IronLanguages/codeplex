@@ -16,19 +16,16 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
-using IronPython.Runtime.Operations;
 
 #if !CLR2
 using MSAst = System.Linq.Expressions;
@@ -65,9 +62,8 @@ namespace IronPython.Compiler.Ast {
 
         internal static MSAst.ParameterExpression LocalCodeContextVariable = Ast.Parameter(typeof(CodeContext), "$localContext");
         private static MSAst.ParameterExpression _catchException = Ast.Parameter(typeof(Exception), "$updException");
-        private static readonly MSAst.Expression _GetCurrentMethod = Ast.Call(AstMethods.GetCurrentMethod);
         internal const string NameForExec = "module: <exec>";
-
+        
         internal bool ContainsImportStar {
             get { return _importStar; }
             set { _importStar = value; }
@@ -197,14 +193,14 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal abstract MSAst.LambdaExpression GetLambda();
+        internal abstract Microsoft.Scripting.Ast.LightLambdaExpression GetLambda();
 
         /// <summary>
         /// Gets or creates the FunctionCode object for this FunctionDefinition.
         /// </summary>
         internal FunctionCode GetOrMakeFunctionCode() {
             if (_funcCode == null) {
-                _funcCode = new FunctionCode(GlobalParent.PyContext, OriginalDelegate, this, ScopeDocumentation);
+                Interlocked.CompareExchange(ref _funcCode, new FunctionCode(GlobalParent.PyContext, OriginalDelegate, this, ScopeDocumentation, null, true), null);
             }
             return _funcCode;
         }
@@ -245,7 +241,7 @@ namespace IronPython.Compiler.Ast {
                 if (_forceCompile) {
                     return false;
                 } else if (GlobalParent.CompilationMode == CompilationMode.Lookup) {
-                    return false; // ??? should be true?
+                    return true;
                 }
                 CompilerContext context = GlobalParent.CompilerContext;
 
@@ -564,19 +560,20 @@ namespace IronPython.Compiler.Ast {
             if (!_containsExceptionHandling) {
                 Debug.Assert(Name != null);
                 Debug.Assert(exception.Type == typeof(Exception));
-                return Ast.Call(
-                    AstMethods.UpdateStackTrace,
-                    exception,
-                    LocalContext,
-                    _funcCodeExpr,
-                    _GetCurrentMethod,
-                    AstUtils.Constant(Name),
-                    AstUtils.Constant(GlobalParent.SourceUnit.Path ?? "<string>"),
-                    new LastFaultingLineExpression(LineNumberExpression)
-                );
+                return UpdateStackTrace(exception);
             }
 
             return GetSaveLineNumberExpression(exception, true);
+        }
+
+        private MSAst.Expression UpdateStackTrace(MSAst.ParameterExpression exception) {
+            return Ast.Call(
+                AstMethods.UpdateStackTrace,
+                exception,
+                LocalContext,
+                _funcCodeExpr,
+                LineNumberExpression
+            );
         }
 
 
@@ -590,16 +587,7 @@ namespace IronPython.Compiler.Ast {
                     Ast.Not(
                         LineNumberUpdated
                     ),
-                    Ast.Call(
-                        AstMethods.UpdateStackTrace,
-                        exception,
-                        LocalContext,
-                        _funcCodeExpr,
-                        _GetCurrentMethod,
-                        AstUtils.Constant(Name),
-                        AstUtils.Constant(GlobalParent.SourceUnit.Path ?? "<string>"),
-                        new LastFaultingLineExpression(LineNumberExpression)
-                    )
+                    UpdateStackTrace(exception)
                 ),
                 Ast.Assign(
                     LineNumberUpdated,

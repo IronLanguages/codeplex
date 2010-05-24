@@ -35,18 +35,16 @@ namespace IronPython.Runtime.Binding {
         private readonly string/*!*/ _message;
         private readonly PythonType/*!*/ _type;
         private readonly Expression _condition;
-        private readonly Func<bool> _conditionDelegate;
 
         public WarningInfo(PythonType/*!*/ type, string/*!*/ message) {
             _message = message;
             _type = type;
         }
 
-        public WarningInfo(PythonType/*!*/ type, string/*!*/ message, Expression condition, Func<bool> conditionDelegate) {
+        public WarningInfo(PythonType/*!*/ type, string/*!*/ message, Expression condition) {
             _message = message;
             _type = type;
             _condition = condition;
-            _conditionDelegate = conditionDelegate;
         }
 
         public DynamicMetaObject/*!*/ AddWarning(Expression/*!*/ codeContext, DynamicMetaObject/*!*/ result) {
@@ -69,22 +67,6 @@ namespace IronPython.Runtime.Binding {
                 ),
                 result.Restrictions
             );
-        }
-
-        public OptimizingCallDelegate/*!*/ AddWarning(OptimizingCallDelegate/*!*/ result) {
-            if(_conditionDelegate != null) {
-                return delegate(object[] callArgs, out bool shouldOptimize) { 
-                    if (_conditionDelegate()) {
-                        PythonOps.Warn((CodeContext)callArgs[0], _type, _message, ArrayUtils.EmptyObjects);
-                    }
-                    return result(callArgs, out shouldOptimize);
-                };
-            }
-
-            return delegate(object[] callArgs, out bool shouldOptimize) { 
-                PythonOps.Warn((CodeContext)callArgs[0], _type, _message, ArrayUtils.EmptyObjects);
-                return result(callArgs, out shouldOptimize);
-            };
         }
     }
 }

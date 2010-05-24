@@ -652,7 +652,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else {
                     res = new DynamicMetaObject(
-                        Ast.Throw(
+                        this.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("TypeError"),
                                 AstUtils.Constant("expected string of length 1 when converting to char, got '{0}'"),
@@ -736,7 +736,7 @@ namespace IronPython.Runtime.Binding {
 
         private DynamicMetaObject/*!*/ MakeStrongBoxToBoolConversionError(DynamicMetaObject/*!*/ self) {
             return new DynamicMetaObject(
-                Ast.Throw(
+                this.Throw(
                     Ast.Call(
                         typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),
                         AstUtils.Constant("Can't convert a Reference<> instance to a bool")

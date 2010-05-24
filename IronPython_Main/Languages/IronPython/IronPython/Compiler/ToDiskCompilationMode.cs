@@ -54,8 +54,9 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        public override MSAst.LambdaExpression ReduceAst(PythonAst instance, string name) {
-            return Ast.Lambda<Func<CodeContext, FunctionCode, object>>(
+        public override LightLambdaExpression ReduceAst(PythonAst instance, string name) {
+            return Utils.LightLambda<LookupCompilationDelegate>(
+                typeof(object),
                 Ast.Block(
                     new[] { PythonAst._globalArray },
                     Ast.Assign(
@@ -75,7 +76,8 @@ namespace IronPython.Compiler.Ast {
 
         public override ScriptCode MakeScriptCode(PythonAst ast) {
             PythonCompilerOptions pco = ast.CompilerContext.Options as PythonCompilerOptions;
-            var code = (MSAst.Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>>)ast.Reduce();
+            // reduce to LightLambda then to Lambda
+            var code = (MSAst.Expression<LookupCompilationDelegate>)ast.Reduce().Reduce();
 
             return new PythonSavableScriptCode(code, ast.SourceUnit, ast.GetNames(), pco.ModuleName);
         }

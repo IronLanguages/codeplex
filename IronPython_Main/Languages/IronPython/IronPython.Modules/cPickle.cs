@@ -1230,7 +1230,7 @@ namespace IronPython.Modules {
                 object moduleName;
                 if (PythonOps.TryGetBoundAttr(context, obj, "__module__", out moduleName)) {
                     // TODO: Global SystemState
-                    Builtin.__import__(context, Converter.ConvertToString(moduleName));
+                    LightExceptions.CheckAndThrow(Builtin.__import__(context, Converter.ConvertToString(moduleName)));
 
                     object foundObj;
                     if (Importer.TryGetExistingModule(context, Converter.ConvertToString(moduleName), out module) &&
@@ -1478,7 +1478,7 @@ namespace IronPython.Modules {
             public object find_global(CodeContext/*!*/ context, object module, object attr) {
                 object moduleObject;
                 if (!Importer.TryGetExistingModule(context, Converter.ConvertToString(module), out moduleObject)) {
-                    Builtin.__import__(context, Converter.ConvertToString(module));
+                    LightExceptions.CheckAndThrow(Builtin.__import__(context, Converter.ConvertToString(module)));
                     moduleObject = PythonContext.GetContext(context).SystemStateModules[module];
                 }
                 return PythonOps.GetBoundAttr(context, moduleObject, Converter.ConvertToString(attr));

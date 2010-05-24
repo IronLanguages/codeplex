@@ -54,8 +54,8 @@ namespace IronPython.Compiler.Ast {
         public UncollectableCompilationMode() {
         }
 
-        public override MSAst.LambdaExpression ReduceAst(PythonAst instance, string name) {
-            return Ast.Lambda<Func<FunctionCode, object>>(AstUtils.Convert(instance.ReduceWorker(), typeof(object)), name, new[] { PythonAst._functionCode });
+        public override LightLambdaExpression ReduceAst(PythonAst instance, string name) {
+            return Utils.LightLambda<Func<FunctionCode, object>>(typeof(object), AstUtils.Convert(instance.ReduceWorker(), typeof(object)), name, new[] { PythonAst._functionCode });
         }
 
         #region Cached Constant/Symbol/Global Support

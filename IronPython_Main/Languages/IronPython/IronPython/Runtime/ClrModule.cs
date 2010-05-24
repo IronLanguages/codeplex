@@ -28,6 +28,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -67,7 +68,7 @@ Assembly object, a full assembly name, or a partial assembly name. After the
 load the assemblies namespaces and top-level types will be available via 
 import Namespace.")]
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
-            if (references == null) throw new ArgumentTypeException("Expected string or Assembly, got NoneType");
+            if (references == null) throw new TypeErrorException("Expected string or Assembly, got NoneType");
             if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -83,7 +84,7 @@ name should be the filename on disk without a directory specifier and
 optionally including the .EXE or .DLL extension. After the load the assemblies 
 namespaces and top-level types will be available via import Namespace.")]
         public static void AddReferenceToFile(CodeContext/*!*/ context, params string[] files) {
-            if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (files == null) throw new TypeErrorException("Expected string, got NoneType");
             if (files.Length == 0) throw new ArgumentException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -96,7 +97,7 @@ namespaces and top-level types will be available via import Namespace.")]
 After the load the assemblies namespaces and top-level types will be available via 
 import Namespace.")]
         public static void AddReferenceByName(CodeContext/*!*/ context, params string[] names) {
-            if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (names == null) throw new TypeErrorException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -157,7 +158,7 @@ import Namespace.")]
 After the load the assemblies namespaces and top-level types will be available via 
 import Namespace.")]
         public static void AddReferenceByPartialName(CodeContext/*!*/ context, params string[] names) {
-            if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (names == null) throw new TypeErrorException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -172,13 +173,13 @@ will be available via import Namespace.")]
 #if CLR2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
         public static Assembly/*!*/ LoadAssemblyFromFileWithPath(string/*!*/ file) {
-            if (file == null) throw new ArgumentTypeException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
+            if (file == null) throw new TypeErrorException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
             // We use Assembly.LoadFile instead of Assembly.LoadFrom as the latter first tries to use Assembly.Load
             return Assembly.LoadFile(file);
         }
 #else
         public static Assembly/*!*/ LoadAssemblyFromFileWithPath(CodeContext/*!*/ context, string/*!*/ file) {
-            if (file == null) throw new ArgumentTypeException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
+            if (file == null) throw new TypeErrorException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
             
             Assembly res;
             if (!context.LanguageContext.TryLoadAssemblyFromFileWithPath(file, out res)) {
@@ -198,7 +199,7 @@ will be available via import Namespace.")]
 object.  Namespaces or types in the assembly can be accessed directly from 
 the assembly object.")]
         public static Assembly/*!*/ LoadAssemblyFromFile(CodeContext/*!*/ context, string/*!*/ file) {
-            if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (file == null) throw new TypeErrorException("Expected string, got NoneType");
             if (file.Length == 0) throw new ArgumentException("assembly name must not be empty string");
             ContractUtils.RequiresNotNull(context, "context");
 
@@ -215,7 +216,7 @@ from the assembly object.")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadWithPartialName")]
         public static Assembly/*!*/ LoadAssemblyByPartialName(string/*!*/ name) {
             if (name == null) {
-                throw new ArgumentTypeException("LoadAssemblyByPartialName: arg 1 must be a string");
+                throw new TypeErrorException("LoadAssemblyByPartialName: arg 1 must be a string");
             }
 
 #pragma warning disable 618 // csc
@@ -231,7 +232,7 @@ object.  Namespaces or types in the assembly can be accessed directly from
 the assembly object.")]
         public static Assembly/*!*/ LoadAssemblyByName(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) {
-                throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
+                throw new TypeErrorException("LoadAssemblyByName: arg 1 must be a string");
             }
 
             return PythonContext.GetContext(context).DomainManager.Platform.LoadAssembly(name);
@@ -246,7 +247,7 @@ the assembly object.")]
             ContractUtils.RequiresNotNull(context, "context");
 
             if (name == null) {
-                throw new ArgumentTypeException("Use: arg 1 must be a string");
+                throw new TypeErrorException("Use: arg 1 must be a string");
             }
 
             var scope = Importer.TryImportSourceFile(PythonContext.GetContext(context), name);
@@ -266,11 +267,11 @@ the assembly object.")]
             ContractUtils.RequiresNotNull(context, "context");
 
             if (path == null) {
-                throw new ArgumentTypeException("Use: arg 1 must be a string");
+                throw new TypeErrorException("Use: arg 1 must be a string");
             }
 
             if (language == null) {
-                throw new ArgumentTypeException("Use: arg 2 must be a string");
+                throw new TypeErrorException("Use: arg 2 must be a string");
             }
 
             var manager = context.LanguageContext.DomainManager;
@@ -316,7 +317,7 @@ the assembly object.")]
                 return;
             }
 
-            throw new ArgumentTypeException(String.Format("Invalid assembly type. Expected string or Assembly, got {0}.", reference));
+            throw new TypeErrorException(String.Format("Invalid assembly type. Expected string or Assembly, got {0}.", reference));
         }
 
         private static void AddReference(CodeContext/*!*/ context, Assembly assembly) {
@@ -325,7 +326,7 @@ the assembly object.")]
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
         private static void AddReference(CodeContext/*!*/ context, string name) {
-            if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (name == null) throw new TypeErrorException("Expected string, got NoneType");
 
             Assembly asm = null;
 
@@ -349,7 +350,7 @@ the assembly object.")]
         }
 
         private static void AddReferenceToFile(CodeContext/*!*/ context, string file) {
-            if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (file == null) throw new TypeErrorException("Expected string, got NoneType");
 
 #if SILVERLIGHT
             Assembly asm = context.LanguageContext.DomainManager.Platform.LoadAssemblyFromPath(file);
@@ -365,7 +366,7 @@ the assembly object.")]
 
 #if !SILVERLIGHT // files, paths
         private static void AddReferenceByPartialName(CodeContext/*!*/ context, string name) {
-            if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (name == null) throw new TypeErrorException("Expected string, got NoneType");
             ContractUtils.RequiresNotNull(context, "context");
 
             Assembly asm = LoadAssemblyByPartialName(name);
@@ -381,7 +382,7 @@ the assembly object.")]
         }
 #endif
         private static void AddReferenceByName(CodeContext/*!*/ context, string name) {
-            if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (name == null) throw new TypeErrorException("Expected string, got NoneType");
 
             Assembly asm = LoadAssemblyByName(context, name);
 
@@ -440,7 +441,7 @@ directory is added to sys.path and AddReferenceToFile is then called. After the
 load the assemblies namespaces and top-level types will be available via 
 import Namespace.")]
         public static void AddReferenceToFileAndPath(CodeContext/*!*/ context, params string[] files) {
-            if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (files == null) throw new TypeErrorException("Expected string, got NoneType");
             ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string file in files) {

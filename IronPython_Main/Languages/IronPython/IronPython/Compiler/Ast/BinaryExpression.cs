@@ -416,6 +416,6 @@ namespace IronPython.Compiler.Ast {
                 }
                 return true;
             }
-        }        
+        }
     }
 }

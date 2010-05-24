@@ -44,18 +44,24 @@ namespace IronPython.Compiler {
     /// object.  The compiler recognizes these on sets and turns them into
     /// assignments on the python global object.
     /// </summary>
-    class PythonGlobalVariableExpression : Expression, IInstructionProvider, IPythonGlobalExpression {
+    class PythonGlobalVariableExpression : Expression, IInstructionProvider, IPythonGlobalExpression, ILightExceptionAwareExpression {
         private readonly Expression/*!*/ _target;
         private readonly PythonGlobal/*!*/ _global;
         private readonly Ast.PythonVariable/*!*/ _variable;
+        private readonly bool _lightEh;
         internal static Expression/*!*/ Uninitialized = Expression.Field(null, typeof(Uninitialized).GetField("Instance"));
 
-        public PythonGlobalVariableExpression(Expression/*!*/ globalExpr, Ast.PythonVariable/*!*/ variable, PythonGlobal/*!*/ global) {
+        public PythonGlobalVariableExpression(Expression/*!*/ globalExpr, Ast.PythonVariable/*!*/ variable, PythonGlobal/*!*/ global)
+            : this(globalExpr, variable, global, false) {
+        }
+
+        internal PythonGlobalVariableExpression(Expression/*!*/ globalExpr, Ast.PythonVariable/*!*/ variable, PythonGlobal/*!*/ global, bool lightEh) {
             Assert.NotNull(globalExpr, variable);
 
             _target = globalExpr;
             _global = global;
             _variable = variable;
+            _lightEh = lightEh;
         }
 
         public Expression/*!*/ Target {
@@ -118,20 +124,40 @@ namespace IronPython.Compiler {
             if (v == _target) {
                 return this;
             }
-            return new PythonGlobalVariableExpression(v, _variable, _global);
+            return new PythonGlobalVariableExpression(v, _variable, _global, _lightEh);
         }
 
         #region IInstructionProvider Members
 
         public void AddInstructions(LightCompiler compiler) {
-            compiler.Instructions.Emit(new PythonGlobalInstruction(_global));
+            if (_lightEh) {
+                compiler.Instructions.Emit(new PythonLightThrowGlobalInstruction(_global));
+            } else {
+                compiler.Instructions.Emit(new PythonGlobalInstruction(_global));
+            }
+        }
+
+        #endregion
+
+        #region ILightExceptionAwareExpression Members
+
+        Expression ILightExceptionAwareExpression.ReduceForLightExceptions() {
+            if (_lightEh) {
+                return this;
+            }
+            return new PythonGlobalVariableExpression(
+                _target,
+                _variable,
+                _global,
+                true
+            );
         }
 
         #endregion
     }
 
     class PythonGlobalInstruction : Instruction {
-        private readonly PythonGlobal _global;
+        protected readonly PythonGlobal _global;
         public PythonGlobalInstruction(PythonGlobal global) {
             _global = global;
         }
@@ -144,6 +170,16 @@ namespace IronPython.Compiler {
 
         public override string ToString() {
             return "GetGlobal(" + _global + ")";
+        }
+    }
+
+    class PythonLightThrowGlobalInstruction : PythonGlobalInstruction {
+        public PythonLightThrowGlobalInstruction(PythonGlobal global) : base(global) {
+        }
+
+        public override int Run(InterpretedFrame frame) {
+            frame.Push(_global.CurrentValueLightThrow);
+            return +1;
         }
     }
 
@@ -194,12 +230,11 @@ namespace IronPython.Compiler {
 
 
         protected override Expression VisitChildren(ExpressionVisitor visitor) {
-            var g = (PythonGlobalVariableExpression)visitor.Visit(_global);
             var v = visitor.Visit(_value);
-            if (g == _global && v == _value) {
+            if (v == _value) {
                 return this;
             }
-            return new PythonSetGlobalVariableExpression(g, v);
+            return new PythonSetGlobalVariableExpression(_global, v);
         }
 
         #region IInstructionProvider Members
@@ -270,18 +305,23 @@ namespace IronPython.Compiler {
         }
     }
 
-    class LookupGlobalVariable : Expression, IInstructionProvider, IPythonGlobalExpression {
+    class LookupGlobalVariable : Expression, IInstructionProvider, IPythonGlobalExpression, ILightExceptionAwareExpression {
         private readonly string/*!*/ _name;
-        private readonly bool/*!*/ _isLocal;
+        private readonly bool/*!*/ _isLocal, _lightThrow;
         private readonly Expression/*!*/ _codeContextExpr;
 
-        public LookupGlobalVariable(Expression/*!*/ codeContextExpr, string/*!*/  name, bool isLocal) {
+        public LookupGlobalVariable(Expression/*!*/ codeContextExpr, string/*!*/  name, bool isLocal)
+            : this(codeContextExpr, name, isLocal, false) {
+        }
+
+        public LookupGlobalVariable(Expression/*!*/ codeContextExpr, string/*!*/  name, bool isLocal, bool lightThrow) {
             Debug.Assert(codeContextExpr.Type == typeof(CodeContext));
             Assert.NotNull(name);
 
             _name = name;
             _isLocal = isLocal;
             _codeContextExpr = codeContextExpr;
+            _lightThrow = lightThrow;
         }
 
         public sealed override ExpressionType NodeType {
@@ -296,6 +336,10 @@ namespace IronPython.Compiler {
             get {
                 return true;
             }
+        }
+
+        protected override Expression VisitChildren(ExpressionVisitor visitor) {
+            return this;
         }
 
         public Expression/*!*/ RawValue() {
@@ -357,7 +401,19 @@ namespace IronPython.Compiler {
 
         void IInstructionProvider.AddInstructions(LightCompiler compiler) {
             compiler.Compile(_codeContextExpr);
-            compiler.Instructions.Emit(new LookupGlobalInstruction(_name, _isLocal));
+            compiler.Instructions.Emit(new LookupGlobalInstruction(_name, _isLocal, _lightThrow));
+        }
+
+        #endregion
+
+        #region ILightExceptionAwareExpression Members
+
+        Expression ILightExceptionAwareExpression.ReduceForLightExceptions() {
+            if (_lightThrow) {
+                return this;
+            }
+
+            return new LookupGlobalVariable(_codeContextExpr, _name, _isLocal, true);
         }
 
         #endregion
@@ -365,19 +421,16 @@ namespace IronPython.Compiler {
 
     class LookupGlobalInstruction : Instruction {
         private readonly string _name;
-        private readonly bool _isLocal;
-        public LookupGlobalInstruction(string name, bool isLocal) {
+        private readonly bool _isLocal, _lightThrow;
+        public LookupGlobalInstruction(string name, bool isLocal, bool lightThrow) {
             _name = name;
             _isLocal = isLocal;
+            _lightThrow = lightThrow;
         }
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
         public override int Run(InterpretedFrame frame) {
-            if (_isLocal) {
-                frame.Push(PythonOps.GetLocal((CodeContext)frame.Pop(), _name));
-            } else {
-                frame.Push(PythonOps.GetGlobal((CodeContext)frame.Pop(), _name));
-            }
+            frame.Push(PythonOps.GetVariable((CodeContext)frame.Pop(), _name, !_isLocal, _lightThrow));
             return +1;
         }
 

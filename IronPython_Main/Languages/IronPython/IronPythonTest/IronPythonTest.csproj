@@ -99,6 +99,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AttrInjectorTest.cs" />
+    <Compile Include="LightExceptionTests.cs" />
     <Compile Include="MemberOverloadTest.cs" />
     <Compile Include="BinderTest.cs" />
     <Compile Include="BindTest.cs" />

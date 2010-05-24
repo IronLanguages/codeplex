@@ -291,7 +291,7 @@ namespace IronPython.Runtime {
                     // Sample error message from CPython 2.5 looks like:
                     //     Exception __main__.MyError: MyError() in <generator object at 0x00D7F6E8> ignored
                     try {
-                        string message = string.Format("Exception in generator {1} ignored", PythonOps.Repr(Context, this));
+                        string message = String.Format("Exception in generator {0} ignored", PythonOps.Repr(Context, this));
 
                         PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, message);
                         PythonOps.PrintWithDest(Context, PythonContext.GetContext(Context).SystemStandardError, Context.LanguageContext.FormatException(e));

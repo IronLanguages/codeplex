@@ -32,7 +32,7 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo RaiseAssertionError = GetMethod((Action<object>)PythonOps.RaiseAssertionError);
         public static readonly MethodInfo Repr = GetMethod((Func<CodeContext, object, string>)PythonOps.Repr);
         public static readonly MethodInfo WarnDivision = GetMethod((Action<CodeContext, PythonDivisionOptions, object, object>)PythonOps.WarnDivision);
-        public static readonly MethodInfo MakeClass = GetMethod((Func<object, CodeContext, string, object[], string, object>)PythonOps.MakeClass);
+        public static readonly MethodInfo MakeClass = GetMethod((Func<FunctionCode, Func<CodeContext, CodeContext>, CodeContext, string, object[], string, object>)PythonOps.MakeClass);
         public static readonly MethodInfo UnqualifiedExec = GetMethod((Action<CodeContext, object>)PythonOps.UnqualifiedExec);
         public static readonly MethodInfo QualifiedExec = GetMethod((Action<CodeContext, object, PythonDictionary, object>)PythonOps.QualifiedExec);
         public static readonly MethodInfo PrintExpressionValue = GetMethod((Action<CodeContext, object>)PythonOps.PrintExpressionValue);
@@ -88,8 +88,7 @@ namespace IronPython.Compiler.Ast {
         public static readonly MethodInfo MakeSet = GetMethod((Func<object[], SetCollection>)PythonOps.MakeSet);
         public static readonly MethodInfo MakeHomogeneousDictFromItems = GetMethod((Func<object[], PythonDictionary>)PythonOps.MakeHomogeneousDictFromItems);
         public static readonly MethodInfo CreateLocalContext = GetMethod((Func<CodeContext, MutableTuple, string[], CodeContext>)PythonOps.CreateLocalContext);
-        public static readonly MethodInfo UpdateStackTrace = GetMethod((Action<Exception, CodeContext, FunctionCode, MethodBase, string, string, int>)PythonOps.UpdateStackTrace);
-        public static readonly MethodInfo GetCurrentMethod = GetMethod((Func<MethodBase>)MethodBase.GetCurrentMethod);
+        public static readonly MethodInfo UpdateStackTrace = GetMethod((Action<Exception, CodeContext, FunctionCode, int>)PythonOps.UpdateStackTrace);
         public static readonly MethodInfo ForLoopDispose = GetMethod((Action<KeyValuePair<IEnumerator, IDisposable>>)PythonOps.ForLoopDispose);
         public static readonly MethodInfo GetClosureTupleFromContext = GetMethod((Func<CodeContext, MutableTuple>)PythonOps.GetClosureTupleFromContext);
         public static readonly MethodInfo IsUnicode = GetMethod((Func<object, bool>)PythonOps.IsUnicode);

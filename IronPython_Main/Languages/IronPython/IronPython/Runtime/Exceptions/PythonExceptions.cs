@@ -58,7 +58,7 @@ namespace IronPython.Runtime.Exceptions {
     /// for convenience their's also an _TypeName version which is the PythonType.
     /// </summary>
     public static partial class PythonExceptions {
-        private const string _pythonExceptionKey = "PythonExceptionInfo";
+        private static object _pythonExceptionKey = typeof(BaseException);
         internal const string DefaultExceptionModule = "exceptions";
         public const string __doc__ = "Provides the most commonly used exceptions for Python programs";
         
@@ -118,10 +118,17 @@ namespace IronPython.Runtime.Exceptions {
             }
 
             public static object __new__(PythonType/*!*/ cls, params object[] args\u00F8) {
+                if (cls.UnderlyingSystemType == typeof(BaseException)) {
+                    return new BaseException(cls);
+                }
                 return Activator.CreateInstance(cls.UnderlyingSystemType, cls);
             }
 
             public static object __new__(PythonType/*!*/ cls, [ParamDictionary]IDictionary<object, object> kwArgs\u00F8, params object[] args\u00F8) {
+                if (cls.UnderlyingSystemType == typeof(BaseException)) {
+                    return new BaseException(cls);
+                } 
+                
                 return Activator.CreateInstance(cls.UnderlyingSystemType, cls);
             }
 
@@ -358,13 +365,6 @@ namespace IronPython.Runtime.Exceptions {
             #region Internal .NET Exception production
 
             /// <summary>
-            /// Creates a CLR Exception for this Python exception
-            /// </summary>
-            internal System.Exception/*!*/ CreateClrException(string/*!*/ message) {
-                return ToClrHelper(_type, message);
-            }
-
-            /// <summary>
             /// Initializes the Python exception from a .NET exception
             /// </summary>
             /// <param name="exception"></param>
@@ -388,10 +388,10 @@ namespace IronPython.Runtime.Exceptions {
 
                 string stringMessage = _message as string;
                 if (String.IsNullOrEmpty(stringMessage)) {
-                    stringMessage = "Python Exception: " + _type.Name;
+                    stringMessage = _type.Name;
                 }
-                System.Exception newExcep = CreateClrException(stringMessage);
-                AssociateException(newExcep, this);
+                System.Exception newExcep = _type._makeException(stringMessage);
+                newExcep.SetPythonException(this);
 
                 Interlocked.CompareExchange<System.Exception>(ref _clrException, newExcep, null);
 
@@ -972,7 +972,7 @@ for k, v in toError.iteritems():
                 res = new System.Exception(PythonOps.ToString(pythonException));
             }
 
-            AssociateException(res, pythonException);
+            res.SetPythonException(pythonException);
 
             return res;
         }
@@ -990,7 +990,7 @@ for k, v in toError.iteritems():
                 return ipe.ToPythonException();
             }
 
-            object res = GetAssociatedException(clrException);
+            object res = clrException.GetPythonException();
             if (res == null) {
                 SyntaxErrorException syntax;
 
@@ -1020,7 +1020,7 @@ for k, v in toError.iteritems():
                     res = ToPythonNewStyle(clrException);
                 }
 
-                AssociateException(clrException, res);                
+                clrException.SetPythonException(res);
             }
 
             return res;
@@ -1077,8 +1077,13 @@ for k, v in toError.iteritems():
         /// <summary>
         /// Internal helper to associate a .NET exception and a Python exception.
         /// </summary>
-        private static void AssociateException(System.Exception e, object exception) {
-            e.Data[_pythonExceptionKey] = new ExceptionDataWrapper(exception);
+        private static void SetPythonException(this Exception e, object exception) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                pyAware.PythonException = exception;
+            } else {
+                e.Data[_pythonExceptionKey] = new ExceptionDataWrapper(exception);
+            }
             BaseException be = exception as BaseException;
             if (be != null) {
                 be.clsException = e;
@@ -1088,12 +1093,69 @@ for k, v in toError.iteritems():
         /// <summary>
         /// Internal helper to get the associated Python exception from a .NET exception.
         /// </summary>
-        private static object GetAssociatedException(System.Exception e) {
-            if (e.Data.Contains(_pythonExceptionKey)) {
+        private static object GetPythonException(this Exception e) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                return pyAware.PythonException;
+            }  else if (e.Data.Contains(_pythonExceptionKey)) {
                 return ((ExceptionDataWrapper)e.Data[_pythonExceptionKey]).Value;
             }
 
             return null;
+        }
+
+        internal static List<DynamicStackFrame> GetFrameList(this Exception e) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                return pyAware.Frames;
+            } else {
+                return e.Data[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
+            }
+        }
+
+        internal static void SetFrameList(this Exception e, List<DynamicStackFrame> frames) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                pyAware.Frames = frames;
+            } else {
+                e.Data[typeof(DynamicStackFrame)] = frames;
+            }
+        }
+
+        internal static void RemoveFrameList(this Exception e) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                pyAware.Frames = null;
+            } else {
+                e.Data.Remove(typeof(DynamicStackFrame));
+            }
+        }
+
+        internal static TraceBack GetTraceBack(this Exception e) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                return pyAware.TraceBack;
+            } else {
+                return e.Data[typeof(TraceBack)] as TraceBack;
+            }
+        }
+
+        internal static void SetTraceBack(this Exception e, TraceBack traceback) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                pyAware.TraceBack = traceback;
+            } else {
+                e.Data[typeof(TraceBack)] = traceback;
+            }
+        }
+
+        internal static void RemoveTraceBack(this Exception e) {
+            IPythonAwareException pyAware = e as IPythonAwareException;
+            if (pyAware != null) {
+                pyAware.TraceBack = null;
+            } else {
+                e.Data.Remove(typeof(TraceBack));
+            }
         }
 
         /// <summary>
@@ -1121,7 +1183,7 @@ for k, v in toError.iteritems():
             se.text = sourceLine;
             se.msg = e.Message;
 
-            AssociateException(e, se);
+            e.SetPythonException(se);
 
             return se;
         }
@@ -1131,8 +1193,8 @@ for k, v in toError.iteritems():
         /// normal user types.
         /// </summary>
         [PythonHidden]
-        public static PythonType CreateSubType(PythonContext/*!*/ context, PythonType baseType, string name, string module, string documentation) {
-            PythonType res = new PythonType(context, baseType, name, module, documentation);
+        public static PythonType CreateSubType(PythonContext/*!*/ context, PythonType baseType, string name, string module, string documentation, Func<string, Exception> exceptionMaker) {
+            PythonType res = new PythonType(context, baseType, name, module, documentation, exceptionMaker);
             res.SetCustomMember(context.SharedContext, "__weakref__", new PythonTypeWeakRefSlot(res));
             res.IsWeakReferencable = true;
             return res;
@@ -1145,14 +1207,14 @@ for k, v in toError.iteritems():
         /// example StandardError.x = 3 is illegal.  This isn't for module exceptions which 
         /// are like user defined types.  thread.error.x = 3 is legal.
         /// </summary>
-        private static PythonType CreateSubType(PythonType baseType, string name) {
-            return new PythonType(baseType, name);
+        private static PythonType CreateSubType(PythonType baseType, string name, Func<string, Exception> exceptionMaker) {
+            return new PythonType(baseType, name, exceptionMaker);
         }
 
         /// <summary>
         /// Creates a new type for a built-in exception which is the root concrete type.  
         /// </summary>
-        private static PythonType/*!*/ CreateSubType(PythonType/*!*/ baseType, Type/*!*/ concreteType) {
+        private static PythonType/*!*/ CreateSubType(PythonType/*!*/ baseType, Type/*!*/ concreteType, Func<string, Exception> exceptionMaker) {
             Assert.NotNull(baseType, concreteType);
 
             PythonType myType = DynamicHelpers.GetPythonTypeFromType(concreteType);
@@ -1160,6 +1222,7 @@ for k, v in toError.iteritems():
             myType.ResolutionOrder = Mro.Calculate(myType, new PythonType[] { baseType });
             myType.BaseTypes = new PythonType[] { baseType };
             myType.HasDictionary = true;
+            myType._makeException = exceptionMaker;
 
             return myType;
         }
@@ -1169,144 +1232,20 @@ for k, v in toError.iteritems():
         #region .NET/Python Exception Merging/Tracking
 
         /// <summary>
-        /// Walks all stack frames, filtering out DLR frames
-        /// Does not walk the frames in the InnerException, if any
-        /// Frames are returned in CLR order (inner to outer)
+        /// Gets the list of DynamicStackFrames for the current exception.
         /// </summary>
-        internal static IEnumerable<DynamicStackFrame> GetStackFrames(Exception e) {
-            return GetStackFrames(e, false);
-        }
-
-        /// <summary>
-        /// Walks all stack frames, filtering out DLR frames
-        /// Does not walk the frames in the InnerException, if any
-        /// Frames are returned in CLR order (inner to outer), unless reverse is set
-        /// </summary>
-        internal static IEnumerable<DynamicStackFrame> GetStackFrames(Exception e, bool reverseOrder) {
-            IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
-            if (traces == null) {
-                traces = new[] { GetStackTrace(e) };
-            } else {
-                traces.Add(GetStackTrace(e));
-            }
-
-            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(GetDynamicStackFrames(e));
-            // dynamicFrames is stored in the opposite order that we are walking,
-            // so we can always pop them from the back of the List<T>, which is O(1)
-            if (!reverseOrder) {
-                dynamicFrames.Reverse();
-            }
-
-            foreach (StackTrace trace in WalkList(traces, reverseOrder)) {
-                foreach (DynamicStackFrame result in GetStackFrames(trace, dynamicFrames, reverseOrder)) {
-                    yield return result;
-                }
-            }
-
-            //TODO: we would like to be able to assert this;
-            // right now, we cannot, because we are not using dynamic frames for non-interpreted dynamic methods.
-            // (we create the frames, but we do not consume them in FormatStackTrace.)
-            //Debug.Assert(dynamicFrames.Count == 0);
-        }
-
-        private static StackTrace GetStackTrace(Exception e) {
-#if SILVERLIGHT
-            return new StackTrace(e);
-#else
-            return new StackTrace(e, true);
-#endif
-        }
-
-        private static IEnumerable<T> WalkList<T>(IList<T> list, bool reverseOrder) {
-            if (reverseOrder) {
-                for (int i = list.Count - 1; i >= 0; i--) {
-                    yield return list[i];
-                }
-            } else {
-                for (int i = 0; i < list.Count; i++) {
-                    yield return list[i];
-                }
-            }
-        }
-
-        private static DynamicStackFrame GetStackFrame(StackFrame frame) {
-            MethodBase method = frame.GetMethod();
-            string methodName = method.Name;
-            string filename = frame.GetFileName();
-            int line = frame.GetFileLineNumber();
-
-            int dollar = method.Name.IndexOf('$');
-            if (dollar != -1) {
-                methodName = methodName.Substring(0, dollar);
-            }
-
-            if (String.IsNullOrEmpty(filename) && method.DeclaringType != null) {
-                filename = method.DeclaringType.Assembly.GetName().Name;
-                line = 0;
-            }
-
-            return new DynamicStackFrame(method, methodName, filename, line);
-        }
-
-
-        private static IEnumerable<DynamicStackFrame> GetStackFrames(StackTrace trace, List<DynamicStackFrame> dynamicFrames, bool reverseOrder) {
-            StackFrame[] frames = trace.GetFrames();
-            if (frames == null) {
-                yield break;
-            }
-
-            foreach (StackFrame frame in WalkList(frames, reverseOrder)) {
-                MethodBase method = frame.GetMethod();
-                Type parentType = method.DeclaringType;
-
-                if (dynamicFrames.Count > 0 && frame.GetMethod() == dynamicFrames[dynamicFrames.Count - 1].GetMethod()) {
-                    yield return dynamicFrames[dynamicFrames.Count - 1];
-                    dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
-                    continue;
-                }
-
-                if (parentType != null) {
-                    if (parentType == typeof(LambdaExpression) && method.Name == "DoExecute") {
-                        // Evaluated frame -- Replace with dynamic frame
-                        Debug.Assert(dynamicFrames.Count > 0);
-                        //if (dynamicFrames.Count == 0) continue;
-                        yield return dynamicFrames[dynamicFrames.Count - 1];
-
-                        dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
-                        continue;
-                    }
-                }
-
-                if (!DynamicSiteHelpers.IsInvisibleDlrStackFrame(method) &&
-                    (method.DeclaringType != null && Snippets.Shared.IsSnippetsAssembly(method.DeclaringType.Assembly))) {
-                    yield return GetStackFrame(frame);
-                }
-            }
-
-        }
-
         internal static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
-            return GetDynamicStackFrames(e, true);
-        }
-
-        internal static DynamicStackFrame[] GetDynamicStackFrames(Exception e, bool filter) {
-            List<DynamicStackFrame> frames = e.Data[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
+            List<DynamicStackFrame> frames = e.GetFrameList();
 
             if (frames == null) {
                 return new DynamicStackFrame[0];
             }
 
 #if !SILVERLIGHT
-            if (!filter) return frames.ToArray();
-
             frames = new List<DynamicStackFrame>(frames);
             List<DynamicStackFrame> res = new List<DynamicStackFrame>();
 
-            // the list of _stackFrames we build up in ScriptingRuntimeHelpers can have
-            // too many frames if exceptions are thrown from script code and
-            // caught outside w/o calling GetDynamicStackFrames.  Therefore we
-            // filter down to only script frames which we know are associated
-            // w/ the exception here.
+            // merge .NET frames w/ any dynamic frames that we have
             try {
                 StackTrace outermostTrace = new StackTrace(e);
                 IList<StackTrace> otherTraces = ExceptionHelpers.GetExceptionStackTraces(e) ?? new List<StackTrace>();
@@ -1326,9 +1265,7 @@ for k, v in toError.iteritems():
                         // method info's don't always compare equal, check based
                         // upon name/module/declaring type which will always be a correct
                         // check for dynamic methods.
-                        if (method.Module == other.Module &&
-                            method.DeclaringType == other.DeclaringType &&
-                            method.Name == other.Name) {
+                        if (MethodsMatch(method, other)) {
                             res.Add(frames[j]);
                             frames.RemoveAt(j);
                             lastFound = j;
@@ -1339,10 +1276,19 @@ for k, v in toError.iteritems():
             } catch (MemberAccessException) {
                 // can't access new StackTrace(e) due to security
             }
+
+            // add any remaining frames we couldn't find
+            res.AddRange(frames);
             return res.ToArray();
 #else 
             return frames.ToArray();
 #endif
+        }
+
+        private static bool MethodsMatch(MethodBase method, MethodBase other) {
+            return (method.Module == other.Module &&
+                    method.DeclaringType == other.DeclaringType &&
+                    method.Name == other.Name);
         }
 
         #endregion

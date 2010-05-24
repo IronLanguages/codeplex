@@ -14,7 +14,6 @@ missing implementations for:
     sys  _clear_type_cache             # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
     sys  _current_frames               # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
     sys  _getframe                     # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
-    sys  exc_type                      # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
     sys  getprofile                    # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
     sys  getrefcount                   # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460
     sys  setprofile                    # 17460, http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460

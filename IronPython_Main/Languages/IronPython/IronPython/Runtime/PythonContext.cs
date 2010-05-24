@@ -71,6 +71,7 @@ namespace IronPython.Runtime {
         private readonly Dictionary<string, Type>/*!*/ _builtinModulesDict;
         private readonly PythonOverloadResolverFactory _sharedOverloadResolverFactory;
         private readonly PythonBinder _binder;
+        private readonly SysModuleDictionaryStorage _sysDict = new SysModuleDictionaryStorage();
 #if !SILVERLIGHT
         private readonly AssemblyResolveHolder _resolveHolder;
 #if !CLR2
@@ -167,7 +168,7 @@ namespace IronPython.Runtime {
         private Dictionary<string/*!*/, CompatibilityGetMember/*!*/> _compatGetMemberNoThrow;
         private Dictionary<PythonOperationKind, PythonOperationBinder/*!*/> _operationBinders;
         private Dictionary<ExpressionType, PythonUnaryOperationBinder/*!*/> _unaryBinders;
-        private Dictionary<ExpressionType, PythonBinaryOperationBinder/*!*/> _binaryBinders;
+        private PythonBinaryOperationBinder[] _binaryBinders;
         private Dictionary<OperationRetTypeKey<ExpressionType>, BinaryRetTypeBinder/*!*/> _binaryRetTypeBinders;
         private Dictionary<OperationRetTypeKey<PythonOperationKind>, BinaryRetTypeBinder/*!*/> _operationRetTypeBinders;
         private Dictionary<Type/*!*/, PythonConversionBinder/*!*/>[] _conversionBinders;
@@ -242,7 +243,11 @@ namespace IronPython.Runtime {
 
             InitializeBuiltins();
 
-            _systemState = CreateBuiltinModule("sys", typeof(SysModule), ModuleOptions.NoBuiltins);
+            PythonDictionary sysDict = new PythonDictionary(_sysDict);
+            _systemState = new PythonModule(sysDict);
+            _systemState.__dict__["__name__"] = "sys";
+            _systemState.__dict__["__package__"] = null;
+
             InitializeSystemState();
 #if SILVERLIGHT
             AddToPath("");
@@ -619,14 +624,14 @@ namespace IronPython.Runtime {
         public PythonType EnsureModuleException(object key, PythonDictionary dict, string name, string module) {
             return (PythonType)(dict[name] = GetOrCreateModuleState(
                 key,
-                () => PythonExceptions.CreateSubType(this, PythonExceptions.Exception, name, module, "")
+                () => PythonExceptions.CreateSubType(this, PythonExceptions.Exception, name, module, "", PythonType.DefaultMakeException)
             ));
         }
 
         public PythonType EnsureModuleException(object key, PythonType baseType, PythonDictionary dict, string name, string module) {
             return (PythonType)(dict[name] = GetOrCreateModuleState(
                 key,
-                () => PythonExceptions.CreateSubType(this, baseType, name, module, "")
+                () => PythonExceptions.CreateSubType(this, baseType, name, module, "", PythonType.DefaultMakeException)
             ));
         }
 
@@ -699,23 +704,16 @@ namespace IronPython.Runtime {
             }
         }
 
-        // as of 1.5 preferred access is exc_info, these may be null.
-        internal object SystemExceptionType {
-            set {
-                SetSystemStateValue("exc_type", value);
-            }
+        internal void UpdateExceptionInfo(object type, object value, object traceback) {
+            _sysDict.UpdateExceptionInfo(type, value, traceback);
         }
 
-        internal object SystemExceptionValue {
-            set {
-                SetSystemStateValue("exc_value", value);
-            }
+        internal void UpdateExceptionInfo(Exception clrException, object type, object value, List<DynamicStackFrame> traceback) {
+            _sysDict.UpdateExceptionInfo(clrException, type, value, traceback);            
         }
 
-        internal object SystemExceptionTraceBack {
-            set {
-                SetSystemStateValue("exc_traceback", value);
-            }
+        internal void ExceptionHandled() {
+            _sysDict.ExceptionHandled();
         }
 
         internal PythonModule GetModuleByName(string/*!*/ name) {
@@ -784,8 +782,6 @@ namespace IronPython.Runtime {
             SetSystemStateValue("path", new List(3));
 
             SetStandardIO();
-
-            SystemExceptionType = SystemExceptionValue = SystemExceptionTraceBack = null;
 
             SysModule.PerformModuleReload(this, _systemState.__dict__);
         }
@@ -930,7 +926,7 @@ namespace IronPython.Runtime {
 
         public override ScriptCode/*!*/ LoadCompiledCode(Delegate/*!*/ method, string path, string customData) {
             SourceUnit su = new SourceUnit(this, NullTextContentProvider.Null, path, SourceCodeKind.File);
-            return new OnDiskScriptCode((Func<CodeContext, FunctionCode, object>)method, su, customData);
+            return new OnDiskScriptCode((LookupCompilationDelegate)method, su, customData);
         }
 
         public override SourceCodeReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding/*!*/ defaultEncoding, string path) {
@@ -1211,7 +1207,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            PythonModule mod = new PythonModule(dict); // CreateModule(null, new Scope(dict), null, options);
+            PythonModule mod = new PythonModule(dict);
             mod.__dict__["__name__"] = moduleName;
             mod.__dict__["__package__"] = null;
             return mod;
@@ -1629,10 +1625,13 @@ namespace IronPython.Runtime {
                 printedHeader = true;
             }
 
-            foreach (DynamicStackFrame frame in PythonExceptions.GetStackFrames(e, true)) {
+            var frames = PythonExceptions.GetDynamicStackFrames(e);
+            for (int i = frames.Length - 1; i >= 0; i--) {
+                var frame = frames[i];
+
                 MethodBase method = frame.GetMethod();
-                if (method.DeclaringType != null &&
-                    method.DeclaringType.FullName.StartsWith("IronPython.")) {
+                if (CallSiteHelpers.IsInternalFrame(method) ||
+                    (method.DeclaringType != null && method.DeclaringType.FullName.StartsWith("IronPython."))) {
                     continue;
                 }
 
@@ -2792,7 +2791,7 @@ namespace IronPython.Runtime {
                         CallSite<Func<CallSite, CodeContext, object, string, PythonDictionary, PythonDictionary, PythonTuple, int, object>>.Create(
                             Invoke(
                                 new CallSignature(5)
-                            )
+                            ).GetLightExceptionBinder()
                         ),
                         null
                     );
@@ -2810,7 +2809,7 @@ namespace IronPython.Runtime {
                         CallSite<Func<CallSite, CodeContext, object, string, PythonDictionary, PythonDictionary, PythonTuple, object>>.Create(
                             Invoke(
                                 new CallSignature(4)
-                            )
+                            ).GetLightExceptionBinder()
                         ),
                         null
                     );
@@ -3632,19 +3631,21 @@ namespace IronPython.Runtime {
             if (_binaryBinders == null) {
                 Interlocked.CompareExchange(
                     ref _binaryBinders,
-                    new Dictionary<ExpressionType, PythonBinaryOperationBinder>(),
+                    new PythonBinaryOperationBinder[(int)ExpressionType.IsFalse + 1],
                     null
                 );
             }
 
-            lock (_binaryBinders) {
-                PythonBinaryOperationBinder res;
-                if (!_binaryBinders.TryGetValue(operation, out res)) {
-                    _binaryBinders[operation] = res = new PythonBinaryOperationBinder(this, operation);
-                }
-
-                return res;
+            var ret = _binaryBinders[(int)operation];
+            if (ret != null) {
+                return ret;
             }
+            var oldValue = Interlocked.CompareExchange(
+                ref _binaryBinders[(int)operation],
+                ret = new PythonBinaryOperationBinder(this, operation),
+                null
+            );
+            return oldValue ?? ret;
         }
 
         internal BinaryRetTypeBinder/*!*/ BinaryOperationRetType(PythonBinaryOperationBinder opBinder, PythonConversionBinder convBinder) {

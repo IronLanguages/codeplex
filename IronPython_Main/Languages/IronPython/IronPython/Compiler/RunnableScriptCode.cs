@@ -27,7 +27,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler {    
     abstract class RunnableScriptCode : ScriptCode {
-        private FunctionCode _code;
+        internal FunctionCode _code;
         private readonly Compiler.Ast.PythonAst _ast;
 
         public RunnableScriptCode(Compiler.Ast.PythonAst ast)
@@ -60,6 +60,10 @@ namespace IronPython.Compiler {
         }
 
         protected FunctionCode EnsureFunctionCode(Delegate/*!*/ dlg) {
+            return EnsureFunctionCode(dlg, false, true);
+        }
+
+        protected FunctionCode EnsureFunctionCode(Delegate/*!*/ dlg, bool tracing, bool register) {
             Debug.Assert(dlg != null);
 
             if (_code == null) {
@@ -69,7 +73,9 @@ namespace IronPython.Compiler {
                         (PythonContext)SourceUnit.LanguageContext,
                         dlg,
                         _ast,
-                        _ast.GetDocumentation(_ast)
+                        _ast.GetDocumentation(_ast),
+                        tracing,
+                        register
                     ),
                     null
                 );
@@ -89,12 +95,11 @@ namespace IronPython.Compiler {
             }
         }
 
-        public abstract FunctionCode GetFunctionCode();
+        public abstract FunctionCode GetFunctionCode(bool register);
                 
-        protected void PushFrame(CodeContext context, Delegate code) {
+        protected void PushFrame(CodeContext context, FunctionCode code) {
             if (((PythonContext)SourceUnit.LanguageContext).PythonOptions.Frames) {
-                EnsureFunctionCode(code);
-                PythonOps.PushFrame(context, _code);
+                PythonOps.PushFrame(context, code);
             }
         }
 

@@ -33,7 +33,6 @@ namespace IronPython.Runtime.Binding {
     /// ArgBuilder which provides the CodeContext parameter to a method.
     /// </summary>
     public sealed class ContextArgBuilder : ArgBuilder {
-        private static Func<object[], object> _readFunc = (Func<object[], object>)Delegate.CreateDelegate(typeof(Func<object[], object>), 0, typeof(ArgBuilder).GetMethod("ArgumentRead"));
         public ContextArgBuilder(ParameterInfo info) 
             : base(info){
         }
@@ -48,10 +47,6 @@ namespace IronPython.Runtime.Binding {
 
         protected override Expression ToExpression(OverloadResolver resolver, RestrictedArguments args, bool[] hasBeenUsed) {
             return ((PythonOverloadResolver)resolver).ContextExpression;
-        }
-
-        protected override Func<object[], object> ToDelegate(OverloadResolver resolver, RestrictedArguments args, bool[] hasBeenUsed) {
-            return _readFunc;
         }
     }
 }

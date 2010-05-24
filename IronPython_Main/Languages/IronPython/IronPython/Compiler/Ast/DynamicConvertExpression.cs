@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override MSAst.Expression Reduce() {
-            return _mode.Dynamic(
+            return _mode.ReduceDynamic(
                 _binder,
                 _binder.Type,
                 _target

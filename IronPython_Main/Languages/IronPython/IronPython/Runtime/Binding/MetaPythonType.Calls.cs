@@ -31,6 +31,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -131,9 +132,9 @@ namespace IronPython.Runtime.Binding {
                     msg = String.Format("Cannot create instances of {0} because it has no public constructors", Value.Name);
                 }
                 return new DynamicMetaObject(
-                   Ast.Throw(
+                   call.Throw(
                        Ast.New(
-                           typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                           typeof(TypeErrorException).GetConstructor(new Type[] { typeof(string) }),
                            AstUtils.Constant(msg)
                        )
                    ),
@@ -643,9 +644,9 @@ namespace IronPython.Runtime.Binding {
             return BindingHelpers.AddDynamicTestAndDefer(
                 call,
                 new DynamicMetaObject(
-                    Ast.Throw(
+                    call.Throw(
                         Ast.New(
-                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            typeof(TypeErrorException).GetConstructor(new Type[] { typeof(string) }),
                             AstUtils.Constant(message)
                         )
                     ),
@@ -663,9 +664,9 @@ namespace IronPython.Runtime.Binding {
             return BindingHelpers.AddDynamicTestAndDefer(
                 call,
                 new DynamicMetaObject(
-                    Ast.Throw(
+                    call.Throw(
                         Ast.New(
-                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            typeof(TypeErrorException).GetConstructor(new Type[] { typeof(string) }),
                             AstUtils.Constant(message)
                         ),
                         typeof(object)
