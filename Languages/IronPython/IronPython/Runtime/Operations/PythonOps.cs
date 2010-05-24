@@ -16,6 +16,7 @@
 #if !CLR2
 using System.Linq.Expressions;
 using System.Numerics;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
@@ -1353,22 +1354,25 @@ namespace IronPython.Runtime.Operations {
             return TypeCache.OldInstance;
         }
 
-        public static object MakeClass(object body, CodeContext/*!*/ parentContext, string name, object[] bases, string selfNames) {
-            Func<CodeContext, CodeContext> func = GetClassCode(parentContext, body);
+        public static object MakeClass(FunctionCode funcCode, Func<CodeContext, CodeContext> body, CodeContext/*!*/ parentContext, string name, object[] bases, string selfNames) {
+            Func<CodeContext, CodeContext> func = GetClassCode(parentContext, funcCode, body);
 
             return MakeClass(parentContext, name, bases, selfNames, func(parentContext).Dict);
         }
 
-        private static Func<CodeContext, CodeContext> GetClassCode(CodeContext context, object body) {
-            Func<CodeContext, CodeContext> func = body as Func<CodeContext, CodeContext>;
-            if (func == null) {
-                FunctionCode code = (FunctionCode)body;
-                if (code.Target == null) {
-                    code.UpdateDelegate(context.LanguageContext, true);
+        private static Func<CodeContext, CodeContext> GetClassCode(CodeContext context, FunctionCode funcCode, Func<CodeContext, CodeContext> body) {
+            if (body == null) {
+                if (funcCode.Target == null) {
+                    funcCode.UpdateDelegate(context.LanguageContext, true);
                 }
-                return (Func<CodeContext, CodeContext>)code.Target;
+                return (Func<CodeContext, CodeContext>)funcCode.Target;
+            } else {
+                if (funcCode.Target == null) {
+                    funcCode.SetTarget(body);
+                    funcCode._normalDelegate = body;
+                }
+                return body;
             }
-            return func;
         }
 
         internal static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, PythonDictionary vars) {
@@ -1719,9 +1723,9 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// import spam.eggs
         /// </summary>
-        [ProfilerTreatsAsExternal]
+        [ProfilerTreatsAsExternal, LightThrowing]
         public static object ImportTop(CodeContext/*!*/ context, string fullName, int level) {
-            return Importer.Import(context, fullName, null, level);
+            return Importer.ImportLightThrow(context, fullName, null, level);
         }
 
         /// <summary>
@@ -1729,9 +1733,9 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// import spam.eggs as ham
         /// </summary>
-        [ProfilerTreatsAsExternal]
+        [ProfilerTreatsAsExternal, LightThrowing]
         public static object ImportBottom(CodeContext/*!*/ context, string fullName, int level) {
-            object module = Importer.Import(context, fullName, null, level);
+            object module = Importer.ImportLightThrow(context, fullName, null, level);
 
             if (fullName.IndexOf('.') >= 0) {
                 // Extract bottom from the imported module chain
@@ -1914,7 +1918,7 @@ namespace IronPython.Runtime.Operations {
                 PythonCompilerOptions compilerOptions = Builtin.GetRuntimeGeneratedCodeCompilerOptions(context, true, 0);
 
                 // do interpretation only on strings -- not on files, streams, or code objects
-                code = FunctionCode.FromSourceUnit(source, compilerOptions);
+                code = FunctionCode.FromSourceUnit(source, compilerOptions, false);
             }
 
             FunctionCode fc = code as FunctionCode;
@@ -2084,8 +2088,23 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
+        /// <summary>
+        /// Called from generated code at the start of a catch block.
+        /// </summary>
         public static void BuildExceptionInfo(CodeContext/*!*/ context, Exception clrException) {
-            GetExceptionInfo(context);
+            object pyExcep = PythonExceptions.ToPython(clrException);
+            List<DynamicStackFrame> frames = clrException.GetFrameList();
+            IPythonObject pyObj = pyExcep as IPythonObject;
+
+            object excType;
+            if (pyObj != null) {
+                // class is always the Python type for new-style types (this is also the common case)
+                excType = pyObj.PythonType;
+            } else {
+                excType = PythonOps.GetBoundAttr(context, pyExcep, "__class__");
+            }
+
+            context.LanguageContext.UpdateExceptionInfo(clrException, excType, pyExcep, frames);
         }
 
         // Clear the current exception. Most callers should restore the exception.
@@ -2095,9 +2114,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void ExceptionHandled(CodeContext context) {
-            PythonContext.GetContext(context).DelSystemStateValue("exc_traceback");
-            PythonContext.GetContext(context).DelSystemStateValue("exc_value");
-            PythonContext.GetContext(context).DelSystemStateValue("exc_type");
+            var pyCtx = context.LanguageContext;
+
+            pyCtx.ExceptionHandled();
         }
 
         // Called by code-gen to save it. Codegen just needs to pass this back to RestoreCurrentException.
@@ -2115,23 +2134,11 @@ namespace IronPython.Runtime.Operations {
 
             ObjectException objex;
 
-            if (test is PythonTuple) {
-                // we handle multiple exceptions, we'll check them one at a time.
-                PythonTuple tt = test as PythonTuple;
-                for (int i = 0; i < tt.__len__(); i++) {
-                    object res = CheckException(context, exception, tt[i]);
-                    if (res != null) return res;
-                }
-            } else if ((objex = exception as ObjectException) != null) {
+            if ((objex = exception as ObjectException) != null) {
                 if (PythonOps.IsSubClass(context, objex.Type, test)) {
                     return objex.Instance;
                 }
                 return null;
-            } else if (test is OldClass) {
-                if (PythonOps.IsInstance(context, exception, test)) {
-                    // catching a Python type.
-                    return exception;
-                }
             } else if (test is PythonType) {
                 if (PythonOps.IsSubClass(test as PythonType, TypeCache.BaseException)) {
                     // catching a Python exception type explicitly.
@@ -2141,6 +2148,18 @@ namespace IronPython.Runtime.Operations {
                     Exception clrEx = PythonExceptions.ToClr(exception);
                     if (PythonOps.IsInstance(context, clrEx, test)) return clrEx;
                 }
+            } else if (test is PythonTuple) {
+                // we handle multiple exceptions, we'll check them one at a time.
+                PythonTuple tt = test as PythonTuple;
+                for (int i = 0; i < tt.__len__(); i++) {
+                    object res = CheckException(context, exception, tt[i]);
+                    if (res != null) return res;
+                }
+            } else if (test is OldClass) {
+                if (PythonOps.IsInstance(context, exception, test)) {
+                    // catching a Python type.
+                    return exception;
+                }
             }
 
             return null;
@@ -2148,13 +2167,18 @@ namespace IronPython.Runtime.Operations {
 
         private static TraceBack CreateTraceBack(PythonContext pyContext, Exception e) {
             // user provided trace back
-            if (e.Data.Contains(typeof(TraceBack))) {
-                return (TraceBack)e.Data[typeof(TraceBack)];
+            var tb = e.GetTraceBack();
+            if (tb != null) {
+                return tb;
             }
 
-            DynamicStackFrame[] frames = PythonExceptions.GetDynamicStackFrames(e, false);
-            TraceBack tb = null;
-            for (int i = 0; i < frames.Length; i++) {
+            IList<DynamicStackFrame> frames = ((IList<DynamicStackFrame>)e.GetFrameList()) ?? new DynamicStackFrame[0];
+            return CreateTraceBack(e, frames, frames.Count);
+        }
+
+        internal static TraceBack CreateTraceBack(Exception e, IList<DynamicStackFrame> frames, int frameCount) {
+            TraceBack tb  = null;
+            for (int i = 0; i < frameCount; i++) {
                 DynamicStackFrame frame = frames[i];
 
                 string name = frame.GetMethodName();
@@ -2179,7 +2203,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            e.Data[typeof(TraceBack)] = tb;
+            e.SetTraceBack(tb);
             return tb;
         }
 
@@ -2203,20 +2227,23 @@ namespace IronPython.Runtime.Operations {
                 return PythonTuple.MakeTuple(null, null, null);
             }
 
+            PythonContext pc = context.LanguageContext;
+
             object pyExcep = PythonExceptions.ToPython(ex);
-
-            PythonContext pc = PythonContext.GetContext(context);
             TraceBack tb = CreateTraceBack(pc, ex);
-            pc.SystemExceptionTraceBack = tb;
 
-            object excType = PythonOps.GetBoundAttr(context, pyExcep, "__class__");
-            pc.SystemExceptionType = excType;
-            pc.SystemExceptionValue = pyExcep;
+            IPythonObject pyObj = pyExcep as IPythonObject;
+            object excType;
+            if (pyObj != null) {
+                // class is always the Python type for new-style types (this is also the common case)
+                excType = pyObj.PythonType;
+            } else {
+                excType = PythonOps.GetBoundAttr(context, pyExcep, "__class__");
+            }
 
-            return PythonTuple.MakeTuple(
-                excType,
-                pyExcep,
-                tb);
+            pc.UpdateExceptionInfo(excType, pyExcep, tb);
+
+            return PythonTuple.MakeTuple(excType, pyExcep, tb);
         }
 
         /// <summary>
@@ -2230,7 +2257,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception MakeRethrowExceptionWorker(Exception e) {
-            e.Data.Remove(typeof(TraceBack));
+            e.RemoveTraceBack();
             ExceptionHelpers.UpdateForRethrow(e);
             return e;
         }
@@ -2246,7 +2273,7 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static Exception MakeException(CodeContext/*!*/ context, object type, object value, object traceback) {
             Exception e = MakeExceptionWorker(context, type, value, traceback, false);
-            e.Data.Remove(typeof(DynamicStackFrame));
+            e.RemoveFrameList();
             return e;
         }
 
@@ -2254,10 +2281,10 @@ namespace IronPython.Runtime.Operations {
             Exception throwable;
             PythonType pt;
 
-            if (type is Exception) {
-                throwable = type as Exception;
-            } else if (type is PythonExceptions.BaseException) {
+            if (type is PythonExceptions.BaseException) {
                 throwable = PythonExceptions.ToClr(type);
+            } else if (type is Exception) {
+                throwable = type as Exception;
             } else if ((pt = type as PythonType) != null && typeof(PythonExceptions.BaseException).IsAssignableFrom(pt.UnderlyingSystemType)) {
                 throwable = PythonExceptions.CreateThrowableForRaise(context, pt, value);
             } else if (type is OldClass) {
@@ -2272,17 +2299,15 @@ namespace IronPython.Runtime.Operations {
                 throwable = MakeExceptionTypeError(type);
             }
 
-            IDictionary dict = throwable.Data;
-
             if (traceback != null) {
                 if (!forRethrow) {
                     TraceBack tb = traceback as TraceBack;
                     if (tb == null) throw PythonOps.TypeError("traceback argument must be a traceback object");
 
-                    dict[typeof(TraceBack)] = tb;
+                    throwable.SetTraceBack(tb);
                 }
-            } else if (dict.Contains(typeof(TraceBack))) {
-                dict.Remove(typeof(TraceBack));
+            } else {
+                throwable.RemoveTraceBack();
             }
 
             PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, throwable);
@@ -2454,6 +2479,10 @@ namespace IronPython.Runtime.Operations {
                 dict.Count > 0);
         }
 
+        public static ArgumentTypeException SimpleTypeError(string message) {
+            return new TypeErrorException(message);
+        }
+        
         public static object GetParamsValueOrDefault(PythonFunction function, int index, List extraArgs) {
             if (extraArgs.__len__() > 0) {
                 return extraArgs.pop(0);
@@ -3078,6 +3107,10 @@ namespace IronPython.Runtime.Operations {
 
         public static Delegate FunctionGetTarget(PythonFunction func) {
             return func.func_code.Target;
+        }
+
+        public static Delegate FunctionGetLightThrowTarget(PythonFunction func) {
+            return func.func_code.LightThrowTarget;
         }
 
         public static void FunctionPushFrame(PythonContext context) {
@@ -3763,14 +3796,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object GetGlobal(CodeContext/*!*/ context, string name) {
-            return GetVariable(context, name, true);
+            return GetVariable(context, name, true, false);
         }
 
         public static object GetLocal(CodeContext/*!*/ context, string name) {
-            return GetVariable(context, name, false);
+            return GetVariable(context, name, false, false);
         }
 
-        private static object GetVariable(CodeContext/*!*/ context, string name, bool isGlobal) {
+        internal static object GetVariable(CodeContext/*!*/ context, string name, bool isGlobal, bool lightThrow) {
             object res;
             if (isGlobal) {
                 if (context.TryGetGlobalVariable(name, out res)) {
@@ -3787,10 +3820,16 @@ namespace IronPython.Runtime.Operations {
                 return res;
             }
 
+            Exception ex;
             if (isGlobal) {
-                throw GlobalNameError(name);
+                ex = GlobalNameError(name);
+            } else {
+                ex = NameError(name);
             }
-            throw NameError(name);
+            if (lightThrow) {
+                return LightExceptions.Throw(ex);
+            }
+            throw ex;
         }
 
         public static object RawGetGlobal(CodeContext/*!*/ context, string name) {
@@ -3940,7 +3979,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception TypeError(string format, params object[] args) {
-            return new ArgumentTypeException(string.Format(format, args));
+            return new TypeErrorException(string.Format(format, args));
         }
 
         public static Exception IndexError(string format, params object[] args) {
@@ -4241,8 +4280,9 @@ namespace IronPython.Runtime.Operations {
             return stack;
         }
 
-        internal static LambdaExpression ToGenerator(this LambdaExpression code, bool shouldInterpret, bool debuggable, int compilationThreshold) {
-            return Expression.Lambda(
+        internal static LightLambdaExpression ToGenerator(this LightLambdaExpression code, bool shouldInterpret, bool debuggable, int compilationThreshold) {
+            return Utils.LightLambda(
+                typeof(object),
                 code.Type,
                 new GeneratorRewriter(code.Name, code.Body).Reduce(shouldInterpret, debuggable, compilationThreshold, code.Parameters, x => x),
                 code.Name,
@@ -4250,18 +4290,19 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        public static void UpdateStackTrace(Exception e, CodeContext context, FunctionCode funcCode, MethodBase method, string funcName, string filename, int line) {
+        public static void UpdateStackTrace(Exception e, CodeContext context, FunctionCode funcCode, int line) {
             if (line != -1) {
-                Debug.Assert(filename != null);
                 Debug.Assert(line != SourceLocation.None.Line);
 
-                List<DynamicStackFrame> pyFrames = (List<DynamicStackFrame>)e.Data[typeof(DynamicStackFrame)];
+                List<DynamicStackFrame> pyFrames = e.GetFrameList();
                 
                 if (pyFrames == null) {
-                    e.Data[typeof(DynamicStackFrame)] = pyFrames = new List<DynamicStackFrame>();
+                    e.SetFrameList(pyFrames = new List<DynamicStackFrame>());
                 }
 
-                pyFrames.Add(new PythonDynamicStackFrame(context, funcCode, method, funcName, filename, line));
+                var frame = new PythonDynamicStackFrame(context, funcCode, line);
+                funcCode.LightThrowCompile();
+                pyFrames.Add(frame);
             }
         }
 

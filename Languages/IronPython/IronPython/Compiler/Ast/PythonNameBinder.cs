@@ -482,9 +482,17 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
+#if DEBUG
+        private static int _labelId;
+#endif
         private void PushLoop(ILoopStatement node) {
+#if DEBUG
+            node.BreakLabel = Ast.Label("break" + _labelId++);
+            node.ContinueLabel = Ast.Label("continue" + _labelId++);
+#else
             node.BreakLabel = Ast.Label("break");
             node.ContinueLabel = Ast.Label("continue");
+#endif
             _loops.Add(node);
         }
 

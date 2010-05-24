@@ -327,7 +327,7 @@ namespace IronPython.Runtime.Binding {
                     } else {
                         // non-iterable object
                         res = new DynamicMetaObject(
-                            Ast.Throw(
+                            operation.Throw(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod("TypeErrorForNonIterableObject"),
                                     AstUtils.Convert(
@@ -376,7 +376,7 @@ namespace IronPython.Runtime.Binding {
             if (func.IsNull) {
                 // Python 2.6 setting __hash__ = None makes the type unhashable
                 res = new DynamicMetaObject(
-                    Expression.Throw(
+                    operation.Throw(
                         Expression.Call(
                             typeof(PythonOps).GetMethod("TypeErrorForUnhashableObject"),
                             self.Expression
@@ -1551,7 +1551,7 @@ namespace IronPython.Runtime.Binding {
 
             }
 
-            return builder.MakeRule(state, args);
+            return builder.MakeRule(operation, state, args);
         }
 
         private static DynamicMetaObject MakeUnindexableError(DynamicMetaObjectBinder operation, PythonIndexType op, DynamicMetaObject/*!*/[] types, DynamicMetaObject indexedType, PythonContext state) {
@@ -1695,7 +1695,7 @@ namespace IronPython.Runtime.Binding {
             /// <summary>
             /// Adds the target of the call to the rule.
             /// </summary>
-            public abstract DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObject[] args, Func<DynamicMetaObject> customFailure);
+            public abstract DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObjectBinder/*!*/ metaBinder, DynamicMetaObject[] args, Func<DynamicMetaObject> customFailure);
 
             protected PythonBinder Binder {
                 get { return _binder.Binder; }
@@ -1733,7 +1733,7 @@ namespace IronPython.Runtime.Binding {
                 return arguments;
             }
 
-            public override DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObject/*!*/[]/*!*/ args, Func<DynamicMetaObject> customFailure) {
+            public override DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObjectBinder/*!*/ metaBinder, DynamicMetaObject/*!*/[]/*!*/ args, Func<DynamicMetaObject> customFailure) {
                 Assert.NotNull(args);
                 Assert.NotNullItems(args);
 
@@ -1756,6 +1756,8 @@ namespace IronPython.Runtime.Binding {
                     PythonNarrowing.IndexOperator,
                     out target
                 );
+
+                res = BindingHelpers.CheckLightThrowMO(metaBinder, res, target);
 
                 if (target.Success) {
                     if (IsSetter) {
@@ -1789,7 +1791,7 @@ namespace IronPython.Runtime.Binding {
                 _slot = slot;
             }
 
-            public override DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObject/*!*/[]/*!*/ args, Func<DynamicMetaObject> customFailure) {
+            public override DynamicMetaObject/*!*/ CompleteRuleTarget(DynamicMetaObjectBinder/*!*/ metaBinder, DynamicMetaObject/*!*/[]/*!*/ args, Func<DynamicMetaObject> customFailure) {
                 ConditionalBuilder cb = new ConditionalBuilder();
                 _slot.MakeGetExpression(
                     Binder,
@@ -1806,7 +1808,7 @@ namespace IronPython.Runtime.Binding {
                     cb
                 );
                 if (!cb.IsFinal) {
-                    cb.FinishCondition(Ast.Throw(Ast.New(typeof(InvalidOperationException))));
+                    cb.FinishCondition(metaBinder.Throw(Ast.New(typeof(InvalidOperationException))));
                 }
 
                 Expression callable = cb.GetMetaObject().Expression;
@@ -1846,7 +1848,7 @@ namespace IronPython.Runtime.Binding {
                 _types = types;
             }
 
-            public abstract DynamicMetaObject/*!*/ MakeRule(PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args);
+            public abstract DynamicMetaObject/*!*/ MakeRule(DynamicMetaObjectBinder/*!*/ metaBinder, PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args);
 
             protected Callable/*!*/ Callable {
                 get { return _callable; }
@@ -1867,7 +1869,7 @@ namespace IronPython.Runtime.Binding {
                 : base(types, callable) {
             }
 
-            public override DynamicMetaObject/*!*/ MakeRule(PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args) {
+            public override DynamicMetaObject/*!*/ MakeRule(DynamicMetaObjectBinder/*!*/ metaBinder, PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args) {
                 // the semantics of simple slicing state that if the value
                 // is less than 0 then the length is added to it.  The default
                 // for unprovided parameters are 0 and maxint.  The callee
@@ -1941,7 +1943,7 @@ namespace IronPython.Runtime.Binding {
                 if (_lengthVar != null) {
                     // we need the length which we should only calculate once, calculate and
                     // store it in a temporary.  Note we only calculate the length if we'll
-                    DynamicMetaObject res = Callable.CompleteRuleTarget(args, null);
+                    DynamicMetaObject res = Callable.CompleteRuleTarget(metaBinder, args, null);
 
                     return new DynamicMetaObject(
                         Ast.Block(
@@ -1953,7 +1955,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 }
 
-                return Callable.CompleteRuleTarget(args, null);
+                return Callable.CompleteRuleTarget(metaBinder, args, null);
             }
 
             private DynamicMetaObject/*!*/ MakeBigIntTest(DynamicMetaObject/*!*/ self, DynamicMetaObject/*!*/ bigInt) {
@@ -2006,9 +2008,9 @@ namespace IronPython.Runtime.Binding {
                 : base(types, callable) {
             }
 
-            public override DynamicMetaObject/*!*/ MakeRule(PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args) {
+            public override DynamicMetaObject/*!*/ MakeRule(DynamicMetaObjectBinder/*!*/ metaBinder, PythonContext/*!*/ binder, DynamicMetaObject/*!*/[]/*!*/ args) {
                 DynamicMetaObject[] tupleArgs = Callable.GetTupleArguments(args);
-                return Callable.CompleteRuleTarget(tupleArgs, delegate() {
+                return Callable.CompleteRuleTarget(metaBinder, tupleArgs, delegate() {
                     PythonTypeSlot indexSlot;
                     if (args[1].GetLimitType() != typeof(Slice) && GetTypeAt(1).TryResolveSlot(binder.SharedContext, "__index__", out indexSlot)) {
                         args[1] = new DynamicMetaObject(
@@ -2034,7 +2036,7 @@ namespace IronPython.Runtime.Binding {
                             BindingRestrictions.Empty
                         );
 
-                        return Callable.CompleteRuleTarget(tupleArgs, null);
+                        return Callable.CompleteRuleTarget(metaBinder, tupleArgs, null);
                     }
                     return null;
                 });
@@ -2408,7 +2410,7 @@ namespace IronPython.Runtime.Binding {
             if (action is IPythonSite) {
                 // produce the custom Python error message
                 return new DynamicMetaObject(
-                    Ast.Throw(
+                    action.Throw(
                         Ast.Call(
                             typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
                             AstUtils.Constant(Symbols.OperatorToSymbol(NormalizeOperator(op))),
@@ -2433,39 +2435,12 @@ namespace IronPython.Runtime.Binding {
         /// </summary>
         public static DynamicMetaObject/*!*/ TypeError(DynamicMetaObjectBinder/*!*/ action, string message, params DynamicMetaObject[] types) {
             if (action is IPythonSite) {
-                Expression[] formatArgs;
-                Type[] typeArgs;
+                message = String.Format(message, ArrayUtils.ConvertAll(types, x => MetaPythonObject.GetPythonType(x).Name));
 
-                // produce our custom errors for Python...
-                if (types.Length <= 3) {
-                    // String.Format only has overloads for up to 3 objects following the format string
-                    formatArgs = new Expression[types.Length + 1];
-                    for (int i = 1; i < formatArgs.Length; i++) {
-                        formatArgs[i] = AstUtils.Constant(MetaPythonObject.GetPythonType(types[i - 1]).Name);
-                    }
-                    formatArgs[0] = AstUtils.Constant(message);
-                    typeArgs = CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), types.Length + 1);
-                    typeArgs[0] = typeof(string);
-                } else {
-                    // Use the params overload for String.Format
-                    formatArgs = new Expression[types.Length];
-                    for (int i = 0; i < formatArgs.Length; i++) {
-                        formatArgs[i] = AstUtils.Constant(MetaPythonObject.GetPythonType(types[i]).Name);
-                    }
-                    formatArgs = new Expression[] {
-                        AstUtils.Constant(message),
-                        Expression.NewArrayInit(typeof(object), formatArgs)
-                    };
-                    typeArgs = new Type[] { typeof(string), typeof(object[]) };
-                }
-
-                Expression error = Ast.Throw(
+                Expression error = action.Throw(
                     Ast.Call(
-                        typeof(ScriptingRuntimeHelpers).GetMethod("SimpleTypeError"),
-                        AstUtils.ComplexCallHelper(
-                            typeof(String).GetMethod("Format", typeArgs),
-                            formatArgs
-                        )
+                        typeof(PythonOps).GetMethod("SimpleTypeError"),   
+                        Ast.Constant(message)
                     ),
                     typeof(object)
                 );

@@ -147,7 +147,8 @@ namespace IronPython.Runtime.Binding {
                         Value.IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All,
                         out target
                     );
-                    return new BuiltinFunction.BindingResult(target, res);
+
+                    return BindingHelpers.CheckLightThrow(call, res, target);
                 }
             );
         }
@@ -214,7 +215,8 @@ namespace IronPython.Runtime.Binding {
                         Value.IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All,
                         out target
                     );
-                    return new BuiltinFunction.BindingResult(target, res);
+
+                    return BindingHelpers.CheckLightThrow(call, res, target);
                 }
             );
         }

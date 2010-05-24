@@ -47,12 +47,22 @@ namespace IronPython.Runtime {
         /// a module and returns the module.
         /// </summary>
         public static object Import(CodeContext/*!*/ context, string fullName, PythonTuple from, int level) {
+            return LightExceptions.CheckAndThrow(ImportLightThrow(context, fullName, from, level));
+        }
+
+        /// <summary>
+        /// Gateway into importing ... called from Ops.  Performs the initial import of
+        /// a module and returns the module.  This version returns light exceptions instead of throwing.
+        /// </summary>
+        [LightThrowing]
+        internal static object ImportLightThrow(CodeContext/*!*/ context, string fullName, PythonTuple from, int level) {
             PythonContext pc = PythonContext.GetContext(context);
 
             if (level == -1) {
                 // no specific level provided, call the 4 param version so legacy code continues to work
-                return pc.OldImportSite.Target(
-                    pc.OldImportSite,
+                var site = pc.OldImportSite;
+                return site.Target(
+                    site,
                     context,
                     FindImportFunction(context),
                     fullName,
@@ -60,24 +70,25 @@ namespace IronPython.Runtime {
                     context.Dict,
                     from
                 );
+            } else {
+
+                // relative import or absolute import, in other words:
+                //
+                // from . import xyz
+                // or 
+                // from __future__ import absolute_import
+                var site = pc.ImportSite;
+                return site.Target(
+                    site,
+                    context,
+                    FindImportFunction(context),
+                    fullName,
+                    Builtin.globals(context),
+                    context.Dict,
+                    from,
+                    level
+                );
             }
-
-            // relative import or absolute import, in other words:
-            //
-            // from . import xyz
-            // or 
-            // from __future__ import absolute_import
-
-            return pc.ImportSite.Target(
-                pc.ImportSite,
-                context,
-                FindImportFunction(context),
-                fullName,
-                Builtin.globals(context),
-                context.Dict,
-                from,
-                level
-            );
         }
 
         /// <summary>

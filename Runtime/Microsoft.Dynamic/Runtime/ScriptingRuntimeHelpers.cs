@@ -63,6 +63,12 @@ namespace Microsoft.Scripting.Runtime {
             return result;
         }
 
+#if DEBUG
+        public static void NoteException(Exception e) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, "LightEH Missed: " + e.GetType());
+        }
+#endif
+
         /// <summary>
         /// Gets a singleton boxed value for the given integer if possible, otherwise boxes the integer.
         /// </summary>
@@ -235,6 +241,23 @@ namespace Microsoft.Scripting.Runtime {
                     fi.SetValue(null, SymbolTable.StringToId(fi.Name));
                 }
             }
+        }
+
+        /// <summary>
+        /// Provides the test to see if an interpreted call site should switch over to being compiled.
+        /// </summary>
+        public static bool InterpretedCallSiteTest(bool restrictionResult, object bindingInfo) {
+            if (restrictionResult) {
+                CachedBindingInfo bindInfo = (CachedBindingInfo)bindingInfo;
+                if (bindInfo.CountDown >= 0) {
+                    // still interpreting...
+                    bindInfo.CountDown--;
+                    return true;
+                }
+
+                return bindInfo.CheckCompiled();
+            }
+            return false;
         }
     }
 }

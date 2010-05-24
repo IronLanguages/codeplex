@@ -529,7 +529,7 @@ def test_clr_exception_has_non_trivial_exception_message():
         raise MyException
     except System.Exception as e:
         pass
-    AreEqual(e.Message, "Python Exception: MyException")
+    AreEqual(e.Message, "MyException")
 
 def test_cp23822():
     from copy import deepcopy

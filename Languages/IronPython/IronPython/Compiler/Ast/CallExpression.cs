@@ -418,7 +418,5 @@ namespace IronPython.Compiler.Ast {
             }
             walker.PostWalk(this);
         }
-
-        
     }
 }

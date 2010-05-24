@@ -44,10 +44,5 @@ namespace IronPython.Runtime.Binding {
         protected override Expression ToExpression(OverloadResolver resolver, RestrictedArguments args, bool[] hasBeenUsed) {
             return AstUtils.Constant(Activator.CreateInstance(ParameterInfo.ParameterType));
         }
-
-        protected override Func<object[], object> ToDelegate(OverloadResolver resolver, RestrictedArguments args, bool[] hasBeenUsed) {
-            object value = Activator.CreateInstance(ParameterInfo.ParameterType);
-            return (_) => value;
-        }
     }
 }

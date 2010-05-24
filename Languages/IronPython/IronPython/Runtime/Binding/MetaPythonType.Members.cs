@@ -450,7 +450,7 @@ namespace IronPython.Runtime.Binding {
                         );
                     } else {
                         return new DynamicMetaObject(
-                            Ast.Throw(
+                            member.Throw(
                                 Ast.Call(
                                     typeof(PythonOps).GetMethod(
                                         "AttributeErrorForMissingAttribute",

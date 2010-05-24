@@ -80,8 +80,7 @@ namespace IronPython.Runtime.Binding {
                                 typeof(Thread).GetMethod("GetApartmentState")
                             ),
                             AstUtils.Constant(ApartmentState.STA)
-                        ),
-                        () => Thread.CurrentThread.GetApartmentState() == ApartmentState.STA
+                        )
                     );
 
                     return true;

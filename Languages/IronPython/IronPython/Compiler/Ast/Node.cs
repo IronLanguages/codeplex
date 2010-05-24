@@ -28,6 +28,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -452,9 +453,7 @@ namespace IronPython.Compiler.Ast {
         }
         
         internal static MSAst.Expression UpdateLineNumber(int line) {
-            return AstUtils.SkipInterpret(
-                Ast.Assign(LineNumberExpression, AstUtils.Constant(line))
-            );
+            return Ast.Assign(LineNumberExpression, AstUtils.Constant(line));
         }
 
         internal static MSAst.Expression UpdateLineUpdated(bool updated) {

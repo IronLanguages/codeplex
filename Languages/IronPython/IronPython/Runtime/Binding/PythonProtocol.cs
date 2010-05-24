@@ -156,7 +156,7 @@ namespace IronPython.Runtime.Binding {
                 );
                 
                 if (!cb.IsFinal) {
-                    cb.FinishCondition(GetCallError(self));
+                    cb.FinishCondition(GetCallError(call, self));
                 }
 
                 Expression[] callArgs = ArrayUtils.Insert(
@@ -214,10 +214,10 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static Expression/*!*/ GetCallError(DynamicMetaObject/*!*/ self) {
+        private static Expression/*!*/ GetCallError(DynamicMetaObjectBinder binder, DynamicMetaObject/*!*/ self) {
             Assert.NotNull(self);
 
-            return Ast.Throw(
+            return binder.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("UncallableError"),
                     AstUtils.Convert(self.Expression, typeof(object))

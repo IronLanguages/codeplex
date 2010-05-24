@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -58,7 +59,7 @@ namespace IronPython.Compiler {
                     return _value;
                 }
 
-                return GetCachedValue();
+                return GetCachedValue(false);
             }
             set {
                 if (value == Uninitialized.Instance && _value == Uninitialized.Instance) {
@@ -69,9 +70,19 @@ namespace IronPython.Compiler {
             }
         }
 
+        public object CurrentValueLightThrow {
+            get {
+                if (_value != Uninitialized.Instance) {
+                    return _value;
+                }
+
+                return GetCachedValue(true);
+            }
+        }
+
         public string Name { get { return _name; } }
 
-        private object GetCachedValue() {
+        private object GetCachedValue(bool lightThrow) {
             if (_global == null) {                
                 _global = ((PythonContext)_context.LanguageContext).GetModuleGlobalCache(_name);
             }
@@ -88,6 +99,9 @@ namespace IronPython.Compiler {
                 }
             }
 
+            if (lightThrow) {
+                return LightExceptions.Throw(PythonOps.GlobalNameError(_name));
+            }
             throw PythonOps.GlobalNameError(_name);
         }
 

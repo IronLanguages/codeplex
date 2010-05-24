@@ -252,6 +252,7 @@ namespace IronPython.Modules {
         // lstat(path) -> stat result
         // Like stat(path), but do not follow symbolic links.
         // 
+        [LightThrowing]
         public static object lstat(string path) {
             return stat(path);
         }
@@ -1102,8 +1103,11 @@ namespace IronPython.Modules {
         }
 
         [Documentation("stat(path) -> stat result\nGathers statistics about the specified file or directory")]
-        public static object stat(string path) {
-            if (path == null) throw PythonOps.TypeError("expected string, got NoneType");
+        [LightThrowing]
+        public static object stat(string path) {            
+            if (path == null) {
+                return LightExceptions.Throw(PythonOps.TypeError("expected string, got NoneType"));
+            }
 
             stat_result sr;
 
@@ -1122,7 +1126,7 @@ namespace IronPython.Modules {
                         mode |= S_IEXEC;
                     }
                 } else {
-                    throw PythonExceptions.CreateThrowable(WindowsError, PythonExceptions._WindowsError.ERROR_PATH_NOT_FOUND, "file does not exist: " + path);
+                    return LightExceptions.Throw(PythonExceptions.CreateThrowable(WindowsError, PythonExceptions._WindowsError.ERROR_PATH_NOT_FOUND, "file does not exist: " + path));
                 }
 
                 long st_atime = (long)PythonTime.TicksToTimestamp(fi.LastAccessTime.ToUniversalTime().Ticks);
@@ -1135,9 +1139,9 @@ namespace IronPython.Modules {
 
                 sr = new stat_result(mode, size, st_atime, st_mtime, st_ctime);
             } catch (ArgumentException) {
-                throw PythonExceptions.CreateThrowable(WindowsError, PythonExceptions._WindowsError.ERROR_INVALID_NAME, "The path is invalid: " + path);
+                return LightExceptions.Throw(PythonExceptions.CreateThrowable(WindowsError, PythonExceptions._WindowsError.ERROR_INVALID_NAME, "The path is invalid: " + path));
             } catch (Exception e) {
-                throw ToPythonException(e, path);
+                return LightExceptions.Throw(ToPythonException(e, path));
             }
 
             return sr;

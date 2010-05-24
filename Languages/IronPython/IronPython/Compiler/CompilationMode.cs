@@ -26,12 +26,14 @@ using System.Dynamic;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler.Ast;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
+    public delegate object LookupCompilationDelegate(CodeContext context, FunctionCode code);
 
     /// <summary>
     /// Specifies the compilation mode which will be used during the AST transformation
@@ -80,7 +82,7 @@ namespace IronPython.Compiler {
 
         public virtual Type DelegateType {
             get {
-                return typeof(MSAst.Expression<Func<CodeContext, FunctionCode, object>>);
+                return typeof(MSAst.Expression<LookupCompilationDelegate>);
             }
         }
 
@@ -91,30 +93,77 @@ namespace IronPython.Compiler {
         public virtual void PublishContext(CodeContext codeContext, UncollectableCompilationMode.ConstantInfo _contextInfo) {
         }
 
-        public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0) {
+        public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0) {
+            if (retType == typeof(object)) {
+                return new PythonDynamicExpression1(binder, this, arg0);
+            }
+            return ReduceDynamic(binder, retType, arg0);
+        }
+
+        public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1) {
+            if (retType == typeof(object)) {
+                return new PythonDynamicExpression2(binder, this, arg0, arg1);
+            }
+            return ReduceDynamic(binder, retType, arg0, arg1);
+        }
+
+        public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2) {
+            if (retType == typeof(object)) {
+                return new PythonDynamicExpression3(binder, this, arg0, arg1, arg2);
+            }
+            return ReduceDynamic(binder, retType, arg0, arg1, arg2);
+        }
+
+        public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2, MSAst.Expression/*!*/ arg3) {
+            if (retType == typeof(object)) {
+                return new PythonDynamicExpression4(binder, this, arg0, arg1, arg2, arg3);
+            }
+            return ReduceDynamic(binder, retType, arg0, arg1, arg2, arg3);
+        }
+
+        public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/[]/*!*/ args) {
+            Assert.NotNull(binder, retType, args);
+            Assert.NotNullItems(args);
+            
+            switch (args.Length) {
+                case 1: return Dynamic(binder, retType, args[0]);
+                case 2: return Dynamic(binder, retType, args[0], args[1]);
+                case 3: return Dynamic(binder, retType, args[0], args[1], args[2]);
+                case 4: return Dynamic(binder, retType, args[0], args[1], args[2], args[3]);
+            }
+
+            if (retType == typeof(object)) {
+                return new PythonDynamicExpressionN(binder, this, args);
+            }
+
+            return ReduceDynamic(binder, retType, args);
+        }
+
+        public virtual MSAst.Expression/*!*/ ReduceDynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0) {
             return MSAst.Expression.Dynamic(binder, retType, arg0);
         }
 
-        public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1) {
+        public virtual MSAst.Expression/*!*/ ReduceDynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1) {
             return MSAst.Expression.Dynamic(binder, retType, arg0, arg1);
         }
 
-        public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2) {
+        public virtual MSAst.Expression/*!*/ ReduceDynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2) {
             return MSAst.Expression.Dynamic(binder, retType, arg0, arg1, arg2);
         }
 
-        public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2, MSAst.Expression/*!*/ arg3) {
+        public virtual MSAst.Expression/*!*/ ReduceDynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1, MSAst.Expression/*!*/ arg2, MSAst.Expression/*!*/ arg3) {
             return MSAst.Expression.Dynamic(binder, retType, arg0, arg1, arg2, arg3);
         }
 
-        public virtual MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, IList<MSAst.Expression/*!*/>/*!*/ args) {
+        public virtual MSAst.Expression/*!*/ ReduceDynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/[]/*!*/ args) {
             Assert.NotNull(binder, retType, args);
             Assert.NotNullItems(args);
+
             return MSAst.Expression.Dynamic(binder, retType, args);
         }
 
         public abstract MSAst.Expression GetGlobal(MSAst.Expression globalContext, int arrayIndex, PythonVariable variable, PythonGlobal global);
 
-        public abstract MSAst.LambdaExpression ReduceAst(PythonAst instance, string name);
+        public abstract LightLambdaExpression ReduceAst(PythonAst instance, string name);
     }
 }

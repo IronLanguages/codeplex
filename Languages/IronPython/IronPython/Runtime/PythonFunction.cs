@@ -231,8 +231,11 @@ namespace IronPython.Runtime {
                 return _code; 
             }
             set {
-                if (value == null) throw PythonOps.TypeError("func_code must be set to a code object");
+                if (value == null) {
+                    throw PythonOps.TypeError("func_code must be set to a code object");
+                }
                 _code = value;
+                _compat = CalculatedCachedCompat();
             }
         }
 

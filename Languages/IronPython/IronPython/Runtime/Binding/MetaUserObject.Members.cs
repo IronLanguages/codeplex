@@ -31,6 +31,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -414,7 +415,7 @@ namespace IronPython.Runtime.Binding {
                                         _bindingInfo.Self
                                     )
                                 ),
-                                Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnreadableProperty")), typeof(object))
+                                _binder.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnreadableProperty")), typeof(object))
                             )
                         )
                     );
@@ -774,8 +775,8 @@ namespace IronPython.Runtime.Binding {
             return AstUtils.Convert(AstUtils.WeakConstant(slot), typeof(PythonTypeSlot));
         }
 
-        private static Expression/*!*/ MakeTypeError(string/*!*/ name, PythonType/*!*/ type) {
-            return Ast.Throw(
+        private static Expression/*!*/ MakeTypeError(DynamicMetaObjectBinder binder, string/*!*/ name, PythonType/*!*/ type) {
+            return binder.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(string) }),
                     AstUtils.Constant(type.Name),
@@ -1110,7 +1111,7 @@ namespace IronPython.Runtime.Binding {
                     return _target._baseMetaObject.BindSetMember(action, value);
                 } else if (action is PythonSetMemberBinder) {
                     return new DynamicMetaObject(
-                        MakeTypeError(action.Name, Instance.PythonType),
+                        MakeTypeError(action, action.Name, Instance.PythonType),
                         BindingRestrictions.Empty
                     );
                 }
@@ -1194,7 +1195,7 @@ namespace IronPython.Runtime.Binding {
                                     typeof(object)
                                 )
                             ),
-                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnsetableProperty")), typeof(object))
+                            info.Action.Throw(Ast.Call(typeof(PythonOps).GetMethod("UnsetableProperty")), typeof(object))
                         )
                     )
                 );
@@ -1240,9 +1241,9 @@ namespace IronPython.Runtime.Binding {
             IPythonObject sdo = info.Args[0].Value as IPythonObject;
             if (info.Action.Name == "__class__") {
                 return new DynamicMetaObject(
-                    Ast.Throw(
+                    info.Action.Throw(
                         Ast.New(
-                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            typeof(TypeErrorException).GetConstructor(new Type[] { typeof(string) }),
                             AstUtils.Constant("can't delete __class__ attribute")
                         ),
                         typeof(object)
@@ -1325,7 +1326,7 @@ namespace IronPython.Runtime.Binding {
                                 tmpDeleter,
                                 info.Args[0].Expression
                             ),
-                            Ast.Throw(Ast.Call(typeof(PythonOps).GetMethod("UndeletableProperty")), typeof(object))
+                            info.Action.Throw(Ast.Call(typeof(PythonOps).GetMethod("UndeletableProperty")), typeof(object))
                         )
                     )
                 );
@@ -1481,7 +1482,7 @@ namespace IronPython.Runtime.Binding {
                 );
             } else if (action is PythonGetMemberBinder) {
                 return new DynamicMetaObject(
-                    MakeTypeError(GetGetMemberName(action), PythonType),
+                    MakeTypeError(action, GetGetMemberName(action), PythonType),
                     BindingRestrictions.Empty
                 );
             }
@@ -1498,7 +1499,7 @@ namespace IronPython.Runtime.Binding {
                 return _baseMetaObject.BindDeleteMember(action);
             } else if (action is PythonDeleteMemberBinder) {
                 return new DynamicMetaObject(
-                    MakeTypeError(action.Name, ((IPythonObject)args[0].Value).PythonType),
+                    MakeTypeError(action, action.Name, ((IPythonObject)args[0].Value).PythonType),
                     BindingRestrictions.Empty
                 );
             }

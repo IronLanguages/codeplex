@@ -198,7 +198,7 @@ namespace IronPython.Compiler {
         private Expression MakeAssign(Expression variable, Expression value) {
             // TODO: this is not complete.
             // It may end up generating a bad tree if any of these nodes
-            // contain yield and return a value: Switch, Loop, Goto, or Label.
+            // contain yield and return a value: Switch, Loop, or Goto.
             // Those are not supported, but we can't throw here because we may
             // end up disallowing valid uses (if some other expression contains
             // yield, but not this one).
@@ -207,14 +207,82 @@ namespace IronPython.Compiler {
                     return MakeAssignBlock(variable, value);
                 case ExpressionType.Conditional:
                     return MakeAssignConditional(variable, value);
+                case ExpressionType.Label:
+                    return MakeAssignLabel(variable, (LabelExpression)value);
             }
             return DelayedAssign(variable, value);
+        }
+
+        struct GotoRewriteInfo {
+            public readonly Expression Variable;
+            public readonly LabelTarget VoidTarget;
+
+            public GotoRewriteInfo(Expression variable, LabelTarget voidTarget) {
+                Variable = variable;
+                VoidTarget = voidTarget;
+            }
+        }
+
+        private Expression MakeAssignLabel(Expression variable, LabelExpression value) {
+            GotoRewriteInfo curVariable = new GotoRewriteInfo(variable, Expression.Label(value.Target.Name + "_voided"));
+
+            var defaultValue = new GotoRewriter(this, curVariable, value.Target).Visit(value.DefaultValue);
+
+            return MakeAssignLabel(variable, curVariable, value.Target, defaultValue);
+        }
+
+        private Expression MakeAssignLabel(Expression variable, GotoRewriteInfo curVariable, LabelTarget target, Expression defaultValue) {
+            return Expression.Label(
+                curVariable.VoidTarget,
+                MakeAssign(variable, defaultValue)
+            );
+        }
+
+        class GotoRewriter : ExpressionVisitor {
+            private readonly GotoRewriteInfo _gotoInfo;
+            private readonly LabelTarget _target;
+            private readonly GeneratorRewriter _rewriter;
+            
+            public GotoRewriter(GeneratorRewriter rewriter, GotoRewriteInfo gotoInfo, LabelTarget target) {
+                _gotoInfo = gotoInfo;
+                _target = target;
+                _rewriter = rewriter;
+            }
+
+            protected override Expression VisitGoto(GotoExpression node) {
+                if (node.Target == _target) {
+                    return Expression.Goto(
+                        _gotoInfo.VoidTarget,
+                        Expression.Block(
+                            _rewriter.MakeAssign(_gotoInfo.Variable, node.Value),
+                            Expression.Default(typeof(void))
+                        ),
+                        node.Type
+                    );
+                }
+                return base.VisitGoto(node);
+            }
         }
 
         private Expression MakeAssignBlock(Expression variable, Expression value) {
             var node = (BlockExpression)value;
             var newBlock = new ReadOnlyCollectionBuilder<Expression>(node.Expressions);
-            newBlock[newBlock.Count - 1] = MakeAssign(variable, newBlock[newBlock.Count - 1]);
+
+            Expression blockRhs = newBlock[newBlock.Count - 1];
+            if (blockRhs.NodeType == ExpressionType.Label) {
+                var label = (LabelExpression)blockRhs;
+                GotoRewriteInfo curVariable = new GotoRewriteInfo(variable, Expression.Label(label.Target.Name + "_voided"));
+                
+                var rewriter = new GotoRewriter(this, curVariable, label.Target);
+                for (int i = 0; i < newBlock.Count - 1; i++) {
+                    newBlock[i] = rewriter.Visit(newBlock[i]);
+                }
+                
+                newBlock[newBlock.Count - 1] = MakeAssignLabel(variable, curVariable, label.Target, rewriter.Visit(label.DefaultValue));
+            } else {
+                newBlock[newBlock.Count - 1] = MakeAssign(variable, newBlock[newBlock.Count - 1]);
+            }
+
             return Expression.Block(node.Variables, newBlock);
         }
 
@@ -269,6 +337,8 @@ namespace IronPython.Compiler {
 
             // No yields, just return
             if (startYields == _yields.Count) {
+                Debug.Assert(@try.Type == node.Type);
+                Debug.Assert(handlers == null || handlers.Count == 0 || handlers[0].Body.Type == node.Type);
                 return Expression.MakeTry(null, @try, @finally, fault, handlers);
             }
 
@@ -282,14 +352,15 @@ namespace IronPython.Compiler {
             // dispatches to the yield labels
             var tryStart = Expression.Label("tryStart");
             if (tryYields != startYields) {
-                @try = Expression.Block(MakeYieldRouter(startYields, tryYields, tryStart), @try);
+                @try = Expression.Block(MakeYieldRouter(node.Body.Type, startYields, tryYields, tryStart), @try);
+                Debug.Assert(@try.Type == node.Body.Type);
             }
 
             // Transform catches with yield to deferred handlers
             if (catchYields != tryYields) {
                 var block = new List<Expression>();
 
-                block.Add(MakeYieldRouter(tryYields, catchYields, tryStart));
+                block.Add(MakeYieldRouter(node.Body.Type, tryYields, catchYields, tryStart));
                 block.Add(null); // empty slot to fill in later
 
                 for (int i = 0, n = handlers.Count; i < n; i++) {
@@ -325,7 +396,10 @@ namespace IronPython.Compiler {
                     // }
                     handlers[i] = Expression.Catch(
                         exceptionVar,
-                        Utils.Void(DelayedAssign(Visit(deferredVar), exceptionVar)),
+                        Expression.Block(
+                            DelayedAssign(Visit(deferredVar), exceptionVar),
+                            Expression.Default(node.Body.Type)
+                        ),
                         filter
                     );
 
@@ -336,15 +410,17 @@ namespace IronPython.Compiler {
                     //     ... catch body ...
                     // }
                     block.Add(
-                        Expression.IfThen(
+                        Expression.Condition(
                             Expression.NotEqual(Visit(deferredVar), AstUtils.Constant(null, deferredVar.Type)),
-                            catchBody
+                            catchBody,
+                            Expression.Default(node.Body.Type)
                         )
                     );
                 }
 
                 block[1] = Expression.MakeTry(null, @try, null, null, new ReadOnlyCollection<CatchBlock>(handlers));
                 @try = Expression.Block(block);
+                Debug.Assert(@try.Type == node.Body.Type);
                 handlers = new CatchBlock[0]; // so we don't reuse these
             }
 
@@ -366,6 +442,7 @@ namespace IronPython.Compiler {
                 // wrap them in a try
                 if (handlers.Count > 0) {
                     @try = Expression.MakeTry(null, @try, null, null, handlers);
+                    Debug.Assert(@try.Type == node.Body.Type);
                     handlers = new CatchBlock[0];
                 }
 
@@ -373,8 +450,8 @@ namespace IronPython.Compiler {
                 // The first call changes the labels to all point at "tryEnd",
                 // so the second router will jump to "tryEnd"
                 var tryEnd = Expression.Label("tryEnd");
-                Expression inFinallyRouter = MakeYieldRouter(catchYields, finallyYields, tryEnd);
-                Expression inTryRouter = MakeYieldRouter(catchYields, finallyYields, tryStart);
+                Expression inFinallyRouter = MakeYieldRouter(node.Body.Type, catchYields, finallyYields, tryEnd);
+                Expression inTryRouter = MakeYieldRouter(node.Body.Type, catchYields, finallyYields, tryStart);
 
                 var all = Expression.Variable(typeof(Exception), "e");
                 var saved = Expression.Variable(typeof(Exception), "$saved$" + _temps.Count);
@@ -421,7 +498,7 @@ namespace IronPython.Compiler {
             if (handlers.Count > 0 || @finally != null || fault != null) {
                 @try = Expression.MakeTry(null, @try, @finally, fault, handlers);
             }
-
+            Debug.Assert(@try.Type == node.Body.Type);
             return Expression.Block(Expression.Label(tryStart), @try);
         }
 
@@ -504,17 +581,17 @@ namespace IronPython.Compiler {
 
         #endregion
 
-        private SwitchExpression MakeYieldRouter(int start, int end, LabelTarget newTarget) {
+        private SwitchExpression MakeYieldRouter(Type type, int start, int end, LabelTarget newTarget) {
             Debug.Assert(end > start);
             var cases = new SwitchCase[end - start];
             for (int i = start; i < end; i++) {
                 YieldMarker y = _yields[i];
-                cases[i - start] = Expression.SwitchCase(Expression.Goto(y.Label), AstUtils.Constant(y.State));
+                cases[i - start] = Expression.SwitchCase(Expression.Goto(y.Label, type), AstUtils.Constant(y.State));
                 // Any jumps from outer switch statements should go to the this
                 // router, not the original label (which they cannot legally jump to)
                 y.Label = newTarget;
             }
-            return Expression.Switch(_gotoRouter, cases);
+            return Expression.Switch(_gotoRouter, Expression.Default(type), cases);
         }
 
         protected override Expression VisitExtension(Expression node) {
@@ -958,6 +1035,9 @@ namespace IronPython.Compiler {
         }
 
         public override Expression Reduce() {
+            // we assign to a temporary and then assign that to the tuple
+            // because there may be branches in the RHS which can cause
+            // us to not have the tuple instance
             return Expression.Assign(_lhs.Reduce(), _rhs);
         }
 
@@ -986,10 +1066,10 @@ namespace IronPython.Compiler {
     }
 
     internal sealed class PythonGeneratorExpression : Expression {
-        private readonly LambdaExpression _lambda;
+        private readonly LightLambdaExpression _lambda;
         private readonly int _compilationThreshold;
 
-        public PythonGeneratorExpression(LambdaExpression lambda, int compilationThreshold) {
+        public PythonGeneratorExpression(LightLambdaExpression lambda, int compilationThreshold) {
             _lambda = lambda;
             _compilationThreshold = compilationThreshold;
         }

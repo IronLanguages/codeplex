@@ -432,7 +432,7 @@ namespace IronPython.Runtime {
                 object argValue;
 
                 // get the object
-                if (fieldName.ArgumentName == "") {
+                if (fieldName.ArgumentName.Length == 0) {
                     // auto-numbering of format specifiers
                     if (_autoNumberedIndex == -1) {
                         throw PythonOps.ValueError("cannot switch from manual field specification to automatic field numbering");

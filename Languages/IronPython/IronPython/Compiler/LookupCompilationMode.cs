@@ -47,8 +47,9 @@ namespace IronPython.Compiler.Ast {
             return new PythonScriptCode(ast);
         }
 
-        public override MSAst.LambdaExpression ReduceAst(PythonAst instance, string name) {
-            return Ast.Lambda<Func<CodeContext, FunctionCode, object>>(
+        public override LightLambdaExpression ReduceAst(PythonAst instance, string name) {
+            return Utils.LightLambda<LookupCompilationDelegate>(
+                typeof(object),
                 AstUtils.Convert(instance.ReduceWorker(), typeof(object)),
                 name,
                 PythonAst._arrayFuncParams

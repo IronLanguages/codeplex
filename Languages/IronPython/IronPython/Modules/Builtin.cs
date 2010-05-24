@@ -90,11 +90,13 @@ namespace IronPython.Modules {
         }
 
         [Documentation("__import__(name) -> module\n\nImport a module.")]
+        [LightThrowing]
         public static object __import__(CodeContext/*!*/ context, string name) {
             return __import__(context, name, null, null, null, -1);
         }
 
         [Documentation("__import__(name, globals, locals, fromlist, level) -> module\n\nImport a module.")]
+        [LightThrowing]
         public static object __import__(CodeContext/*!*/ context, string name, [DefaultParameterValue(null)]object globals, [DefaultParameterValue(null)]object locals, [DefaultParameterValue(null)]object fromlist, [DefaultParameterValue(-1)]int level) {
             if (fromlist is string || fromlist is Extensible<string>) {
                 fromlist = new List<object> { fromlist };
@@ -105,7 +107,7 @@ namespace IronPython.Modules {
 
             object ret = Importer.ImportModule(context, globals, name, from != null && from.Count > 0, level);
             if (ret == null) {
-                throw PythonOps.ImportError("No module named {0}", name);
+                return LightExceptions.Throw(PythonOps.ImportError("No module named {0}", name));
             }
 
             PythonModule mod = ret as PythonModule;
@@ -300,12 +302,12 @@ namespace IronPython.Modules {
                     throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
 
-            return FunctionCode.FromSourceUnit(sourceUnit, opts);
+            return FunctionCode.FromSourceUnit(sourceUnit, opts, true);
         }
 
         private static string RemoveBom(string source) {
             // skip BOM (TODO: this is ugly workaround that is in fact not strictly correct, we need binary strings to handle it correctly)
-            if (source.StartsWith("\u00ef\u00bb\u00bf")) {
+            if (source.StartsWith("\u00ef\u00bb\u00bf", StringComparison.Ordinal)) {
                 source = source.Substring(3, source.Length - 3);
             }
             return source;
@@ -443,6 +445,7 @@ namespace IronPython.Modules {
             return attrLocals;
         }
 
+        [LightThrowing]
         public static object eval(CodeContext/*!*/ context, string expression) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
@@ -450,6 +453,7 @@ namespace IronPython.Modules {
             return eval(context, expression, globals(context), locals(context));
         }
 
+        [LightThrowing]
         public static object eval(CodeContext/*!*/ context, string expression, PythonDictionary globals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
@@ -457,6 +461,7 @@ namespace IronPython.Modules {
             return eval(context, expression, globals, globals);
         }
 
+        [LightThrowing]
         public static object eval(CodeContext/*!*/ context, string expression, PythonDictionary globals, object locals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
@@ -472,7 +477,9 @@ namespace IronPython.Modules {
             // TODO: remove TrimStart
             var sourceUnit = pythonContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
             var compilerOptions = GetRuntimeGeneratedCodeCompilerOptions(context, true, 0);
-            var code = FunctionCode.FromSourceUnit(sourceUnit, compilerOptions);
+            compilerOptions.Module |= ModuleOptions.LightThrow;
+            compilerOptions.Module &= ~ModuleOptions.ModuleBuiltins;
+            var code = FunctionCode.FromSourceUnit(sourceUnit, compilerOptions, false);
 
             return code.Call(scope);
         }
@@ -519,7 +526,7 @@ namespace IronPython.Modules {
             options.Module &= ~ModuleOptions.Optimized;
 
             try {
-                code = FunctionCode.FromSourceUnit(sourceUnit, options);
+                code = FunctionCode.FromSourceUnit(sourceUnit, options, false);
             } catch (UnauthorizedAccessException x) {
                 throw PythonOps.IOError(x);
             }
@@ -895,10 +902,12 @@ namespace IronPython.Modules {
             return (BigInteger)res;
         }
 
+        [LightThrowing]
         public static object input(CodeContext/*!*/ context) {
             return input(context, null);
         }
 
+        [LightThrowing]
         public static object input(CodeContext/*!*/ context, object prompt) {
             return eval(context, raw_input(context, prompt));
         }

@@ -310,13 +310,13 @@ namespace IronPython.Modules {
                     // need to verify we have the correct # of args
                     if (Value._argtypes != null) {
                         if (args.Length < Value._argtypes.Count || (Value.CallingConvention != CallingConvention.Cdecl && args.Length > Value._argtypes.Count)) {
-                            return IncorrectArgCount(restrictions, Value._argtypes.Count, args.Length);
+                            return IncorrectArgCount(binder, restrictions, Value._argtypes.Count, args.Length);
                         }
                     } else {
                         CFuncPtrType funcType = ((CFuncPtrType)Value.NativeType);
                         if (funcType._argtypes != null &&
                             (args.Length  < funcType._argtypes.Length || (Value.CallingConvention != CallingConvention.Cdecl && args.Length > funcType._argtypes.Length))) {
-                            return IncorrectArgCount(restrictions, funcType._argtypes.Length, args.Length);
+                            return IncorrectArgCount(binder, restrictions, funcType._argtypes.Length, args.Length);
                         }
                     }
 
@@ -387,9 +387,9 @@ namespace IronPython.Modules {
                     return res;
                 }
 
-                private static DynamicMetaObject IncorrectArgCount(BindingRestrictions restrictions, int expected, int got) {
+                private static DynamicMetaObject IncorrectArgCount(DynamicMetaObjectBinder binder, BindingRestrictions restrictions, int expected, int got) {
                     return new DynamicMetaObject(
-                        Expression.Throw(
+                        binder.Throw(
                             Expression.Call(
                                 typeof(PythonOps).GetMethod("TypeError"),
                                 Expression.Constant(String.Format("this function takes {0} arguments ({1} given)", expected, got)),

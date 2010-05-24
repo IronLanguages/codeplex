@@ -26,8 +26,8 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Reflection;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Actions.Calls;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -468,6 +468,22 @@ namespace IronPython.Runtime.Binding {
             }
 
             return arg;
+        }
+
+        internal static BuiltinFunction.BindingResult CheckLightThrow(DynamicMetaObjectBinder call, DynamicMetaObject res, BindingTarget target) {
+            return new BuiltinFunction.BindingResult(target, CheckLightThrowMO(call, res, target));
+        }
+
+        internal static DynamicMetaObject CheckLightThrowMO(DynamicMetaObjectBinder call, DynamicMetaObject res, BindingTarget target) {
+            if (target.Success && target.Overload.ReflectionInfo.IsDefined(typeof(LightThrowingAttribute), false)) {
+                if (!call.SupportsLightThrow()) {
+                    res = new DynamicMetaObject(
+                        LightExceptions.CheckAndThrow(res.Expression),
+                        res.Restrictions
+                    );
+                }
+            }
+            return res;
         }
     }
 

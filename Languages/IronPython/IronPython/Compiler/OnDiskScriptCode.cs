@@ -30,13 +30,13 @@ namespace IronPython.Compiler {
     /// A ScriptCode which has been loaded from an assembly which is saved on disk.
     /// </summary>
     class OnDiskScriptCode : RunnableScriptCode {
-        private readonly Func<CodeContext, FunctionCode, object> _code;
+        private readonly LookupCompilationDelegate _target;
         private CodeContext _optimizedContext;
         private readonly string _moduleName;
 
-        public OnDiskScriptCode(Func<CodeContext, FunctionCode, object> code, SourceUnit sourceUnit, string moduleName) :
+        public OnDiskScriptCode(LookupCompilationDelegate code, SourceUnit sourceUnit, string moduleName) :
             base(MakeAstFromSourceUnit(sourceUnit)) {
-            _code = code;
+            _target = code;
             _moduleName = moduleName;
         }
 
@@ -46,19 +46,15 @@ namespace IronPython.Compiler {
         private static Ast.PythonAst MakeAstFromSourceUnit(SourceUnit sourceUnit) {
             var compCtx = new CompilerContext(sourceUnit, new PythonCompilerOptions(), ErrorSink.Null);
 
-            return new Ast.PythonAst(
-                new Ast.EmptyStatement(), 
-                true, 
-                ModuleOptions.None, 
-                false, 
-                compCtx);
+            return new Ast.PythonAst(compCtx);
         }
 
         public override object Run() {
             CodeContext ctx = CreateContext();
             try {
-                PushFrame(ctx, _code);
-                return _code(ctx, EnsureFunctionCode(_code));
+                var funcCode = EnsureFunctionCode(_target, false, true);
+                PushFrame(ctx, funcCode);
+                return _target(ctx, funcCode);
             } finally {
                 PopFrame();
             }
@@ -78,8 +74,8 @@ namespace IronPython.Compiler {
             }
         }
 
-        public override FunctionCode GetFunctionCode() {
-            return EnsureFunctionCode(_code);
+        public override FunctionCode GetFunctionCode(bool register) {
+            return EnsureFunctionCode(_target, false, register);
         }
 
         public override Scope CreateScope() {
@@ -88,7 +84,7 @@ namespace IronPython.Compiler {
 
         internal CodeContext CreateContext() {
             if (_optimizedContext == null) {
-                CachedOptimizedCodeAttribute[] attrs = (CachedOptimizedCodeAttribute[])_code.Method.GetCustomAttributes(typeof(CachedOptimizedCodeAttribute), false);
+                CachedOptimizedCodeAttribute[] attrs = (CachedOptimizedCodeAttribute[])_target.Method.GetCustomAttributes(typeof(CachedOptimizedCodeAttribute), false);
 
                 // create the CompilerContext for the ScriptCode
                 CachedOptimizedCodeAttribute optimizedCode = attrs[0];

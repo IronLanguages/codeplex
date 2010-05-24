@@ -74,5 +74,11 @@ namespace IronPython.Compiler.Ast {
             }
             walker.PostWalk(this);
         }
+
+        internal override bool CanThrow {
+            get {
+                return _expression.CanThrow;
+            }
+        }
     }
 }

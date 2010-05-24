@@ -14,7 +14,9 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Exceptions {
     #region Generated UnicodeTranslateException
@@ -24,7 +26,11 @@ namespace IronPython.Runtime.Exceptions {
 
 
     [Serializable]
-    public class UnicodeTranslateException : UnicodeException {
+    public class UnicodeTranslateException : UnicodeException, IPythonAwareException {
+        private object _pyExceptionObject;
+        private List<DynamicStackFrame> _frames;
+        private TraceBack _traceback;
+
         public UnicodeTranslateException() : base() { }
         public UnicodeTranslateException(string msg) : base(msg) { }
         public UnicodeTranslateException(string message, Exception innerException)
@@ -32,7 +38,36 @@ namespace IronPython.Runtime.Exceptions {
         }
 #if !SILVERLIGHT // SerializationInfo
         protected UnicodeTranslateException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2123:OverrideLinkDemandsShouldBeIdenticalToBase")]
+        public override void GetObjectData(SerializationInfo info, StreamingContext context) {
+            info.AddValue("frames", _frames);
+            info.AddValue("traceback", _traceback);
+            base.GetObjectData(info, context);
+        }
 #endif
+
+        object IPythonAwareException.PythonException {
+            get { 
+                if (_pyExceptionObject == null) {
+                    var newEx = new PythonExceptions._UnicodeTranslateError();
+                    newEx.InitializeFromClr(this);
+                    _pyExceptionObject = newEx;
+                }
+                return _pyExceptionObject; 
+            }
+            set { _pyExceptionObject = value; }
+        }
+
+        List<DynamicStackFrame> IPythonAwareException.Frames {
+            get { return _frames; }
+            set { _frames = value; }
+        }
+
+        TraceBack IPythonAwareException.TraceBack {
+            get { return _traceback; }
+            set { _traceback = value; }
+        }
     }
 
 

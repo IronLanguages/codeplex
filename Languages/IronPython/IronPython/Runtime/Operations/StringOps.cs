@@ -886,6 +886,7 @@ namespace IronPython.Runtime.Operations {
             return self.TrimStart(chars.ToCharArray());
         }
 
+        [return: SequenceTypeInfo(typeof(string))]
         public static PythonTuple partition(this string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");
@@ -1007,6 +1008,7 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
+        [return: SequenceTypeInfo(typeof(string))]
         public static PythonTuple rpartition(this string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");

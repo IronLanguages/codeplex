@@ -59,10 +59,10 @@ namespace IronPython.Compiler {
             return InvokeTarget(scope);
         }
 
-        public override FunctionCode GetFunctionCode() {
+        public override FunctionCode GetFunctionCode(bool register) {
             EnsureCompiled();
 
-            return EnsureFunctionCode(_optimizedTarget);
+            return EnsureFunctionCode(_optimizedTarget, false, register);
         }
 
         private object InvokeTarget(Scope scope) {
@@ -70,12 +70,13 @@ namespace IronPython.Compiler {
                 EnsureCompiled();
 
                 Exception e = PythonOps.SaveCurrentException();
-                PushFrame(_optimizedContext, _optimizedTarget);
+                var funcCode = EnsureFunctionCode(_optimizedTarget, false, true);
+                PushFrame(_optimizedContext, funcCode);
                 try {
                     if (Ast.CompilerContext.SourceUnit.Kind == SourceCodeKind.Expression) {
-                        return OptimizedEvalWrapper();
+                        return OptimizedEvalWrapper(funcCode);
                     }
-                    return _optimizedTarget(EnsureFunctionCode(_optimizedTarget));
+                    return _optimizedTarget(funcCode);
                 } finally {
                     PythonOps.RestoreCurrentException(e);
                     PopFrame();
@@ -99,11 +100,11 @@ namespace IronPython.Compiler {
             return _unoptimizedCode.Run(scope);
         }
         
-        private object OptimizedEvalWrapper() {
+        private object OptimizedEvalWrapper(FunctionCode funcCode) {
             try {
-                return _optimizedTarget(EnsureFunctionCode(_optimizedTarget));
+                return _optimizedTarget(funcCode);
             } catch (Exception e) {
-                PythonOps.UpdateStackTrace(e, _optimizedContext, Code, _optimizedTarget.Method, "<module>", "<string>", 0);
+                PythonOps.UpdateStackTrace(e, _optimizedContext, Code, 0);
                 throw;
             }
         }
@@ -123,11 +124,9 @@ namespace IronPython.Compiler {
             var pc = (PythonContext)SourceUnit.LanguageContext;
             
             if (pc.ShouldInterpret(pco, SourceUnit)) {
-                return CompilerHelpers.LightCompile(
-                    (MSAst.Expression<Func<FunctionCode, object>>)Ast.GetLambda(), pc.Options.CompilationThreshold
-                );
+                return ((Microsoft.Scripting.Ast.LightExpression<Func<FunctionCode, object>>)Ast.GetLambda()).Compile(pc.Options.CompilationThreshold);
             } else {
-                return ((MSAst.Expression<Func<FunctionCode, object>>)Ast.GetLambda()).Compile(SourceUnit.EmitDebugSymbols);
+                return ((Microsoft.Scripting.Ast.LightExpression<Func<FunctionCode, object>>)Ast.GetLambda()).ReduceToLambda().Compile(SourceUnit.EmitDebugSymbols);
             }
         }
     }

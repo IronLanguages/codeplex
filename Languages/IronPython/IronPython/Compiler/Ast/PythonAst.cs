@@ -58,6 +58,7 @@ namespace IronPython.Compiler.Ast {
 
         private PythonVariable _docVariable, _nameVariable, _fileVariable;
         private ModuleContext _modContext;
+        private readonly bool _onDiskProxy;
         internal MSAst.Expression _arrayExpression;
         private UncollectableCompilationMode.ConstantInfo _contextInfo;
         private Dictionary<PythonVariable, MSAst.Expression> _globalVariables = new Dictionary<PythonVariable, MSAst.Expression>();
@@ -110,6 +111,15 @@ namespace IronPython.Compiler.Ast {
             _document = context.SourceUnit.Document ?? Ast.SymbolDocument(name, PyContext.LanguageGuid, PyContext.VendorGuid);
         }
 
+        internal PythonAst(CompilerContext context)
+            : this(new EmptyStatement(),
+                true,
+                ModuleOptions.None,
+                false,
+                context) {
+            _onDiskProxy = true;
+        }
+
         /// <summary>
         /// Binds an AST and makes it capable of being reduced and compiled.  Before calling Bind an AST cannot successfully
         /// be reduced.
@@ -152,7 +162,9 @@ namespace IronPython.Compiler.Ast {
             if (_mode == CompilationMode.ToDisk) {
                 _arrayExpression = array = _globalArray;
             } else {
-                _arrayExpression = array = Ast.Constant(globalArray);
+                var newArray = new ConstantExpression(globalArray);
+                newArray.Parent = this;
+                _arrayExpression = array = newArray;
             }
 
             if (Variables != null) {
@@ -274,7 +286,7 @@ namespace IronPython.Compiler.Ast {
             return GetLambda();
         }
 
-        internal override MSAst.LambdaExpression GetLambda() {
+        internal override Microsoft.Scripting.Ast.LightLambdaExpression GetLambda() {
             string name = ((PythonCompilerOptions)_compilerContext.Options).ModuleName ?? "<unnamed>";
 
             return CompilationMode.ReduceAst(this, name);
@@ -337,34 +349,47 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression ReduceWorker() {
-            ReadOnlyCollectionBuilder<MSAst.Expression> block = new ReadOnlyCollectionBuilder<MSAst.Expression>();
-
-            if (_body is ReturnStatement && (_languageFeatures == ModuleOptions.None || _languageFeatures == (ModuleOptions.ExecOrEvalCode | ModuleOptions.Interpret))) {
+            var retStmt = _body as ReturnStatement;
+            
+            if (retStmt != null && 
+                (_languageFeatures == ModuleOptions.None || 
+                _languageFeatures == (ModuleOptions.ExecOrEvalCode | ModuleOptions.Interpret) ||
+                _languageFeatures == (ModuleOptions.ExecOrEvalCode | ModuleOptions.Interpret | ModuleOptions.LightThrow))) {
                 // for simple eval's we can construct a simple tree which just
                 // leaves the value on the stack.  Return's can't exist in modules
                 // so this is always safe.
                 Debug.Assert(!_isModule);
 
-                var ret = (ReturnStatement)_body;
+                Ast simpleBody;
+                if ((_languageFeatures & ModuleOptions.LightThrow) != 0) {
+                    simpleBody = LightExceptions.Rewrite(retStmt.Expression.Reduce());
+                } else {
+                    simpleBody = retStmt.Expression.Reduce();
+                }
+
                 return Ast.Block(
                     Ast.DebugInfo(
                         _document,
-                        ret.Expression.Start.Line,
-                        ret.Expression.Start.Column,
-                        ret.Expression.End.Line,
-                        ret.Expression.End.Column
+                        retStmt.Expression.Start.Line,
+                        retStmt.Expression.Start.Column,
+                        retStmt.Expression.End.Line,
+                        retStmt.Expression.End.Column
                     ),
-                    AstUtils.Convert(
-                        ret.Expression.Reduce(), 
-                        typeof(object)
-                    )
+                    AstUtils.Convert(simpleBody, typeof(object))
                 );
             }
 
+            ReadOnlyCollectionBuilder<MSAst.Expression> block = new ReadOnlyCollectionBuilder<MSAst.Expression>();
             AddInitialiation(block);
 
             if (_isModule) {
                 block.Add(AssignValue(GetVariableExpression(_docVariable), Ast.Constant(GetDocumentation(_body))));
+            }
+
+            if (!(_body is SuiteStatement) && _body.CanThrow) {
+                // we only initialize line numbers in suite statements but if we don't generate a SuiteStatement
+                // at the top level we can miss some line number updates.  
+                block.Add(UpdateLineNumber(_body.Start.Line));
             }
 
             block.Add(_body);
@@ -376,6 +401,10 @@ namespace IronPython.Compiler.Ast {
             body = AddModulePublishing(body);
 
             body = AddProfiling(body);
+
+            if ((((PythonCompilerOptions)_compilerContext.Options).Module & ModuleOptions.LightThrow) != 0) {
+                body = LightExceptions.Rewrite(body);
+            }
 
             body = Ast.Label(FunctionDefinition._returnLabel, AstUtils.Convert(body, typeof(object)));
             if (body.Type == typeof(void)) {
@@ -836,6 +865,15 @@ namespace IronPython.Compiler.Ast {
                 } else {
                     return "module " + System.IO.Path.GetFileNameWithoutExtension(_name);
                 }
+            }
+        }
+
+        /// <summary>
+        /// True if this is on-disk code which we don't really have an AST for.
+        /// </summary>
+        internal bool OnDiskProxy {
+            get {
+                return _onDiskProxy;
             }
         }
     }

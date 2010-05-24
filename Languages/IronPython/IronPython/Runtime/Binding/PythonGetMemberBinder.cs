@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 #endif
@@ -40,10 +41,11 @@ namespace IronPython.Runtime.Binding {
     using Ast = Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
-    class PythonGetMemberBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
+    class PythonGetMemberBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable, ILightExceptionBinder {
         private readonly PythonContext/*!*/ _context;
         private readonly GetMemberOptions _options;
         private readonly string _name;
+        private LightThrowBinder _lightThrowBinder;
 
         public PythonGetMemberBinder(PythonContext/*!*/ context, string/*!*/ name) {
             _context = context;
@@ -118,7 +120,9 @@ namespace IronPython.Runtime.Binding {
 
             if (args[0] != null) {
                 if (args[0].GetType() == typeof(PythonModule)) {
-                    if (!IsNoThrow) {
+                    if (SupportsLightThrow) {
+                        return (T)(object)new Func<CallSite, object, CodeContext, object>(new PythonModuleDelegate(_name).LightThrowTarget);
+                    } else if (!IsNoThrow) {
                         return (T)(object)new Func<CallSite, object, CodeContext, object>(new PythonModuleDelegate(_name).Target);
                     } else {
                         return (T)(object)new Func<CallSite, object, CodeContext, object>(new PythonModuleDelegate(_name).NoThrowTarget);
@@ -188,6 +192,14 @@ namespace IronPython.Runtime.Binding {
             public object GetError(CallSite site, TSelfType target, CodeContext context) {
                 if (target != null && target.GetType() == _type) {
                     throw PythonOps.AttributeErrorForObjectMissingAttribute(target, _name);
+                }
+
+                return ((CallSite<Func<CallSite, TSelfType, CodeContext, object>>)site).Update(site, target, context);
+            }
+
+            public object GetErrorLightThrow(CallSite site, TSelfType target, CodeContext context) {
+                if (target != null && target.GetType() == _type) {
+                    return LightExceptions.Throw(PythonOps.AttributeErrorForObjectMissingAttribute(target, _name));
                 }
 
                 return ((CallSite<Func<CallSite, TSelfType, CodeContext, object>>)site).Update(site, target, context);
@@ -419,6 +431,8 @@ namespace IronPython.Runtime.Binding {
 
                         if (IsNoThrow) {
                             return new FastErrorGet<TSelfType>(type, name).GetErrorNoThrow;
+                        } else if (SupportsLightThrow) {
+                            return new FastErrorGet<TSelfType>(type, name).GetErrorLightThrow;
                         } else {
                             return new FastErrorGet<TSelfType>(type, name).GetError;
                         }
@@ -457,6 +471,20 @@ namespace IronPython.Runtime.Binding {
             public object NoThrowTarget(CallSite site, object self, CodeContext context) {
                 if (self != null && self.GetType() == typeof(PythonModule)) {
                     return ((PythonModule)self).GetAttributeNoThrow(context, _name);
+                }
+
+                return Update(site, self, context);
+            }
+
+            public object LightThrowTarget(CallSite site, object self, CodeContext context) {
+                if (self != null && self.GetType() == typeof(PythonModule)) {
+                    var res = ((PythonModule)self).GetAttributeNoThrow(context, _name);
+                    if (res == OperationFailed.Value) {
+                        return LightExceptions.Throw(
+                            PythonOps.AttributeErrorForObjectMissingAttribute(self, _name)
+                        );
+                    }
+                    return res;
                 }
 
                 return Update(site, self, context);
@@ -590,7 +618,7 @@ namespace IronPython.Runtime.Binding {
                     );
                 } else {
                     return new DynamicMetaObject(
-                        Ast.Throw(
+                        action.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("AttributeError"),
                                 AstUtils.Constant("{0} instance has no attribute '{1}'"),
@@ -667,7 +695,7 @@ namespace IronPython.Runtime.Binding {
         }
 
         public override string ToString() {
-            return String.Format("Python GetMember {0} IsNoThrow: {1}", Name, _options);
+            return String.Format("Python GetMember {0} IsNoThrow: {1} LightThrow: {2}", Name, _options, SupportsLightThrow);
         }
 
         #region IExpressionSerializable Members
@@ -679,6 +707,37 @@ namespace IronPython.Runtime.Binding {
                 AstUtils.Constant(Name),
                 AstUtils.Constant(IsNoThrow)
             );
+        }
+
+        #endregion
+
+        #region ILightExceptionBinder Members
+
+        public virtual bool SupportsLightThrow {
+            get { return false; }
+        }
+
+        public virtual CallSiteBinder GetLightExceptionBinder() {
+            if (_lightThrowBinder == null) {
+                _lightThrowBinder = new LightThrowBinder(_context, Name, IsNoThrow);
+            }
+            return _lightThrowBinder;
+        }
+
+        class LightThrowBinder : PythonGetMemberBinder {
+            public LightThrowBinder(PythonContext/*!*/ context, string/*!*/ name, bool isNoThrow)
+                : base(context, name, isNoThrow) {
+            }
+
+            public override bool SupportsLightThrow {
+                get {
+                    return true;
+                }
+            }
+
+            public override CallSiteBinder GetLightExceptionBinder() {
+                return this;
+            }
         }
 
         #endregion

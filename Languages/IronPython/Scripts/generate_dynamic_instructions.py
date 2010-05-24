@@ -176,9 +176,17 @@ def gen_run_methods(cw):
         gen_run_maker(cw, i, True)
         
 
-
+def gen_instructionlist_factory(cw):
+    for i in xrange(1, MAX_TYPES):
+        gen_args = ', '.join(get_type_names(i))
+        cw.enter_block('public void EmitDynamic<%s, TRet>(CallSiteBinder binder)' % gen_args)
+        cw.write('Emit(DynamicInstruction<%s, TRet>.Factory(binder));' % gen_args)
+        cw.exit_block()
+        cw.write('')
+    
 def main():
     return generate(
+        ("Dynamic InstructionList Factory", gen_instructionlist_factory),
         ("LightLambda Run Methods", gen_run_methods),
         ("Dynamic Instructions", gen_instructions),
         ("Dynamic Instruction Types", gen_types),

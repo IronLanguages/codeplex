@@ -365,25 +365,6 @@ namespace IronPython.Runtime {
             );
         }
 
-        /// <summary>
-        /// Wraps a call to a MethodInfo with profiling capture for that MethodInfo
-        /// </summary>
-        internal OptimizingCallDelegate AddProfiling(OptimizingCallDelegate/*!*/ callDelgate, MethodBase/*!*/ method) {
-            if ((method is DynamicMethod) || IgnoreMethod(method)) {
-                return callDelgate;
-            }
-            
-            int profileIndex = GetProfilerIndex(method);
-            return delegate(object[] callArgs, out bool shouldOptimize) {
-                long callStart = StartCall(profileIndex);
-                try {
-                    return callDelgate(callArgs, out shouldOptimize);
-                } finally {
-                    FinishCall(profileIndex, callStart);
-                }
-            };
-        }
-
         #endregion
 
         /// <summary>

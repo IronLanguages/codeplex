@@ -330,7 +330,7 @@ namespace IronPython.Runtime.Binding {
 
             return ErrorInfo.FromException(
                 Ast.New(
-                    typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                    typeof(TypeErrorException).GetConstructor(new Type[] { typeof(string) }),
                     AstUtils.Constant(String.Format("can't set attributes of built-in/extension type '{0}'", NameConverter.GetTypeName(type)))
                 )
             );

@@ -33,6 +33,7 @@ using MSAst = System.Linq.Expressions;
 using MSAst = Microsoft.Scripting.Ast;
 #endif
 
+using LightLambdaExpression = Microsoft.Scripting.Ast.LightLambdaExpression;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
@@ -50,7 +51,7 @@ namespace IronPython.Compiler.Ast {
         private PythonVariable _docVariable;        // Variable for the __doc__ attribute
         private PythonVariable _modNameVariable;    // Variable for the module's __name__
 
-        private MSAst.LambdaExpression _dlrBody;       // the transformed body including all of our initialization, etc...
+        private LightLambdaExpression _dlrBody;       // the transformed body including all of our initialization, etc...
 
         private static int _classId;
 
@@ -159,7 +160,8 @@ namespace IronPython.Compiler.Ast {
 
             return null;
         }
-        
+
+        private static MSAst.Expression NullLambda = AstUtils.Default(typeof(Func<CodeContext, CodeContext>));
         public override MSAst.Expression Reduce() {
             var codeObj = GetOrMakeFunctionCode();
             var funcCode = GlobalParent.Constant(codeObj);
@@ -169,7 +171,7 @@ namespace IronPython.Compiler.Ast {
             if (EmitDebugSymbols) {
                 lambda = GetLambda();
             } else {
-                lambda = Ast.Convert(funcCode, typeof(object));
+                lambda = NullLambda;
                 ThreadPool.QueueUserWorkItem((x) => {
                     // class defs are almost always run, so start 
                     // compiling the code now so it might be ready
@@ -180,6 +182,7 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.Expression classDef = Ast.Call(
                 AstMethods.MakeClass,
+                funcCode,
                 lambda,
                 Parent.LocalContext,
                 AstUtils.Constant(_name),
@@ -195,7 +198,7 @@ namespace IronPython.Compiler.Ast {
             return GlobalParent.AddDebugInfoAndVoid(AssignValue(Parent.GetVariableExpression(_variable), classDef), new SourceSpan(Start, Header));
         }
 
-        private MSAst.Expression<Func<CodeContext, CodeContext>> MakeClassBody() {
+        private Microsoft.Scripting.Ast.LightExpression<Func<CodeContext, CodeContext>> MakeClassBody() {
             string className = _name;
 
             // we always need to create a nested context for class defs            
@@ -251,7 +254,8 @@ namespace IronPython.Compiler.Ast {
                 _body.CanThrow
             );
 
-            var lambda = Ast.Lambda<Func<CodeContext, CodeContext>>(
+            var lambda = AstUtils.LightLambda<Func<CodeContext, CodeContext>>(
+                typeof(CodeContext),
                 Ast.Block(
                     locals,
                     bodyStmt
@@ -263,7 +267,7 @@ namespace IronPython.Compiler.Ast {
             return lambda;
         }
 
-        internal override MSAst.LambdaExpression GetLambda() {
+        internal override LightLambdaExpression GetLambda() {
             if (_dlrBody == null) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Creating FunctionBody");
                 _dlrBody = MakeClassBody();

@@ -346,7 +346,7 @@ namespace IronPython.Runtime.Binding {
                 } else {
                     // generic error
                     res = new DynamicMetaObject(
-                        Ast.Throw(
+                        _call.Throw(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod(Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "FunctionBadArgumentError"),
                                 AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),
@@ -452,7 +452,7 @@ namespace IronPython.Runtime.Binding {
                                     if (exprArgs[j] != null) {
                                         // kw-argument provided for already provided normal argument.
                                         if (_error == null) {
-                                            _error = Expression.Throw(
+                                            _error = _call.Throw(
                                                 Expression.Call(
                                                     typeof(PythonOps).GetMethod("MultipleKeywordArgumentError"),
                                                     GetFunctionParam(),
@@ -988,11 +988,13 @@ namespace IronPython.Runtime.Binding {
                 // If calling generator, create the instance of PythonGenerator first
                 // and add it into the list of arguments
                 invokeArgs = ArrayUtils.Insert(GetFunctionParam(), invokeArgs);
-
+                
                 Expression invoke = AstUtils.SimpleCallHelper(
                     Ast.Convert(
                         Ast.Call(
-                            typeof(PythonOps).GetMethod("FunctionGetTarget"),
+                            _call.SupportsLightThrow() ?
+                                typeof(PythonOps).GetMethod("FunctionGetLightThrowTarget")
+                                : typeof(PythonOps).GetMethod("FunctionGetTarget"),
                             GetFunctionParam()
                         ),
                         targetType
@@ -1026,7 +1028,7 @@ namespace IronPython.Runtime.Binding {
                     break;
                 }
 
-                _error = Ast.Throw(
+                _error = _call.Throw(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("UnexpectedKeywordArgumentError"),
                         AstUtils.Convert(GetFunctionParam(), typeof(PythonFunction)),

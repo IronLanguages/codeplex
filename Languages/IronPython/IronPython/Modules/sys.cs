@@ -137,7 +137,7 @@ namespace IronPython.Modules {
         }
 
         public static object getfilesystemencoding() {
-            return null;
+            return "mbcs";
         }
 
         [PythonHidden]

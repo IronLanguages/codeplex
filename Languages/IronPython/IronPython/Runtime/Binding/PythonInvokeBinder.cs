@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 #endif
@@ -42,9 +43,10 @@ namespace IronPython.Runtime.Binding {
     /// 
     /// When a foreign object is encountered the arguments are expanded into normal position/keyword arguments.
     /// </summary>
-    class PythonInvokeBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable {
+    class PythonInvokeBinder : DynamicMetaObjectBinder, IPythonSite, IExpressionSerializable, ILightExceptionBinder {
         private readonly PythonContext/*!*/ _context;
         private readonly CallSignature _signature;
+        private LightThrowBinder _lightThrowBinder;
 
         public PythonInvokeBinder(PythonContext/*!*/ context, CallSignature signature) {
             _context = context;
@@ -307,5 +309,37 @@ namespace IronPython.Runtime.Binding {
         }
 
         #endregion
+
+        #region ILightExceptionBinder Members
+
+        public virtual bool SupportsLightThrow {
+            get { return false; }
+        }
+
+        public virtual CallSiteBinder GetLightExceptionBinder() {            
+            if (_lightThrowBinder == null) {
+                _lightThrowBinder = new LightThrowBinder(_context, _signature);
+            }
+            return _lightThrowBinder;
+        }
+
+        class LightThrowBinder : PythonInvokeBinder {
+            public LightThrowBinder(PythonContext/*!*/ context, CallSignature signature)
+                : base(context, signature) {
+            }
+
+            public override bool SupportsLightThrow {
+                get {
+                    return true;
+                }
+            }
+
+            public override CallSiteBinder GetLightExceptionBinder() {
+                return this;
+            }
+        }
+
+        #endregion
     }
+
 }

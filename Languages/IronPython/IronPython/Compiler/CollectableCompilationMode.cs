@@ -45,8 +45,9 @@ namespace IronPython.Compiler.Ast {
     /// </summary>
     class CollectableCompilationMode : CompilationMode {
 
-        public override MSAst.LambdaExpression ReduceAst(PythonAst instance, string name) {
-            return Ast.Lambda<Func<FunctionCode, object>>(
+        public override LightLambdaExpression ReduceAst(PythonAst instance, string name) {
+            return Utils.LightLambda<Func<FunctionCode, object>>(
+                    typeof(object),
                     Ast.Block(
                         new[] { PythonAst._globalArray, PythonAst._globalContext },
                         Ast.Assign(PythonAst._globalArray, instance.GlobalArrayInstance),

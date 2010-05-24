@@ -25,6 +25,7 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Utils;
 
 // This generated code is updated by the generate_exceptions.py script.
 namespace IronPython.Runtime.Exceptions {
@@ -42,7 +43,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (GeneratorExitStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        GeneratorExitStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "GeneratorExit");
+                        GeneratorExitStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "GeneratorExit", msg => new GeneratorExitException(msg));
                     }
                 }
                 return GeneratorExitStorage;
@@ -55,7 +56,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (SystemExitStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        SystemExitStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), typeof(_SystemExit));
+                        SystemExitStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), typeof(_SystemExit), msg => new SystemExitException(msg));
                     }
                 }
                 return SystemExitStorage;
@@ -86,7 +87,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (KeyboardInterruptStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        KeyboardInterruptStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "KeyboardInterrupt");
+                        KeyboardInterruptStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "KeyboardInterrupt", msg => new KeyboardInterruptException(msg));
                     }
                 }
                 return KeyboardInterruptStorage;
@@ -99,7 +100,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ExceptionStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ExceptionStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "Exception");
+                        ExceptionStorage = CreateSubType(DynamicHelpers.GetPythonTypeFromType(typeof(BaseException)), "Exception", msg => new PythonException(msg));
                     }
                 }
                 return ExceptionStorage;
@@ -112,7 +113,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (StopIterationStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        StopIterationStorage = CreateSubType(Exception, "StopIteration");
+                        StopIterationStorage = CreateSubType(Exception, "StopIteration", msg => new StopIterationException(msg));
                     }
                 }
                 return StopIterationStorage;
@@ -125,7 +126,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (StandardErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        StandardErrorStorage = CreateSubType(Exception, "StandardError");
+                        StandardErrorStorage = CreateSubType(Exception, "StandardError", msg => new ApplicationException(msg));
                     }
                 }
                 return StandardErrorStorage;
@@ -138,7 +139,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (BufferErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        BufferErrorStorage = CreateSubType(StandardError, "BufferError");
+                        BufferErrorStorage = CreateSubType(StandardError, "BufferError", msg => new BufferException(msg));
                     }
                 }
                 return BufferErrorStorage;
@@ -151,7 +152,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ArithmeticErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ArithmeticErrorStorage = CreateSubType(StandardError, "ArithmeticError");
+                        ArithmeticErrorStorage = CreateSubType(StandardError, "ArithmeticError", msg => new ArithmeticException(msg));
                     }
                 }
                 return ArithmeticErrorStorage;
@@ -164,7 +165,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (FloatingPointErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        FloatingPointErrorStorage = CreateSubType(ArithmeticError, "FloatingPointError");
+                        FloatingPointErrorStorage = CreateSubType(ArithmeticError, "FloatingPointError", msg => new FloatingPointException(msg));
                     }
                 }
                 return FloatingPointErrorStorage;
@@ -177,7 +178,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (OverflowErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        OverflowErrorStorage = CreateSubType(ArithmeticError, "OverflowError");
+                        OverflowErrorStorage = CreateSubType(ArithmeticError, "OverflowError", msg => new OverflowException(msg));
                     }
                 }
                 return OverflowErrorStorage;
@@ -190,7 +191,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ZeroDivisionErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ZeroDivisionErrorStorage = CreateSubType(ArithmeticError, "ZeroDivisionError");
+                        ZeroDivisionErrorStorage = CreateSubType(ArithmeticError, "ZeroDivisionError", msg => new DivideByZeroException(msg));
                     }
                 }
                 return ZeroDivisionErrorStorage;
@@ -203,7 +204,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (AssertionErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        AssertionErrorStorage = CreateSubType(StandardError, "AssertionError");
+                        AssertionErrorStorage = CreateSubType(StandardError, "AssertionError", msg => new AssertionException(msg));
                     }
                 }
                 return AssertionErrorStorage;
@@ -216,7 +217,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (AttributeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        AttributeErrorStorage = CreateSubType(StandardError, "AttributeError");
+                        AttributeErrorStorage = CreateSubType(StandardError, "AttributeError", msg => new AttributeErrorException(msg));
                     }
                 }
                 return AttributeErrorStorage;
@@ -229,7 +230,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (EnvironmentErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        EnvironmentErrorStorage = CreateSubType(StandardError, typeof(_EnvironmentError));
+                        EnvironmentErrorStorage = CreateSubType(StandardError, typeof(_EnvironmentError), msg => new ExternalException(msg));
                     }
                 }
                 return EnvironmentErrorStorage;
@@ -272,7 +273,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (IOErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        IOErrorStorage = CreateSubType(EnvironmentError, "IOError");
+                        IOErrorStorage = CreateSubType(EnvironmentError, "IOError", msg => new IOException(msg));
                     }
                 }
                 return IOErrorStorage;
@@ -285,7 +286,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (OSErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        OSErrorStorage = CreateSubType(EnvironmentError, "OSError");
+                        OSErrorStorage = CreateSubType(EnvironmentError, "OSError", msg => new OSException(msg));
                     }
                 }
                 return OSErrorStorage;
@@ -298,7 +299,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (WindowsErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        WindowsErrorStorage = CreateSubType(OSError, typeof(_WindowsError));
+                        WindowsErrorStorage = CreateSubType(OSError, typeof(_WindowsError), msg => new Win32Exception(msg));
                     }
                 }
                 return WindowsErrorStorage;
@@ -329,7 +330,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (EOFErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        EOFErrorStorage = CreateSubType(StandardError, "EOFError");
+                        EOFErrorStorage = CreateSubType(StandardError, "EOFError", msg => new EndOfStreamException(msg));
                     }
                 }
                 return EOFErrorStorage;
@@ -342,7 +343,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ImportErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ImportErrorStorage = CreateSubType(StandardError, "ImportError");
+                        ImportErrorStorage = CreateSubType(StandardError, "ImportError", msg => new ImportException(msg));
                     }
                 }
                 return ImportErrorStorage;
@@ -355,7 +356,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (LookupErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        LookupErrorStorage = CreateSubType(StandardError, "LookupError");
+                        LookupErrorStorage = CreateSubType(StandardError, "LookupError", msg => new LookupException(msg));
                     }
                 }
                 return LookupErrorStorage;
@@ -368,7 +369,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (IndexErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        IndexErrorStorage = CreateSubType(LookupError, "IndexError");
+                        IndexErrorStorage = CreateSubType(LookupError, "IndexError", msg => new IndexOutOfRangeException(msg));
                     }
                 }
                 return IndexErrorStorage;
@@ -381,7 +382,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (KeyErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        KeyErrorStorage = CreateSubType(LookupError, "KeyError");
+                        KeyErrorStorage = CreateSubType(LookupError, "KeyError", msg => new KeyNotFoundException(msg));
                     }
                 }
                 return KeyErrorStorage;
@@ -394,7 +395,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (MemoryErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        MemoryErrorStorage = CreateSubType(StandardError, "MemoryError");
+                        MemoryErrorStorage = CreateSubType(StandardError, "MemoryError", msg => new OutOfMemoryException(msg));
                     }
                 }
                 return MemoryErrorStorage;
@@ -407,7 +408,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (NameErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        NameErrorStorage = CreateSubType(StandardError, "NameError");
+                        NameErrorStorage = CreateSubType(StandardError, "NameError", msg => new UnboundNameException(msg));
                     }
                 }
                 return NameErrorStorage;
@@ -420,7 +421,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnboundLocalErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnboundLocalErrorStorage = CreateSubType(NameError, "UnboundLocalError");
+                        UnboundLocalErrorStorage = CreateSubType(NameError, "UnboundLocalError", msg => new UnboundLocalException(msg));
                     }
                 }
                 return UnboundLocalErrorStorage;
@@ -433,7 +434,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ReferenceErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ReferenceErrorStorage = CreateSubType(StandardError, "ReferenceError");
+                        ReferenceErrorStorage = CreateSubType(StandardError, "ReferenceError", msg => new ReferenceException(msg));
                     }
                 }
                 return ReferenceErrorStorage;
@@ -446,7 +447,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (RuntimeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        RuntimeErrorStorage = CreateSubType(StandardError, "RuntimeError");
+                        RuntimeErrorStorage = CreateSubType(StandardError, "RuntimeError", msg => new RuntimeException(msg));
                     }
                 }
                 return RuntimeErrorStorage;
@@ -459,7 +460,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (NotImplementedErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        NotImplementedErrorStorage = CreateSubType(RuntimeError, "NotImplementedError");
+                        NotImplementedErrorStorage = CreateSubType(RuntimeError, "NotImplementedError", msg => new NotImplementedException(msg));
                     }
                 }
                 return NotImplementedErrorStorage;
@@ -472,7 +473,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (SyntaxErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        SyntaxErrorStorage = CreateSubType(StandardError, typeof(_SyntaxError));
+                        SyntaxErrorStorage = CreateSubType(StandardError, typeof(_SyntaxError), msg => new SyntaxErrorException(msg));
                     }
                 }
                 return SyntaxErrorStorage;
@@ -533,7 +534,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (IndentationErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        IndentationErrorStorage = CreateSubType(SyntaxError, "IndentationError");
+                        IndentationErrorStorage = CreateSubType(SyntaxError, "IndentationError", msg => new IndentationException(msg));
                     }
                 }
                 return IndentationErrorStorage;
@@ -546,7 +547,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (TabErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        TabErrorStorage = CreateSubType(IndentationError, "TabError");
+                        TabErrorStorage = CreateSubType(IndentationError, "TabError", msg => new TabException(msg));
                     }
                 }
                 return TabErrorStorage;
@@ -559,7 +560,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (SystemErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        SystemErrorStorage = CreateSubType(StandardError, "SystemError");
+                        SystemErrorStorage = CreateSubType(StandardError, "SystemError", msg => new SystemException(msg));
                     }
                 }
                 return SystemErrorStorage;
@@ -572,7 +573,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (TypeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        TypeErrorStorage = CreateSubType(StandardError, "TypeError");
+                        TypeErrorStorage = CreateSubType(StandardError, "TypeError", msg => new TypeErrorException(msg));
                     }
                 }
                 return TypeErrorStorage;
@@ -585,7 +586,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ValueErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ValueErrorStorage = CreateSubType(StandardError, "ValueError");
+                        ValueErrorStorage = CreateSubType(StandardError, "ValueError", msg => new ArgumentException(msg));
                     }
                 }
                 return ValueErrorStorage;
@@ -598,7 +599,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnicodeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnicodeErrorStorage = CreateSubType(ValueError, "UnicodeError");
+                        UnicodeErrorStorage = CreateSubType(ValueError, "UnicodeError", msg => new UnicodeException(msg));
                     }
                 }
                 return UnicodeErrorStorage;
@@ -611,7 +612,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnicodeDecodeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnicodeDecodeErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeDecodeError));
+                        UnicodeDecodeErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeDecodeError), msg => new DecoderFallbackException(msg));
                     }
                 }
                 return UnicodeDecodeErrorStorage;
@@ -682,7 +683,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnicodeEncodeErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnicodeEncodeErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeEncodeError));
+                        UnicodeEncodeErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeEncodeError), msg => new EncoderFallbackException(msg));
                     }
                 }
                 return UnicodeEncodeErrorStorage;
@@ -753,7 +754,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnicodeTranslateErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnicodeTranslateErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeTranslateError));
+                        UnicodeTranslateErrorStorage = CreateSubType(UnicodeError, typeof(_UnicodeTranslateError), msg => new UnicodeTranslateException(msg));
                     }
                 }
                 return UnicodeTranslateErrorStorage;
@@ -808,7 +809,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (WarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        WarningStorage = CreateSubType(Exception, "Warning");
+                        WarningStorage = CreateSubType(Exception, "Warning", msg => new WarningException(msg));
                     }
                 }
                 return WarningStorage;
@@ -821,7 +822,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (DeprecationWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        DeprecationWarningStorage = CreateSubType(Warning, "DeprecationWarning");
+                        DeprecationWarningStorage = CreateSubType(Warning, "DeprecationWarning", msg => new DeprecationWarningException(msg));
                     }
                 }
                 return DeprecationWarningStorage;
@@ -834,7 +835,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (PendingDeprecationWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        PendingDeprecationWarningStorage = CreateSubType(Warning, "PendingDeprecationWarning");
+                        PendingDeprecationWarningStorage = CreateSubType(Warning, "PendingDeprecationWarning", msg => new PendingDeprecationWarningException(msg));
                     }
                 }
                 return PendingDeprecationWarningStorage;
@@ -847,7 +848,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (RuntimeWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        RuntimeWarningStorage = CreateSubType(Warning, "RuntimeWarning");
+                        RuntimeWarningStorage = CreateSubType(Warning, "RuntimeWarning", msg => new RuntimeWarningException(msg));
                     }
                 }
                 return RuntimeWarningStorage;
@@ -860,7 +861,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (SyntaxWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        SyntaxWarningStorage = CreateSubType(Warning, "SyntaxWarning");
+                        SyntaxWarningStorage = CreateSubType(Warning, "SyntaxWarning", msg => new SyntaxWarningException(msg));
                     }
                 }
                 return SyntaxWarningStorage;
@@ -873,7 +874,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UserWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UserWarningStorage = CreateSubType(Warning, "UserWarning");
+                        UserWarningStorage = CreateSubType(Warning, "UserWarning", msg => new UserWarningException(msg));
                     }
                 }
                 return UserWarningStorage;
@@ -886,7 +887,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (FutureWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        FutureWarningStorage = CreateSubType(Warning, "FutureWarning");
+                        FutureWarningStorage = CreateSubType(Warning, "FutureWarning", msg => new FutureWarningException(msg));
                     }
                 }
                 return FutureWarningStorage;
@@ -899,7 +900,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ImportWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ImportWarningStorage = CreateSubType(Warning, "ImportWarning");
+                        ImportWarningStorage = CreateSubType(Warning, "ImportWarning", msg => new ImportWarningException(msg));
                     }
                 }
                 return ImportWarningStorage;
@@ -912,7 +913,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (UnicodeWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        UnicodeWarningStorage = CreateSubType(Warning, "UnicodeWarning");
+                        UnicodeWarningStorage = CreateSubType(Warning, "UnicodeWarning", msg => new UnicodeWarningException(msg));
                     }
                 }
                 return UnicodeWarningStorage;
@@ -925,7 +926,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (BytesWarningStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        BytesWarningStorage = CreateSubType(Warning, "BytesWarning");
+                        BytesWarningStorage = CreateSubType(Warning, "BytesWarning", msg => new BytesWarningException(msg));
                     }
                 }
                 return BytesWarningStorage;
@@ -943,105 +944,54 @@ namespace IronPython.Runtime.Exceptions {
         // generated by function: gen_topython_helper from: generate_exceptions.py
 
         private static BaseException/*!*/ ToPythonHelper(System.Exception clrException) {
-            if (clrException is BytesWarningException) return new BaseException(BytesWarning);
-            if (clrException is DecoderFallbackException) return new _UnicodeDecodeError();
-            if (clrException is DeprecationWarningException) return new BaseException(DeprecationWarning);
-            if (clrException is DivideByZeroException) return new BaseException(ZeroDivisionError);
-            if (clrException is EncoderFallbackException) return new _UnicodeEncodeError();
-            if (clrException is EndOfStreamException) return new BaseException(EOFError);
-            if (clrException is FutureWarningException) return new BaseException(FutureWarning);
-            if (clrException is ImportWarningException) return new BaseException(ImportWarning);
-            if (clrException is MissingMemberException) return new BaseException(AttributeError);
-            if (clrException is OverflowException) return new BaseException(OverflowError);
-            if (clrException is PendingDeprecationWarningException) return new BaseException(PendingDeprecationWarning);
-            if (clrException is RuntimeWarningException) return new BaseException(RuntimeWarning);
-            if (clrException is SyntaxWarningException) return new BaseException(SyntaxWarning);
-            if (clrException is TabException) return new _SyntaxError(TabError);
-            if (clrException is UnicodeWarningException) return new BaseException(UnicodeWarning);
-            if (clrException is UserWarningException) return new BaseException(UserWarning);
-            if (clrException is Win32Exception) return new _WindowsError();
-            if (clrException is ArgumentException) return new BaseException(ValueError);
-            if (clrException is ArithmeticException) return new BaseException(ArithmeticError);
-            if (clrException is ExternalException) return new _EnvironmentError();
-            if (clrException is IOException) return new _EnvironmentError(IOError);
-            if (clrException is IndentationException) return new _SyntaxError(IndentationError);
-            if (clrException is IndexOutOfRangeException) return new BaseException(IndexError);
-            if (clrException is KeyNotFoundException) return new BaseException(KeyError);
-            if (clrException is NotImplementedException) return new BaseException(NotImplementedError);
-            if (clrException is OSException) return new _EnvironmentError(OSError);
-            if (clrException is OutOfMemoryException) return new BaseException(MemoryError);
-            if (clrException is UnboundLocalException) return new BaseException(UnboundLocalError);
-            if (clrException is UnicodeTranslateException) return new _UnicodeTranslateError();
-            if (clrException is WarningException) return new BaseException(Warning);
-            if (clrException is ApplicationException) return new BaseException(StandardError);
-            if (clrException is ArgumentTypeException) return new BaseException(TypeError);
-            if (clrException is AssertionException) return new BaseException(AssertionError);
-            if (clrException is BufferException) return new BaseException(BufferError);
-            if (clrException is FloatingPointException) return new BaseException(FloatingPointError);
-            if (clrException is GeneratorExitException) return new BaseException(GeneratorExit);
-            if (clrException is ImportException) return new BaseException(ImportError);
-            if (clrException is KeyboardInterruptException) return new BaseException(KeyboardInterrupt);
-            if (clrException is LookupException) return new BaseException(LookupError);
-            if (clrException is ReferenceException) return new BaseException(ReferenceError);
-            if (clrException is RuntimeException) return new BaseException(RuntimeError);
-            if (clrException is StopIterationException) return new BaseException(StopIteration);
-            if (clrException is SyntaxErrorException) return new _SyntaxError();
-            if (clrException is SystemException) return new BaseException(SystemError);
-            if (clrException is SystemExitException) return new _SystemExit();
-            if (clrException is UnboundNameException) return new BaseException(NameError);
-            if (clrException is UnicodeException) return new BaseException(UnicodeError);
+            if (clrException is BytesWarningException) return new PythonExceptions.BaseException(PythonExceptions.BytesWarning);
+            if (clrException is DecoderFallbackException) return new PythonExceptions._UnicodeDecodeError();
+            if (clrException is DeprecationWarningException) return new PythonExceptions.BaseException(PythonExceptions.DeprecationWarning);
+            if (clrException is DivideByZeroException) return new PythonExceptions.BaseException(PythonExceptions.ZeroDivisionError);
+            if (clrException is EncoderFallbackException) return new PythonExceptions._UnicodeEncodeError();
+            if (clrException is EndOfStreamException) return new PythonExceptions.BaseException(PythonExceptions.EOFError);
+            if (clrException is FutureWarningException) return new PythonExceptions.BaseException(PythonExceptions.FutureWarning);
+            if (clrException is ImportWarningException) return new PythonExceptions.BaseException(PythonExceptions.ImportWarning);
+            if (clrException is MissingMemberException) return new PythonExceptions.BaseException(PythonExceptions.AttributeError);
+            if (clrException is OverflowException) return new PythonExceptions.BaseException(PythonExceptions.OverflowError);
+            if (clrException is PendingDeprecationWarningException) return new PythonExceptions.BaseException(PythonExceptions.PendingDeprecationWarning);
+            if (clrException is RuntimeWarningException) return new PythonExceptions.BaseException(PythonExceptions.RuntimeWarning);
+            if (clrException is SyntaxWarningException) return new PythonExceptions.BaseException(PythonExceptions.SyntaxWarning);
+            if (clrException is TabException) return new PythonExceptions._SyntaxError(PythonExceptions.TabError);
+            if (clrException is UnicodeWarningException) return new PythonExceptions.BaseException(PythonExceptions.UnicodeWarning);
+            if (clrException is UserWarningException) return new PythonExceptions.BaseException(PythonExceptions.UserWarning);
+            if (clrException is Win32Exception) return new PythonExceptions._WindowsError();
+            if (clrException is ArgumentException) return new PythonExceptions.BaseException(PythonExceptions.ValueError);
+            if (clrException is ArithmeticException) return new PythonExceptions.BaseException(PythonExceptions.ArithmeticError);
+            if (clrException is ExternalException) return new PythonExceptions._EnvironmentError();
+            if (clrException is IOException) return new PythonExceptions._EnvironmentError(PythonExceptions.IOError);
+            if (clrException is IndentationException) return new PythonExceptions._SyntaxError(PythonExceptions.IndentationError);
+            if (clrException is IndexOutOfRangeException) return new PythonExceptions.BaseException(PythonExceptions.IndexError);
+            if (clrException is KeyNotFoundException) return new PythonExceptions.BaseException(PythonExceptions.KeyError);
+            if (clrException is NotImplementedException) return new PythonExceptions.BaseException(PythonExceptions.NotImplementedError);
+            if (clrException is OSException) return new PythonExceptions._EnvironmentError(PythonExceptions.OSError);
+            if (clrException is OutOfMemoryException) return new PythonExceptions.BaseException(PythonExceptions.MemoryError);
+            if (clrException is UnboundLocalException) return new PythonExceptions.BaseException(PythonExceptions.UnboundLocalError);
+            if (clrException is UnicodeTranslateException) return new PythonExceptions._UnicodeTranslateError();
+            if (clrException is WarningException) return new PythonExceptions.BaseException(PythonExceptions.Warning);
+            if (clrException is ApplicationException) return new PythonExceptions.BaseException(PythonExceptions.StandardError);
+            if (clrException is ArgumentTypeException) return new PythonExceptions.BaseException(PythonExceptions.TypeError);
+            if (clrException is AssertionException) return new PythonExceptions.BaseException(PythonExceptions.AssertionError);
+            if (clrException is BufferException) return new PythonExceptions.BaseException(PythonExceptions.BufferError);
+            if (clrException is FloatingPointException) return new PythonExceptions.BaseException(PythonExceptions.FloatingPointError);
+            if (clrException is GeneratorExitException) return new PythonExceptions.BaseException(PythonExceptions.GeneratorExit);
+            if (clrException is ImportException) return new PythonExceptions.BaseException(PythonExceptions.ImportError);
+            if (clrException is KeyboardInterruptException) return new PythonExceptions.BaseException(PythonExceptions.KeyboardInterrupt);
+            if (clrException is LookupException) return new PythonExceptions.BaseException(PythonExceptions.LookupError);
+            if (clrException is PythonException) return new PythonExceptions.BaseException(PythonExceptions.Exception);
+            if (clrException is ReferenceException) return new PythonExceptions.BaseException(PythonExceptions.ReferenceError);
+            if (clrException is RuntimeException) return new PythonExceptions.BaseException(PythonExceptions.RuntimeError);
+            if (clrException is StopIterationException) return new PythonExceptions.BaseException(PythonExceptions.StopIteration);
+            if (clrException is SyntaxErrorException) return new PythonExceptions._SyntaxError();
+            if (clrException is SystemException) return new PythonExceptions.BaseException(PythonExceptions.SystemError);
+            if (clrException is SystemExitException) return new PythonExceptions._SystemExit();
+            if (clrException is UnboundNameException) return new PythonExceptions.BaseException(PythonExceptions.NameError);
             return new BaseException(Exception);
-        }
-        private static System.Exception/*!*/ ToClrHelper(PythonType/*!*/ type, string message) {
-            if (type == BytesWarning) return new BytesWarningException(message);
-            if (type == UnicodeDecodeError) return new DecoderFallbackException(message);
-            if (type == DeprecationWarning) return new DeprecationWarningException(message);
-            if (type == ZeroDivisionError) return new DivideByZeroException(message);
-            if (type == UnicodeEncodeError) return new EncoderFallbackException(message);
-            if (type == EOFError) return new EndOfStreamException(message);
-            if (type == FutureWarning) return new FutureWarningException(message);
-            if (type == ImportWarning) return new ImportWarningException(message);
-            if (type == AttributeError) return new MissingMemberException(message);
-            if (type == OverflowError) return new OverflowException(message);
-            if (type == PendingDeprecationWarning) return new PendingDeprecationWarningException(message);
-            if (type == RuntimeWarning) return new RuntimeWarningException(message);
-            if (type == SyntaxWarning) return new SyntaxWarningException(message);
-            if (type == TabError) return new TabException(message);
-            if (type == UnicodeWarning) return new UnicodeWarningException(message);
-            if (type == UserWarning) return new UserWarningException(message);
-            if (type == WindowsError) return new Win32Exception(message);
-            if (type == ValueError) return new ArgumentException(message);
-            if (type == ArithmeticError) return new ArithmeticException(message);
-            if (type == EnvironmentError) return new ExternalException(message);
-            if (type == IOError) return new IOException(message);
-            if (type == IndentationError) return new IndentationException(message);
-            if (type == IndexError) return new IndexOutOfRangeException(message);
-            if (type == KeyError) return new KeyNotFoundException(message);
-            if (type == NotImplementedError) return new NotImplementedException(message);
-            if (type == OSError) return new OSException(message);
-            if (type == MemoryError) return new OutOfMemoryException(message);
-            if (type == UnboundLocalError) return new UnboundLocalException(message);
-            if (type == UnicodeTranslateError) return new UnicodeTranslateException(message);
-            if (type == Warning) return new WarningException(message);
-            if (type == StandardError) return new ApplicationException(message);
-            if (type == TypeError) return new ArgumentTypeException(message);
-            if (type == AssertionError) return new AssertionException(message);
-            if (type == BufferError) return new BufferException(message);
-            if (type == FloatingPointError) return new FloatingPointException(message);
-            if (type == GeneratorExit) return new GeneratorExitException(message);
-            if (type == ImportError) return new ImportException(message);
-            if (type == KeyboardInterrupt) return new KeyboardInterruptException(message);
-            if (type == LookupError) return new LookupException(message);
-            if (type == ReferenceError) return new ReferenceException(message);
-            if (type == RuntimeError) return new RuntimeException(message);
-            if (type == StopIteration) return new StopIterationException(message);
-            if (type == SyntaxError) return new SyntaxErrorException(message);
-            if (type == SystemError) return new SystemException(message);
-            if (type == SystemExit) return new SystemExitException(message);
-            if (type == NameError) return new UnboundNameException(message);
-            if (type == UnicodeError) return new UnicodeException(message);
-            if (type == Exception) return new Exception(message);
-            return new Exception(message);
         }
 
         // *** END GENERATED CODE ***

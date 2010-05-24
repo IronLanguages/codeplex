@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 using MSAst = System.Linq.Expressions;
 #else
 using Microsoft.Scripting.Ast;
@@ -45,12 +46,12 @@ namespace IronPython.Compiler {
     /// </summary>
     class PythonScriptCode : RunnableScriptCode {
         private CodeContext _defaultContext;
-        private Func<CodeContext/*!*/, FunctionCode/*!*/, object>/*!*/ _target, _tracingTarget; // lazily compiled targets
+        private LookupCompilationDelegate/*!*/ _target, _tracingTarget; // lazily compiled targets
 
         public PythonScriptCode(Compiler.Ast.PythonAst/*!*/ ast)
             : base(ast) {
             Assert.NotNull(ast);
-            Debug.Assert(ast.Type == typeof(Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>>));
+            Debug.Assert(ast.Type == typeof(Expression<LookupCompilationDelegate>));
         }
 
         public override object Run() {
@@ -72,23 +73,23 @@ namespace IronPython.Compiler {
         }
 
         private object RunWorker(CodeContext ctx) {
-            Func<CodeContext/*!*/, FunctionCode/*!*/, object> target = GetTarget();
+            LookupCompilationDelegate target = GetTarget(true);
 
             Exception e = PythonOps.SaveCurrentException();
-            PushFrame(ctx, target);
+            PushFrame(ctx, _code);
             try {
-                return target(ctx, EnsureFunctionCode(target));
+                return target(ctx, _code);
             } finally {
                 PythonOps.RestoreCurrentException(e);
                 PopFrame();
             }
         }
 
-        private Func<CodeContext/*!*/, FunctionCode/*!*/, object> GetTarget() {
-            Func<CodeContext/*!*/, FunctionCode/*!*/, object> target;
+        private LookupCompilationDelegate GetTarget(bool register) {
+            LookupCompilationDelegate target;
             PythonContext pc = (PythonContext)Ast.CompilerContext.SourceUnit.LanguageContext;
             if (!pc.EnableTracing) {
-                EnsureTarget();
+                EnsureTarget(register);
                 target = _target;
             } else {
                 EnsureTracingTarget();
@@ -97,8 +98,9 @@ namespace IronPython.Compiler {
             return target;
         }
 
-        public override FunctionCode GetFunctionCode() {
-            return EnsureFunctionCode(GetTarget());
+        public override FunctionCode GetFunctionCode(bool register) {
+            GetTarget(register);
+            return _code;
         }
 
         public override Scope/*!*/ CreateScope() {
@@ -110,14 +112,13 @@ namespace IronPython.Compiler {
             try {
                 return RunWorker(ctx);
             } catch (Exception e) {
-                PythonOps.UpdateStackTrace(e, ctx, Code, _target.Method, "<module>", "<string>", 0);
+                PythonOps.UpdateStackTrace(e, ctx, Code, 0);
                 throw;
             }
         }
 
-        private Func<CodeContext, FunctionCode, object> CompileBody(Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>> lambda) {
-            Func<CodeContext, FunctionCode, object> func;
-            PythonContext pc = (PythonContext)Ast.CompilerContext.SourceUnit.LanguageContext;
+        private LookupCompilationDelegate CompileBody(LightExpression<LookupCompilationDelegate> lambda) {
+            LookupCompilationDelegate func;
 
             var extractConstant = ExtractConstant(lambda);
 
@@ -127,16 +128,21 @@ namespace IronPython.Compiler {
                 return (codeCtx, functionCode) => value;
             }
 
-            if (pc.ShouldInterpret((PythonCompilerOptions)Ast.CompilerContext.Options, Ast.CompilerContext.SourceUnit)) {
-                func = CompilerHelpers.LightCompile(lambda, pc.Options.CompilationThreshold);
+            PythonContext pc = (PythonContext)Ast.CompilerContext.SourceUnit.LanguageContext;
+            if (ShouldInterpret(pc)) {
+                func = lambda.Compile(pc.Options.CompilationThreshold);
             } else {
-                func = lambda.Compile(Ast.CompilerContext.SourceUnit.EmitDebugSymbols);
+                func = lambda.ReduceToLambda().Compile(Ast.CompilerContext.SourceUnit.EmitDebugSymbols);
             }
 
             return func;
         }
 
-        private static PythonConstantExpression ExtractConstant(Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>> lambda) {
+        private bool ShouldInterpret(PythonContext pc) {
+            return pc.ShouldInterpret((PythonCompilerOptions)Ast.CompilerContext.Options, Ast.CompilerContext.SourceUnit);
+        }
+
+        private static PythonConstantExpression ExtractConstant(LightExpression<LookupCompilationDelegate> lambda) {
             var body = lambda.Body as BlockExpression;
             if (body == null || 
                 body.Expressions.Count != 2 || 
@@ -149,9 +155,10 @@ namespace IronPython.Compiler {
             return (PythonConstantExpression)((MSAst.UnaryExpression)body.Expressions[1]).Operand;
         }
 
-        private void EnsureTarget() {
+        private void EnsureTarget(bool register) {
             if (_target == null) {
-                _target = CompileBody((Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>>)Ast.GetLambda());
+                _target = CompileBody((LightExpression<LookupCompilationDelegate>)Ast.GetLambda());
+                EnsureFunctionCode(_target, false, register);
             }
         }
 
@@ -180,9 +187,17 @@ namespace IronPython.Compiler {
                     debugProperties // custom payload
                 );
 
-                var lambda = pc.DebugContext.TransformLambda(Ast.GetLambda(), debugInfo);
-                _tracingTarget = CompileBody((Expression<Func<CodeContext/*!*/, FunctionCode/*!*/, object>>)lambda);
-                debugProperties.Code = EnsureFunctionCode(_tracingTarget);
+                var lambda = (Expression<LookupCompilationDelegate>)pc.DebugContext.TransformLambda((MSAst.LambdaExpression)Ast.GetLambda().Reduce(), debugInfo);
+
+                LookupCompilationDelegate func;
+                if (ShouldInterpret(pc)) {
+                    func = (LookupCompilationDelegate)CompilerHelpers.LightCompile(lambda, pc.Options.CompilationThreshold);
+                } else {
+                    func = (LookupCompilationDelegate)lambda.Compile(Ast.CompilerContext.SourceUnit.EmitDebugSymbols);
+                }
+
+                _tracingTarget = func;
+                debugProperties.Code = EnsureFunctionCode(_tracingTarget, true, true);
             }
         }
     }

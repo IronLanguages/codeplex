@@ -19,7 +19,7 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Exceptions {
     [Serializable]
-    class ObjectException : Exception, IPythonException {
+    sealed class ObjectException : Exception, IPythonException {
         private object _instance;
         private PythonType _type;
 
@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Exceptions {
             : base(message, innerException) {
         }
 #if !SILVERLIGHT // SerializationInfo
-        protected ObjectException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        private ObjectException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 #endif
 
         public object Instance {

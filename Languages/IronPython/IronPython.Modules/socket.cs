@@ -1971,6 +1971,7 @@ namespace IronPython.Modules {
                 if (sock != null) {
                     sock.close(false, _close);
                 }
+                base.Dispose(disposing);
             }
         }
 

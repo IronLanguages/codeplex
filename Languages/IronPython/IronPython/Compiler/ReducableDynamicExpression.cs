@@ -15,6 +15,7 @@
 
 #if !CLR2
 using System.Linq.Expressions;
+using Microsoft.Scripting.Ast;
 #else
 using Microsoft.Scripting.Ast;
 #endif
@@ -26,6 +27,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Dynamic;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Compiler {
     /// <summary>
@@ -33,7 +35,7 @@ namespace IronPython.Compiler {
     /// 
     /// This lets us recognize both normal Dynamic and our own Dynamic expressions and apply the combo binder on them.
     /// </summary>
-    internal class ReducableDynamicExpression  : Expression {
+    internal class ReducableDynamicExpression : Expression, ILightExceptionAwareExpression {
         private readonly Expression/*!*/ _reduction;
         private readonly DynamicMetaObjectBinder/*!*/ _binder;
         private readonly IList<Expression/*!*/> _args;
@@ -73,5 +75,23 @@ namespace IronPython.Compiler {
         public override Expression Reduce() {
             return _reduction;
         }
+
+        #region ILightExceptionAwareExpression Members
+
+        Expression ILightExceptionAwareExpression.ReduceForLightExceptions() {
+            ILightExceptionBinder binder = Binder as ILightExceptionBinder;
+            if (binder != null) {
+                var lightBinder = binder.GetLightExceptionBinder() as DynamicMetaObjectBinder;
+                if (lightBinder != binder) {
+                    return Expression.Dynamic(
+                        lightBinder,
+                        Type,
+                        _args);
+                }
+            }
+            return this;
+        }
+
+        #endregion
     }
 }

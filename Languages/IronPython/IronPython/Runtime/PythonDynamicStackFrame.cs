@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -35,12 +36,23 @@ namespace IronPython.Runtime {
         private readonly CodeContext/*!*/ _context;
         private readonly FunctionCode/*!*/ _code;
 
-        public PythonDynamicStackFrame(CodeContext/*!*/ context, FunctionCode/*!*/ funcCode, MethodBase method, string funcName, string filename, int line)
-            : base(method, funcName, filename, line) {
+        public PythonDynamicStackFrame(CodeContext/*!*/ context, FunctionCode/*!*/ funcCode, int line)
+            : base(GetMethod(context, funcCode), funcCode.co_name, funcCode.co_filename, line) {
             Assert.NotNull(context, funcCode);
 
             _context = context;
             _code = funcCode;
+        }
+
+        private static MethodBase GetMethod(CodeContext context, FunctionCode funcCode) {
+            MethodBase method;
+            Debug.Assert(funcCode._normalDelegate != null || funcCode._tracingDelegate != null);
+            if (!context.LanguageContext.EnableTracing || funcCode._tracingDelegate == null) {
+                method = funcCode._normalDelegate.Method;
+            } else {
+                method = funcCode._tracingDelegate.Method;
+            }
+            return method;
         }
 
         

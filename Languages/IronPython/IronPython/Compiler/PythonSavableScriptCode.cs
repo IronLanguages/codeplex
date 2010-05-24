@@ -38,11 +38,11 @@ namespace IronPython.Compiler {
     /// the clr.CompileModules API.  This ScriptCode does not support running.
     /// </summary>
     class PythonSavableScriptCode : SavableScriptCode, ICustomScriptCodeData {
-        private readonly Expression<Func<CodeContext, FunctionCode, object>> _code;
+        private readonly Expression<LookupCompilationDelegate> _code;
         private readonly string[] _names;
         private readonly string _moduleName;
         
-        public PythonSavableScriptCode(Expression<Func<CodeContext, FunctionCode, object>> code, SourceUnit sourceUnit, string[] names, string moduleName)
+        public PythonSavableScriptCode(Expression<LookupCompilationDelegate> code, SourceUnit sourceUnit, string[] names, string moduleName)
             : base(sourceUnit) {
             _code = code;
             _names = names;
@@ -60,7 +60,7 @@ namespace IronPython.Compiler {
                 new object[] { _names }
             ));
 
-            return new KeyValuePair<MethodBuilder, Type>(mb, typeof(Func<CodeContext, FunctionCode, object>));
+            return new KeyValuePair<MethodBuilder, Type>(mb, typeof(LookupCompilationDelegate));
         }
 
         public override object Run() {
