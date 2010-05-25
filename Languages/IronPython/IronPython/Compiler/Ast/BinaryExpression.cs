@@ -47,8 +47,8 @@ namespace IronPython.Compiler.Ast {
             _op = op;
             _left = left;
             _right = right;
-            Start = left.Start;
-            End = right.End;
+            StartIndex = left.StartIndex;
+            EndIndex = right.EndIndex;
         }
 
         public Expression Left {

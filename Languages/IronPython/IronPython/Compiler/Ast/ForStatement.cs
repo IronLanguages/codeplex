@@ -34,7 +34,7 @@ namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
     public class ForStatement : Statement, ILoopStatement {
-        private SourceLocation _header;
+        private int _headerIndex;
         private readonly Expression _left;
         private Expression _list;
         private Statement _body;
@@ -48,8 +48,8 @@ namespace IronPython.Compiler.Ast {
             _else = else_;
         }
 
-        public SourceLocation Header {
-            set { _header = value; }
+        public int HeaderIndex {
+            set { _headerIndex = value; }
         }
 
         public Expression Left {
@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Ast {
             // Temporary variable for the IEnumerator object
             MSAst.ParameterExpression enumerator = Ast.Variable(typeof(KeyValuePair<IEnumerator, IDisposable>), "foreach_enumerator");
 
-            return Ast.Block(new[] { enumerator }, TransformFor(Parent, enumerator, _list, _left, _body, _else, Span, _header, _break, _continue, true));
+            return Ast.Block(new[] { enumerator }, TransformFor(Parent, enumerator, _list, _left, _body, _else, Span, GlobalParent.IndexToLocation(_headerIndex), _break, _continue, true));
         }
 
         public override void Walk(PythonWalker walker) {
@@ -157,7 +157,7 @@ namespace IronPython.Compiler.Ast {
                             PythonOperationKind.None
                         ),
                         body,
-                        isStatement ? UpdateLineNumber(list.Start.Line) : AstUtils.Empty(),
+                        isStatement ? UpdateLineNumber(parent.GlobalParent.IndexToLocation(list.StartIndex).Line) : AstUtils.Empty(),
                         AstUtils.Empty()
                     ),
                     else_,

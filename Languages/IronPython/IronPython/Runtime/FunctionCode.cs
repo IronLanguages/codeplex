@@ -933,21 +933,8 @@ namespace IronPython.Runtime {
                     ArrayUtils.ConvertAll(_lambda.ParameterNames, (x) => Expression.Constant(x))
                 ),
                 Expression.Constant(Flags),
-                Expression.New(
-                    typeof(SourceSpan).GetConstructor(new Type[] { typeof(SourceLocation), typeof(SourceLocation) }),
-                    Expression.New(
-                        typeof(SourceLocation).GetConstructor(new Type[] { typeof(int), typeof(int), typeof(int) }),
-                        Expression.Constant(Span.Start.Index),
-                        Expression.Constant(Span.Start.Line),
-                        Expression.Constant(Span.Start.Column)
-                    ),
-                    Expression.New(
-                        typeof(SourceLocation).GetConstructor(new Type[] { typeof(int), typeof(int), typeof(int) }),
-                        Expression.Constant(Span.End.Index),
-                        Expression.Constant(Span.End.Line),
-                        Expression.Constant(Span.End.Column)
-                    )
-                ),
+                Expression.Constant(_lambda.IndexSpan.Start),
+                Expression.Constant(_lambda.IndexSpan.End),
                 Expression.Constant(_lambda.Filename),
                 GetGeneratorOrNormalLambda(),
                 TupleToStringArray(co_freevars),

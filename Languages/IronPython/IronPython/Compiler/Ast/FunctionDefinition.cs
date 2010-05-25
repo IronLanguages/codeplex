@@ -46,7 +46,6 @@ namespace IronPython.Compiler.Ast {
 
     public class FunctionDefinition : ScopeStatement, IInstructionProvider {
         protected Statement _body;
-        private SourceLocation _header;
         private readonly string _name;
         private readonly Parameter[] _parameters;
         private IList<Expression> _decorators;
@@ -61,6 +60,7 @@ namespace IronPython.Compiler.Ast {
         internal PythonVariable _nameVariable;          // the variable that refers to the global __name__
         private LightLambdaExpression _dlrBody;       // the transformed body including all of our initialization, etc...
         internal bool _hasReturn;
+        private int _headerIndex;
 
         private static int _lambdaId;
         internal static readonly MSAst.ParameterExpression _functionParam = Ast.Parameter(typeof(PythonFunction), "$function");
@@ -134,8 +134,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         public SourceLocation Header {
-            get { return _header; }
-            set { _header = value; }
+            get { return GlobalParent.IndexToLocation(_headerIndex); }
+        }
+
+        public int HeaderIndex {
+            get { return _headerIndex; }
+            set { _headerIndex = value; }
         }
 
         public override string Name {
@@ -332,7 +336,10 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(_variable != null, "Shouldn't be called by lambda expression");
 
             MSAst.Expression function = MakeFunctionExpression();
-            return GlobalParent.AddDebugInfoAndVoid(AssignValue(Parent.GetVariableExpression(_variable), function), new SourceSpan(Start, Header));
+            return GlobalParent.AddDebugInfoAndVoid(
+                AssignValue(Parent.GetVariableExpression(_variable), function),
+                new SourceSpan(GlobalParent.IndexToLocation(StartIndex), GlobalParent.IndexToLocation(HeaderIndex))
+            );
         }
         
         /// <summary>
@@ -606,9 +613,10 @@ namespace IronPython.Compiler.Ast {
 
             List<MSAst.Expression> statements = new List<MSAst.Expression>();
             // add beginning sequence point
+            var start = GlobalParent.IndexToLocation(StartIndex);
             statements.Add(GlobalParent.AddDebugInfo(
                 AstUtils.Empty(),
-                new SourceSpan(new SourceLocation(0, Start.Line, Start.Column), new SourceLocation(0, Start.Line, Int32.MaxValue))));
+                new SourceSpan(new SourceLocation(0, start.Line, start.Column), new SourceLocation(0, start.Line, Int32.MaxValue))));
 
 
             // For generators, we need to do a check before the first statement for Generator.Throw() / Generator.Close().
@@ -627,8 +635,8 @@ namespace IronPython.Compiler.Ast {
                 locals.Add(extracted);
             }
 
-            if (_body.CanThrow && !(_body is SuiteStatement) && _body.Start.IsValid) {
-                statements.Add(UpdateLineNumber(_body.Start.Line));
+            if (_body.CanThrow && !(_body is SuiteStatement) && _body.StartIndex != -1) {
+                statements.Add(UpdateLineNumber(GlobalParent.IndexToLocation(_body.StartIndex).Line));
             }
 
             statements.Add(Body);

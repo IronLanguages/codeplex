@@ -83,11 +83,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override bool Walk(Parameter node) {
+            node.Parent = _binder._currentScope;
             node.PythonVariable = _binder.DefineParameter(node.Name);
             return false;
         }
         public override bool Walk(SublistParameter node) {
             node.PythonVariable = _binder.DefineParameter(node.Name);
+            node.Parent = _binder._currentScope;
             // we walk the node by hand to avoid walking the default values.
             WalkTuple(node.Tuple);
             return false;
@@ -562,6 +564,7 @@ namespace IronPython.Compiler.Ast {
 
             if (node.Names != FromImportStatement.Star) {
                 PythonVariable[] variables = new PythonVariable[node.Names.Count];
+                node.Root.Parent = _currentScope;
                 for (int i = 0; i < node.Names.Count; i++) {
                     string name = node.AsNames[i] != null ? node.AsNames[i] : node.Names[i];
                     variables[i] = DefineName(name);
@@ -725,6 +728,7 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < node.Names.Count; i++) {
                 string name = node.AsNames[i] != null ? node.AsNames[i] : node.Names[i].Names[0];
                 variables[i] = DefineName(name);
+                node.Names[i].Parent = _currentScope;
             }
             node.Variables = variables;
             return true;
@@ -743,7 +747,7 @@ namespace IronPython.Compiler.Ast {
                     if (tsh.Target != null) {
                         tsh.Target.Walk(_define);
                     }
-
+                    tsh.Parent = _currentScope;
                     tsh.Walk(this);
                 }
             }

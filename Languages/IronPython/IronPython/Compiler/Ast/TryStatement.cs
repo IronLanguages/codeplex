@@ -37,8 +37,7 @@ namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
     public class TryStatement : Statement {
-        private SourceLocation _header;
-
+        private int _headerIndex;
         /// <summary>
         /// The statements under the try-block.
         /// </summary>
@@ -66,8 +65,8 @@ namespace IronPython.Compiler.Ast {
             _finally = finally_;
         }
 
-        public SourceLocation Header {
-            set { _header = value; }
+        public int HeaderIndex {
+            set { _headerIndex = value; }
         }
 
         public Statement Body {
@@ -134,7 +133,7 @@ namespace IronPython.Compiler.Ast {
                         PushLineUpdated(false, lineUpdated),
                         LightExceptions.RewriteExternal(
                             AstUtils.Try(
-                                Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
+                                Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, GlobalParent.IndexToLocation(_headerIndex))),
                                 body,
                                 AstUtils.Constant(null)
                             ).Catch(exception,
@@ -162,7 +161,7 @@ namespace IronPython.Compiler.Ast {
                 result = 
                     LightExceptions.RewriteExternal(
                         AstUtils.Try(
-                            GlobalParent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
+                            GlobalParent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, GlobalParent.IndexToLocation(_headerIndex))),
                             // save existing line updated
                             PushLineUpdated(false, lineUpdated),
                             body,
@@ -215,7 +214,7 @@ namespace IronPython.Compiler.Ast {
                 body = AstUtils.Try( // we use a fault to know when we have an exception and when control leaves normally (via
                     // either a return or the body completing successfully).
                     AstUtils.Try(
-                        Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, _header)),
+                        Parent.AddDebugInfo(AstUtils.Empty(), new SourceSpan(Span.Start, GlobalParent.IndexToLocation(_headerIndex))),
                         Ast.Assign(tryThrows, AstUtils.Constant(null, typeof(Exception))),
                         body,
                         AstUtils.Empty()
@@ -316,7 +315,7 @@ namespace IronPython.Compiler.Ast {
                                         exception,
                                         tsh.Body
                                     ),
-                                    new SourceSpan(tsh.Start, tsh.Header)
+                                    new SourceSpan(GlobalParent.IndexToLocation(tsh.StartIndex), GlobalParent.IndexToLocation(tsh.HeaderIndex))
                                 ),
                                 AstUtils.Empty()
                             )
@@ -341,7 +340,7 @@ namespace IronPython.Compiler.Ast {
                                     exception,
                                     tsh.Body
                                 ),
-                                new SourceSpan(tsh.Start, tsh.Header)
+                                new SourceSpan(GlobalParent.IndexToLocation(tsh.StartIndex), GlobalParent.IndexToLocation(tsh.HeaderIndex))
                             )
                         );
                     }
@@ -363,7 +362,7 @@ namespace IronPython.Compiler.Ast {
 
                     catchAll = GlobalParent.AddDebugInfo(
                         GetTracebackHeader(this, exception, tsh.Body),
-                        new SourceSpan(tsh.Start, tsh.Header)
+                        new SourceSpan(GlobalParent.IndexToLocation(tsh.StartIndex), GlobalParent.IndexToLocation(tsh.HeaderIndex))
                     );
                 }
             }
@@ -463,7 +462,7 @@ namespace IronPython.Compiler.Ast {
 
     // A handler corresponds to the except block.
     public class TryStatementHandler : Node {
-        private SourceLocation _header;
+        private int _headerIndex;
         private readonly Expression _test, _target;
         private readonly Statement _body;
 
@@ -474,8 +473,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         public SourceLocation Header {
-            get { return _header; }
-            set { _header = value; }
+            get { return GlobalParent.IndexToLocation(_headerIndex); }
+        }
+
+        public int HeaderIndex {
+            get { return _headerIndex; }
+            set { _headerIndex = value; }
         }
 
         public Expression Test {

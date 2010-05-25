@@ -3071,10 +3071,10 @@ namespace IronPython.Runtime.Operations {
             return ((Func<PythonFunction, object, object>)func.func_code.Target)(func, input);
         }
 
-        public static FunctionCode MakeFunctionCode(CodeContext context, string name, string documentation, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, Delegate code, string[] freeVars, string[] names, string[] cellVars, string[] varNames, int localCount) {
-            Compiler.Ast.SerializedScopeStatement scope = new Compiler.Ast.SerializedScopeStatement(name, argNames, flags, span, path, freeVars, names, cellVars, varNames);
+        public static FunctionCode MakeFunctionCode(CodeContext context, string name, string documentation, string[] argNames, FunctionAttributes flags, int startIndex, int endIndex, string path, Delegate code, string[] freeVars, string[] names, string[] cellVars, string[] varNames, int localCount) {
+            Compiler.Ast.SerializedScopeStatement scope = new Compiler.Ast.SerializedScopeStatement(name, argNames, flags, startIndex, endIndex, path, freeVars, names, cellVars, varNames);
 
-            return new FunctionCode(PythonContext.GetContext(context), code, scope, documentation, localCount);
+            return new FunctionCode(context.LanguageContext, code, scope, documentation, localCount);
         }
 
         [NoSideEffects]

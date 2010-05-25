@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
     public class IfStatementTest : Node {
-        private SourceLocation _header;
+        private int _headerIndex;
         private readonly Expression _test;
         private Statement _body;
 
@@ -27,8 +27,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         public SourceLocation Header {
-            set { _header = value; }
-            get { return _header; }
+            get { return GlobalParent.IndexToLocation(_headerIndex); }
+        }
+
+        public int HeaderIndex {
+            set { _headerIndex = value; }
+            get { return _headerIndex; }
         }
 
         public Expression Test {

@@ -51,10 +51,11 @@ namespace IronPython.Compiler.Ast {
         private CompilationMode _mode;
         private readonly bool _isModule;
         private readonly bool _printExpressions;
-        private readonly ModuleOptions _languageFeatures;
+        private ModuleOptions _languageFeatures;
         private readonly CompilerContext _compilerContext;
         private readonly MSAst.SymbolDocumentInfo _document;
         private readonly string/*!*/ _name;
+        internal int[] _lineLocations;
 
         private PythonVariable _docVariable, _nameVariable, _fileVariable;
         private ModuleContext _modContext;
@@ -79,10 +80,21 @@ namespace IronPython.Compiler.Ast {
             _languageFeatures = languageFeatures;
         }
 
-        public PythonAst(Statement body, bool isModule, ModuleOptions languageFeatures, bool printExpressions, CompilerContext context) {
+        public PythonAst(Statement body, bool isModule, ModuleOptions languageFeatures, bool printExpressions, CompilerContext context, int[] lineLocations) :
+            this(isModule, languageFeatures, printExpressions, context) {
+
             ContractUtils.RequiresNotNull(body, "body");
 
             _body = body;
+            
+            _lineLocations = lineLocations;
+        }
+
+        /// <summary>
+        /// Creates a new PythonAst without a body.  ParsingFinished should be called afterwards to set
+        /// the body.
+        /// </summary>
+        public PythonAst(bool isModule, ModuleOptions languageFeatures, bool printExpressions, CompilerContext context) {
             _isModule = isModule;
             _printExpressions = printExpressions;
             _languageFeatures = languageFeatures;
@@ -116,8 +128,33 @@ namespace IronPython.Compiler.Ast {
                 true,
                 ModuleOptions.None,
                 false,
-                context) {
+                context,
+                null) {
             _onDiskProxy = true;
+        }
+
+        /// <summary>
+        /// Called when parsing is complete, the body is built, the line mapping and language features are known.
+        /// 
+        /// This is used in conjunction with the constructor which does not take a body.  It enables creating
+        /// the outer most PythonAst first so that nodes can always have a global parent.  This lets an un-bound
+        /// tree to still provide it's line information immediately after parsing.  When we set the location
+        /// of each node during construction we also set the global parent.  When we name bind the global 
+        /// parent gets replaced with the real parent ScopeStatement.
+        /// </summary>
+        /// <param name="lineLocations">a mapping of where each line begins</param>
+        /// <param name="body">The body of code</param>
+        /// <param name="languageFeatures">The language features which were set during parsing.</param>
+        public void ParsingFinished(int[] lineLocations, Statement body, ModuleOptions languageFeatures) {
+            ContractUtils.RequiresNotNull(body, "body");
+
+            if (_body != null) {
+                throw new InvalidOperationException("cannot set body twice");
+            }
+
+            _body = body;
+            _lineLocations = lineLocations;
+            _languageFeatures = languageFeatures;
         }
 
         /// <summary>
@@ -360,6 +397,7 @@ namespace IronPython.Compiler.Ast {
                 // so this is always safe.
                 Debug.Assert(!_isModule);
 
+                var ret = (ReturnStatement)_body;
                 Ast simpleBody;
                 if ((_languageFeatures & ModuleOptions.LightThrow) != 0) {
                     simpleBody = LightExceptions.Rewrite(retStmt.Expression.Reduce());
@@ -367,13 +405,16 @@ namespace IronPython.Compiler.Ast {
                     simpleBody = retStmt.Expression.Reduce();
                 }
 
+                var start = IndexToLocation(ret.Expression.StartIndex);
+                var end = IndexToLocation(ret.Expression.EndIndex);
+
                 return Ast.Block(
                     Ast.DebugInfo(
                         _document,
-                        retStmt.Expression.Start.Line,
-                        retStmt.Expression.Start.Column,
-                        retStmt.Expression.End.Line,
-                        retStmt.Expression.End.Column
+                        start.Line,
+                        start.Column,
+                        end.Line,
+                        end.Column
                     ),
                     AstUtils.Convert(simpleBody, typeof(object))
                 );
@@ -748,6 +789,7 @@ namespace IronPython.Compiler.Ast {
                 _body = body;
                 _doc = originalBody.Documentation;
                 _originalBody = originalBody;
+                SetLoc(originalBody.GlobalParent, originalBody.IndexSpan);
             }
 
             public override MSAst.Expression Reduce() {

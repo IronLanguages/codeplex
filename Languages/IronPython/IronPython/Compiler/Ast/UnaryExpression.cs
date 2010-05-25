@@ -36,7 +36,7 @@ namespace IronPython.Compiler.Ast {
         public UnaryExpression(PythonOperator op, Expression expression) {
             _op = op;
             _expression = expression;
-            End = expression.End;
+            EndIndex = expression.EndIndex;
         }
 
         public Expression Expression {

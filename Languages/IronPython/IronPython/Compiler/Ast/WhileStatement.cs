@@ -28,7 +28,7 @@ namespace IronPython.Compiler.Ast {
 
     public class WhileStatement : Statement, ILoopStatement, IInstructionProvider {
         // Marks the end of the condition of the while loop
-        private SourceLocation _header;
+        private int _indexHeader;
         private readonly Expression _test;
         private readonly Statement _body;
         private readonly Statement _else;
@@ -53,13 +53,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         private SourceSpan Header {
-            get { return new SourceSpan(Start, _header); }
+            get { return new SourceSpan(GlobalParent.IndexToLocation(StartIndex), GlobalParent.IndexToLocation(_indexHeader)); }
         }
 
-        public void SetLoc(SourceLocation start, SourceLocation header, SourceLocation end) {
-            Start = start;
-            _header = header;
-            End = end;
+        public void SetLoc(PythonAst globalParent, int start, int header, int end) {
+            SetLoc(globalParent, start, end);
+            _indexHeader = header;
         }
 
         MSAst.LabelTarget ILoopStatement.BreakLabel {
@@ -119,7 +118,7 @@ namespace IronPython.Compiler.Ast {
                     _continue
                 );
 
-                if (_test.Start.Line != _body.Start.Line) {
+                if (GlobalParent.IndexToLocation(_test.StartIndex).Line != GlobalParent.IndexToLocation(_body.StartIndex).Line) {
                     res = GlobalParent.AddDebugInfoAndVoid(res, _test.Span);
                 }
 

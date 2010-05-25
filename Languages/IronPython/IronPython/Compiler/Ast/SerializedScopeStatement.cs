@@ -37,11 +37,11 @@ namespace IronPython.Compiler.Ast {
         private readonly FunctionAttributes _flags;
         private readonly string[] _parameterNames;
 
-        internal SerializedScopeStatement(string name, string[] argNames, FunctionAttributes flags, SourceSpan span, string path, string[] freeVars, string[] names, string[] cellVars, string[] varNames) {
+        internal SerializedScopeStatement(string name, string[] argNames, FunctionAttributes flags, int startIndex, int endIndex, string path, string[] freeVars, string[] names, string[] cellVars, string[] varNames) {
             _name = name;
             _filename = path;
             _flags = flags;
-            this.SetLoc(span.Start, span.End);
+            SetLoc(null, startIndex, endIndex);
             _parameterNames = argNames;
             if (freeVars != null) {
                 foreach (string freeVar in freeVars) {
