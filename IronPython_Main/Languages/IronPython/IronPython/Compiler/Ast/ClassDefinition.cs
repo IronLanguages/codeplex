@@ -40,7 +40,7 @@ namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
     
     public class ClassDefinition : ScopeStatement {
-        private SourceLocation _header;
+        private int _headerIndex;
         private readonly string _name;
         private Statement _body;
         private readonly Expression[] _bases;
@@ -68,8 +68,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         public SourceLocation Header {
-            get { return _header; }
-            set { _header = value; }
+            get { return GlobalParent.IndexToLocation(_headerIndex); }
+        }
+
+        public int HeaderIndex {
+            get { return _headerIndex; }
+            set { _headerIndex = value; }
         }
 
         public override string Name {
@@ -195,7 +199,13 @@ namespace IronPython.Compiler.Ast {
 
             classDef = AddDecorators(classDef, _decorators);
 
-            return GlobalParent.AddDebugInfoAndVoid(AssignValue(Parent.GetVariableExpression(_variable), classDef), new SourceSpan(Start, Header));
+            return GlobalParent.AddDebugInfoAndVoid(
+                AssignValue(Parent.GetVariableExpression(_variable), classDef), 
+                new SourceSpan(
+                    GlobalParent.IndexToLocation(StartIndex),
+                    GlobalParent.IndexToLocation(HeaderIndex)
+                )
+            );
         }
 
         private Microsoft.Scripting.Ast.LightExpression<Func<CodeContext, CodeContext>> MakeClassBody() {

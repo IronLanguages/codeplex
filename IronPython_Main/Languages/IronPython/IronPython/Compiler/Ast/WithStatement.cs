@@ -35,7 +35,7 @@ namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
     public class WithStatement : Statement {
-        private SourceLocation _header;
+        private int _headerIndex;
         private readonly Expression _contextManager;
         private readonly Expression _var;
         private Statement _body;
@@ -46,8 +46,8 @@ namespace IronPython.Compiler.Ast {
             _body = body;
         }
 
-        public SourceLocation Header {
-            set { _header = value; }
+        public int HeaderIndex {
+            set { _headerIndex = value; }
         }
 
         public new Expression Variable {
@@ -103,7 +103,7 @@ namespace IronPython.Compiler.Ast {
                         manager,
                         _contextManager
                     ),
-                    new SourceSpan(Start, _header)
+                    new SourceSpan(GlobalParent.IndexToLocation(StartIndex), GlobalParent.IndexToLocation(_headerIndex))
                 )
             );
 
@@ -140,7 +140,7 @@ namespace IronPython.Compiler.Ast {
                             )
                         )
                     ),
-                    new SourceSpan(Start, _header)
+                    new SourceSpan(GlobalParent.IndexToLocation(StartIndex), GlobalParent.IndexToLocation(_headerIndex))
                 )
             );
 

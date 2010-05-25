@@ -82,10 +82,10 @@ namespace IronPython.Compiler.Ast {
                         optimizeDynamicConvert ?
                             TransformAndDynamicConvert(ist.Test, typeof(bool)) :
                             GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
-                        TransformMaybeSingleLineSuite(ist.Body, ist.Test.Start),
+                        TransformMaybeSingleLineSuite(ist.Body, GlobalParent.IndexToLocation(ist.Test.StartIndex)),
                         result
                     ),
-                    new SourceSpan(ist.Start, ist.Header)
+                    new SourceSpan(GlobalParent.IndexToLocation(ist.StartIndex), GlobalParent.IndexToLocation(ist.HeaderIndex))
                 );
             }
 

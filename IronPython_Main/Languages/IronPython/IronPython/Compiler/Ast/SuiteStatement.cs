@@ -55,16 +55,17 @@ namespace IronPython.Compiler.Ast {
             foreach (var statement in _statements) {
                 // CPython debugging treats multiple statements on the same line as a single step, we
                 // match that behavior here.
-                if (statement.Start.Line == curStart) {
+                int newline = GlobalParent.IndexToLocation(statement.StartIndex).Line;
+                if (newline == curStart) {
                     statements.Add(new DebugInfoRemovalExpression(statement, curStart));
                 } else {
-                    if (statement.CanThrow && statement.Start.IsValid) {
-                        statements.Add(UpdateLineNumber(statement.Start.Line));
+                    if (statement.CanThrow && newline != -1) {
+                        statements.Add(UpdateLineNumber(newline));
                     }
 
                     statements.Add(statement);
                 }
-                curStart = statement.Start.Line;
+                curStart = newline;
             }
             
             return Ast.Block(statements.ToReadOnlyCollection());

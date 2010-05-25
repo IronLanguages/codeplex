@@ -43,8 +43,7 @@ namespace IronPython.Compiler.Ast {
 
     public abstract class Node : MSAst.Expression {
         private ScopeStatement _parent;
-        private SourceLocation _start = SourceLocation.Invalid;
-        private SourceLocation _end = SourceLocation.Invalid;
+        private IndexSpan _span;
 
         internal static readonly MSAst.BlockExpression EmptyBlock = Ast.Block(AstUtils.Empty());
         internal static readonly MSAst.Expression[] EmptyExpression = new MSAst.Expression[0];
@@ -63,30 +62,79 @@ namespace IronPython.Compiler.Ast {
             get { return _parent; }
             set { _parent = value; }
         }
-
-        public void SetLoc(SourceLocation start, SourceLocation end) {
-            _start = start;
-            _end = end;
+        
+        public void SetLoc(PythonAst globalParent, int start, int end) {
+            _span = new IndexSpan(start, end > start ? end - start : start);
+            _parent = globalParent;
         }
 
-        public void SetLoc(SourceSpan span) {
-            _start = span.Start;
-            _end = span.End;
+        public void SetLoc(PythonAst globalParent, IndexSpan span) {
+            _span = span;
+            _parent = globalParent;
+        }
+
+        public IndexSpan IndexSpan {
+            get {
+                return _span;
+            }
+            set {
+                _span = value;
+            }
         }
 
         public SourceLocation Start {
-            get { return _start; }
-            set { _start = value; }
+            get {
+                return GlobalParent.IndexToLocation(StartIndex); 
+            }
         }
 
         public SourceLocation End {
-            get { return _end; }
-            set { _end = value; }
+            get {
+                return GlobalParent.IndexToLocation(EndIndex);
+            }
+        }
+
+        public int EndIndex {
+            get {
+                return _span.End;
+            }
+            set {
+                _span = new IndexSpan(_span.Start, value - _span.Start);
+            }
+        }
+
+        public int StartIndex {
+            get {
+                return _span.Start;
+            }
+            set {
+                _span = new IndexSpan(value, 0);
+            }
+        }
+        
+        internal SourceLocation IndexToLocation(int index) {
+            if (index == -1) {
+                return SourceLocation.Invalid;
+            }
+
+            var locs = GlobalParent._lineLocations;
+            int match = Array.BinarySearch(locs, index);
+            if (match < 0) {
+                // If our index = -1, it means we're on the first line.
+                if (match == -1) {
+                    return new SourceLocation(index, 1, index + 1);
+                }
+
+                // If we couldn't find an exact match for this line number, get the nearest
+                // matching line number less than this one
+                match = ~match - 1;
+            }
+            return new SourceLocation(index, match + 2, index - locs[match] + 1);
         }
 
         public SourceSpan Span {
             get {
-                return new SourceSpan(_start, _end);
+                return new SourceSpan(Start, End);
             }
         }
 
@@ -262,7 +310,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal static MSAst.Expression TransformMaybeSingleLineSuite(Statement body, SourceLocation prevStart) {
-            if (body.Start.Line != prevStart.Line) {
+            if (body.GlobalParent.IndexToLocation(body.StartIndex).Line != prevStart.Line) {
                 return body;
             }
 

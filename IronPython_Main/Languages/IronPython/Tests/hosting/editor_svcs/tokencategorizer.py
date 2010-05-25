@@ -87,8 +87,7 @@ def test_categorizer_for_loop():
         t.Operator(From(28,1,29), To(33,2,5)),
         t.Keyword(From(33,2,5), To(38,2,10)),
         t.Identifier(From(39,2,11), To(43,2,15)),
-        t.Delimiter(From(43,2,15), To(44,2,16), TokenTriggers.ParameterNext),
-        t.WhiteSpace(From(44,2,16), To(44,2,16)),
+        t.Delimiter(From(43,2,15), To(44,2,16), TokenTriggers.ParameterNext)
     ]
     actual = list(get_tokens("for line in open(\"foo.txt\"):\n    print line,"))
     AreEqual(actual, expected)
@@ -183,7 +182,6 @@ def test_categorizer_if_else():
         t.WhiteSpace(From(23,3,6), To(28,4,5)),
         t.Operator(From(23,3,6), To(28,4,5)),
         t.Keyword(From(28,4,5), To(32,4,9)),
-        t.WhiteSpace(From(32,4,9), To(32,4,9)),
     ]
     actual = list(get_tokens("if True:\n    pass\nelse:\n    pass"))
     AreEqual(actual, expected)
@@ -207,9 +205,9 @@ def test_categorizer_def():
         t.Identifier(From(25,2,12), To(26,2,13)),
         t.Operator(From(26,2,13), To(27,2,14)),
         t.Identifier(From(27,2,14), To(28,2,15)),
-        t.WhiteSpace(From(28,2,15), To(28,2,15)),
     ]
     actual = list(get_tokens("def foo(a,b):\n    return a+b"))
+
     AreEqual(actual, expected)
 
 def test_categorizer_class():
