@@ -20,7 +20,7 @@ MKDIR CPy_Testcases
 
 echo Copying CPython testcases...
 
-FOR /R %Dlr_Root%\Test\RowanTest\Languages\IronPython\cpy %%G IN (test*_cpy.GenericTest) DO (       
+FOR /R %Dlr_Root%\Test\Wrappers\Languages\IronPython\cpy %%G IN (test*_cpy.GenericTest) DO (       
     set FILENAME=%%~nG
     set FILENAME=!FILENAME:_cpy=.py!
     FINDSTR /L /I /M /C:"due_to_ironpython" %DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\26\lib\test\!FILENAME! >> CPy_Testcases\file_list.txt 

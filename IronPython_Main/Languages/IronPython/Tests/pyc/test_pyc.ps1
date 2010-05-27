@@ -18,11 +18,11 @@
 
 #------------------------------------------------------------------------------
 #--Sanity
-if ($env:ROWAN_BIN -eq $null) {
-    echo "Cannot run this test without ROWAN_BIN being set!"
+if ($env:DLR_BIN -eq $null) {
+    echo "Cannot run this test without DLR_BIN being set!"
     exit 1
 }
-if (! (test-path $env:ROWAN_BIN\ipy.exe)) {
+if (! (test-path $env:DLR_BIN\ipy.exe)) {
     echo "Cannot run this test without ipy.exe being built!"
     exit 1
 }
@@ -35,7 +35,7 @@ if ([System.Environment]::Version.Major -eq 4) {
 #------------------------------------------------------------------------------
 #--Prereqs and globals
 
-set-alias IPY_CMD $env:ROWAN_BIN\ipy.exe 
+set-alias IPY_CMD $env:DLR_BIN\ipy.exe 
 $CURRPATH = split-path -parent $MyInvocation.MyCommand.Definition
 $TOOLSPATH = $args[0]
 if (! (test-path "$TOOLSPATH\pyc.py")) {
@@ -64,8 +64,8 @@ function prepare-testcase {
     rm -force *.exe
 
     #Copy over prereqs for running pyc.py
-    cp -force $env:ROWAN_BIN\IronPython*dll .
-    cp -force $env:ROWAN_BIN\Microsoft.*dll .
+    cp -force $env:DLR_BIN\IronPython*dll .
+    cp -force $env:DLR_BIN\Microsoft.*dll .
 }
 
 
