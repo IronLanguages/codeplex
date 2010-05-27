@@ -36,14 +36,14 @@ import os
 #Find the location of the 'iptest' package
 mroot = [os.environ[x] for x in os.environ.keys() if x.lower() == "dlr_root"]
 if len(mroot)==0:
-    rowan_bin = os.getcwd() + r"\..\..\bin\debug\lib"
+    dlr_bin = os.getcwd() + r"\..\..\bin\debug\lib"
 else:
-    rowan_bin = [os.environ[x] for x in os.environ.keys() if x.lower() == "rowan_bin"]
-    if len(rowan_bin)==0:
-        rowan_bin = mroot[0] + r"\bin\debug\lib"
+    dlr_bin = [os.environ[x] for x in os.environ.keys() if x.lower() == "dlr_bin"]
+    if len(dlr_bin)==0:
+        dlr_bin = mroot[0] + r"\bin\debug\lib"
     else:
-        rowan_bin = rowan_bin[0] + r"\lib"
-os.environ.update({ "pythonpath" : sys.exec_prefix + r"\lib;" + rowan_bin})
+        dlr_bin = dlr_bin[0] + r"\lib"
+os.environ.update({ "pythonpath" : sys.exec_prefix + r"\lib;" + dlr_bin})
 
 
 #------------------------------------------------------------------------------

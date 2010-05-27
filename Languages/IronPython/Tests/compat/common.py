@@ -48,17 +48,17 @@ def get_all_paths():
             cpython_lib_path   = get_environ_variable('DLR_ROOT')+'/External.LCA_RESTRICTED/Languages/ironpython/26/Lib'
             
         elif sys.platform == "win32":
-            rowan_bin = get_environ_variable('ROWAN_BIN')
-            if rowan_bin:
-                if rowan_bin.startswith('"'):
-                    # strip quotes when ROWAN_BIN has spaces, e.g. "bin\Debug\V4 Debug"
-                    Assert(rowan_bin.endswith('"'))
-                    rowan_bin = rowan_bin[1:-1]
+            dlr_bin = get_environ_variable('DLR_BIN')
+            if dlr_bin:
+                if dlr_bin.startswith('"'):
+                    # strip quotes when DLR_BIN has spaces, e.g. "bin\Debug\V4 Debug"
+                    Assert(dlr_bin.endswith('"'))
+                    dlr_bin = dlr_bin[1:-1]
             elif not get_environ_variable('THISISSNAP'):
-                rowan_bin = get_environ_variable('DLR_ROOT') + '/Bin/Debug'
+                dlr_bin = get_environ_variable('DLR_ROOT') + '/Bin/Debug'
             cpython_executable = sys.executable
             cpython_lib_path   = sys.prefix + "/Lib"
-            ipython_executable = rowan_bin+'/ipy.exe'
+            ipython_executable = dlr_bin+'/ipy.exe'
             compat_test_path   = get_environ_variable('DLR_ROOT')+'/Languages/IronPython/Tests/Compat/'
         else:
             raise AssertionError        

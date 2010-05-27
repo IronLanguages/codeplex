@@ -23,12 +23,12 @@
 echo "To re-run this test execute the following line from a PowerShell prompt:"
 echo     $MyInvocation.Line
 echo "---------------------------------------------------------------------"
-if (! (test-path  $env:ROWAN_BIN\ipyw.exe))
+if (! (test-path  $env:DLR_BIN\ipyw.exe))
 {
-    write-error "Must set the ROWAN_BIN environment variable or build ipy.exe!"
+    write-error "Must set the DLR_BIN environment variable or build ipy.exe!"
     exit 1
 }
-set-alias ipyw $env:ROWAN_BIN\ipyw.exe
+set-alias ipyw $env:DLR_BIN\ipyw.exe
 
 #------------------------------------------------------------------------------
 function setup

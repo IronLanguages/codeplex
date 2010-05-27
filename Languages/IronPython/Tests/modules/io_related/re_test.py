@@ -716,34 +716,17 @@ def test_empty_split():
     for expr, result in cases:
         AreEqual(re.split(":*", expr), result)
 
-@skip("win32", "silverlight")
+@skip("silverlight")
 def test_cp15298():
-    import time
-    tmin_compiled = 100
-    tmin_string   = 100
     regex = "^" + "\d\.\d\.\d \(IronPython \d\.\d(\.\d)? ((Alpha )|(Beta )|())\(\d\.\d\.\d\.\d{3,4}\) on \.NET \d(\.\d{1,5}){3}\)" * 15 + "$"
     match_str = "2.5.0 (IronPython 2.0 Beta (2.0.0.1000) on .NET 2.0.50727.1433)" * 15
     compiled_regex = re.compile(regex)
     
-    for i in xrange(100):
+    retval = compiled_regex.match(match_str)
+    Assert(retval != None)
     
-        t0 = time.time()
-        for i in xrange(250):
-            retval = compiled_regex.match(match_str)
-        t1 = time.time()
-        Assert(retval != None)
-        if t1-t0 < tmin_compiled:
-            tmin_compiled = t1-t0
-            
-        t0 = time.time()
-        for i in xrange(250):
-            retval = re.match(regex, match_str)
-        t1 = time.time()
-        Assert(retval != None)
-        if t1-t0 < tmin_string:
-            tmin_string = t1-t0
-
-    Assert(tmin_compiled<=tmin_string, "re.compile(...).match(...) is slower than re.match(..., ...)")
+    retval = re.match(regex, match_str)
+    Assert(retval != None)
 
 def test_cp11136():
     regex = re.compile(r"^(?P<msg>NMAKE[A-Za-z0-9]*)'\"?(?P<file>[\\A-Za-z0-9/:_\.\+]+)" )

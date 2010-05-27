@@ -64,8 +64,8 @@ $global:DOCSTRING = "$global:TEST_DIR\docstring_test.py"
 $global:TRACEBACK = "$global:TEST_DIR\traceback_test.py"
 
 #There are tests which are specifically disabled or enabled for debug/release binaries
-$global:IS_DEBUG   = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
-$global:IS_RELEASE = "$env:ROWAN_BIN".ToLower().EndsWith("bin\release")
+$global:IS_DEBUG   = "$env:DLR_BIN".ToLower().EndsWith("bin\debug")
+$global:IS_RELEASE = "$env:DLR_BIN".ToLower().EndsWith("bin\release")
 
 #Some tests fail under x64
 $global:IS_64 = (test-path $env:SystemRoot\SYSWOW64) -or (test-path $env:systemroot\SYSWOW64)
@@ -878,9 +878,9 @@ function test-regressions($pyexe)
 
 
 #sanity checks
-if (!(test-path $env:ROWAN_BIN\ipy.exe)) 
+if (!(test-path $env:DLR_BIN\ipy.exe)) 
 {
-	$host.ui.writeerrorline("ROWAN_BIN environment variable is not set or ipy.exe not built!")
+	$host.ui.writeerrorline("DLR_BIN environment variable is not set or ipy.exe not built!")
 	exit 1
 }
 
@@ -892,7 +892,7 @@ $tests = @("test-pymodes", "test-dlrmodes", "test-relatedpy", "test-nonsensemode
 foreach ($exe_test in $tests)
 {
 	echo "---------------------------------------------------------------------"
-	&$exe_test $env:ROWAN_BIN\ipy.exe
+	&$exe_test $env:DLR_BIN\ipy.exe
 	echo ""
 }
 

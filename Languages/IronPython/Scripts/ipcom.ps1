@@ -27,12 +27,12 @@ if (! $?) {
 	exit 1
 }
 
-if ("$env:ROWAN_BIN" -eq "") {
-	log-critical "ROWAN_BIN is not set.  Cannot continue!"
+if ("$env:DLR_BIN" -eq "") {
+	log-critical "DLR_BIN is not set.  Cannot continue!"
 }
 
-if (! (test-path $env:ROWAN_BIN\ipy.exe)) {
-	log-critical "$env:ROWAN_BIN\ipy.exe does not exist.  Cannot continue!"
+if (! (test-path $env:DLR_BIN\ipy.exe)) {
+	log-critical "$env:DLR_BIN\ipy.exe does not exist.  Cannot continue!"
 }
 set-alias rowipy $env:DLR_ROOT\Languages\IronPython\Internal\ipy.bat
 
@@ -43,7 +43,7 @@ set-alias rowipy $env:DLR_ROOT\Languages\IronPython\Internal\ipy.bat
 
 pushd $env:DLR_ROOT\Languages\IronPython\Tests
 
-log-info "Running the following COM test: $PWD> $env:ROWAN_BIN\ipy.exe $args"
+log-info "Running the following COM test: $PWD> $env:DLR_BIN\ipy.exe $args"
 rowipy $args[0].Split(" ")
 $EC = $LASTEXITCODE
 
