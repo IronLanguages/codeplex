@@ -443,7 +443,7 @@ def test_bound_builtin_func():
     out = run_help(x.append)
     Assert(out.find('Help on built-in function append') != -1)
     if is_cli:   # Cpython and IronPython display different help
-        Assert(out.find('append(self, ') != -1)
+        Assert(out.find('append(self: ') != -1)
 
 @skip("win32")
 def test_clr_addreference():
@@ -459,14 +459,9 @@ def test_paramrefs():
     # System.DateTime.Parse (for example) has a paramrefs in its help text which get substitued
     # by paramnames.
     import System
-    sys.stdout = stdout_reader()
-    help(System.DateTime.Parse)
-    x = sys.stdout.text
-    sys.stdout = sys.__stdout__
+    x = run_help(System.DateTime.Parse)
     
-    print System.Threading.Thread.CurrentThread.CurrentCulture.Name   
-    print x
-    # TODO: Assert(x.find("A System.DateTime equivalent to the date and time contained in s.") != -1)
+    Assert(x.find("A System.DateTime equivalent to the date and time contained in s") != -1)
 
 @skip("silverlight") #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=20236#
 def test_type():        

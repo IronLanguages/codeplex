@@ -319,14 +319,16 @@ def test_sys_path_none_builtins():
         Assert('datetime' in sys.modules.keys())
         
         sys.path = prevPath + [None]
-        Assert('copy_reg' not in sys.modules.keys())
+        if not imp.is_builtin('copy_reg'):
+            Assert('copy_reg' not in sys.modules.keys())
         import datetime
         import copy_reg
         Assert('datetime' in sys.modules.keys())
         Assert('copy_reg' in sys.modules.keys())
         
         sys.path = [None]
-        Assert('binascii' not in sys.modules.keys())
+        if not imp.is_builtin('binascii'):
+            Assert('binascii' not in sys.modules.keys())
         import datetime
         import copy_reg
         import binascii
