@@ -250,8 +250,39 @@ namespace IronPython.Compiler.Ast {
             BitArray save = _bits;
             _bits = new BitArray(_bits);
 
-            foreach (ListComprehensionIterator iter in node.Iterators) iter.Walk(this);
+            foreach (ComprehensionIterator iter in node.Iterators) {
+                iter.Walk(this);
+            }
             node.Item.Walk(this);
+
+            _bits = save;
+            return false;
+        }
+
+        // SetComp
+        public override bool Walk(SetComprehension node) {
+            BitArray save = _bits;
+            _bits = new BitArray(_bits);
+
+            foreach (ComprehensionIterator iter in node.Iterators) {
+                iter.Walk(this);
+            }
+            node.Item.Walk(this);
+
+            _bits = save;
+            return false;
+        }
+
+        // DictComp
+        public override bool Walk(DictionaryComprehension node) {
+            BitArray save = _bits;
+            _bits = new BitArray(_bits);
+
+            foreach (ComprehensionIterator iter in node.Iterators) {
+                iter.Walk(this);
+            }
+            node.Key.Walk(this);
+            node.Value.Walk(this);
 
             _bits = save;
             return false;

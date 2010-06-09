@@ -215,9 +215,9 @@
     <Compile Include="Compiler\Ast\ImportStatement.cs" />
     <Compile Include="Compiler\Ast\IndexExpression.cs" />
     <Compile Include="Compiler\Ast\LambdaExpression.cs" />
-    <Compile Include="Compiler\Ast\ListComprehension.cs" />
-    <Compile Include="Compiler\Ast\ListComprehensionFor.cs" />
-    <Compile Include="Compiler\Ast\ListComprehensionIf.cs" />
+    <Compile Include="Compiler\Ast\Comprehension.cs" />
+    <Compile Include="Compiler\Ast\ComprehensionFor.cs" />
+    <Compile Include="Compiler\Ast\ComprehensionIf.cs" />
     <Compile Include="Compiler\Ast\ListExpression.cs" />
     <Compile Include="Compiler\LookupCompilationMode.cs" />
     <Compile Include="Compiler\Ast\MemberExpression.cs" />

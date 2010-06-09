@@ -1366,7 +1366,7 @@ namespace IronPython.Runtime {
                 x >>= 2;
                 res += 2;
             }
-            if (x >=  1 << 1) {
+            if (x >= 1 << 1) {
                 res += 1;
             }
 

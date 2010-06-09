@@ -266,6 +266,9 @@ namespace IronPython.Runtime.Operations {
         public static string __hex__(SByte value) {
             return BigIntegerOps.__hex__(value);
         }
+        public static int bit_length(SByte value) {
+            return MathUtils.BitLength((int)value);
+        }
     }
 
     public static partial class ByteOps {
@@ -579,6 +582,9 @@ namespace IronPython.Runtime.Operations {
         public static string __hex__(Byte value) {
             return BigIntegerOps.__hex__(value);
         }
+        public static int bit_length(Byte value) {
+            return MathUtils.BitLength((int)value);
+        }
     }
 
     public static partial class Int16Ops {
@@ -817,6 +823,9 @@ namespace IronPython.Runtime.Operations {
         }
         public static string __hex__(Int16 value) {
             return BigIntegerOps.__hex__(value);
+        }
+        public static int bit_length(Int16 value) {
+            return MathUtils.BitLength((int)value);
         }
     }
 
@@ -1137,6 +1146,9 @@ namespace IronPython.Runtime.Operations {
         public static string __hex__(UInt16 value) {
             return BigIntegerOps.__hex__(value);
         }
+        public static int bit_length(UInt16 value) {
+            return MathUtils.BitLength((int)value);
+        }
     }
 
     public static partial class Int32Ops {
@@ -1315,6 +1327,9 @@ namespace IronPython.Runtime.Operations {
         [PropertyMethod, SpecialName]
         public static Int32 Getdenominator(Int32 x) {
             return (Int32)1;
+        }
+        public static int bit_length(Int32 value) {
+            return MathUtils.BitLength(value);
         }
     }
 
@@ -1633,6 +1648,9 @@ namespace IronPython.Runtime.Operations {
         public static string __hex__(UInt32 value) {
             return BigIntegerOps.__hex__(value);
         }
+        public static int bit_length(UInt32 value) {
+            return MathUtils.BitLengthUnsigned(value);
+        }
     }
 
     public static partial class Int64Ops {
@@ -1875,6 +1893,9 @@ namespace IronPython.Runtime.Operations {
         }
         public static string __hex__(Int64 value) {
             return BigIntegerOps.__hex__(value);
+        }
+        public static int bit_length(Int64 value) {
+            return MathUtils.BitLength(value);
         }
     }
 
@@ -2200,6 +2221,9 @@ namespace IronPython.Runtime.Operations {
         }
         public static string __hex__(UInt64 value) {
             return BigIntegerOps.__hex__(value);
+        }
+        public static int bit_length(UInt64 value) {
+            return MathUtils.BitLengthUnsigned(value);
         }
     }
 

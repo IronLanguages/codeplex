@@ -449,10 +449,20 @@ def gen_api(cw, ty):
         write_property(cw, ty, "denominator", const="1")
         
         if ty.name != 'Int32':
-            cw.enter_block('public static string __hex__(%s value)' % (ty.name, ))
+            cw.enter_block('public static string __hex__(%s value)' % ty.name)
             cw.write('return BigIntegerOps.__hex__(value);')        
             cw.exit_block()
         
+        cast = "(int)"
+        counter = "BitLength"
+        if ty.size >= 4294967296:
+            # 32- or 64-bit type
+            cast = ""
+            if not ty.is_signed:
+                counter += "Unsigned"
+        cw.enter_block('public static int bit_length(%s value)' % ty.name)
+        cw.write('return MathUtils.%s(%svalue);' % (counter, cast))
+        cw.exit_block()
             
 type_header = """\
 [StaticExtensionMethod]

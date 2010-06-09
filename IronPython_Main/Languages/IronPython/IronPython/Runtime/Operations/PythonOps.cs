@@ -110,6 +110,10 @@ namespace IronPython.Runtime.Operations {
             return new SetCollection(items);
         }
 
+        public static SetCollection MakeEmptySet() {
+            return new SetCollection();
+        }
+
         /// <summary>
         /// Creates a new dictionary extracting the keys and values from the
         /// provided data array.  Keys/values are adjacent in the array with
@@ -3416,6 +3420,15 @@ namespace IronPython.Runtime.Operations {
         public static void ListAddForComprehension(List l, object o) {
             l.AddNoLock(o);
         }
+
+        public static void SetAddForComprehension(SetCollection s, object o) {
+            s._items.AddNoLock(o);
+        }
+
+        public static void DictAddForComprehension(PythonDictionary d, object k, object v) {
+            d._storage.AddNoLock(ref d._storage, k, v);
+        }
+
 
         public static void ModuleStarted(CodeContext/*!*/ context, ModuleOptions features) {
             context.ModuleContext.Features |= features;

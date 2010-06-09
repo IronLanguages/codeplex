@@ -19,38 +19,46 @@ using MSAst = System.Linq.Expressions;
 using MSAst = Microsoft.Scripting.Ast;
 #endif
 
-using Microsoft.Scripting.Actions;
-
-using AstUtils = Microsoft.Scripting.Ast.Utils;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
     using Ast = MSAst.Expression;
 
-    public class ListComprehensionIf : ListComprehensionIterator {
-        private readonly Expression _test;
+    public class ComprehensionFor : ComprehensionIterator {
+        private readonly Expression _lhs, _list;
 
-        public ListComprehensionIf(Expression test) {
-            _test = test;
+        public ComprehensionFor(Expression lhs, Expression list) {
+            _lhs = lhs;
+            _list = list;
         }
 
-        public Expression Test {
-            get { return _test; }
+        public Expression Left {
+            get { return _lhs; }
+        }
+
+        public Expression List {
+            get { return _list; }
         }
 
         internal override MSAst.Expression Transform(MSAst.Expression body) {
-            return GlobalParent.AddDebugInfoAndVoid(
-                AstUtils.If(
-                    GlobalParent.Convert(typeof(bool), ConversionResultKind.ExplicitCast, _test),
-                    body
-                ),
-                Span
+            MSAst.ParameterExpression temp = Ast.Parameter(typeof(KeyValuePair<IEnumerator, IDisposable>), "list_comprehension_for");
+
+            return Ast.Block(
+                new[] { temp },
+                ForStatement.TransformFor(Parent, temp, _list, _lhs, body, null, Span, GlobalParent.IndexToLocation(_lhs.EndIndex), null, null, false)
             );
         }
 
         public override void Walk(PythonWalker walker) {
             if (walker.Walk(this)) {
-                if (_test != null) {
-                    _test.Walk(walker);
+                if (_lhs != null) {
+                    _lhs.Walk(walker);
+                }
+                if (_list != null) {
+                    _list.Walk(walker);
                 }
             }
             walker.PostWalk(this);
