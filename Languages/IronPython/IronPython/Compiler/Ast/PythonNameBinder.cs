@@ -360,7 +360,17 @@ namespace IronPython.Compiler.Ast {
             return base.Walk(node);
         }
 
-        public override bool Walk(ListComprehensionIf node) {
+        public override bool Walk(SetComprehension node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(DictionaryComprehension node) {
+            node.Parent = _currentScope;
+            return base.Walk(node);
+        }
+
+        public override bool Walk(ComprehensionIf node) {
             node.Parent = _currentScope;
             return base.Walk(node);
         }
@@ -766,7 +776,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         // ListComprehensionFor
-        public override bool Walk(ListComprehensionFor node) {
+        public override bool Walk(ComprehensionFor node) {
             node.Parent = _currentScope;
             node.Left.Walk(_define);
             return true;

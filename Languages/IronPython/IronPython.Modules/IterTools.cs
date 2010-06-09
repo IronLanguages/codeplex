@@ -16,18 +16,22 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 #if CLR2
 using Microsoft.Scripting.Math;
+using Complex = Microsoft.Scripting.Math.Complex64;
 #else
 using System.Numerics;
 #endif
@@ -100,8 +104,7 @@ namespace IronPython.Modules {
 
         [PythonType]
         public class chain : IterBase {
-            private chain() {
-            }
+            private chain() { }
 
             public chain(params object[] iterables) {
                 InnerEnumerator = LazyYielder(iterables);
@@ -133,53 +136,217 @@ namespace IronPython.Modules {
         }
 
         [PythonType]
-        public class count : IEnumerator, ICodeFormattable {
-            private BigInteger _cur, _start;
+        public class compress : IterBase {
+            private compress() { }
 
-            public count() {
-                _cur = _start = -1;
+            public compress(CodeContext/*!*/ context, [NotNull]object data, [NotNull]object selectors) {
+                EnsureIterator(context, data);
+                EnsureIterator(context, selectors);
+                InnerEnumerator = LazyYielder(data, selectors);
             }
 
-            public count([NotNull]BigInteger n) {
-                _cur = _start = n - 1;
-            }
-
-            #region IEnumerator Members
-
-            object IEnumerator.Current {
-                get {
-                    int res;
-                    if (_cur.AsInt32(out res)) {
-                        return ScriptingRuntimeHelpers.Int32ToObject(res);
-                    }
-                    return _cur;
+            private static void EnsureIterator(CodeContext/*!*/ context, object iter) {
+                if (iter is IEnumerable || iter is IEnumerator ||
+                    iter is IEnumerable<object> || iter is IEnumerator<object>) {
+                    return;
+                }
+                if (iter == null ||
+                    !PythonOps.HasAttr(context, iter, "__iter__") &&
+                    !PythonOps.HasAttr(context, iter, "__getitem__")) {
+                        if (iter is OldInstance) {
+                            throw PythonOps.TypeError("iteration over non-sequence");
+                        } else {
+                            throw PythonOps.TypeError("'{0}' object is not iterable", PythonTypeOps.GetName(iter));
+                        }
                 }
             }
 
-            bool IEnumerator.MoveNext() {
-                _cur += 1;
-                return true;
+            // (d for d, s in zip(data, selectors) if s)
+            private static IEnumerator<object> LazyYielder(object data, object selectors) {
+                IEnumerator de = PythonOps.GetEnumerator(data);
+                IEnumerator se = PythonOps.GetEnumerator(selectors);
+
+                while (de.MoveNext()) {
+                    if (!se.MoveNext()) {
+                        break;
+                    }
+                    if (PythonOps.IsTrue(se.Current)) {
+                        yield return de.Current;
+                    }
+                }
+            }
+        }
+
+        [PythonType]
+        public class count : IterBase, ICodeFormattable {
+            private int _curInt;
+            private object _step, _cur;
+
+            public count() {
+                _curInt = 0;
+                _step = 1;
+                InnerEnumerator = IntYielder(this, 0, 1);
             }
 
-            void IEnumerator.Reset() {
-                _cur = _start;
+            public count(int start) {
+                _curInt = start;
+                _step = 1;
+                InnerEnumerator = IntYielder(this, start, 1);
             }
 
-            public object __iter__() {
-                return this;
+            public count(BigInteger start) {
+                _cur = start;
+                _step = 1;
+                InnerEnumerator = BigIntYielder(this, start, 1);
             }
 
-            #endregion
+            public count([DefaultParameterValue(0)]int start, [DefaultParameterValue(1)]int step) {
+                _curInt = start;
+                _step = step;
+                InnerEnumerator = IntYielder(this, start, step);
+            }
+
+            public count([DefaultParameterValue(0)]int start, [DefaultParameterValue(1)]BigInteger step) {
+                _curInt = start;
+                _step = step;
+                InnerEnumerator = IntYielder(this, start, step);
+            }
+
+            public count(BigInteger start, [DefaultParameterValue(1)]int step) {
+                _cur = start;
+                _step = step;
+                InnerEnumerator = BigIntYielder(this, start, step);
+            }
+
+            public count(BigInteger start, [DefaultParameterValue(1)]BigInteger step) {
+                _cur = start;
+                _step = step;
+                InnerEnumerator = BigIntYielder(this, start, step);
+            }
+
+            public count(CodeContext/*!*/ context, [DefaultParameterValue(0)]object start, [DefaultParameterValue(1)]object step) {
+                EnsureNumeric(context, start);
+                EnsureNumeric(context, step);
+                _cur = start;
+                _step = step;
+                InnerEnumerator = ObjectYielder(PythonContext.GetContext(context), this, start, step);
+            }
+
+            private static void EnsureNumeric(CodeContext/*!*/ context, object num) {
+                if (num is int || num is double || num is BigInteger || num is Complex) {
+                    return;
+                }
+                if (num == null ||
+                    !PythonOps.HasAttr(context, num, "__int__") &&
+                    !PythonOps.HasAttr(context, num, "__float__")) {
+                        throw PythonOps.TypeError("a number is required");
+                }
+            }
+
+            private static IEnumerator<object> IntYielder(count c, int start, int step) {
+                int prev;
+                for (; ; ) {
+                    prev = c._curInt;
+                    try {
+                        start = checked(start + step);
+                    } catch (OverflowException) {
+                        break;
+                    }
+
+                    c._curInt = start;
+                    yield return prev;
+                }
+
+                BigInteger startBig = (BigInteger)start + step;
+                c._cur = startBig;
+                yield return prev;
+
+                for (startBig += step; ; startBig += step) {
+                    object prevObj = c._cur;
+                    c._cur = startBig;
+                    yield return prevObj;
+                }
+            }
+
+            private static IEnumerator<object> IntYielder(count c, int start, BigInteger step) {
+                BigInteger startBig = (BigInteger)start + step;
+                c._cur = startBig;
+                yield return start;
+
+                for (startBig += step; ; startBig += step) {
+                    object prevObj = c._cur;
+                    c._cur = startBig;
+                    yield return prevObj;
+                }
+            }
+
+            private static IEnumerator<BigInteger> BigIntYielder(count c, BigInteger start, int step) {
+                for (start += step; ; start += step) {
+                    BigInteger prev = (BigInteger)c._cur;
+                    c._cur = start;
+                    yield return prev;
+                }
+            }
+
+            private static IEnumerator<BigInteger> BigIntYielder(count c, BigInteger start, BigInteger step) {
+                for (start += step; ; start += step) {
+                    BigInteger prev = (BigInteger)c._cur;
+                    c._cur = start;
+                    yield return prev;
+                }
+            }
+
+            private static IEnumerator<object> ObjectYielder(PythonContext context, count c, object start, object step) {
+                start = context.Operation(PythonOperationKind.Add, start, step);
+                for (; ; start = context.Operation(PythonOperationKind.Add, start, step)) {
+                    object prev = c._cur;
+                    c._cur = start;
+                    yield return prev;
+                }
+            }
+
+            public PythonTuple __reduce__() {
+                PythonTuple args;
+                if (StepIsOne()) {
+                    args = PythonOps.MakeTuple(_cur == null ? _curInt : _cur);
+                } else {
+                    args = PythonOps.MakeTuple(_cur == null ? _curInt : _cur, _step);
+                }
+
+                return PythonOps.MakeTuple(DynamicHelpers.GetPythonType(this), args);
+            }
+
+            public PythonTuple __reduce_ex__([Optional]int protocol) {
+                return __reduce__();
+            }
+
+            private bool StepIsOne() {
+                if (_step is int) {
+                    return (int)_step == 1;
+                }
+
+                Extensible<int> stepExt;
+                if ((stepExt = _step as Extensible<int>) != null) {
+                    return stepExt.Value == 1;
+                }
+
+                return false;
+            }
 
             #region ICodeFormattable Members
 
-            public string/*!*/ __repr__(CodeContext/*!*/ context) {
-                int res;
-                if ((_cur + 1).AsInt32(out res)) {
-                    return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), _cur + 1);
-                } else {
-                    return String.Format("{0}({1}L)", PythonOps.GetPythonTypeName(this), _cur + 1);
+            public string __repr__(CodeContext/*!*/ context) {
+                object cur = _cur == null ? _curInt : _cur;
+
+                if (StepIsOne()) {
+                    return string.Format("count({0})", PythonOps.Repr(context, cur));
                 }
+
+                return string.Format(
+                    "count({0}, {1})",
+                    PythonOps.Repr(context, cur),
+                    PythonOps.Repr(context, _step)
+                );
             }
 
             #endregion
@@ -656,14 +823,14 @@ namespace IronPython.Modules {
                     enums[0] = _data.GetEnumerator();
 
                     int curDepth = 0;
-                    int[] curIndicies = new int[enums.Length];
+                    int[] curIndices = new int[enums.Length];
                     do {
                         if (enums[curDepth].MoveNext()) {
-                            curIndicies[curDepth]++;
-                            int curIndex = curIndicies[curDepth];
+                            curIndices[curDepth]++;
+                            int curIndex = curIndices[curDepth];
                             bool shouldSkip = false;
                             for (int i = 0; i < curDepth; i++) {
-                                if (curIndicies[i] >= curIndicies[curDepth]) {
+                                if (curIndices[i] >= curIndices[curDepth]) {
                                     // skip if we've already seen this index or a higher
                                     // index elsewhere
                                     shouldSkip = true;
@@ -684,7 +851,64 @@ namespace IronPython.Modules {
                                     // going to the next depth, get a new enumerator
                                     curDepth++;
                                     enums[curDepth] = _data.GetEnumerator();
-                                    curIndicies[curDepth] = 0;
+                                    curIndices[curDepth] = 0;
+                                }
+                            }
+                        } else {
+                            // current depth exhausted, go to the previous iterator
+                            curDepth--;
+                        }
+                    } while (curDepth != -1);
+                } else {
+                    yield return PythonTuple.EMPTY;
+                }
+            }
+        }
+
+        [PythonType]
+        public class combinations_with_replacement : IterBase {
+            private readonly List _data;
+
+            public combinations_with_replacement(object iterable, object r) {
+                _data = new List(iterable);
+
+                InnerEnumerator = Yielder(GetR(r, _data));
+            }
+
+            private IEnumerator<object> Yielder(int r) {
+                IEnumerator[] enums = new IEnumerator[r];
+                if (r > 0) {
+                    enums[0] = _data.GetEnumerator();
+
+                    int curDepth = 0;
+                    int[] curIndices = new int[enums.Length];
+                    do {
+                        if (enums[curDepth].MoveNext()) {
+                            curIndices[curDepth]++;
+                            int curIndex = curIndices[curDepth];
+                            bool shouldSkip = false;
+                            for (int i = 0; i < curDepth; i++) {
+                                if (curIndices[i] > curIndices[curDepth]) {
+                                    // skip if we've already seen a higher index elsewhere
+                                    shouldSkip = true;
+                                    break;
+                                }
+                            }
+
+                            if (!shouldSkip) {
+                                if (curDepth == enums.Length - 1) {
+                                    // create a new array so we don't mutate previous tuples
+                                    object[] final = new object[r];
+                                    for (int j = 0; j < enums.Length; j++) {
+                                        final[j] = enums[j].Current;
+                                    }
+
+                                    yield return PythonTuple.MakeTuple(final);
+                                } else {
+                                    // going to the next depth, get a new enumerator
+                                    curDepth++;
+                                    enums[curDepth] = _data.GetEnumerator();
+                                    curIndices[curDepth] = 0;
                                 }
                             }
                         } else {
@@ -720,14 +944,14 @@ namespace IronPython.Modules {
                     enums[0] = _data.GetEnumerator();
 
                     int curDepth = 0;
-                    int[] curIndicies = new int[enums.Length];
+                    int[] curIndices = new int[enums.Length];
                     do {
                         if (enums[curDepth].MoveNext()) {
-                            curIndicies[curDepth]++;
-                            int curIndex = curIndicies[curDepth];
+                            curIndices[curDepth]++;
+                            int curIndex = curIndices[curDepth];
                             bool shouldSkip = false;
                             for (int i = 0; i < curDepth; i++) {
-                                if (curIndicies[i] == curIndicies[curDepth]) {
+                                if (curIndices[i] == curIndices[curDepth]) {
                                     // skip if we're already using this index elsewhere
                                     shouldSkip = true;
                                     break;
@@ -747,7 +971,7 @@ namespace IronPython.Modules {
                                     // going to the next depth, get a new enumerator
                                     curDepth++;
                                     enums[curDepth] = _data.GetEnumerator();
-                                    curIndicies[curDepth] = 0;
+                                    curIndices[curDepth] = 0;
                                 }
                             }
                         } else {

@@ -117,6 +117,7 @@ from IronPython:
     Type: <type 'basestring'>/Type: <type 'str'>  zfill                         
     Type: <type 'bool'>  __eq__                        
     Type: <type 'bool'>  __ne__                        
+    Type: <type 'bool'>  bit_length                    
     Type: <type 'builtin_function_or_method'>  __get__                       
     Type: <type 'builtin_function_or_method'>  __get__                       
     Type: <type 'builtin_function_or_method'>  __get__                       
@@ -125,7 +126,9 @@ from IronPython:
     Type: <type 'datetime.timedelta'>  __getnewargs__                
     Type: <type 'instancemethod'>  __eq__                        
     Type: <type 'instancemethod'>  __ne__                        
+    Type: <type 'int'>  bit_length                    
     Type: <type 'list'>  __radd__                      
+    Type: <type 'long'>  bit_length                    
     Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __ge__                        
     Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __get__                       
     Type: <type 'method-wrapper'>/Type: <type 'builtin_function_or_method'>  __gt__                        

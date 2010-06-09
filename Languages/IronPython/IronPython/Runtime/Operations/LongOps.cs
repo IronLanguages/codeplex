@@ -582,6 +582,10 @@ namespace IronPython.Runtime.Operations {
             return (BigInteger)1;
         }
 
+        public static int bit_length(BigInteger self) {
+            return MathUtils.BitLength(self);
+        }
+
         public static BigInteger __trunc__(BigInteger self) {
             return self;
         }

@@ -2020,7 +2020,7 @@ namespace IronPython.Compiler {
                     return FinishListValue();
                 case TokenKind.LeftBrace:       // dict_display
                     NextToken();
-                    return FinishDictValue();
+                    return FinishDictOrSetValue();
                 case TokenKind.BackQuote:       // string_conversion
                     NextToken();
                     return FinishStringConversion();
@@ -2666,12 +2666,12 @@ namespace IronPython.Compiler {
         }
 
 
-        // dict_display: '{' dictorsetmaker '}'
-        // dictorsetmaker: ( (test ':' test (',' test ':' test)* [',']) |
-        //          (test (',' test)* [',']) )
+        // dict_display: '{' [dictorsetmaker] '}'
+        // dictorsetmaker: ( (test ':' test (comp_for | (',' test ':' test)* [','])) |
+        //                   (test (comp_for | (',' test)* [','])) )
 
 
-        private Expression FinishDictValue() {
+        private Expression FinishDictOrSetValue() {
             var oStart = GetStart();
             var oEnd = GetEnd();
 
@@ -2681,25 +2681,43 @@ namespace IronPython.Compiler {
             try {
                 _allowIncomplete = true;
                 while (true) {
-                    if (MaybeEat(TokenKind.RightBrace)) {
+                    if (MaybeEat(TokenKind.RightBrace)) { // empty dict literal
                         break;
                     }
+                    bool first = false;
                     Expression e1 = ParseExpression();
-                    if (MaybeEat(TokenKind.Colon)) {
+                    if (MaybeEat(TokenKind.Colon)) { // dict literal
                         if (setMembers != null) {
                             ReportSyntaxError("invalid syntax");
                         } else if (dictMembers == null) {
                             dictMembers = new List<SliceExpression>();
+                            first = true;
                         }
                         Expression e2 = ParseExpression();
+
+                        if (PeekToken(Tokens.KeywordForToken)) {
+                            if (!first) {
+                                ReportSyntaxError("invalid syntax");
+                            }
+                            return FinishDictComp(e1, e2);
+                        }
+
                         SliceExpression se = new SliceExpression(e1, e2, null, false);
                         se.SetLoc(_globalParent, e1.StartIndex, e2.EndIndex);
                         dictMembers.Add(se);
-                    } else {
+                    } else { // set literal
                         if (dictMembers != null) {
                             ReportSyntaxError("invalid syntax");
                         } else if (setMembers == null) {
                             setMembers = new List<Expression>();
+                            first = true;
+                        }
+
+                        if (PeekToken(Tokens.KeywordForToken)) {
+                            if (!first) {
+                                ReportSyntaxError("invalid syntax");
+                            }
+                            return FinishSetComp(e1);
                         }
 
                         // error recovery
@@ -2746,6 +2764,64 @@ namespace IronPython.Compiler {
             }
         }
 
+        // comp_iter '}'
+        private SetComprehension FinishSetComp(Expression item) {
+            ComprehensionIterator[] iters = ParseCompIter();
+            Eat(TokenKind.RightBrace);
+            return new SetComprehension(item, iters);
+        }
+
+        // comp_iter '}'
+        private DictionaryComprehension FinishDictComp(Expression key, Expression value) {
+            ComprehensionIterator[] iters = ParseCompIter();
+            Eat(TokenKind.RightBrace);
+            return new DictionaryComprehension(key, value, iters);
+        }
+
+        // comp_iter: comp_for | comp_if
+        private ComprehensionIterator[] ParseCompIter() {
+            List<ComprehensionIterator> iters = new List<ComprehensionIterator>();
+            ComprehensionFor firstFor = ParseCompFor();
+            iters.Add(firstFor);
+
+            while (true) {
+                if (PeekToken(Tokens.KeywordForToken)) {
+                    iters.Add(ParseCompFor());
+                } else if (PeekToken(Tokens.KeywordIfToken)) {
+                    iters.Add(ParseCompIf());
+                } else {
+                    break;
+                }
+            }
+
+            return iters.ToArray();
+        }
+
+        // comp_for: 'for target_list 'in' or_test [comp_iter]
+        private ComprehensionFor ParseCompFor() {
+            Eat(TokenKind.KeywordFor);
+            var start = GetStart();
+            bool trailingComma;
+            List<Expression> l = ParseTargetList(out trailingComma);
+
+            // expr list is something like:
+            //  ()
+            // a
+            // a,b
+            // a,b,c
+            // we either want just () or a or we want (a,b) and (a,b,c)
+            // so we can do tupleExpr.EmitSet() or loneExpr.EmitSet()
+
+            Expression lhs = MakeTupleOrExpr(l, trailingComma);
+            Eat(TokenKind.KeywordIn);
+
+            Expression list = ParseOrTest();
+
+            ComprehensionFor ret = new ComprehensionFor(lhs, list);
+
+            ret.SetLoc(_globalParent, start, GetEnd());
+            return ret;
+        }
 
         // listmaker: expression ( list_for | (',' expression)* [','] )
         private Expression FinishListValue() {
@@ -2792,28 +2868,34 @@ namespace IronPython.Compiler {
             return ret;
         }
 
-        // list_iter: list_for | list_if
+        // list_iter ']'
         private ListComprehension FinishListComp(Expression item) {
-            List<ListComprehensionIterator> iters = new List<ListComprehensionIterator>();
-            ListComprehensionFor firstFor = ParseListCompFor();
+            ComprehensionIterator[] iters = ParseListCompIter();
+            Eat(TokenKind.RightBracket);
+            return new ListComprehension(item, iters);
+        }
+
+        // list_iter: list_for | list_if
+        private ComprehensionIterator[] ParseListCompIter() {
+            List<ComprehensionIterator> iters = new List<ComprehensionIterator>();
+            ComprehensionFor firstFor = ParseListCompFor();
             iters.Add(firstFor);
 
             while (true) {
                 if (PeekToken(Tokens.KeywordForToken)) {
                     iters.Add(ParseListCompFor());
                 } else if (PeekToken(Tokens.KeywordIfToken)) {
-                    iters.Add(ParseListCompIf());
+                    iters.Add(ParseCompIf());
                 } else {
                     break;
                 }
             }
 
-            Eat(TokenKind.RightBracket);
-            return new ListComprehension(item, iters.ToArray());
+            return iters.ToArray();
         }
 
         // list_for: 'for' target_list 'in' old_expression_list [list_iter]
-        private ListComprehensionFor ParseListCompFor() {
+        private ComprehensionFor ParseListCompFor() {
             Eat(TokenKind.KeywordFor);
             var start = GetStart();
             bool trailingComma;
@@ -2830,21 +2912,21 @@ namespace IronPython.Compiler {
             Expression lhs = MakeTupleOrExpr(l, trailingComma);
             Eat(TokenKind.KeywordIn);
 
-            Expression list = null;
-            list = ParseOldExpressionListAsExpr();
+            Expression list = ParseOldExpressionListAsExpr();
 
-            ListComprehensionFor ret = new ListComprehensionFor(lhs, list);
+            ComprehensionFor ret = new ComprehensionFor(lhs, list);
 
             ret.SetLoc(_globalParent, start, GetEnd());
             return ret;
         }
 
         // list_if: 'if' old_test [list_iter]
-        private ListComprehensionIf ParseListCompIf() {
+        // comp_if: 'if' old_test [comp_iter]
+        private ComprehensionIf ParseCompIf() {
             Eat(TokenKind.KeywordIf);
             var start = GetStart();
             Expression expr = ParseOldExpression();
-            ListComprehensionIf ret = new ListComprehensionIf(expr);
+            ComprehensionIf ret = new ComprehensionIf(expr);
 
             ret.SetLoc(_globalParent, start, GetEnd());
             return ret;
