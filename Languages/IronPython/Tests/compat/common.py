@@ -51,7 +51,7 @@ def get_all_paths():
             dlr_bin = get_environ_variable('DLR_BIN')
             if dlr_bin:
                 if dlr_bin.startswith('"'):
-                    # strip quotes when DLR_BIN has spaces, e.g. "bin\Debug\V4 Debug"
+                    # strip quotes when DLR_BIN has spaces, e.g. "bin\Debug\v4Debug"
                     Assert(dlr_bin.endswith('"'))
                     dlr_bin = dlr_bin[1:-1]
             elif not get_environ_variable('THISISSNAP'):

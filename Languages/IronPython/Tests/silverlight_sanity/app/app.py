@@ -14,7 +14,7 @@
 #####################################################################################
 
 """
-Bare-bones application used to ensure the 'Silverlight Release' build configuration of
+Bare-bones application used to ensure the 'Silverlight3Release' build configuration of
 IronPython is OK.
 """
 
