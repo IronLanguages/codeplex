@@ -33,9 +33,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Debug' ">
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight3Debug' ">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>$(SolutionDir)..\bin\Silverlight Debug</OutputPath>
+    <OutputPath>$(SolutionDir)..\bin\Silverlight3Debug</OutputPath>
     <DefineConstants>TRACE;DEBUG;SILVERLIGHT</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -43,8 +43,8 @@
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
-    <OutputPath>$(SolutionDir)..\bin\Silverlight Release</OutputPath>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight3Release' ">
+    <OutputPath>$(SolutionDir)..\bin\Silverlight3Release</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <DebugType>pdbonly</DebugType>
@@ -72,9 +72,9 @@
   <PropertyGroup>
     <Prefix>rowantest.</Prefix>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'V4 Debug'">
+  <PropertyGroup Condition="'$(Configuration)' == 'v4Debug'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\V4 Debug\</OutputPath>
+    <OutputPath>bin\v4Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -82,8 +82,8 @@
     <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
     <CodeAnalysisFailOnMissingRules>true</CodeAnalysisFailOnMissingRules>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'V4 Release'">
-    <OutputPath>bin\V4 Release\</OutputPath>
+  <PropertyGroup Condition="'$(Configuration)' == 'v4Release'">
+    <OutputPath>bin\v4Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
