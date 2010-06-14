@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Metadata {
         }
 
         public void Seek(int position) {
-            if (position > _block.Length) {
+            if (position < 0 || position > _block.Length) {
                 throw new BadImageFormatException();
             }
             _position = position;
@@ -138,21 +138,13 @@ namespace Microsoft.Scripting.Metadata {
         }
 
         /// <summary>
-        /// Reads zero terminated sequence of bytes and converts them it an ASCII string.
-        /// </summary>
-        public string ReadAscii() {
-            var result = _block.ReadAscii(_position);
-            _position += result.Length + 1;
-            return result;
-        }
-
-        /// <summary>
         /// Reads zero terminated sequence of bytes of given maximal length and converts it into an ASCII string.
         /// </summary>
         public string ReadAscii(int maxByteCount) {
             int current = _position;
-            _position = current + maxByteCount;
-            return _block.ReadAscii(current, maxByteCount);
+            string result = _block.ReadAscii(current, maxByteCount);
+            _position = current + result.Length + 1; // terminating \0
+            return result;
         }
     }
 }
