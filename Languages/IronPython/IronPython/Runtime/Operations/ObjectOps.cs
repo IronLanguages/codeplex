@@ -209,7 +209,7 @@ namespace IronPython.Runtime.Operations {
                 res += AdjustPointerSize(12); // class, dict, slots 
             }
 
-            Type t = PythonTypeOps.GetFinalSystemType(DynamicHelpers.GetPythonType(self));
+            Type t = DynamicHelpers.GetPythonType(self).FinalSystemType;
             res += GetTypeSize(t);
 
             return res;

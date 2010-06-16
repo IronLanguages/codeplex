@@ -33,7 +33,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime {
 
     [PythonType("instancemethod"), DontMapGetMemberNamesToDir]
-    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IPythonMembersList, IDynamicMetaObjectProvider, ICodeFormattable {
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, IPythonMembersList, IDynamicMetaObjectProvider, ICodeFormattable, Binding.IFastInvokable {
         private readonly object _func;
         private readonly object _inst;
         private readonly object _declaringClass;

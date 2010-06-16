@@ -52,25 +52,22 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static string GetModuleName(CodeContext/*!*/ context, Type type) {
-            if (IsRuntimeAssembly(type.Assembly) || PythonBinder.IsPythonType(type)) {
-                Type curType = type;
-                while (curType != null) {
-                    string moduleName;
-                    if (PythonContext.GetContext(context).BuiltinModuleNames.TryGetValue(curType, out moduleName)) {
-                        return moduleName;
-                    }
-
-                    curType = curType.DeclaringType;
+            Type curType = type;
+            while (curType != null) {
+                string moduleName;
+                if (PythonContext.GetContext(context).BuiltinModuleNames.TryGetValue(curType, out moduleName)) {
+                    return moduleName;
                 }
 
-                FieldInfo modField = type.GetField("__module__");
-                if (modField != null && modField.IsLiteral && modField.FieldType == typeof(string)) {
-                    return (string)modField.GetRawConstantValue();
-                }
-                return "__builtin__";
+                curType = curType.DeclaringType;
             }
 
-            return type.Namespace + " in " + type.Assembly.FullName;
+            FieldInfo modField = type.GetField("__module__");
+            if (modField != null && modField.IsLiteral && modField.FieldType == typeof(string)) {
+                return (string)modField.GetRawConstantValue();
+            }
+
+            return "__builtin__";
         }
 
         internal static object CallParams(CodeContext/*!*/ context, PythonType cls, params object[] args\u03c4) {

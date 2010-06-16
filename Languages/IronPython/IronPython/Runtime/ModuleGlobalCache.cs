@@ -13,16 +13,13 @@
  *
  * ***************************************************************************/
 
-#if !CLR2
-using System.Linq.Expressions;
-#else
-using Microsoft.Scripting.Ast;
-#endif
-
-using System.Diagnostics;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
 using System;
+using System.Diagnostics;
+
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -69,7 +66,7 @@ namespace IronPython.Runtime {
                 return _value;
             }
             set {
-                if (_value == NotCaching) throw new ArgumentException("Cannot change non-caching value.");
+                if (_value == NotCaching) throw new ValueErrorException("Cannot change non-caching value.");
                 _value = value;
             }
         }

@@ -323,6 +323,7 @@ namespace IronPython.Modules {
             return PythonOps.LookupEncoding(context, encoding);
         }
 
+        [LightThrowing]
         public static object lookup_error(CodeContext/*!*/ context, string name) {
             return PythonOps.LookupEncodingError(context, name);
         }

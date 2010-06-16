@@ -210,7 +210,7 @@ namespace IronPython.Runtime.Binding {
                 // a = nc_ga.x # here we want to dispatch to the type's rule, not call __getattribute__ directly.
 
                 CodeContext context = PythonContext.GetPythonContext(info.Action).SharedContext;
-                Type finalType = PythonTypeOps.GetFinalSystemType(obj.PythonType.UnderlyingSystemType);
+                Type finalType = obj.PythonType.FinalSystemType;
                 if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {
                     PythonTypeSlot baseSlot;
                     if (TryGetGetAttribute(context, DynamicHelpers.GetPythonTypeFromType(finalType), out baseSlot) && baseSlot == slot) {
@@ -579,8 +579,8 @@ namespace IronPython.Runtime.Binding {
                     }
                 }
 
-                if (dlg != null && dlg.ShouldUseNonOptimizedSite) {                    
-                    return new FastBindResult<Func<CallSite, object, CodeContext, object>>(dlg._func, false);
+                if (dlg != null && dlg.ShouldUseNonOptimizedSite) {
+                    return new FastBindResult<Func<CallSite, object, CodeContext, object>>(dlg._func, dlg.ShouldCache);
                 }
                 return new FastBindResult<Func<CallSite, object, CodeContext, object>>();
             }
@@ -638,7 +638,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             private Func<CallSite, object, CodeContext, object> FallbackError() {
-                Type finalType = PythonTypeOps.GetFinalSystemType(Value.PythonType.UnderlyingSystemType);
+                Type finalType = Value.PythonType.FinalSystemType;
                 if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {                    
                     return ((IFastGettable)Value).MakeGetBinding(_site, _binder, _context, _binder.Name);
                 }
@@ -656,7 +656,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             protected override FastGetBase BindGetAttribute(PythonTypeSlot foundSlot) {
-                Type finalType = PythonTypeOps.GetFinalSystemType(Value.PythonType.UnderlyingSystemType);
+                Type finalType = Value.PythonType.FinalSystemType;
                 if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType)) {
                     Debug.Assert(Value is IFastGettable);
 

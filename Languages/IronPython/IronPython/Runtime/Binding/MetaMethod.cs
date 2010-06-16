@@ -23,9 +23,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -119,7 +121,7 @@ namespace IronPython.Runtime.Binding {
                             Ast.Dynamic(
                                 PythonContext.GetPythonContext(callAction).Invoke(
                                     BindingHelpers.GetCallSignature(callAction)
-                                ),
+                                ).GetLightExceptionBinder(callAction.SupportsLightThrow()),
                                 typeof(object),
                                 ArrayUtils.Insert(PythonContext.GetCodeContext(callAction), DynamicUtils.GetExpressions(ArrayUtils.Insert(func, args)))
                             )
@@ -159,7 +161,7 @@ namespace IronPython.Runtime.Binding {
                     Ast.Dynamic(
                         PythonContext.GetPythonContext(callAction).Invoke(
                             newSig
-                        ),
+                        ).GetLightExceptionBinder(callAction.SupportsLightThrow()),
                         typeof(object),
                         ArrayUtils.Insert(PythonContext.GetCodeContext(callAction), DynamicUtils.GetExpressions(newArgs))
                     ),

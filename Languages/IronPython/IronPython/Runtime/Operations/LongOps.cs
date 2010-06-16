@@ -1059,11 +1059,11 @@ namespace IronPython.Runtime.Operations {
                         throw PythonOps.ValueError("Sign not allowed with integer format specifier 'c'");
                     } else if (!self.AsInt32(out iVal)) {
                         throw PythonOps.OverflowError("long int too large to convert to int");
-                    } else if(iVal < Char.MinValue || iVal > Char.MaxValue) {
+                    } else if(iVal < 0 || iVal > 0xFF) {
                         throw PythonOps.OverflowError("%c arg not in range(0x10000)");
                     }
 
-                    digits = Builtin.chr(iVal);
+                    digits = digits = ScriptingRuntimeHelpers.CharToString((char)iVal);
                     break;
                 default:
                     throw PythonOps.ValueError("Unknown format code '{0}'", spec.Type.ToString());

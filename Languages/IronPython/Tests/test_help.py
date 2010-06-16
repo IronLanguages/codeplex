@@ -472,6 +472,10 @@ def test_type():
         
     Assert("CodeContext" not in x)
     Assert(x.count("type(") > 1)
+
+def test_builtinfunc_module():
+    AreEqual([].append.__module__, None)
+    AreEqual(min.__module__, '__builtin__')
     
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

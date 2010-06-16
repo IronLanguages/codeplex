@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -440,7 +441,7 @@ namespace IronPython.Runtime {
         int IStructuralComparable.CompareTo(object obj, IComparer comparer) {
             PythonTuple other = obj as PythonTuple;
             if (other == null) {
-                throw new ArgumentException("expected tuple");
+                throw new ValueErrorException("expected tuple");
             }
 
             return PythonOps.CompareArrays(_data, _data.Length, other._data, other._data.Length, comparer);

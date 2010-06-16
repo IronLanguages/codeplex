@@ -116,7 +116,10 @@ namespace IronPython.Runtime.Binding {
             } else {
                 PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "InvokeNoFast " + CompilerHelpers.GetType(args[1]));
             }
-            return base.BindDelegate(site, args);
+
+            var target = this.LightBind<T>(args, Context.Options.CompilationThreshold);
+            base.CacheTarget(target);
+            return target;
         }
 
         /// <summary>
@@ -321,6 +324,13 @@ namespace IronPython.Runtime.Binding {
                 _lightThrowBinder = new LightThrowBinder(_context, _signature);
             }
             return _lightThrowBinder;
+        }
+
+        public CallSiteBinder GetLightExceptionBinder(bool really) {
+            if (really) {
+                return GetLightExceptionBinder();
+            }
+            return this;
         }
 
         class LightThrowBinder : PythonInvokeBinder {

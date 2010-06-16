@@ -874,7 +874,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static string lower(this string self) {
-            return self.ToLower(CultureInfo.InvariantCulture);
+            for (int i = 0; i < self.Length; i++) {
+                if (self[i] >= 'A' && self[i] <= 'Z') {
+                    return self.ToLower(CultureInfo.InvariantCulture);
+                }
+            }
+            return self;
         }
 
         public static string lstrip(this string self) {
@@ -1735,7 +1740,7 @@ namespace IronPython.Runtime.Operations {
                 default:
                     e.DecoderFallback = new PythonDecoderFallback(encoding,
                         s,
-                        PythonOps.LookupEncodingError(context, errors));
+                        LightExceptions.CheckAndThrow(PythonOps.LookupEncodingError(context, errors)));
                     break;
             }
 #endif
@@ -1824,7 +1829,7 @@ namespace IronPython.Runtime.Operations {
                 default:
                     e.EncoderFallback = new PythonEncoderFallback(encoding,
                         s,
-                        PythonOps.LookupEncodingError(context, errors));
+                        LightExceptions.CheckAndThrow(PythonOps.LookupEncodingError(context, errors)));
                     break;
             }
 
@@ -2033,7 +2038,7 @@ namespace IronPython.Runtime.Operations {
             if (String.IsNullOrEmpty(self)) {
                 return SplitEmptyString(seps != null);
             } else {
-                string[] r = null;
+                string[] r;
                 //  If the optional second argument sep is absent or None, the words are separated 
                 //  by arbitrary strings of whitespace characters (space, tab, newline, return, formfeed);
                 

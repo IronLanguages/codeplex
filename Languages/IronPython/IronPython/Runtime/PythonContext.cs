@@ -201,6 +201,7 @@ namespace IronPython.Runtime {
         private static bool _enableTracing;
 
         internal readonly List<FunctionStack> _mainThreadFunctionStack;
+        private CallSite<Func<CallSite, CodeContext, object, object>> _callSite0LightEh;
 
         #region Generated Python Shared Call Sites Storage
 
@@ -2151,7 +2152,7 @@ namespace IronPython.Runtime {
                 case UnaryOperators.Length: symbol = "__len__"; break;
                 case UnaryOperators.Hash: symbol = "__hash__"; break;
                 case UnaryOperators.String: symbol = "__str__"; break;
-                default: throw new ArgumentException("unknown unary symbol");
+                default: throw new ValueErrorException("unknown unary symbol");
             }
             return symbol;
         }
@@ -2200,7 +2201,7 @@ namespace IronPython.Runtime {
             switch (oper) {
                 case TernaryOperators.SetDescriptor: symbol = "__set__"; break;
                 case TernaryOperators.GetDescriptor: symbol = "__get__"; break;
-                default: throw new ArgumentException("unknown ternary operator");
+                default: throw new ValueErrorException("unknown ternary operator");
             }
             return symbol;
         }
@@ -2723,6 +2724,22 @@ namespace IronPython.Runtime {
             return _callSite0.Target(_callSite0, context, func);
         }
 
+        private void EnsureCall0SiteLightEh() {
+            if (_callSite0LightEh == null) {
+                Interlocked.CompareExchange(
+                    ref _callSite0LightEh,
+                    CallSite<Func<CallSite, CodeContext, object, object>>.Create(Invoke(new CallSignature(0)).GetLightExceptionBinder()),
+                    null
+                );
+            }
+        }
+
+        internal object CallLightEh(CodeContext/*!*/ context, object func) {
+            EnsureCall0SiteLightEh();
+
+            return _callSite0LightEh.Target(_callSite0LightEh, context, func);
+        }
+
         internal object Call(CodeContext/*!*/ context, object func, object arg0) {
             EnsureCall1Site();
 
@@ -2859,6 +2876,12 @@ namespace IronPython.Runtime {
         }
 
         internal object Add(object x, object y) {
+            var addSite = EnsureAddSite();
+
+            return addSite.Target(addSite, x, y);
+        }
+
+        internal CallSite<Func<CallSite, object, object, object>> EnsureAddSite() {
             if (_addSite == null) {
                 Interlocked.CompareExchange(
                     ref _addSite,
@@ -2869,7 +2892,7 @@ namespace IronPython.Runtime {
                 );
             }
 
-            return _addSite.Target(_addSite, x, y);
+            return _addSite;
         }
 
         internal object DivMod(object x, object y) {

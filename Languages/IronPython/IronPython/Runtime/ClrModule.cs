@@ -69,7 +69,7 @@ load the assemblies namespaces and top-level types will be available via
 import Namespace.")]
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
             if (references == null) throw new TypeErrorException("Expected string or Assembly, got NoneType");
-            if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
+            if (references.Length == 0) throw new ValueErrorException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
             foreach (object reference in references) {
@@ -85,7 +85,7 @@ optionally including the .EXE or .DLL extension. After the load the assemblies
 namespaces and top-level types will be available via import Namespace.")]
         public static void AddReferenceToFile(CodeContext/*!*/ context, params string[] files) {
             if (files == null) throw new TypeErrorException("Expected string, got NoneType");
-            if (files.Length == 0) throw new ArgumentException("Expected at least one name, got none");
+            if (files.Length == 0) throw new ValueErrorException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string file in files) {
@@ -98,7 +98,7 @@ After the load the assemblies namespaces and top-level types will be available v
 import Namespace.")]
         public static void AddReferenceByName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new TypeErrorException("Expected string, got NoneType");
-            if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
+            if (names.Length == 0) throw new ValueErrorException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string name in names) {
@@ -159,7 +159,7 @@ After the load the assemblies namespaces and top-level types will be available v
 import Namespace.")]
         public static void AddReferenceByPartialName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new TypeErrorException("Expected string, got NoneType");
-            if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
+            if (names.Length == 0) throw new ValueErrorException("Expected at least one name, got none");
             ContractUtils.RequiresNotNull(context, "context");
 
             foreach (string name in names) {
@@ -184,11 +184,11 @@ will be available via import Namespace.")]
             Assembly res;
             if (!context.LanguageContext.TryLoadAssemblyFromFileWithPath(file, out res)) {
                 if (!Path.IsPathRooted(file)) {
-                    throw new ArgumentException("LoadAssemblyFromFileWithPath: path must be rooted");
+                    throw new ValueErrorException("LoadAssemblyFromFileWithPath: path must be rooted");
                 } else if (!File.Exists(file)) {
-                    throw new ArgumentException("LoadAssemblyFromFileWithPath: file not found");
+                    throw new ValueErrorException("LoadAssemblyFromFileWithPath: file not found");
                 } else {
-                    throw new ArgumentException("LoadAssemblyFromFileWithPath: error loading assembly");
+                    throw new ValueErrorException("LoadAssemblyFromFileWithPath: error loading assembly");
                 }
             }
             return res;
@@ -200,11 +200,11 @@ object.  Namespaces or types in the assembly can be accessed directly from
 the assembly object.")]
         public static Assembly/*!*/ LoadAssemblyFromFile(CodeContext/*!*/ context, string/*!*/ file) {
             if (file == null) throw new TypeErrorException("Expected string, got NoneType");
-            if (file.Length == 0) throw new ArgumentException("assembly name must not be empty string");
+            if (file.Length == 0) throw new ValueErrorException("assembly name must not be empty string");
             ContractUtils.RequiresNotNull(context, "context");
 
             if (file.IndexOf(System.IO.Path.DirectorySeparatorChar) != -1) {
-                throw new ArgumentException("filenames must not contain full paths, first add the path to sys.path");
+                throw new ValueErrorException("filenames must not contain full paths, first add the path to sys.path");
             }
 
             return context.LanguageContext.LoadAssemblyFromFile(file);
@@ -252,7 +252,7 @@ the assembly object.")]
 
             var scope = Importer.TryImportSourceFile(PythonContext.GetContext(context), name);
             if (scope == null) {
-                throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
+                throw new ValueErrorException(String.Format("couldn't find module {0} to use", name));
             }
             return scope;
         }
@@ -276,7 +276,7 @@ the assembly object.")]
 
             var manager = context.LanguageContext.DomainManager;
             if (!manager.Platform.FileExists(path)) {
-                throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
+                throw new ValueErrorException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
             }
 
             var sourceUnit = manager.GetLanguageByName(language).CreateFileUnit(path);

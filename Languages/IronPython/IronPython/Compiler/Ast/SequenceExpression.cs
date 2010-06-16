@@ -81,13 +81,17 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression assignStmt1 = MakeAssignment(right_temp, right);
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
-            MSAst.Expression enumeratorValues = Ast.Call(
-                AstMethods.GetEnumeratorValues,    // method
-                // arguments
-                Parent.LocalContext,
-                right_temp,
-                AstUtils.Constant(_items.Length)
-            );
+            MSAst.Expression enumeratorValues = Expression.Convert(LightExceptions.CheckAndThrow(
+                Expression.Call(
+                    emitIndividualSets ? 
+                        AstMethods.GetEnumeratorValues : 
+                        AstMethods.GetEnumeratorValuesNoComplexSets,    // method
+                    // arguments
+                    Parent.LocalContext,
+                    right_temp,
+                    AstUtils.Constant(_items.Length)
+                )
+            ), typeof(object[]));
 
             // 4. Create temporary variable for the array
             MSAst.ParameterExpression array_temp = Ast.Variable(typeof(object[]), "array");

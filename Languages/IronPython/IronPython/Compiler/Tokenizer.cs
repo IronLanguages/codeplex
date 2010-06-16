@@ -21,6 +21,7 @@ using System.IO;
 using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
@@ -191,7 +192,7 @@ namespace IronPython.Compiler {
             ContractUtils.RequiresNotNull(reader, "reader");
 
             if (state != null) {
-                if (!(state is State)) throw new ArgumentException("bad state provided");
+                if (!(state is State)) throw new ValueErrorException("bad state provided");
                 _state = new State((State)state);
             } else {
                 _state = new State(null);

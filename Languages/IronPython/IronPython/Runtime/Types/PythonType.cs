@@ -71,6 +71,7 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         private List<PythonType> _resolutionOrder;          // the search order for methods in the type
         private PythonType/*!*/[]/*!*/ _bases;              // the base classes of the type
         private BuiltinFunction _ctor;                      // the built-in function which allocates an instance - a .NET ctor
+        private Type _finalSystemType;                      // base .NET type if we're inherited from another Python-like type.
 
         // fields that frequently remain null
         private WeakRefTracker _weakrefTracker;             // storage for Python style weak references
@@ -573,6 +574,11 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             return PythonTypeOps.GetModuleName(context, self.UnderlyingSystemType);
         }
 
+        [SpecialName, PropertyMethod, WrapperDescriptor, PythonHidden]
+        public static string Get__clr_assembly__(PythonType self) {
+            return self.UnderlyingSystemType.Namespace + " in " + self.UnderlyingSystemType.Assembly.FullName;
+        }
+
         [SpecialName, PropertyMethod, WrapperDescriptor]
         public static void Set__module__(CodeContext/*!*/ context, PythonType self, object value) {
             if (self.IsSystemType) {
@@ -985,6 +991,12 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         internal Type/*!*/ UnderlyingSystemType {
             get {
                 return _underlyingSystemType;
+            }
+        }
+
+        internal Type/*!*/ FinalSystemType {
+            get {
+                return _finalSystemType ?? (_finalSystemType = PythonTypeOps.GetFinalSystemType(_underlyingSystemType));
             }
         }
 

@@ -147,8 +147,9 @@ namespace IronPython.Modules {
         public static object a2b_qp(object data) {
             throw new NotImplementedException();
         }
+        [LightThrowing]
         public static object a2b_qp(object data, object header) {
-            throw new NotImplementedException();
+            return LightExceptions.Throw(new NotImplementedException());
         }
         public static object b2a_qp(object data) {
             throw new NotImplementedException();

@@ -22,6 +22,7 @@ using System.Text;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -125,7 +126,7 @@ namespace IronPython.Modules {
                 case SeekOrigin.End:
                     _position = _data.Length + offset; break;
                 default:
-                    throw new ArgumentException("origin");
+                    throw new ValueErrorException("origin");
             }
 
             return _position;

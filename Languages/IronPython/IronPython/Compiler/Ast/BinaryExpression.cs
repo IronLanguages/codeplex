@@ -27,6 +27,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Interpreter;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Binding;
 
@@ -42,7 +43,7 @@ namespace IronPython.Compiler.Ast {
         public BinaryExpression(PythonOperator op, Expression left, Expression right) {
             ContractUtils.RequiresNotNull(left, "left");
             ContractUtils.RequiresNotNull(right, "right");
-            if (op == PythonOperator.None) throw new ArgumentException("bad operator");
+            if (op == PythonOperator.None) throw new ValueErrorException("bad operator");
 
             _op = op;
             _left = left;

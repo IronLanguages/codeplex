@@ -141,11 +141,18 @@ namespace IronPython.Runtime.Binding {
                         )
                     ),
                     Ast.Condition(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
-                            self.Expression,
-                            instTmp,
-                            init
+                        Expression.Not(
+                            Expression.TypeIs(
+                                Expression.Assign(
+                                    init,
+                                    Ast.Call(
+                                        typeof(PythonOps).GetMethod("OldClassTryLookupInit"),
+                                        self.Expression,
+                                        instTmp
+                                    )
+                                ),
+                                typeof(OperationFailed)
+                            )
                         ),
                         Ast.Dynamic(
                             PythonContext.GetPythonContext(call).Invoke(
@@ -307,12 +314,19 @@ namespace IronPython.Runtime.Binding {
                         Ast.Block(
                             new ParameterExpression[] { tmp },
                             Ast.Condition(
-                                Ast.Call(
-                                    typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
-                                    AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
-                                    self.Expression,
-                                    AstUtils.Constant(memberName),
-                                    tmp
+                                Expression.Not(
+                                    Expression.TypeIs(
+                                        Expression.Assign(
+                                            tmp,
+                                            Ast.Call(
+                                                typeof(PythonOps).GetMethod("OldClassTryLookupValue"),
+                                                AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
+                                                self.Expression,
+                                                AstUtils.Constant(memberName)
+                                            )
+                                        ),
+                                        typeof(OperationFailed)
+                                    )
                                 ),
                                 tmp,
                                 AstUtils.Convert(

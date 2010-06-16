@@ -17,6 +17,7 @@
 using System.Linq.Expressions;
 #endif
 
+using System;
 using System.Dynamic;
 using System.Runtime.CompilerServices;
 using IronPython.Runtime;
@@ -43,7 +44,35 @@ namespace IronPython.Compiler {
         }
     }
 
-    internal sealed class PythonDynamicExpression2 : LightDynamicExpression2 {
+    internal sealed class PythonDynamicExpression1<T> : LightDynamicExpression1 {
+        private readonly CompilationMode/*!*/ _mode;
+
+        public PythonDynamicExpression1(CallSiteBinder/*!*/ binder, CompilationMode/*!*/ mode, Expression/*!*/ arg0)
+            : base(binder, arg0) {
+            _mode = mode;
+        }
+
+        protected override Expression Rewrite(CallSiteBinder binder, Expression arg0) {
+            return new PythonDynamicExpression1<T>(binder, _mode, arg0);
+        }
+
+        public override Expression/*!*/ Reduce() {
+            return _mode.ReduceDynamic((DynamicMetaObjectBinder)Binder, Type, Argument0);
+        }
+
+        public override Type Type {
+            get {
+                return typeof(T);
+            }
+        }
+
+        public override void AddInstructions(LightCompiler compiler) {
+            compiler.Compile(Argument0);
+            compiler.Instructions.EmitDynamic<object, T>(Binder);
+        }
+    }
+
+    internal class PythonDynamicExpression2 : LightDynamicExpression2 {
         private readonly CompilationMode/*!*/ _mode;
 
         public PythonDynamicExpression2(CallSiteBinder/*!*/ binder, CompilationMode/*!*/ mode, Expression/*!*/ arg0, Expression/*!*/ arg1)
@@ -71,6 +100,46 @@ namespace IronPython.Compiler {
                 compiler.Instructions.EmitDynamic<object, CodeContext, object>(Binder);
             } else {
                 base.AddInstructions(compiler);
+            }
+        }
+    }
+
+    internal sealed class PythonDynamicExpression2<T> : PythonDynamicExpression2 {
+        private readonly CompilationMode/*!*/ _mode;
+
+        public PythonDynamicExpression2(CallSiteBinder/*!*/ binder, CompilationMode/*!*/ mode, Expression/*!*/ arg0, Expression/*!*/ arg1)
+            : base(binder, mode, arg0, arg1) {
+            _mode = mode;
+        }
+
+        public override Expression/*!*/ Reduce() {
+            return _mode.ReduceDynamic((DynamicMetaObjectBinder)Binder, Type, Argument0, Argument1);
+        }
+
+        protected override Expression Rewrite(CallSiteBinder binder, Expression arg0, Expression arg1) {
+            return new PythonDynamicExpression2<T>(binder, _mode, arg0, arg1);
+        }
+
+        public override Type Type {
+            get {
+                return typeof(T);
+            }
+        }
+
+        public override void AddInstructions(LightCompiler compiler) {
+            if (Argument0.Type == typeof(CodeContext)) {
+                compiler.Compile(Argument0);
+                compiler.Compile(Argument1);
+                compiler.Instructions.EmitDynamic<CodeContext, object, T>(Binder);
+            } else if (Argument1.Type == typeof(CodeContext)) {
+                // GetMember sites
+                compiler.Compile(Argument0);
+                compiler.Compile(Argument1);
+                compiler.Instructions.EmitDynamic<object, CodeContext, T>(Binder);
+            } else {
+                compiler.Compile(Argument0);
+                compiler.Compile(Argument1);
+                compiler.Instructions.EmitDynamic<object, object, T>(Binder);
             }
         }
     }

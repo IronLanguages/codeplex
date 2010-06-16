@@ -236,6 +236,55 @@ def test_sorted():
     x = sorted([(v,k) for k,v in d.items()])
     Assert(x == [(1, 'Joe'), (2, 'Tom'), (3, 'David'), (4, 'Gary'), (5, 'Carl'), (6, 'John'), (7, 'Tim'), (8, 'Todd'), (9, 'Jack')])
 
+def test_sum():
+    class user_object(object):
+        def __add__(self, other):
+            return self
+        def __radd__(self, other):
+            return self
+        
+    def gen(x):
+        for a in x: yield a
+        
+    def sumtest(values, expected):
+        for value in values, tuple(values), gen(values):
+            res = sum(values)
+            AreEqual(res, expected)
+            AreEqual(type(res), type(expected))
+    
+            res = sum(values, 0)
+            AreEqual(res, expected)
+            AreEqual(type(res), type(expected))
+
+    uo = user_object()
+    # int + other
+    sumtest([1, 1], 2)
+    sumtest([2147483647, 1], 2147483648L)
+    sumtest([1, 1.0], 2.0)
+    sumtest([1, 1L], 2L)
+    sumtest([1, uo], uo)
+
+    # double and other
+    sumtest([1.0, 1], 2.0)
+    sumtest([2147483647.0, 1], 2147483648.0)
+    sumtest([1.0, 1.0], 2.0)
+    sumtest([1.0, 1L], 2.0)
+    sumtest([1.0, uo], uo)
+
+    # long and other
+    sumtest([1L, 1], 2L)
+    sumtest([2147483647L, 1], 2147483648L)
+    sumtest([1L, 1.0], 2.0)
+    sumtest([1L, 1L], 2L)
+    sumtest([1L, uo], uo)
+
+    # corner cases
+    sumtest([1L, 2.0, 3], 6.0)
+    sumtest([2147483647, 1, 1.0], 2147483649.0)    
+    inf = 1.7976931348623157e+308*2
+    sumtest([1.7976931348623157e+308, long(1.7976931348623157e+308)], inf)        
+    AssertError(OverflowError, sum, [1.0, 100000000L<<2000])
+    
 def test_unichr():
 
     #Added the following to resolve Codeplex WorkItem #3220.

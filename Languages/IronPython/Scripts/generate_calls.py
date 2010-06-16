@@ -82,6 +82,60 @@ def gen_args_paramscall(nparams):
     return args
 
 
+method_caller_template = """
+class MethodBinding<%(typeParams)s> : BaseMethodBinding {
+    private CallSite<Func<CallSite, CodeContext, object, object, %(typeParams)s, object>> _site;
+
+    public MethodBinding(PythonInvokeBinder binder) {
+        _site = CallSite<Func<CallSite, CodeContext, object, object, %(typeParams)s, object>>.Create(binder);
+    }
+
+    public object SelfTarget(CallSite site, CodeContext context, object target, %(callParams)s) {
+        Method self = target as Method;
+        if (self != null && self._inst != null) {
+            return _site.Target(_site, context, self._func, self._inst, %(callArgs)s);
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object, %(typeParams)s, object>>)site).Update(site, context, target, %(callArgs)s);
+    }
+
+    public object SelflessTarget(CallSite site, CodeContext context, object target, object arg0, %(callParamsSelfless)s) {
+        Method self = target as Method;
+        if (self != null && self._inst == null) {
+            return _site.Target(_site, context, self._func, PythonOps.MethodCheckSelf(context, self, arg0), %(callArgsSelfless)s);
+        }
+
+        return ((CallSite<Func<CallSite, CodeContext, object, object, %(typeParams)s, object>>)site).Update(site, context, target, arg0, %(callArgsSelfless)s);
+    }
+    
+    public override Delegate GetSelfTarget() {
+        return new Func<CallSite, CodeContext, object, %(typeParams)s, object>(SelfTarget);
+    }
+
+    public override Delegate GetSelflessTarget() {
+        return new Func<CallSite, CodeContext, object, object, %(typeParams)s, object>(SelflessTarget);
+    }
+}"""
+
+def method_callers(cw):
+    for nparams in range(1, MAX_ARGS-3):        
+        cw.write(method_caller_template % {
+                  'typeParams' : ', '.join(('T%d' % d for d in xrange(nparams))),
+                  'callParams': ', '.join(('T%d arg%d' % (d,d) for d in xrange(nparams))),
+                  'callParamsSelfless': ', '.join(('T%d arg%d' % (d,d+1) for d in xrange(nparams))),
+                  'callArgsSelfless' : ', '.join(('arg%d' % (d+1) for d in xrange(nparams))),
+                  'argCount' : nparams,
+                  'callArgs': ', '.join(('arg%d' % d for d in xrange(nparams))),
+                  'genFuncArgs' : make_calltarget_type_args(nparams),
+                 })
+                 
+                 
+def selfless_method_caller_switch(cw):
+    cw.enter_block('switch (typeArgs.Length)')
+    for i in range(1, MAX_ARGS-3):
+        cw.write('case %d: binding = (BaseMethodBinding)Activator.CreateInstance(typeof(MethodBinding<%s>).MakeGenericType(typeArgs), binder); break;' % (i, ',' * (i-1)))
+    cw.exit_block()
+        
 function_caller_template = """
 class FunctionCaller<%(typeParams)s> : FunctionCaller {
     public FunctionCaller(int compat) : base(compat) { }
@@ -527,6 +581,8 @@ def gen_shared_call_sites_properties(cw):
 
 def main(): 
     return generate(
+        ("Python Selfless Method Caller Switch", selfless_method_caller_switch),
+        ("Python Method Callers", method_callers),
         ("Python Shared Call Sites Properties", gen_shared_call_sites_properties),
         ("Python Shared Call Sites Storage", gen_shared_call_sites_storage),
         ("Python Call Expression Instructions", gen_call_expression_instructions),

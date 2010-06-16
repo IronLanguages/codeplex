@@ -330,7 +330,7 @@ namespace IronPython.Modules {
             else if (hKey == HKEY_USERS)
                 return RegistryHive.Users;
             else
-                throw new ArgumentException("Unknown system key");
+                throw new ValueErrorException("Unknown system key");
         }
 
         private static int MapRegistryValueKind(RegistryValueKind registryValueKind) {

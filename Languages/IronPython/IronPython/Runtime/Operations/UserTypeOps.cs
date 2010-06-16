@@ -399,7 +399,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         internal static Binding.FastBindResult<T> MakeGetBinding<T>(CodeContext codeContext, CallSite<T> site, IPythonObject self, Binding.PythonGetMemberBinder getBinder) where T : class {
-            Type finalType = PythonTypeOps.GetFinalSystemType(self.PythonType.UnderlyingSystemType);
+            Type finalType = self.PythonType.FinalSystemType;
             if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(finalType) &&
                 !(self is IFastGettable)) {
                 // very tricky, user is inheriting from a class which implements IDO, we

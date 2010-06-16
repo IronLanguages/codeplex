@@ -91,6 +91,13 @@ namespace IronPython.Runtime {
             }
             return storage;
         }
+
+        public virtual void EnsureCapacityNoLock(int size) {
+        }
+
+        public virtual IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+            return GetItems().GetEnumerator();
+        }
         
         /// <summary>
         /// Provides fast access to the __path__ attribute if the dictionary storage supports caching it.
