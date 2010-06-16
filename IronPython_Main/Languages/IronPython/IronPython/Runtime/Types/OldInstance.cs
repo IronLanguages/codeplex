@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
@@ -54,7 +55,8 @@ namespace IronPython.Runtime.Types {
         ISerializable,
         IWeakReferenceable,
         IDynamicMetaObjectProvider, 
-        IPythonMembersList
+        IPythonMembersList,
+        Binding.IFastGettable
     {
 
         private PythonDictionary _dict;
@@ -994,5 +996,66 @@ namespace IronPython.Runtime.Types {
                 }
             }
         }
+
+        class FastOldInstanceGet {
+            private readonly string _name;
+
+            public FastOldInstanceGet(string name) {
+                _name = name;
+            }
+
+            public object Target(CallSite site, object instance, CodeContext context) {
+                OldInstance oi = instance as OldInstance;
+                if (oi != null) {
+                    object res;
+                    if (oi.TryGetBoundCustomMember(context, _name, out res)) {
+                        return res;
+                    }
+                    throw PythonOps.AttributeError("{0} instance has no attribute '{1}'", oi._class.Name, _name);
+                }
+
+                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, instance, context);
+            }
+
+            public object LightThrowTarget(CallSite site, object instance, CodeContext context) {
+                OldInstance oi = instance as OldInstance;
+                if (oi != null) {
+                    object res;
+                    if (oi.TryGetBoundCustomMember(context, _name, out res)) {
+                        return res;
+                    }
+                    return LightExceptions.Throw(PythonOps.AttributeError("{0} instance has no attribute '{1}'", oi._class.Name, _name));
+                }
+
+                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, instance, context);
+            }
+
+            public object NoThrowTarget(CallSite site, object instance, CodeContext context) {
+                OldInstance oi = instance as OldInstance;
+                if (oi != null) {
+                    object res;
+                    if (oi.TryGetBoundCustomMember(context, _name, out res)) {
+                        return res;
+                    }
+                    return OperationFailed.Value;
+                }
+
+                return ((CallSite<Func<CallSite, object, CodeContext, object>>)site).Update(site, instance, context);
+            }
+        }
+
+        #region IFastGettable Members
+
+        T Binding.IFastGettable.MakeGetBinding<T>(System.Runtime.CompilerServices.CallSite<T> site, Binding.PythonGetMemberBinder binder, CodeContext state, string name) {
+            if (binder.IsNoThrow) {
+                return (T)(object)new Func<CallSite, object, CodeContext, object>(new FastOldInstanceGet(name).NoThrowTarget);
+            } else if (binder.SupportsLightThrow) {
+                return (T)(object)new Func<CallSite, object, CodeContext, object>(new FastOldInstanceGet(name).LightThrowTarget);
+            } else {
+                return (T)(object)new Func<CallSite, object, CodeContext, object>(new FastOldInstanceGet(name).Target);
+            }
+        }
+
+        #endregion
     }
 }

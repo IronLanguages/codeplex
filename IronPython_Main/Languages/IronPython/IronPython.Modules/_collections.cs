@@ -27,6 +27,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Binding;
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
@@ -447,7 +448,7 @@ namespace IronPython.Modules {
             int IComparable.CompareTo(object obj) {
                 deque otherDeque = obj as deque;
                 if (otherDeque == null) {
-                    throw new ArgumentException("expected deque");
+                    throw new ValueErrorException("expected deque");
                 }
 
                 return CompareToWorker(otherDeque);
@@ -519,7 +520,7 @@ namespace IronPython.Modules {
             int IStructuralComparable.CompareTo(object other, IComparer comparer) {
                 deque otherDeque = other as deque;
                 if (otherDeque == null) {
-                    throw new ArgumentException("expected deque");
+                    throw new ValueErrorException("expected deque");
                 }
 
                 return CompareToWorker(otherDeque, comparer);

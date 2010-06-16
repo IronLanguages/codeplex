@@ -586,7 +586,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 if (ValueErrorStorage == null) {
                     lock (_pythonExceptionsLock) {
-                        ValueErrorStorage = CreateSubType(StandardError, "ValueError", msg => new ArgumentException(msg));
+                        ValueErrorStorage = CreateSubType(StandardError, "ValueError", msg => new ValueErrorException(msg));
                     }
                 }
                 return ValueErrorStorage;

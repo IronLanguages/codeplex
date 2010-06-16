@@ -191,6 +191,7 @@ namespace IronPython.Compiler.Ast {
         public static SiteInfo/*!*/ NextSite<T>(DynamicMetaObjectBinder/*!*/ binder) where T : class {
             lock (StorageData.SiteLockObj) {
                 int index = SiteStorage<T>.SiteCount++;
+                
                 int arrIndex = index - StorageData.SiteTypes * StorageData.StaticFields;
                 Type storageType = SiteStorage<T>.SiteStorageType(index);
 

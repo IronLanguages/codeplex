@@ -149,13 +149,14 @@ namespace IronPython.Runtime.Operations {
             return InfiniteRepr;
         }
 
+        [LightThrowing]
         internal static object LookupEncodingError(CodeContext/*!*/ context, string name) {
             Dictionary<string, object> errorHandlers = PythonContext.GetContext(context).ErrorHandlers;
             lock (errorHandlers) {
                 if (errorHandlers.ContainsKey(name))
                     return errorHandlers[name];
                 else
-                    throw PythonOps.LookupError("unknown error handler name '{0}'", name);
+                    return LightExceptions.Throw(PythonOps.LookupError("unknown error handler name '{0}'", name));
             }
         }
 
@@ -1521,7 +1522,8 @@ namespace IronPython.Runtime.Operations {
         /// array of objects (.Lengh == expected) if exactly expected objects are in the enumerator.
         /// Otherwise throws exception
         /// </returns>
-        public static object[] GetEnumeratorValues(CodeContext/*!*/ context, object e, int expected) {
+        [LightThrowing]
+        public static object GetEnumeratorValues(CodeContext/*!*/ context, object e, int expected) {
             if (e != null && e.GetType() == typeof(PythonTuple)) {
                 // fast path for tuples, avoid enumerating & copying the tuple.
                 return GetEnumeratorValuesFromTuple((PythonTuple)e, expected);
@@ -1534,27 +1536,45 @@ namespace IronPython.Runtime.Operations {
 
             while (count < expected) {
                 if (!ie.MoveNext()) {
-                    throw PythonOps.ValueErrorForUnpackMismatch(expected, count);
+                    return LightExceptions.Throw(PythonOps.ValueErrorForUnpackMismatch(expected, count));
                 }
                 values[count] = ie.Current;
                 count++;
             }
 
             if (ie.MoveNext()) {
-                throw PythonOps.ValueErrorForUnpackMismatch(expected, count + 1);
+                return LightExceptions.Throw(PythonOps.ValueErrorForUnpackMismatch(expected, count + 1));
             }
 
             return values;
         }
 
-        private static object[] GetEnumeratorValuesFromTuple(PythonTuple pythonTuple, int expected) {
+        [LightThrowing]
+        public static object GetEnumeratorValuesNoComplexSets(CodeContext/*!*/ context, object e, int expected) {
+            if (e != null && e.GetType() == typeof(List)) {
+                // fast path for lists, avoid enumerating & copying the list.
+                return GetEnumeratorValuesFromList((List)e, expected);
+            }
+
+            return GetEnumeratorValues(context, e, expected);
+        }
+
+        [LightThrowing]
+        private static object GetEnumeratorValuesFromTuple(PythonTuple pythonTuple, int expected) {
             if (pythonTuple.Count == expected) {
                 return pythonTuple._data;
             }
 
-            throw PythonOps.ValueErrorForUnpackMismatch(expected, pythonTuple.Count);
+            return LightExceptions.Throw(PythonOps.ValueErrorForUnpackMismatch(expected, pythonTuple.Count));
         }
 
+        private static object[] GetEnumeratorValuesFromList(List list, int expected) {
+            if (list._size == expected) {
+                return list._data;
+            }
+
+            throw PythonOps.ValueErrorForUnpackMismatch(expected, list._size);
+        }
         /// <summary>
         /// Python runtime helper to create instance of Slice object
         /// </summary>
@@ -1757,9 +1777,9 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// from spam import eggs1, eggs2 
         /// </summary>
-        [ProfilerTreatsAsExternal]
+        [ProfilerTreatsAsExternal, LightThrowing]
         public static object ImportWithNames(CodeContext/*!*/ context, string fullName, string[] names, int level) {
-            return Importer.Import(context, fullName, PythonTuple.MakeTuple(names), level);
+            return Importer.ImportLightThrow(context, fullName, PythonTuple.MakeTuple(names), level);
         }
 
 
@@ -1989,11 +2009,15 @@ namespace IronPython.Runtime.Operations {
         public static IEnumerator GetEnumeratorForUnpack(CodeContext/*!*/ context, object enumerable) {
             IEnumerator enumerator;
             if (!TryGetEnumerator(context, enumerable, out enumerator)) {
-                throw PythonOps.TypeError("'{0}' object is not iterable", PythonTypeOps.GetName(enumerable));
+                throw TypeErrorForNotIterable(enumerable);
             }
 
             return enumerator;
         }
+
+        public static Exception TypeErrorForNotIterable(object enumerable) {
+            return PythonOps.TypeError("'{0}' object is not iterable", PythonTypeOps.GetName(enumerable));
+        }        
 
         public static KeyValuePair<IEnumerator, IDisposable> ThrowTypeErrorForBadIteration(CodeContext context, object enumerable) {
             throw PythonOps.TypeError("iteration over non-sequence of type {0}", PythonTypeOps.GetName(enumerable));
@@ -2332,7 +2356,7 @@ namespace IronPython.Runtime.Operations {
         public static PythonDictionary CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
             foreach (object o in dict.Keys) {
                 if (!(o is string)) {
-                    throw TypeError("{0}() keywords most be strings", function.__name__);
+                    throw TypeError("{0}() keywords must be strings", function.__name__);
                 }
             }
             return new PythonDictionary(dict);
@@ -2361,7 +2385,7 @@ namespace IronPython.Runtime.Operations {
                 if (s == null) {
                     Extensible<string> es = o as Extensible<string>;
                     if (es == null) {
-                        throw PythonOps.TypeError("{0}() keywords most be strings, not {0}",
+                        throw PythonOps.TypeError("{0}() keywords must be strings, not {0}",
                             funcName,
                             PythonTypeOps.GetName(dict));
                     }
@@ -2377,7 +2401,7 @@ namespace IronPython.Runtime.Operations {
 
         public static PythonDictionary CopyAndVerifyPythonDictionary(PythonFunction function, PythonDictionary dict) {
             if (dict._storage.HasNonStringAttributes()) {
-                throw TypeError("{0}() keywords most be strings", function.__name__);
+                throw TypeError("{0}() keywords must be strings", function.__name__);
             }
 
             return new PythonDictionary(dict);
@@ -3201,6 +3225,7 @@ namespace IronPython.Runtime.Operations {
             return method.CheckSelf(context, self);
         }
 
+        [LightThrowing]
         public static object GeneratorCheckThrowableAndReturnSendValue(object self) {
             return ((PythonGenerator)self).CheckThrowableAndReturnSendValue();
         }
@@ -3300,8 +3325,12 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
-        public static bool OldClassTryLookupInit(OldClass oc, object inst, out object ret) {
-            return oc.TryLookupInit(inst, out ret);
+        public static object OldClassTryLookupInit(OldClass oc, object inst) {
+            object ret;
+            if (oc.TryLookupInit(inst, out ret)) {
+                return ret;
+            }
+            return OperationFailed.Value;
         }
 
         public static object OldClassMakeCallError(OldClass oc) {
@@ -3316,8 +3345,12 @@ namespace IronPython.Runtime.Operations {
             oc.DictionaryIsPublic();
         }
 
-        public static bool OldClassTryLookupValue(CodeContext context, OldClass oc, string name, out object value) {
-            return oc.TryLookupValue(context, name, out value);
+        public static object OldClassTryLookupValue(CodeContext context, OldClass oc, string name) {
+            object value;
+            if (oc.TryLookupValue(context, name, out value)) {
+                return value;
+            }
+            return OperationFailed.Value;
         }
 
         public static object OldClassLookupValue(CodeContext context, OldClass oc, string name) {
@@ -3359,8 +3392,12 @@ namespace IronPython.Runtime.Operations {
             return self.TryLookupOneSlot(type, name, out value);
         }
 
-        public static bool OldInstanceTryGetBoundCustomMember(CodeContext context, OldInstance self, string name, out object value) {
-            return self.TryGetBoundCustomMember(context, name, out value);
+        public static object OldInstanceTryGetBoundCustomMember(CodeContext context, OldInstance self, string name) {
+            object value;
+            if (self.TryGetBoundCustomMember(context, name, out value)) {
+                return value;
+            }
+            return OperationFailed.Value;
         }
 
         public static object OldInstanceSetCustomMember(CodeContext context, OldInstance self, string name, object value) {
@@ -3948,7 +3985,7 @@ namespace IronPython.Runtime.Operations {
 
 
         public static Exception ValueError(string format, params object[] args) {
-            return new ArgumentException(string.Format(format, args));
+            return new ValueErrorException(string.Format(format, args));
         }
 
         public static Exception KeyError(object key) {
@@ -4314,7 +4351,7 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 var frame = new PythonDynamicStackFrame(context, funcCode, line);
-                funcCode.LightThrowCompile();
+                funcCode.LightThrowCompile(context);
                 pyFrames.Add(frame);
             }
         }

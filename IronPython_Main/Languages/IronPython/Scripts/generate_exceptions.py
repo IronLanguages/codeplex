@@ -164,7 +164,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'IronPython.Runtime.Exceptio
                             ),
                             ExceptionInfo('SystemError', 'System.SystemException', None, (), ()),
                             ExceptionInfo('TypeError', 'IronPython.Runtime.Exceptions.TypeErrorException', None, (), (), baseMapping = 'Microsoft.Scripting.ArgumentTypeException'),
-                            ExceptionInfo('ValueError', 'System.ArgumentException', None, (), (
+                            ExceptionInfo('ValueError', 'IronPython.Runtime.Exceptions.ValueErrorException', None, (), (
                                     ExceptionInfo('UnicodeError', 'IronPython.Runtime.Exceptions.UnicodeException', None, (), 
                                         (
                                             ExceptionInfo('UnicodeDecodeError', 'System.Text.DecoderFallbackException', ('encoding', 'object', 'start', 'end', 'reason'), ('start', 'reason', 'object', 'end', 'encoding'), ()),
@@ -173,6 +173,7 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'IronPython.Runtime.Exceptio
                                         ),
                                     ),
                                 ),
+                                baseMapping = 'System.ArgumentException'
                             ),
                         ),
                     ),

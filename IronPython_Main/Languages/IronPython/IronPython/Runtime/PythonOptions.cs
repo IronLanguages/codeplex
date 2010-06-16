@@ -15,9 +15,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using Microsoft.Scripting;
 using System.Collections.ObjectModel;
+using IronPython.Runtime.Exceptions;
+using Microsoft.Scripting;
 
 namespace IronPython {
 
@@ -270,11 +270,11 @@ namespace IronPython {
                 } else if (value is string) {
                     _version = new Version((string)value);
                 } else {
-                    throw new ArgumentException("Expected string or Version for PythonVersion");
+                    throw new ValueErrorException("Expected string or Version for PythonVersion");
                 }
 
                 if (_version != new Version(2, 6) && _version != new Version(3, 0)) {
-                    throw new ArgumentException("Expected Version to be 2.6 or 3.0");
+                    throw new ValueErrorException("Expected Version to be 2.6 or 3.0");
                 }
             } else {
                 _version = new Version(2, 6);

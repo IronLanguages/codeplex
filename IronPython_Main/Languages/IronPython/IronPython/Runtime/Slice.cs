@@ -21,6 +21,7 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
     [PythonType("slice")]
@@ -81,7 +82,7 @@ namespace IronPython.Runtime {
 
         int IComparable.CompareTo(object obj) {
             Slice other = obj as Slice;
-            if (other == null) throw new ArgumentException("expected slice");
+            if (other == null) throw new ValueErrorException("expected slice");
             return __cmp__(other);
         }
 

@@ -22,7 +22,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
 namespace IronPython.Compiler.Ast {
@@ -50,9 +50,11 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression instance = GeneratorRewriter._generatorParam;
             Debug.Assert(instance.Type == typeof(IronPython.Runtime.PythonGenerator));
 
-            MSAst.Expression s2 = Ast.Call(
-                typeof(PythonOps).GetMethod("GeneratorCheckThrowableAndReturnSendValue"),
-                instance
+            MSAst.Expression s2 = LightExceptions.CheckAndThrow(
+                Expression.Call(
+                    AstMethods.GeneratorCheckThrowableAndReturnSendValue,
+                    instance
+                )
             );
             return s2;
         }

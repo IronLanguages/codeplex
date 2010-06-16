@@ -120,9 +120,12 @@ namespace IronPython.Compiler.Ast {
             // enumerator, isDisposable = Dynamic(GetEnumeratorBinder, list)
             MSAst.Expression init = Ast.Assign(
                     enumerator,
-                    parent.GlobalParent.Operation(
-                        typeof(KeyValuePair<IEnumerator, IDisposable>),
-                        PythonOperationKind.GetEnumeratorForIteration,
+                    new PythonDynamicExpression1<KeyValuePair<IEnumerator, IDisposable>>(
+                        Binders.UnaryOperationBinder(
+                            parent.GlobalParent.PyContext,
+                            PythonOperationKind.GetEnumeratorForIteration
+                        ), 
+                        parent.GlobalParent.CompilationMode, 
                         AstUtils.Convert(list, typeof(object))
                     )
                 );

@@ -193,12 +193,19 @@ namespace IronPython.Runtime.Binding {
                 Ast.Block(
                     new ParameterExpression[] { tmp },
                     Ast.Condition(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                            codeContext,
-                            self.Expression,
-                            AstUtils.Constant("__call__"),
-                            tmp
+                        Expression.Not(
+                            Expression.TypeIs(
+                                Expression.Assign(
+                                    tmp,
+                                    Ast.Call(
+                                        typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
+                                        codeContext,
+                                        self.Expression,
+                                        AstUtils.Constant("__call__")
+                                    )
+                                ),
+                                typeof(OperationFailed)
+                            )
                         ),
                         Ast.Block(
                             Utils.Try(
@@ -521,12 +528,19 @@ namespace IronPython.Runtime.Binding {
                     target = Ast.Block(
                         new ParameterExpression[] { tmp },
                         Ast.Condition(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                                Ast.Constant(PythonContext.GetPythonContext(member).SharedContext),
-                                self.Expression,
-                                AstUtils.Constant(name),
-                                tmp
+                            Expression.Not(
+                                Expression.TypeIs(
+                                    Expression.Assign(
+                                        tmp,
+                                        Ast.Call(
+                                            typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
+                                            AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
+                                            self.Expression,
+                                            AstUtils.Constant(name)
+                                        )
+                                    ),
+                                    typeof(OperationFailed)
+                                )
                             ),
                             ((InvokeMemberBinder)member).FallbackInvoke(new DynamicMetaObject(tmp, BindingRestrictions.Empty), args, null).Expression,
                             AstUtils.Convert(                            
@@ -540,12 +554,19 @@ namespace IronPython.Runtime.Binding {
                     target = Ast.Block(
                         new ParameterExpression[] { tmp },
                         Ast.Condition(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
-                                AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
-                                self.Expression,
-                                AstUtils.Constant(name),
-                                tmp
+                            Expression.Not(
+                                Expression.TypeIs(
+                                    Expression.Assign(
+                                        tmp,
+                                        Ast.Call(
+                                            typeof(PythonOps).GetMethod("OldInstanceTryGetBoundCustomMember"),
+                                            AstUtils.Constant(PythonContext.GetPythonContext(member).SharedContext),
+                                            self.Expression,
+                                            AstUtils.Constant(name)
+                                        )
+                                    ),
+                                    typeof(OperationFailed)
+                                )
                             ),
                             tmp,
                             AstUtils.Convert(
@@ -582,13 +603,31 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        private static Expression FallbackGet(DynamicMetaObjectBinder member, DynamicMetaObject[] args) {
+        private Expression FallbackGet(DynamicMetaObjectBinder member, DynamicMetaObject[] args) {
             GetMemberBinder sa = member as GetMemberBinder;
             if (sa != null) {
                 return sa.FallbackGetMember(args[0]).Expression;
             }
 
-            return ((PythonGetMemberBinder)member).Fallback(args[0], PythonContext.GetCodeContextMO(member)).Expression;
+            PythonGetMemberBinder pyGetMem = member as PythonGetMemberBinder;
+            if (pyGetMem.IsNoThrow) {
+                return Ast.Field(
+                    null,
+                    typeof(OperationFailed).GetField("Value")
+                );
+            } else {
+                return member.Throw(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("AttributeError"),
+                        AstUtils.Constant("{0} instance has no attribute '{1}'"),
+                        Ast.NewArrayInit(
+                            typeof(object),
+                            AstUtils.Constant(((OldInstance)Value)._class._name),
+                            AstUtils.Constant(pyGetMem.Name)
+                        )
+                    )
+                );
+            }
         }
 
         #endregion

@@ -20,12 +20,15 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 #if CLR2
 using Microsoft.Scripting.Math;
@@ -1479,7 +1482,7 @@ namespace IronPython.Runtime {
         int IStructuralComparable.CompareTo(object other, IComparer comparer) {
             List l = other as List;
             if (l == null) {
-                throw new ArgumentException("expected List");
+                throw new ValueErrorException("expected List");
             }
 
             return CompareTo(l, comparer);

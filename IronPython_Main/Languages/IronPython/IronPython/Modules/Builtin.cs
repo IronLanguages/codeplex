@@ -232,9 +232,10 @@ namespace IronPython.Modules {
         }
 
         [Documentation("chr(i) -> character\n\nReturn a string of one character with ordinal i; 0 <= i< 256.")]
-        public static string chr(int value) {
+        [LightThrowing]
+        public static object chr(int value) {
             if (value < 0 || value > 0xFF) {
-                throw PythonOps.ValueError("{0} is not in required range", value);
+                return LightExceptions.Throw(PythonOps.ValueError("{0} is not in required range", value));
             }
             return ScriptingRuntimeHelpers.CharToString((char)value);
         }
@@ -950,28 +951,32 @@ namespace IronPython.Modules {
             return PythonOps.IsSubClass(c, typeinfo);
         }
 
-        public static bool issubclass(CodeContext/*!*/ context, object o, object typeinfo) {
+        [LightThrowing]
+        public static object issubclass(CodeContext/*!*/ context, object o, object typeinfo) {
             PythonTuple pt = typeinfo as PythonTuple;
             if (pt != null) {
                 // Recursively inspect nested tuple(s)
                 foreach (object subTypeInfo in pt) {
                     try {
                         PythonOps.FunctionPushFrame(PythonContext.GetContext(context));
-                        if (issubclass(context, o, subTypeInfo)) {
-                            return true;
+                        var res = issubclass(context, o, subTypeInfo);
+                        if (res == ScriptingRuntimeHelpers.True) {
+                            return ScriptingRuntimeHelpers.True;
+                        } else if (LightExceptions.IsLightException(res)) {
+                            return res;
                         }
                     } finally {
                         PythonOps.FunctionPopFrame();
                     }
                 }
-                return false;
+                return ScriptingRuntimeHelpers.False;
             }
 
             object bases;
             PythonTuple tupleBases;
 
             if (!PythonOps.TryGetBoundAttr(o, "__bases__", out bases) || (tupleBases = bases as PythonTuple) == null) {
-                throw PythonOps.TypeError("issubclass() arg 1 must be a class");
+                return LightExceptions.Throw(PythonOps.TypeError("issubclass() arg 1 must be a class"));
             }
 
             foreach (object baseCls in tupleBases) {
@@ -979,23 +984,26 @@ namespace IronPython.Modules {
                 OldClass oc;
 
                 if (baseCls == typeinfo) {
-                    return true;
+                    return ScriptingRuntimeHelpers.True;
                 } else if ((pyType = baseCls as PythonType) != null) {
                     if (issubclass(context, pyType, typeinfo)) {
-                        return true;
+                        return ScriptingRuntimeHelpers.True;
                     }
                 } else if ((oc = baseCls as OldClass) != null) {
                     if (issubclass(context, oc, typeinfo)) {
-                        return true;
+                        return ScriptingRuntimeHelpers.True;
                     }
                 } else if (hasattr(context, baseCls, "__bases__")) {
-                    if (issubclass(context, baseCls, typeinfo)) {
-                        return true;
+                    var res = issubclass(context, baseCls, typeinfo);
+                    if (res == ScriptingRuntimeHelpers.True) {
+                        return ScriptingRuntimeHelpers.True;
+                    } else if (LightExceptions.IsLightException(res)) {
+                        return res;
                     }
                 }
             }
 
-            return false;
+            return ScriptingRuntimeHelpers.False;
         }
 
         public static object iter(CodeContext/*!*/ context, object o) {
@@ -1946,6 +1954,14 @@ namespace IronPython.Modules {
             return sum(context, sequence, 0);
         }
 
+        public static object sum(CodeContext/*!*/ context, [NotNull]List sequence) {
+            return sum(context, sequence, 0);
+        }
+
+        public static object sum(CodeContext/*!*/ context, [NotNull]PythonTuple sequence) {
+            return sum(context, sequence, 0);
+        }
+
         public static object sum(CodeContext/*!*/ context, object sequence, object start) {
             IEnumerator i = PythonOps.GetEnumerator(sequence);
 
@@ -1953,14 +1969,168 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("Cannot sum strings, use '{0}'.join(seq)", start);
             }
 
+            var sumState = new SumState(context.LanguageContext, start);
             object ret = start;
-            PythonContext pc = PythonContext.GetContext(context);
-
+            
             while (i.MoveNext()) {
-                ret = pc.Add(ret, i.Current);
+                SumOne(ref sumState, i.Current);
             }
-            return ret;
+
+            return sumState.CurrentValue;
         }
+
+        public static object sum(CodeContext/*!*/ context, [NotNull]List sequence, object start) {
+            if (start is string) {
+                throw PythonOps.TypeError("Cannot sum strings, use '{0}'.join(seq)", start);
+            }
+
+            var sumState = new SumState(context.LanguageContext, start);
+            for (int i = 0; i < sequence._size; i++) {
+                SumOne(ref sumState, sequence._data[i]);
+            }
+
+            return sumState.CurrentValue;
+        }
+
+        public static object sum(CodeContext/*!*/ context, [NotNull]PythonTuple sequence, object start) {
+            if (start is string) {
+                throw PythonOps.TypeError("Cannot sum strings, use '{0}'.join(seq)", start);
+            }
+
+            var sumState = new SumState(context.LanguageContext, start);
+            var arr = sequence._data;
+            for (int i = 0; i < arr.Length; i++) {
+                SumOne(ref sumState, arr[i]);
+            }
+
+            return sumState.CurrentValue;
+        }
+
+        #region Optimized sum
+
+        private static void SumOne(ref SumState state, object current) {
+            if (current != null) {
+                if (state.CurType == SumVariantType.Int) {
+                    if (current.GetType() == typeof(int)) {
+                        try {
+                            state.IntVal = checked(state.IntVal + ((int)current));
+                        } catch (OverflowException) {
+                            state.BigIntVal = (BigInteger)state.IntVal + (BigInteger)(int)current;
+                            state.CurType = SumVariantType.BigInt;
+                        }
+                    } else if (current.GetType() == typeof(double)) {
+                        state.DoubleVal = state.IntVal + ((double)current);
+                        state.CurType = SumVariantType.Double;
+                    } else if (current.GetType() == typeof(BigInteger)) {
+                        state.BigIntVal = (BigInteger)state.IntVal + (BigInteger)current;
+                        state.CurType = SumVariantType.BigInt;
+                    } else {
+                        SumObject(ref state, state.IntVal, current);
+                    }
+                } else if (state.CurType == SumVariantType.Double) {
+                    if (current.GetType() == typeof(double)) {
+                        state.DoubleVal = state.DoubleVal + ((double)current);
+                    } else if (current.GetType() == typeof(int)) {
+                        state.DoubleVal = state.DoubleVal + ((int)current);
+                    } else if (current.GetType() == typeof(BigInteger)) {
+                        SumBigIntAndDouble(ref state, (BigInteger)current, state.DoubleVal);
+                    } else {
+                        SumObject(ref state, state.DoubleVal, current);
+                    }
+                } else if (state.CurType == SumVariantType.BigInt) {
+                    if (current.GetType() == typeof(BigInteger)) {
+                        state.BigIntVal = state.BigIntVal + ((BigInteger)current);
+                    } else if (current.GetType() == typeof(int)) {
+                        state.BigIntVal = state.BigIntVal + ((int)current);
+                    } else if (current.GetType() == typeof(double)) {
+                        SumBigIntAndDouble(ref state, state.BigIntVal, (double)current);
+                    } else {
+                        SumObject(ref state, state.BigIntVal, current);
+                    }
+                } else if (state.CurType == SumVariantType.Object) {
+                    state.ObjectVal = state.AddSite.Target(state.AddSite, state.ObjectVal, current);
+                }
+            } else {
+                SumObject(ref state, state.BigIntVal, current);
+            }
+        }
+#if CLR2
+        private static BigInteger MaxDouble = BigInteger.Create(Double.MaxValue);
+        private static BigInteger MinDouble = BigInteger.Create(Double.MinValue);
+#else
+        private static BigInteger MaxDouble = new BigInteger(Double.MaxValue);
+        private static BigInteger MinDouble = new BigInteger(Double.MinValue);
+#endif
+
+        private static void SumBigIntAndDouble(ref SumState state, BigInteger bigInt, double dbl) {
+            if (bigInt <= MaxDouble && bigInt >= MinDouble) {
+                state.DoubleVal = (double)bigInt + dbl;
+                state.CurType = SumVariantType.Double;
+            } else {
+                // fallback to normal add to report error
+                SumObject(ref state, dbl, bigInt);
+            }
+        }
+
+        private static void SumObject(ref SumState state, object value, object current) {
+            state.ObjectVal = state.AddSite.Target(state.AddSite, value, current);
+            state.CurType = SumVariantType.Object;
+        }
+
+        enum SumVariantType {
+            Double,
+            Int,
+            BigInt,
+            Object
+        }
+
+        struct SumState {
+            public double DoubleVal;
+            public int IntVal;
+            public object ObjectVal;
+            public BigInteger BigIntVal;
+            public SumVariantType CurType;
+            public CallSite<Func<CallSite, object, object, object>> AddSite;
+
+            public SumState(PythonContext context, object start) {
+                DoubleVal = 0;
+                IntVal = 0;
+                ObjectVal = start;
+                BigIntVal = BigInteger.Zero;
+                AddSite = context.EnsureAddSite();
+
+                if (start != null) {
+                    if (start.GetType() == typeof(int)) {
+                        CurType = SumVariantType.Int;
+                        IntVal = (int)start;
+                    } else if (start.GetType() == typeof(double)) {
+                        CurType = SumVariantType.Double;
+                        DoubleVal = (double)start;
+                    } else if (start.GetType() == typeof(BigInteger)) {
+                        CurType = SumVariantType.BigInt;
+                        BigIntVal = (BigInteger)start;
+                    } else {
+                        CurType = SumVariantType.Object;
+                    }
+                } else {
+                    CurType = SumVariantType.Object;
+                }
+            }
+
+            public object CurrentValue {
+                get {
+                    switch (CurType) {
+                        case SumVariantType.BigInt: return BigIntVal;
+                        case SumVariantType.Double: return DoubleVal;
+                        case SumVariantType.Int: return IntVal;
+                        case SumVariantType.Object: return ObjectVal;
+                        default: throw Assert.Unreachable;
+                    }
+                }
+            }
+        }
+
+        #endregion
 
         public static PythonType super {
             get {

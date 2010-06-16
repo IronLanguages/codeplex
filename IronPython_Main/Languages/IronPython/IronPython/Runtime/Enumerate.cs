@@ -92,6 +92,7 @@ namespace IronPython.Runtime {
         private readonly object _target;
         private readonly object _sentinel;
         private readonly CodeContext/*!*/ _context;
+        private readonly CallSite<Func<CallSite, CodeContext, object, object>> _site;
         private object _current;
         private bool _sinkState;
 
@@ -99,6 +100,7 @@ namespace IronPython.Runtime {
             _target = target;
             _sentinel = sentinel;
             _context = context;
+            _site = CallSite<Func<CallSite, CodeContext, object, object>>.Create(_context.LanguageContext.InvokeOne);
         }
 
         public object __iter__() {
@@ -130,9 +132,9 @@ namespace IronPython.Runtime {
         bool IEnumerator.MoveNext() {
             if (_sinkState) return false;
 
-            _current = PythonCalls.Call(_target);
+            _current = _site.Target(_site, _context, _target);
 
-            bool hit = PythonOps.EqualRetBool(_context, _sentinel, _current);
+            bool hit = _sentinel == _current || PythonOps.EqualRetBool(_context, _sentinel, _current);
             if (hit) _sinkState = true;
 
             return !hit;
@@ -232,7 +234,15 @@ namespace IronPython.Runtime {
             }
 
             try {
-                _current = PythonCalls.Call(_nextMethod);
+                _current = DefaultContext.Default.LanguageContext.CallLightEh(DefaultContext.Default, _nextMethod);
+                Exception lightEh = LightExceptions.GetLightException(_current);
+                if (lightEh != null) {
+                    if (lightEh is StopIterationException) {
+                        return false;
+                    }
+
+                    throw lightEh;
+                }
                 return true;
             } catch (StopIterationException) {
                 return false;

@@ -292,6 +292,10 @@ namespace IronPython.Runtime.Binding {
                     res = (T)(object)new Func<CallSite, object, bool>(NullToBoolConversion);
                 } else if (target.GetType() == typeof(object)) {
                     res = (T)(object)new Func<CallSite, object, bool>(ObjectToBoolConversion);
+                } else if (target.GetType() == typeof(List)) {
+                    res = (T)(object)new Func<CallSite, object, bool>(ListToBoolConversion);
+                } else if (target.GetType() == typeof(PythonTuple)) {
+                    res = (T)(object)new Func<CallSite, object, bool>(TupleToBoolConversion);
                 }
             } else if (target != null) {
                 // Special cases:
@@ -430,6 +434,26 @@ namespace IronPython.Runtime.Binding {
             } else if (value == null) {
                 // improve perf of sites just polymorphic on object & None
                 return false;
+            }
+
+            return ((CallSite<Func<CallSite, object, bool>>)site).Update(site, value);
+        }
+
+        public bool ListToBoolConversion(CallSite site, object value) {
+            if (value == null) {
+                return false;
+            } else if (value.GetType() == typeof(List)) {
+                return ((List)value).Count != 0;
+            }
+
+            return ((CallSite<Func<CallSite, object, bool>>)site).Update(site, value);
+        }
+
+        public bool TupleToBoolConversion(CallSite site, object value) {
+            if (value == null) {
+                return false;
+            } else if (value.GetType() == typeof(PythonTuple)) {
+                return ((PythonTuple)value).Count != 0;
             }
 
             return ((CallSite<Func<CallSite, object, bool>>)site).Update(site, value);

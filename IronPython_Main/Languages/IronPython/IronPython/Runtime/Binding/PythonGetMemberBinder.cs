@@ -172,7 +172,7 @@ namespace IronPython.Runtime.Binding {
             }
 
             PerfTrack.NoteEvent(PerfTrack.Categories.BindingSlow, "GetNoFast " + IsNoThrow + " " + CompilerHelpers.GetType(args[0]));
-            return base.BindDelegate<T>(site, args);
+            return this.LightBind<T>(args, this.Context.Options.CompilationThreshold);
         }
 
         class FastErrorGet<TSelfType> : FastGetBase {
@@ -606,34 +606,7 @@ namespace IronPython.Runtime.Binding {
                     return BindingHelpers.FilterShowCls(codeContext, action, baseRes, failure);
                 }
             }
-
-            if (self.GetLimitType() == typeof(OldInstance)) {
-                if ((options & GetMemberOptions.IsNoThrow) != 0) {
-                    return new DynamicMetaObject(
-                        Ast.Field(
-                            null,
-                            typeof(OperationFailed).GetField("Value")
-                        ),
-                        self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(OldInstance)))
-                    );
-                } else {
-                    return new DynamicMetaObject(
-                        action.Throw(
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("AttributeError"),
-                                AstUtils.Constant("{0} instance has no attribute '{1}'"),
-                                Ast.NewArrayInit(
-                                    typeof(object),
-                                    AstUtils.Constant(((OldInstance)self.Value)._class._name),
-                                    AstUtils.Constant(name)
-                                )
-                            )
-                        ),
-                        self.Restrictions.Merge(BindingRestrictionsHelpers.GetRuntimeTypeRestriction(self.Expression, typeof(OldInstance)))
-                    );
-                }
-            }
-
+            
             var res = PythonContext.GetPythonContext(action).Binder.GetMember(name, self, resolverFactory, isNoThrow, errorSuggestion);
 
             // Default binder can return something typed to boolean or int.

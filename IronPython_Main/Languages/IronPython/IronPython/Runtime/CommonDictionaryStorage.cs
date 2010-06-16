@@ -285,6 +285,14 @@ namespace IronPython.Runtime {
             _buckets = newBuckets;
         }
 
+        public override void EnsureCapacityNoLock(int size) {
+            if (_buckets == null) {
+                _buckets = new Bucket[(int)(size / Load) + 1];
+            } else {
+                EnsureSize((int)(size / Load));
+            }
+        }
+
         /// <summary>
         /// Initializes the buckets to their initial capacity, the caller
         /// must check if the buckets are empty first.
@@ -329,7 +337,6 @@ namespace IronPython.Runtime {
             _version++;
             buckets[index].HashCode = hc;
             buckets[index].Value = value;
-            Thread.MemoryBarrier();
             buckets[index].Key = key;
 
             return true;
@@ -584,6 +591,23 @@ namespace IronPython.Runtime {
             }
         }
 
+        public override IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+            lock (this) {
+                if (_count > 0) {
+                    for (int i = 0; i < _buckets.Length; i++) {
+                        Bucket curBucket = _buckets[i];
+                        if (curBucket.Key != null && curBucket.Key != _removed) {
+                            yield return new KeyValuePair<object, object>(curBucket.Key, curBucket.Value);
+                        }
+                    }
+                }
+
+                if (_nullValue != null) {
+                    yield return new KeyValuePair<object, object>(null, _nullValue.Value);
+                }
+            }
+        }
+
         public override IEnumerable<object>/*!*/ GetKeys() {
             Bucket[] buckets = _buckets;
             lock (this) {
@@ -612,11 +636,11 @@ namespace IronPython.Runtime {
                 if (nullValue != null && !(nullValue.Value is string)) {
                     return true;
                 }
-                if (_keyType != typeof(string) && _buckets != null) {
+                if (_keyType != typeof(string) && _keyType != null && _count > 0) {
                     for (int i = 0; i < _buckets.Length; i++) {
                         Bucket curBucket = _buckets[i];
                         
-                        if (!(curBucket.Key is string)) {
+                        if (curBucket.Key != null && !(curBucket.Key is string)) {
                             return true;
                         }
                     }

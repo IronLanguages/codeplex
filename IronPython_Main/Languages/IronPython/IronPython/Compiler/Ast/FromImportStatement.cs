@@ -21,6 +21,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting;
 using AstUtils = Microsoft.Scripting.Ast.Utils;
 
@@ -99,12 +100,14 @@ namespace IronPython.Compiler.Ast {
                     GlobalParent.AddDebugInfoAndVoid(
                         AssignValue(
                             module,
-                            Ast.Call(
-                                AstMethods.ImportWithNames,
-                                Parent.LocalContext,
-                                AstUtils.Constant(_root.MakeString()),
-                                Ast.NewArrayInit(typeof(string), names),
-                                AstUtils.Constant(GetLevel())
+                            LightExceptions.CheckAndThrow(
+                                Expression.Call(
+                                    AstMethods.ImportWithNames,
+                                    Parent.LocalContext,
+                                    AstUtils.Constant(_root.MakeString()),
+                                    Ast.NewArrayInit(typeof(string), names),
+                                    AstUtils.Constant(GetLevel())
+                                )
                             )
                         ),
                         _root.Span

@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
+using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting.Utils;
@@ -245,7 +246,7 @@ namespace IronPython.Runtime {
         private static int HexValue(char ch) {
             int value;
             if (!HexValue(ch, out value)) {
-                throw new ArgumentException("bad char for integer value: " + ch);
+                throw new ValueErrorException("bad char for integer value: " + ch);
             }
             return value;
         }
@@ -253,7 +254,7 @@ namespace IronPython.Runtime {
         private static int CharValue(char ch, int b) {
             int val = HexValue(ch);
             if (val >= b) {
-                throw new ArgumentException(String.Format("bad char for the integer value: '{0}' (base {1})", ch, b));
+                throw new ValueErrorException(String.Format("bad char for the integer value: '{0}' (base {1})", ch, b));
             }
             return val;
         }
@@ -312,7 +313,7 @@ namespace IronPython.Runtime {
             short sign = 1;
 
             if (b < 0 || b == 1 || b > 36) {
-                throw new ArgumentException("base must be >= 2 and <= 36");
+                throw new ValueErrorException("base must be >= 2 and <= 36");
             }
 
             ParseIntegerStart(text, ref b, ref start, end, ref sign);
@@ -324,7 +325,7 @@ namespace IronPython.Runtime {
                     int digit;
                     if (start >= end) {
                         if (saveStart == start) {
-                            throw new ArgumentException("Invalid integer literal");
+                            throw new ValueErrorException("Invalid integer literal");
                         }
                         break;
                     }
@@ -333,7 +334,7 @@ namespace IronPython.Runtime {
                         if (text[start] == 'l' || text[start] == 'L') {
                             break;
                         }
-                        throw new ArgumentException("Invalid integer literal");
+                        throw new ValueErrorException("Invalid integer literal");
                     }
 
                     checked {
@@ -396,7 +397,7 @@ namespace IronPython.Runtime {
             while (start < end && Char.IsWhiteSpace(text, start)) start++;
 
             if (start < end) {
-                throw new ArgumentException("invalid integer number literal");
+                throw new ValueErrorException("invalid integer number literal");
             }
         }
 
@@ -434,7 +435,7 @@ namespace IronPython.Runtime {
             short sign = 1;
 
             if (b < 0 || b == 1 || b > 36) {
-                throw new ArgumentException("base must be >= 2 and <= 36");
+                throw new ValueErrorException("base must be >= 2 and <= 36");
             }
 
             ParseIntegerStart(text, ref b, ref start, end, ref sign);
@@ -445,7 +446,7 @@ namespace IronPython.Runtime {
                 int digit;
                 if (start >= end) {
                     if (start == saveStart) {
-                        throw new ArgumentException("Invalid integer literal");
+                        throw new ValueErrorException("Invalid integer literal");
                     }
                     break;
                 }
@@ -454,7 +455,7 @@ namespace IronPython.Runtime {
                     if (text[start] == 'l' || text[start] == 'L') {
                         break;
                     }
-                    throw new ArgumentException("Invalid integer literal");
+                    throw new ValueErrorException("Invalid integer literal");
                 }
                 ret = ret * b + digit;
                 start++;

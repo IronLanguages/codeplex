@@ -191,13 +191,32 @@ namespace IronPython.Runtime {
             Target = LightThrowTarget = target;
         }
 
-        internal void LightThrowCompile() {
+        internal void LightThrowCompile(CodeContext/*!*/ context) {
             if (++_exceptionCount > 20) {
                 if (!_compilingLight && (object)Target == (object)LightThrowTarget) {
                     _compilingLight = true;
                     if (!IsOnDiskCode) {
                         ThreadPool.QueueUserWorkItem(x => {
-                            LightThrowTarget = ((LambdaExpression)LightExceptions.Rewrite(GetGeneratorOrNormalLambda().Reduce())).Compile();
+                            var pyCtx = context.LanguageContext;
+
+                            bool enableTracing;
+                            lock (pyCtx._codeUpdateLock) {
+                                enableTracing = context.LanguageContext.EnableTracing;
+                            }
+
+                            Delegate target;
+                            if (enableTracing) {
+                                target = ((LambdaExpression)LightExceptions.Rewrite(GetGeneratorOrNormalLambdaTracing(pyCtx).Reduce())).Compile();
+                            } else {
+                                target = ((LambdaExpression)LightExceptions.Rewrite(GetGeneratorOrNormalLambda().Reduce())).Compile();
+
+                            }
+
+                            lock (pyCtx._codeUpdateLock) {
+                                if (context.LanguageContext.EnableTracing == enableTracing) {
+                                    LightThrowTarget = target;
+                                }
+                            }
                         });
                     }
                 }

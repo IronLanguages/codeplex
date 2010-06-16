@@ -31,6 +31,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler.Ast;
 using IronPython.Runtime;
+using System.Collections;
 
 namespace IronPython.Compiler {
     public delegate object LookupCompilationDelegate(CodeContext context, FunctionCode code);
@@ -96,14 +97,20 @@ namespace IronPython.Compiler {
         public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0) {
             if (retType == typeof(object)) {
                 return new PythonDynamicExpression1(binder, this, arg0);
+            } else if (retType == typeof(bool)) {
+                return new PythonDynamicExpression1<bool>(binder, this, arg0);
             }
+
             return ReduceDynamic(binder, retType, arg0);
         }
 
         public MSAst.Expression/*!*/ Dynamic(DynamicMetaObjectBinder/*!*/ binder, Type/*!*/ retType, MSAst.Expression/*!*/ arg0, MSAst.Expression/*!*/ arg1) {
             if (retType == typeof(object)) {
                 return new PythonDynamicExpression2(binder, this, arg0, arg1);
+            } else if (retType == typeof(bool)) {
+                return new PythonDynamicExpression2<bool>(binder, this, arg0, arg1);
             }
+
             return ReduceDynamic(binder, retType, arg0, arg1);
         }
 
