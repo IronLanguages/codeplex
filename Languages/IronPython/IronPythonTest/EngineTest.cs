@@ -283,6 +283,107 @@ namespace IronPythonTest {
         }
 #endif
 
+        public class ScopeDynamicObject : DynamicObject {
+            internal readonly Dictionary<string, object> _members = new Dictionary<string, object>();
+            
+            public override bool TryGetMember(GetMemberBinder binder, out object result) {
+                return _members.TryGetValue(binder.Name, out result);
+            }
+
+            public override bool TrySetMember(SetMemberBinder binder, object value) {
+                _members[binder.Name] = value;
+                return true;
+            }
+
+            public override bool TryDeleteMember(DeleteMemberBinder binder) {
+                return _members.Remove(binder.Name);
+            }
+        }
+
+        public class ScopeDynamicObject2 : ScopeDynamicObject {
+            public readonly object __doc__ = null;
+        }
+
+        public class ScopeDynamicObject3 : ScopeDynamicObject {
+            public object __doc__ {
+                get {
+                    return null;
+                }
+            }
+        }
+
+        public class ScopeDynamicObject4 : ScopeDynamicObject {            
+            private object _doc;
+            public object __doc__ {
+                get {
+                    return _doc;
+                }
+                set {
+                    _doc = value;
+                }
+            }
+        }
+
+        public class ScopeDynamicObject5 : ScopeDynamicObject {
+            public object __doc__;
+        }
+
+        public class ScopeDynamicObject6 : ScopeDynamicObject {
+            public void __doc__() {
+            }
+        }
+
+        public class ScopeDynamicObject7 : ScopeDynamicObject {
+            public class __doc__ {
+            }
+        }
+
+        public class ScopeDynamicObject8 : ScopeDynamicObject {
+#pragma warning disable 67
+            public event EventHandler __doc__;
+#pragma warning restore 67
+        }
+        
+        public void ScenarioDynamicObjectAsScope() {
+            var engine = Python.CreateEngine();
+
+            // tests where __doc__ gets assigned into the members dictionary
+            foreach (var myScope in new ScopeDynamicObject[] { new ScopeDynamicObject(), new ScopeDynamicObject2(), new ScopeDynamicObject3(), new ScopeDynamicObject6(), new ScopeDynamicObject7(), new ScopeDynamicObject8() }) {
+                var scope = engine.CreateScope(myScope);
+                engine.Execute(@"
+x = 42", scope);
+
+                var source = engine.CreateScriptSourceFromString("x = 42", SourceCodeKind.File);
+                source.Compile().Execute(scope);
+
+                AreEqual(myScope._members.ContainsKey("__doc__"), true);
+                AreEqual(myScope._members.ContainsKey("x"), true);
+                AreEqual(myScope._members.ContainsKey("__file__"), true);
+
+                source = engine.CreateScriptSourceFromString("'hello world'", SourceCodeKind.File);
+                source.Compile().Execute(scope);
+
+                AreEqual(myScope._members["__doc__"], "hello world");
+            }
+
+            // tests where __doc__ gets assigned into a field/property
+            {
+                ScopeDynamicObject myScope = new ScopeDynamicObject4();
+                var scope = engine.CreateScope(myScope);
+
+                var source = engine.CreateScriptSourceFromString("'hello world'\nx=42\n", SourceCodeKind.File);
+                source.Compile().Execute(scope);
+
+                AreEqual(((ScopeDynamicObject4)myScope).__doc__, "hello world");
+
+                myScope = new ScopeDynamicObject5();
+                scope = engine.CreateScope(myScope);
+
+                source.Compile().Execute(scope);
+                AreEqual(((ScopeDynamicObject5)myScope).__doc__, "hello world");
+            }
+        }
+
 #if !SILVERLIGHT        
         public void ScenarioCodePlex20472() {
             try {
@@ -2162,6 +2263,9 @@ for mod in sys.builtin_module_names:
     if mod.startswith('_ctypes'):
         continue
     elif mod.startswith('signal'):
+        continue
+    elif mod=='mmap':
+        print 'http://ironpython.codeplex.com/workitem/27571'
         continue
     x = __import__(mod)
     dir(x)

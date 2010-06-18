@@ -70,6 +70,7 @@ BUILTIN_MODULES =  [
                     "itertools", 
                     "marshal",
                     "math", 
+                    "mmap",
                     "nt", 
                     "operator", 
                     "select",
@@ -99,7 +100,6 @@ MISSING_MODULES = [
                     "_types",  #Can't import this in CPython 2.6 either...
                     "audioop", #CodePlex 21400
                     "imageop", #Deprecated in CPy 2.6.  Removed in Cpy 3.0
-                    "mmap", #CodePlex 21401
                     "msvcrt", #CodePlex 21402
                     "parser", #CodePlex 1347 - Won't fix
                     "strop", #CodePlex 21403

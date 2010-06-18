@@ -1429,7 +1429,7 @@ namespace IronPython.Compiler {
             parameters = ParseVarArgsList(TokenKind.Colon);
             var mid = GetEnd();
 
-            FunctionDefinition func = new FunctionDefinition(name, parameters);
+            FunctionDefinition func = new FunctionDefinition(name, parameters ?? new Parameter[0]); // new Parameter[0] for error handling of incomplete lambda
             func.HeaderIndex =  mid;
             func.StartIndex = start;
 
