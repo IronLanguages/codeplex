@@ -51,6 +51,10 @@ namespace IronPython.Runtime.Types {
             return SetBoundValue(resolverFactory, binder, type, value, new DynamicMetaObject(AstUtils.Constant(null), BindingRestrictions.Empty));
         }
 
+        public override DynamicMetaObject SetValue(OverloadResolverFactory resolverFactory, ActionBinder binder, Type type, DynamicMetaObject value, DynamicMetaObject errorSuggestion) {
+            return base.SetValue(resolverFactory, binder, type, value, errorSuggestion);
+        }
+
         protected override DynamicMetaObject GetBoundValue(OverloadResolverFactory factory, ActionBinder binder, Type type, DynamicMetaObject instance) {
             return new DynamicMetaObject(
                 Ast.Call(
@@ -66,19 +70,36 @@ namespace IronPython.Runtime.Types {
                 BindingRestrictions.Empty
             );
         }
-        
-        protected override DynamicMetaObject SetBoundValue(OverloadResolverFactory factory, ActionBinder binder, Type type, DynamicMetaObject value, DynamicMetaObject instance) {
+
+        protected override DynamicMetaObject SetBoundValue(OverloadResolverFactory resolverFactory, ActionBinder binder, Type type, DynamicMetaObject value, DynamicMetaObject instance) {
+            return SetBoundValue(resolverFactory, binder, type, value, instance, null);
+        }
+
+        protected override DynamicMetaObject SetBoundValue(OverloadResolverFactory factory, ActionBinder binder, Type type, DynamicMetaObject value, DynamicMetaObject instance, DynamicMetaObject errorSuggestion) {
             return new DynamicMetaObject(
-                Ast.Call(
-                    typeof(PythonOps).GetMethod("SlotSetValue"),
-                    ((PythonOverloadResolverFactory)factory)._codeContext,
-                    AstUtils.Constant(GetSlot(), typeof(PythonTypeSlot)),
-                    AstUtils.Convert(
-                        instance.Expression,
-                        typeof(object)
+                Expression.Condition(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("SlotTrySetValue"),
+                        ((PythonOverloadResolverFactory)factory)._codeContext,
+                        AstUtils.Constant(GetSlot(), typeof(PythonTypeSlot)),
+                        AstUtils.Convert(
+                            instance.Expression,
+                            typeof(object)
+                        ),
+                        AstUtils.Constant(DynamicHelpers.GetPythonTypeFromType(type)),
+                        value.Expression
                     ),
-                    AstUtils.Constant(DynamicHelpers.GetPythonTypeFromType(type)),
-                    value.Expression
+                    AstUtils.Convert(value.Expression, typeof(object)),
+                    errorSuggestion != null ?
+                        errorSuggestion.Expression :
+                        Expression.Throw(
+                            Expression.Call(
+                                typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(object), typeof(string) }),
+                                instance.Expression,
+                                Expression.Constant(Name)
+                            ),
+                            typeof(object)
+                        )
                 ),
                 BindingRestrictions.Empty
             );

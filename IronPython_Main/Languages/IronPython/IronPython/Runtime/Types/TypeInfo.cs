@@ -1115,11 +1115,7 @@ namespace IronPython.Runtime.Types {
             internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
                 IPythonObject obj = instance as IPythonObject;
                 if (obj == null || !obj.PythonType.HasDictionary) {
-                    string name = owner.Name;
-                    if (obj != null) {
-                        name = obj.PythonType.Name;
-                    }
-                    throw PythonOps.AttributeErrorForReadonlyAttribute(name, "__doc__");
+                    return false;
                 }
 
                 UserTypeOps.GetDictionary(obj)["__doc__"] = value;

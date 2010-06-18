@@ -205,6 +205,20 @@ def test_cp20594():
              IronPython.Runtime.PythonContext.GetIronPythonAssembly("IronPython.Modules").split(",", 1)[1])
             
 
+def test_cp27547():
+    import clr
+    clr.AddReference('IronPython')
+    clr.AddReference('Microsoft.Scripting')
+    from IronPython.Hosting import Python
+    from Microsoft.Scripting import SourceCodeKind, ScriptCodeParseResult
+    engine = Python.CreateEngine()
+    scope = engine.CreateScope()
+    text = 'lambda'
+    source = engine.CreateScriptSourceFromString(text, 'stdin',
+    SourceCodeKind.InteractiveCode)
+    result = source.GetCodeProperties()
+    AreEqual(result, ScriptCodeParseResult.IncompleteToken)
+
 #--MAIN------------------------------------------------------------------------        
 run_test(__name__)
 

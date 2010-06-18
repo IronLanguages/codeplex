@@ -287,15 +287,18 @@ def gen_debug_proxies(cw):
        gen_debug_proxy(cw, e)
 
 def main():
-    return generate(
-        ("Expression Debugger Proxies", gen_debug_proxies),
-        ("Expression Tree Node Types", gen_tree_nodes),
-        ("Checked Operations", gen_checked_ops),
-        ("Binary Operation Binder Validator", gen_binop_validator),
-        ("Unary Operation Binder Validator", gen_unop_validator),
-        ("StackSpiller Switch", gen_stackspiller_switch),
-        ("Expression Compiler", gen_compiler)
-    )
+    temp_list = [   ("Expression Tree Node Types", gen_tree_nodes),
+                    ("Checked Operations", gen_checked_ops),
+                    ("Binary Operation Binder Validator", gen_binop_validator),
+                    ("Unary Operation Binder Validator", gen_unop_validator),
+                    ("StackSpiller Switch", gen_stackspiller_switch),
+                    ("Expression Compiler", gen_compiler)
+                    ]
+    import System
+    if System.Environment.Version.Major<4:
+        temp_list.append(("Expression Debugger Proxies", gen_debug_proxies))
+    
+    return generate(*temp_list)
 
 if __name__ == "__main__":
     main()

@@ -3698,5 +3698,15 @@ def test_cp23564():
     force_gc()
     AreEqual(A, 1)
 
+
+def test_object_delattr():
+    class A(object):
+        def __init__(self):
+            self.abc = 42
+            
+    x = A()
+    object.__delattr__(x, 'abc')
+    AreEqual(hasattr(x, 'abc'), False)
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)

@@ -1052,8 +1052,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void ObjectDeleteAttribute(CodeContext/*!*/ context, object o, string name) {
-            object dummy;
-            if (!PythonTypeOps.TryInvokeBinaryOperator(context, o, name, "__delete__", out dummy)) {
+            if (!DynamicHelpers.GetPythonType(o).TryDeleteNonCustomMember(context, o, name)) {
                 throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
             }
         }

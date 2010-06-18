@@ -978,6 +978,19 @@ def test_file_coding():
         AreEqual(test_coding_2.x, 'ABCDE')
     finally:
         nt.unlink('test_coding_2.py')
+        
+        
+    try:
+        f = file('test_coding_3.py', 'wb+')
+        f.write("# -*- coding: utf-8 -*-\n")
+        f.write("raise Exception()")
+        f.close()
+        try:
+            import test_coding_3
+        except Exception, e:
+            AreEqual(sys.exc_info()[2].tb_next.tb_lineno, 2)
+    finally:
+        nt.unlink('test_coding_3.py')
 
 def test_module_subtype():
     class x(type(sys)):
