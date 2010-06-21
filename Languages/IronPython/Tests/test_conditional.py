@@ -180,6 +180,975 @@ def test_cp13299():
     AreEqual([[1]] if False else 3.14, 3.14)
     AreEqual(u"" if False else 3.14, 3.14)
     
-    
+def test_large_if():    
+    def f(value):
+        if value:
+            return 42
+        elif value:
+            raise Exception()
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif value:
+            pass
+        elif True:
+            return 23
+
+    for i in xrange(10000):
+        AreEqual(f(True), 42)
+
+    for i in xrange(10000):
+        AreEqual(f(False), 23)
 
 run_test(__name__)

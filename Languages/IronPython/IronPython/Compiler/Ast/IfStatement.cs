@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Interpreter;
 
 using IronPython.Runtime;
@@ -66,27 +67,65 @@ namespace IronPython.Compiler.Ast {
         private MSAst.Expression ReduceWorker(bool optimizeDynamicConvert) {
             MSAst.Expression result;
 
-            if (_else != null) {
-                result = _else;
+            if (_tests.Length > 100) {
+                // generate:
+                // if(x) {
+                //   body
+                //   goto end
+                // } else { 
+                // }
+                // elseBody
+                // end:
+                //
+                // to avoid deeply recursive trees which can stack overflow.
+                BlockBuilder builder = new BlockBuilder();
+                var label = Ast.Label();
+                for (int i = 0; i < _tests.Length; i++) {
+                    IfStatementTest ist = _tests[i];
+
+                    builder.Add(
+                        Ast.Condition(
+                            optimizeDynamicConvert ?
+                                TransformAndDynamicConvert(ist.Test, typeof(bool)) :
+                                GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
+                            Ast.Block(
+                                TransformMaybeSingleLineSuite(ist.Body, GlobalParent.IndexToLocation(ist.Test.StartIndex)),
+                                Ast.Goto(label)
+                            ),
+                            Utils.Empty()
+                        )
+                    );
+                }
+
+                if (_else != null) {
+                    builder.Add(_else);
+                }
+
+                builder.Add(Ast.Label(label));
+                result = builder.ToExpression();
             } else {
-                result = AstUtils.Empty();
-            }
+                // Now build from the inside out
+                if (_else != null) {
+                    result = _else;
+                } else {
+                    result = AstUtils.Empty();
+                }
 
-            // Now build from the inside out
-            int i = _tests.Length;
-            while (i-- > 0) {
-                IfStatementTest ist = _tests[i];
+                int i = _tests.Length;
+                while (i-- > 0) {
+                    IfStatementTest ist = _tests[i];
 
-                result = GlobalParent.AddDebugInfoAndVoid(
-                    Ast.Condition(
-                        optimizeDynamicConvert ?
-                            TransformAndDynamicConvert(ist.Test, typeof(bool)) :
-                            GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
-                        TransformMaybeSingleLineSuite(ist.Body, GlobalParent.IndexToLocation(ist.Test.StartIndex)),
-                        result
-                    ),
-                    new SourceSpan(GlobalParent.IndexToLocation(ist.StartIndex), GlobalParent.IndexToLocation(ist.HeaderIndex))
-                );
+                    result = GlobalParent.AddDebugInfoAndVoid(
+                        Ast.Condition(
+                            optimizeDynamicConvert ?
+                                TransformAndDynamicConvert(ist.Test, typeof(bool)) :
+                                GlobalParent.Convert(typeof(bool), Microsoft.Scripting.Actions.ConversionResultKind.ExplicitCast, ist.Test),
+                            TransformMaybeSingleLineSuite(ist.Body, GlobalParent.IndexToLocation(ist.Test.StartIndex)),
+                            result
+                        ),
+                        new SourceSpan(GlobalParent.IndexToLocation(ist.StartIndex), GlobalParent.IndexToLocation(ist.HeaderIndex))
+                    );
+                }
             }
 
             return result;
