@@ -839,6 +839,11 @@ namespace IronPython.Compiler.Ast {
                     return base.VisitExtension(new LambdaExpression((FunctionDefinition)VisitScope(lambda.Function)));
                 }
 
+                GeneratorExpression generator = node as GeneratorExpression;
+                if (generator != null) {
+                    return base.VisitExtension(new GeneratorExpression((FunctionDefinition)VisitScope(generator.Function), generator.Iterable));
+                }
+
                 // update the global get/set/raw gets variables
                 PythonGlobalVariableExpression global = node as PythonGlobalVariableExpression;
                 if (global != null) {
