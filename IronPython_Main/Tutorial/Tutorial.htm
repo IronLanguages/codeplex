@@ -85,13 +85,10 @@
     <p class="Toc3">Task 1: <a href="#T2.3.1">Simple Avalon Application</a></p>
     <p class="Toc3">Task 2: <a href="#T2.3.2">Avalon calculator</a></p>
     <p class="Toc1">Tutorial 3: <a href="#T3">IronPython and COM interoperability</a></p>
-    <p class="Toc2">Exercise 1: <a href="#T3.1">Merlin the Wizard</a></p>
-    <p class="Toc3">Task 1: <a href="#T3.1.1">Creating COM interop assemblies</a></p>
-    <p class="Toc3">Task 2: <a href="#T3.1.2">Using COM objects from IronPython</a></p>
-    <p class="Toc2">Exercise 2: <a href="#T3.2">Use Word for Spell Checking</a></p>
-    <p class="Toc3">Task 1: <a href="#T3.2.1">Accessing Word and Checking
+    <p class="Toc2">Exercise 1: <a href="#T3.1">Use Word for Spell Checking</a></p>
+    <p class="Toc3">Task 1: <a href="#T3.1.1">Accessing Word and Checking
     Spelling</a></p>
-    <p class="Toc3">Task 2: <a href="#T3.2.2">Use Windows Form Dialog to Correct
+    <p class="Toc3">Task 2: <a href="#T3.1.2">Use Windows Form Dialog to Correct
     Spelling</a></p>
     <p class="Toc1">Tutorial 4: <a href="#T4">Debugging IronPython programs</a></p>
     <p class="Toc2">Exercise 1: <a href="#T4.1">Debugging IronPython programs</a></p>
@@ -138,59 +135,36 @@
     Some of the exercises in this tutorial require specific software installations.&nbsp;
     The prerequisites to successfully complete the whole tutorial are:</p>
     <ul type="disc">
-        <li class="Normal">Microsoft .NET Framework Version 2.0 Service Pack 1 (x86)<a href="#VS2005Note">*</a>
+        <li class="Normal">Microsoft .NET Framework Version 4.0 
         <ul type="circle">
             <li class="Normal">Required to run IronPython.</li>
             <li class="Normal">Download from
-            <a href="http://www.microsoft.com/downloads/details.aspx?familyid=79BC3B77-E02C-4AD3-AACF-A7633F706BA5&displaylang=en">
-            here</a>.</li>
-            <li class="Normal"><b>Vista users:</b> There is no installer for the .NET Framework
-            2.0 SP 1 for Windows Vista. Instead, install Microsoft .NET Framework Version 3.5
-            Service Pack 1, which can be downloaded
-            <a href="http://www.microsoft.com/downloads/details.aspx?familyid=AB99342F-5D1A-413D-8319-81DA479AB0D7&displaylang=en">here</a>.</li>
-            <li class="Normal"><b>Windows 7 Users:</b> Windows 7 already includes a compatible version of
-            the .NET Framework, so this requirement is not necessary.</li>
+            <a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=9cfb2d51-5ff4-4491-b0e5-b386f32c0992&amp;displaylang=en">here</a>.</li>
         </ul>
         </li>
     </ul>
     <ul>
-        <li class="Normal">.NET Framework 2.0 Software Development Kit (SDK) (x86)<a href="#VS2005Note">*</a>
-        <ul type="circle">
-            <li class="Normal">Required for the COM interoperability and C#/VB extending tutorials.</li>
-            <li class="Normal">Download from
-            <a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
-            here</a>.</li>
-        </ul>
-        </li>
-    </ul>
-    <ul>
-        <li class="Normal"><a name="WPF">Microsoft .NET Framework Version 3.5 Redistributable Package (x86)</a>
-            <ul type="circle">
-            <li class="Normal">Required for the &quot;<a href="#T2">Advanced IronPython</a>&quot; tutorial.</li>
-            <li class="Normal">Download from
-            <a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=333325fd-ae52-4e35-b531-508d977d32a6&DisplayLang=en">
-            here</a>.</li>
-            <li class="Normal"><b>Vista Users:</b> This requirement is not necessary, as it is included in .NET
-            Framework 3.5 SP1 mentioned above.</li>
-            <li class="Normal"><b>Windows 7 Users:</b> Windows 7 already includes a compatible version of
-            the .NET Framework, so this requirement is not necessary.</li>
-        </ul>
-        </li>
-    </ul>
-    <ul>
-        <li class="Normal"><a name="Mapack">Mapack</a> (example assembly found
+        <li class="Normal">Visual Studio 2010
+		<ul type="circle">
+			<li class="Normal">Very useful for the C#/VB extending tutorials.</li>
+			<li class="Normal">Separate .NET 4.0 installation is not required if 
+			Visual Studio 2010 is installed.</li>
+			<li class="Normal">Download from
+            <a href="http://www.microsoft.com/visualstudio">here</a>.</li>
+		</ul>
+		</li>
+		<li class="Normal"><a name="Mapack">Mapack</a> (example assembly found
         on the internet)<ul>
-            <li>Required for the turorial &quot;<a href="#T1">Basic IronPython</a>&quot;
+			<li>Required for the turorial &quot;<a href="#T1">Basic IronPython</a>&quot;
             and exercise &quot;<a href="#T1.3">Loading additional .NET Libraries</a>&quot;.</li>
-            <li>Download Mapack from
+			<li>Download Mapack from
             <a href="http://www.lutzroeder.com/dotnet/">here</a> (direct link
             to the Mapack.zip download is
-            <a href="http://www.lutzroeder.com/dotnet/Download.aspx?File=Mapack">
-            here</a>).</li>
-            <li>Extract Mapack.dll from the zip file directly into the Tutorial
+            <a href="http://www.lutzroeder.com/dotnet/Download.aspx?File=Mapack">here</a>).</li>
+			<li>Extract Mapack.dll from the zip file directly into the Tutorial
             directory.</li>
-        </ul>
-        </li>
+		</ul>
+		</li>
     </ul>
     <p class="Normal">&nbsp;</p>
     <p class="Body">This tutorial assumes that the IronPython distribution was uncompressed
@@ -201,11 +175,7 @@
     When the tutorials direct you to start the IronPython console from the tutorial directory,
     you should change to the tutorial directory (&gt;cd c:\ironpython\tutorial)
     and launch the console with the tutorial as your working directory (&gt;..\ipy.exe).</p>
-    <a name="VS2005Note"><p class="Body">*Visual Studio 2005 can be used in place of the Microsoft .NET
-    Framework Version 2.0 and the .NET Framework 2.0 Software Development Kit (SDK).
-    Since Visual Studio 2005 installs both the .NET Framework 2.0 and the .NET Framework
-    SDK, there is no need to install those explicitly if you have Visual Studio
-    2005 available.</p></a>
+    <a name="VS2005Note"></a>
     <p class="Body">&nbsp;</p>
     <h1><a name="T1">Tutorial 1: Basic IronPython</a></h1>
     <p class="Body">The emphasis of this tutorial is on the basic interaction with
@@ -246,8 +216,8 @@
         the tutorial directory&quot;.</p>
         </li>
     </ol>
-    <p class="Code-Highlighted">IronPython 2.6 (2.6.10920.0) on .NET 2.0.50727.4918<br />
-    Copyright (c) Microsoft Corporation. All rights reserved.</p>
+    <p class="Code-Highlighted">IronPython 2.7 (2.7.10920.0) on .NET 4.0.30319.1<br />
+    Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.</p>
     <p class="Code-Highlighted">&gt;&gt;&gt; _</p>
     <ol start="2">
         <li>
@@ -1004,7 +974,7 @@ list(set1-set2)</p>
         <p class="Step">Download the latest Python installer from
         <a href="http://www.python.org/download/">http://www.python.org/download/</a>
         and install Python.&nbsp; The rest of this exercise will assume you used the
-        default installer settings (e.g. installing to c:\python26).</p>
+        default installer settings (e.g. installing to c:\python27).</p>
         </li>
         <li>
         <p class="Step">Create a file named 'site.py' and place it in your IronPython 'Lib'
@@ -1012,11 +982,11 @@ list(set1-set2)</p>
         it.&nbsp; This 'site.py' file is automatically executed every time you run IronPython,
         making it a convenient way to tell IronPython the location of Python's standard library.&nbsp; To
         do so, add the following code into IronPython's 'site.py'.&nbsp; (Replace
-        c:\python26\lib with your actual path to the Python lib directory):</p>
+        c:\python27\lib with your actual path to the Python lib directory):</p>
         </li>
     </ol>
     <p class="TypedExample">import sys</p>
-    <p class="TypedExample">sys.path.append(r&quot;c:\python26\lib&quot;)</p>
+    <p class="TypedExample">sys.path.append(r&quot;c:\python27\lib&quot;)</p>
     <p class="SyntaxNote"><b>Syntax Note:</b> Preceding a string literal with 'r' tells
     Python to parse the string in "raw" mode, which does not require backslashes (\) to
     be escaped. This is helpful for the readability of certain strings, such as Windows
@@ -1483,8 +1453,6 @@ with Python's capacity for optional parameters.</p>
     <h2><a name="T2.3">Exercise 3: Windows Presentation Foundation (Avalon)</a></h2>
     <p class="Body">In this exercise, you will interactively create a simple interactive
     Windows Presentation Foundation application.</p>
-    <p class="Body">This exercise requires an installation of Windows Presentation Foundation
-    for versions of the .NET Framework prior to 3.0.</p>
     <p class="Body">Just like Windows Forms, the Windows Presentation Foundation
     also requires initialization to support interactive development. The initialization
     code is available in &quot;avalon.py&quot; in your Tutorial directory.</p>
@@ -1781,172 +1749,18 @@ Registering self.on_Clear to handle Clear.Click</p>
     how the interop assemblies can be created (in the case they are not provided
     by the creators of the COM object) and will demonstrate the ease with which
     COM objects can be used from IronPython.</p>
-    <p class="Body">Estimated time to complete this tutorial: <b>20 minutes</b></p>
+    <p class="Body">Estimated time to complete this tutorial: <b>15 minutes</b></p>
     <p class="Body">The objective of this tutorial is to explore COM interoperability
     from IronPython.</p>
     <ul>
         <li>
-        <p class="ExerciseList"><a href="#T3.1">Merlin the Wizard</a></p>
-        </li>
-        <li>
-        <p class="ExerciseList"><a href="#T3.2">Word Spell Checking</a></p>
+        <p class="ExerciseList"><a href="#T3.1">Word Spell Checking</a></p>
         </li>
     </ul>
-    <h2><a name="T3.1">Exercise 1: Merlin the Wizard</a></h2>
-    <p class="Body">This exercise consists of two tasks.&nbsp; In the first one we will
-    create an interop assembly for a COM object library and explore it using the
-    .NET reflection tools.&nbsp; In the second task we will use the COM object library
-    from IronPython.</p>
-    <p class="Body">In this exercise, you will create a COM interop assembly and
-    use it to drive the COM object from IronPython.</p>
-    <h3><a name="T3.1.1">Task 1: Creating COM interop assemblies</a></h3>
-    <ol>
-        <li>
-        <p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 2005 Command
-        Prompt&quot; from the start menu.</p>
-        </li>
-        <li>
-        <p class="Step">The .NET Frameworks SDK comes with the &quot;tlbimp&quot; tool which converts
-        a COM type library into .NET metadata information -- the interop assembly.&nbsp; The COM object
-        library we want to use from IronPython is msagent, located
-        in %SystemRoot%\msagent\agentsvr.exe.&nbsp; Use the tlbimp tool to generate the
-        interop assembly for msagent (tlbimp writes to the current directory):</p>
-        </li>
-    </ol>
-    <p class="DOSCommand">tlbimp %SystemRoot%\msagent\agentsvr.exe</p><br />
-    <p class="NoVerify-Highlighted">C:\IronPython\Tutorial&gt;tlbimp %SystemRoot%\msagent\agentsvr.exe<br />
-    Microsoft (R) .NET Framework Type Library to Assembly Converter 2.0.50727.42<br />
-    Copyright (C) Microsoft Corporation.&nbsp; All rights reserved.<br />
-    <br>
-    Type library imported to AgentServerObjects.dll</p>
-    <ol start="3">
-        <li>
-        <p class="Step">The .NET metadata information was saved in AgentServerObjects.dll.&nbsp; Use
-        the ildasm tool to explore the generated DLL:</p>
-        </li>
-    </ol>
-    <p class="DOSCommand">ildasm AgentServerObjects.dll</p>
-    <ol start="4">
-        <li>
-        <p class="Step">As you browse the metadata tree, notice that at the root
-        of the hierarchy there is the &quot;AgentServerObjects&quot; namespace.&nbsp; The namespace
-        contains many interfaces and a single class - AgentServerClass.&nbsp; Explore
-        the methods on the class.&nbsp; Calling some of its methods will be the subject
-        of the next task.</p>
-        </li>
-        <li>
-        <p class="Step">When you are done exploring the AgentServerObjects.dll,
-        close the ildasm tool.&nbsp; Copy AgentServerObjects.dll to the tutorial
-        directory, and then close the Windows command prompt.</p>
-        </li>
-    </ol>
-    <h3><a name="T3.1.2">Task 2: Using COM objects from IronPython</a></h3>
-    <ol>
-        <li>
-        <p class="Step">Start the IronPython console from the tutorial directory
-        (see <a href="#Intro">Introduction</a> for details).</p>
-        </li>
-        <li>
-        <p class="Step">Using the &quot;AddReferenceToFile&quot; function in the
-        clr module,
-        add a reference to the AgentServerObjects.dll:</p>
-        </li>
-    </ol>
-    <p class="UserExample">import clr</p>
-    <p class="Code-Background"></p>
-    <p class="UserExample">clr.AddReferenceToFile(&quot;AgentServerObjects.dll&quot;)</p>
-    <p class="Code-Background"></p>
-    <ol start="3">
-        <li>
-        <p class="Step">Import the contents of the AgentServerObjects namespace
-        and explore the contents using dir():</p>
-        </li>
-    </ol>
-    <p class="UserExample">from AgentServerObjects import *</p>
-    <p class="Code-Background"></p>
-    <p class="UserExample">dir()</p>
-    <!-- <p class="HiddenOutput">['AgentServer', 'AgentServerClass', 'IAgent', 'IAgentAudioOutputProperties', 'IAgentAudioOutputPropertiesEx', 'IAgentBalloon', 'IAgentBalloonEx', 'IAgentCharacter', 'IAgentCharacterEx', 'IAgentCommand', 'IAgentCommandEx', 'IAgentCommandWindow', 'IAgentCommands', 'IAgentCommandsEx', 'IAgentEx', 'IAgentNotifySink', 'IAgentNotifySinkEx', 'IAgentPropertySheet', 'IAgentSpeechInputProperties', 'IAgentUserInput', '__builtins__', '__doc__', '__name__', 'clr']
-    </p> -->
-    <ol start="4">
-        <li>
-        <p class="Step">Create instance of the AgentServerClass and explore its
-        contents:</p>
-        </li>
-    </ol>
-    <p class="UserExample">a = AgentServerClass()</p>
-    <p class="UserExample">dir(a)</p>
-    <p class="Stepnonumbering">The output in the console window will be:</p>
-    <p class="NoVerify-Highlighted">&gt;&gt;&gt; a = AgentServerClass()<br />
-    &gt;&gt;&gt; dir(a)</p>
-    <p class="NoVerify-Background">['CreateObjRef','Equals','GetCharacter','GetCharacterEx','GetHashCode','GetLifetimeService','GetSuspended','GetType','GetVersion','InitializeLifetimeService','Load','MemberwiseClone','ReferenceEquals','Register','ShowDefaultCharacterProperties','ToString','Unload','Unregister','__class__','__delattr__','__doc__','__format__','__getattribute__','__hash__','__init__','__new__','__reduce__','__reduce_ex__','__repr__','__setattr__', '__sizeof__', '__str__', '__subclasshook__']</p>
-    <ol start="5">
-        <li>
-        <p class="Step">Load &quot;Merlin the Wizard&quot; character. (The character data
-        is stored in c:\WINDOWS\msagent\chars). The Load method returns multiple
-        values packed into a tuple - the
-    first value is the actual character ID. Capture the character id in the variable:</p>
-        </li>
-    </ol>
-    <p class="UserExample">cid = clr.Reference[int]()</p>
-    <p class="NoVerify-Background"></p>
-    <p class="UserExample">reqid = clr.Reference[int]()</p>
-    <p class="NoVerify-Background"></p>
-    <p class="UserExample">a.Load(&quot;Merlin.acs&quot;, cid, reqid)</p>
-    <p class="NoVerify-Background"></p>
-    <ol start="6">
-        <li>
-        <p class="Step">Call GetCharacter method on the AgentServerClass instance
-        to get the actual character, display the character and have him think about
-        IronPython Tutorial:</p>
-        </li>
-    </ol>
-    <p class="UserExample">from System.Runtime.InteropServices import DispatchWrapper, UnknownWrapper</p>
-    <p class="UserExample">c = clr.StrongBox[object](DispatchWrapper(None))</p>
-    <p class="UserExample">a.GetCharacter(cid.Value, c)</p>
-    <p class="NoVerify-Background"></p>
-    <p class="UserExample">character = c.Value.WrappedObject</p>
-    <p class="UserExample">character.Show(0, reqid)</p>
-    <p class="UserExample">character.Think(&quot;IronPython Tutorial&quot;, reqid)</p>
-    
-    <ol start="7">
-        <li>
-        <p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of
-        all the animations by calling the GetAnimationNames method. Play one of the animations,
-        &quot;Read&quot;, by calling the Play method:</p>
-        </li>
-    </ol>
-    <p class="UserExample">enum = clr.StrongBox[object](UnknownWrapper(None))</p>
-    <p class="UserExample">character.GetAnimationNames(enum)</p>
-    <p class="UserExample">animations = enum.Value.WrappedObject</p>
-    <p class="UserExample">for n in animations: print n</p>
-    
-    
-    <p class="UserExample">character.Play(&quot;Read&quot;, reqid)</p>
-    <ol start="8">
-        <li>
-        <p class="Step">(Optional) To call a series of animations, we could call character.Play(animation_name, reqid)
-        for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation
-        name:</p>
-        </li>
-    </ol>
-    <p class="UserExample">character.GetAnimationNames(enum)</p>
-    <p class="UserExample">animations = enum.Value.WrappedObject</p>
-    <p class="UserExample">for n in animations: globals()[n] = lambda name=n: character.Play(name, reqid)</p>
-    <p class="Stepnonumbering">At this point we can have Merlin play animations
-    simply by calling a function from global namespace:</p>
-    <p class="UserExample">Congratulate()</p>
-    <p class="NoVerify-Background"></p>
-    <ol start="9">
-        <li>
-        <p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
-        </li>
-    </ol>
-    <p class="UserExample">character.StopAll(0)</p>
-    <p class="UserExample">character.Hide(0, reqid)</p>
-    <h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
+    <h2><a name="T3.1">Exercise 1: Use Word for Spell Checking</a></h2>
     <p class="Body">In this exercise you will create an instance of Microsoft
     Word and use it to check word spellings.</p>
-    <h3><a name="T3.2.1">Task 1: Accessing Word and Checking Spelling</a></h3>
+    <h3><a name="T3.1.1">Task 1: Accessing Word and Checking Spelling</a></h3>
     <ol>
         <li>
         <p class="Step">Start the IronPython console from the tutorial directory
@@ -2019,7 +1833,7 @@ Registering self.on_Clear to handle Clear.Click</p>
     </ol>
     <p class="TypedExample">w.Quit()</p>
     <p class="Code-Background"></p>
-    <h3><a name="T3.2.2">Task 2: Use Windows Form Dialog to Correct Spelling</a></h3>
+    <h3><a name="T3.1.2">Task 2: Use Windows Form Dialog to Correct Spelling</a></h3>
     <p class="Body">In this task you will use an example already written that is
     very similar to what you did in Task 1, but it demonstrates two additional
     features.&nbsp; It uses a Python standard module to register a clean up
@@ -2051,24 +1865,15 @@ Registering self.on_Clear to handle Clear.Click</p>
     </ol>
     <p class="Body">&nbsp;</p>
     <p class="LabSummary">Tutorial Summary</p>
-    <p class="Body">This tutorial was focused on using COM interop assemblies generated
-    via tlbimp tool (in the .NET Framework SDK) to control COM objects from the IronPython environment.</p>
+    <p class="Body">This tutorial was focused on using COM interop to control COM objects from the IronPython environment.</p>
     <p class="Body">In this tutorial you performed the following exercises.</p>
     <ul>
         <li>
-        <p class="ExerciseList"><a href="#T3.1">Merlin the Wizard</a></p>
-        </li>
-        <li>
-        <p class="ExerciseList"><a href="#T3.2">Word Spell Checking</a></p>
+        <p class="ExerciseList"><a href="#T3.1">Word Spell Checking</a></p>
         </li>
     </ul>
     <p class="Body">&nbsp;</p>
-    <p class="Body">In this tutorial, you created a COM interop assembly for the
-    msagent COM object.&nbsp; You used the tlbimp tool which is part of the .NET Framework
-    SDK.&nbsp; Using the ildasm tool, you explored contents of the interop assembly.</p>
-    <p class="Body">Then, from IronPython you loaded the interop assembly, created
-    an instance of the COM object, and instructed Merlin to play different animations.</p>
-    <p class="Body">You also used Word to check the spelling of words, learned
+    <p class="Body">You used Word to check the spelling of words, learned
     how to supply missing optional arguments, and inspected code that builds a
     Windows Form and uses it as a dialog.</p>
     <p class="Normal">&nbsp;</p>
@@ -2180,8 +1985,9 @@ Registering self.on_Clear to handle Clear.Click</p>
     <h3><a name="T5.1.1">Task 1: Implementing a simple class - constructor and ToString</a></h3>
     <ol>
         <li>
-        <p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 2005 Command
-        Prompt&quot; from the start menu. A more recent Visual Studio command prompt will also work.</p>
+        <p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 2010 
+		Command Prompt&quot; from the start menu. A more recent Visual Studio command 
+		prompt should also work.</p>
         </li>
         <li>
         <p class="Step">Open the &quot;csextend.cs&quot; file in Notepad or your favorite text
@@ -2214,7 +2020,7 @@ Registering self.on_Clear to handle Clear.Click</p>
     }</p>
     <ol start="5">
         <li>
-        <p class="Step">Switch back to the SDK Command Prompt window and build the
+        <p class="Step">Switch back to the Command Prompt window and build the
         code using available csx.bat (C# extension):</p>
         </li>
     </ol>
@@ -2470,7 +2276,7 @@ list(set1-set2)</p>
     }</p>
     <ol start="3">
         <li>
-        <p class="Step">Return to the SDK command prompt, compile the code
+        <p class="Step">Return to the command prompt, compile the code
         (csx), launch IronPython Console (ip) and test the code:</p>
         </li>
     </ol>
@@ -2516,8 +2322,9 @@ list(set1-set2)</p>
     <h3><a name="T5.2.1">Task 1: Implementing a simple class - constructor and ToString</a></h3>
     <ol>
         <li>
-        <p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 2005 Command
-        Prompt&quot; from the start menu. A more recent Visual Studio Command Prompt will also work.</p>
+        <p class="Step">Open the &quot;SDK Command Prompt&quot; or &quot;Visual Studio 
+		2010 Command Prompt&quot; from the start menu. A more recent Visual Studio 
+		Command Prompt should also work.</p>
         </li>
         <li>
         <p class="Step">Open &quot;vbextend.vb&quot; in notepad or your favorite text editor. The
@@ -2551,7 +2358,7 @@ list(set1-set2)</p>
     <p class="CodeSample">End Class</p>
     <ol start="5">
         <li>
-        <p class="Step">Switch back to the SDK Command Prompt window and build the
+        <p class="Step">Switch back to the Command Prompt window and build the
         code using the available vbx.bat (Visual Basic extension):</p>
         </li>
     </ol>
@@ -2845,7 +2652,7 @@ list(set1-set2)</p>
     End Class</p>
     <ol start="3">
         <li>
-        <p class="Step">Return to the SDK command prompt, compile the code
+        <p class="Step">Return to the command prompt, compile the code
         (vbx), launch IronPython Console (ip) and test the code:</p>
         </li>
     </ol>
@@ -2908,10 +2715,14 @@ list(set1-set2)</p>
     added a custon addition operator to it, and included support for a delegate.
     The implementation was in either C#, Visual Basic, or both.</p>
 <h1><a name="T7">Tutorial 6: Using Visual Studio to Edit .py Files and Debug Them</a></h1>
-    <p class="BodyNote">There is currently very rudimentary support for editing .py files
-    in Visual Studio (no coloring or expression completion), although there is .NET
-    debugging support.<br /><br />
-    If you would like to see more IronPython support in Visual Studio, we would love
+    <p class="BodyNote">There is a community technology preview add-in for 
+	Visual Studio 2010, IronPython Tools, which supports development of Python 
+	code.&nbsp; Not only does this include Python syntax highlighting, it also 
+	adds Python expression completion support to Visual Studio among other 
+	things!&nbsp; You can download IronPython Tools from
+	<a href="http://www.ironpython.net/tools/">http://www.ironpython.net/tools/</a>.</p>
+	<p class="BodyNote">If you would like to see more features added to this 
+	tool, we would love
     your feedback! Please vote and/or leave a comment
     <a href="https://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=475830">here</a>.</p>
     <p class="Body">This tutorial shows you how to quickly set up Visual Studio to
