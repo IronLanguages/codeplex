@@ -151,7 +151,7 @@
     <Compile Include="Runtime\ConstantDictionaryStorage.cs" />
     <Compile Include="Runtime\DictionaryTypeInfoAttribute.cs" />
     <Compile Include="Modules\imp.cs" />
-    <Compile Include="Runtime\AttributesDictionaryStorage.cs" />
+    <Compile Include="Runtime\DebuggerDictionaryStorage.cs" />
     <Compile Include="Runtime\Binding\IComConvertible.cs" />
     <Compile Include="Runtime\CodeContext.cs" />
     <Compile Include="Runtime\CollectionDebugView.cs" />

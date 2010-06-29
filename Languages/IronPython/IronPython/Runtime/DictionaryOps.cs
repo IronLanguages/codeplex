@@ -55,7 +55,7 @@ namespace IronPython.Runtime {
                     if (first) first = false;
                     else buf.Append(", ");
 
-                    if (BaseSymbolDictionary.IsNullObject(kv.Key))
+                    if (CustomStringDictionary.IsNullObject(kv.Key))
                         buf.Append("None");
                     else
                         buf.Append(PythonOps.Repr(context, kv.Key));

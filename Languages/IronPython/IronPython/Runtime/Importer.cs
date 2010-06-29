@@ -155,7 +155,7 @@ namespace IronPython.Runtime {
             NamespaceTracker ns = from as NamespaceTracker;
             if (ns != null) {
                 object val;
-                if (ns.TryGetValue(SymbolTable.StringToId(name), out val)) {
+                if (ns.TryGetValue(name, out val)) {
                     return MemberTrackerToPython(context, val);
                 }
             }

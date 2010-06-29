@@ -1832,8 +1832,12 @@ k = KNew()", SourceCodeKind.Statements);
 
             #region IEnumerable<KeyValuePair<string,object>> Members
 
-            public IEnumerator<KeyValuePair<string, object>> GetEnumerator() {
-                throw new NotImplementedException("The method or operation is not implemented.");
+            public IEnumerator<KeyValuePair<string, object>> GetEnumerator() {                
+                foreach (var keyValue in dict) {
+                    yield return keyValue;
+                }
+
+                yield return new KeyValuePair<string, object>("customSymbol", customSymbolValue);
             }
 
             #endregion
@@ -1850,7 +1854,7 @@ k = KNew()", SourceCodeKind.Statements);
         public void ScenarioCustomDictionary() {
             PythonDictionary customGlobals = new PythonDictionary(new StringDictionaryStorage(new CustomDictionary()));
             
-            ScriptScope customModule = _pe.Runtime.CreateScope(customGlobals);            
+            ScriptScope customModule = _pe.Runtime.CreateScope(new ObjectDictionaryExpando(customGlobals));            
 
             // Evaluate
             AreEqual(_pe.Execute<int>("customSymbol + 1", customModule), CustomDictionary.customSymbolValue + 1);

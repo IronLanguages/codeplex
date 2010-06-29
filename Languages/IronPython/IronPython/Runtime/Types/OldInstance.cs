@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Types {
                 keys.Add(o);
                 object value;
                 
-                bool res = ((IAttributesCollection)_dict).TryGetObjectValue(o, out value);
+                bool res = _dict.TryGetValue(o, out value);
 
                 Debug.Assert(res);
 

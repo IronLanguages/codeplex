@@ -34,14 +34,14 @@ namespace IronPythonTest {
 
         public static class SimpleXmlAttrInjector {
             [SpecialName]
-            public static IList<SymbolId> GetMemberNames(object obj) {
-                List<SymbolId> list = new List<SymbolId>();
+            public static IList<string> GetMemberNames(object obj) {
+                List<string> list = new List<string>();
                 XmlElement xml = obj as XmlElement;
 
                 if (xml != null) {
                     for (XmlNode n = xml.FirstChild; n != null; n = n.NextSibling) {
                         if (n is XmlElement) {
-                            list.Add(SymbolTable.StringToId(n.Name));
+                            list.Add(n.Name);
                         }
                     }
                 }
