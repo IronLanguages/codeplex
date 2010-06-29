@@ -61,14 +61,6 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Creates a new module backed by a Scope.  Used for creating modules for Python code.
-        /// </summary>
-        internal PythonModule(PythonDictionary dict, Scope scope) {
-            _dict = dict;
-            _scope = scope;
-        }
-
-        /// <summary>
         /// Creates a new PythonModule with the specified dictionary.
         /// 
         /// Used for creating modules for builtin modules which don't have any code associated with them.
@@ -236,7 +228,7 @@ namespace IronPython.Runtime {
         internal Scope Scope {
             get {
                 if (_scope == null) {
-                    Interlocked.CompareExchange(ref _scope, new Scope(_dict), null);
+                    Interlocked.CompareExchange(ref _scope, new Scope(new ObjectDictionaryExpando(_dict)), null);
                 }
 
                 return _scope;

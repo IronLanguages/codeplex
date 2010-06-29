@@ -26,13 +26,11 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Runtime {
 
     [PythonType("dict"), Serializable, DebuggerTypeProxy(typeof(PythonDictionary.DebugProxy)), DebuggerDisplay("dict, {Count} items")]
-    public class PythonDictionary : IDictionary<object, object>, IDictionary, IAttributesCollection,
+    public class PythonDictionary : IDictionary<object, object>, IDictionary, 
 #if CLR2
         IValueEquality,
 #endif
         ICodeFormattable, IStructuralEquatable {
-        [MultiRuntimeAware]
-        private static object DefaultGetItem;   // our cached __getitem__ method
         internal DictionaryStorage _storage;
 
         internal static object MakeDict(CodeContext/*!*/ context, PythonType cls) {
@@ -774,88 +772,9 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region Fast Attribute Access Support
-        /* IAttributesDictionary is implemented on our built-in
-         * dictionaries to allow users to assign dictionaries into
-         * classes.  These dictionaries will resolve their key via
-         * the field table, but only get used when the user does
-         * explicit dictionary assignment.
-         *
-         */
-
-        #region IAttributesCollection Members
-
-        void IAttributesCollection.Add(SymbolId name, object value) {
-            this[SymbolTable.IdToString(name)] = value;
-        }
-
-        bool IAttributesCollection.ContainsKey(SymbolId name) {
-            return __contains__(SymbolTable.IdToString(name));
-        }
-
-        bool IAttributesCollection.Remove(SymbolId name) {
-            return ((IDictionary<object, object>)this).Remove(SymbolTable.IdToString(name));
-        }
-
-        ICollection<object> IAttributesCollection.Keys {
-            get { return keys(); }
-        }
-
-        int IAttributesCollection.Count {
-            get {
-                return Count;
-            }
-        }
-
-        bool IAttributesCollection.TryGetValue(SymbolId name, out object value) {
-            if (GetType() != typeof(PythonDictionary) &&
-                DictionaryOps.TryGetValueVirtual(DefaultContext.Default, this, SymbolTable.IdToString(name), ref DefaultGetItem, out value)) {
-                return true;
-            }
-
-            // call Dict.TryGetValue to get the real value.
-            return _storage.TryGetValue(SymbolTable.IdToString(name), out value);
-        }
-
-        object IAttributesCollection.this[SymbolId name] {
-            get {
-                return this[name];
-            }
-            set {
-                if (GetType() == typeof(PythonDictionary)) {
-                    // no need to call virtual version
-                    _storage.Add(ref _storage, SymbolTable.IdToString(name), value);
-                } else {
-                    this[SymbolTable.IdToString(name)] = value;
-                }
-            }
-        }
-
-        IDictionary<SymbolId, object> IAttributesCollection.SymbolAttributes {
-            get {
-                Dictionary<SymbolId, object> d = new Dictionary<SymbolId, object>();
-                foreach (KeyValuePair<object, object> name in _storage.GetItems()) {
-                    string stringKey = name.Key as string;
-                    if (stringKey == null) continue;
-                    d.Add(SymbolTable.StringToId(stringKey), name.Value);
-                }
-                return d;
-            }
-        }
-
-        void IAttributesCollection.AddObjectKey(object name, object value) { this[name] = value; }
-        bool IAttributesCollection.TryGetObjectValue(object name, out object value) { return ((IDictionary<object, object>)this).TryGetValue(name, out value); }
-        bool IAttributesCollection.RemoveObjectKey(object name) { return ((IDictionary<object, object>)this).Remove(name); }
-        bool IAttributesCollection.ContainsObjectKey(object name) { return __contains__(name); }
-        IDictionary<object, object> IAttributesCollection.AsObjectKeyedDictionary() { return this; }
-
-        #endregion
-
         internal bool TryRemoveValue(object key, out object value) {
             return _storage.TryRemoveValue(ref _storage, key, out value);
         }
-
-        #endregion
 
         #region Debugger View
 

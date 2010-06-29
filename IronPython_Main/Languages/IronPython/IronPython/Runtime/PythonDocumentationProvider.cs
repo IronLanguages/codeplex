@@ -45,11 +45,11 @@ namespace IronPython.Runtime {
 
             NamespaceTracker ns = value as NamespaceTracker;
             if (ns != null) {
-                foreach (var v in ns.SymbolAttributes) {
+                foreach (var v in ns) {
                     AddMember(
                         res,
                         new KeyValuePair<object, object>(
-                            SymbolTable.IdToString(v.Key),
+                            v.Key,
                             Importer.MemberTrackerToPython(_context.SharedClsContext, v.Value)
                         ),
                         false

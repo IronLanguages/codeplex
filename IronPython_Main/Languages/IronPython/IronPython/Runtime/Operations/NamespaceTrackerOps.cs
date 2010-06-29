@@ -56,7 +56,7 @@ namespace IronPython.Runtime.Operations {
         [SpecialName, PropertyMethod]
         public static PythonDictionary Get__dict__(CodeContext context, NamespaceTracker self) {
             PythonDictionary res = new PythonDictionary();
-            foreach (KeyValuePair<object, object> kvp in self) {
+            foreach (var kvp in self) {
                 if (kvp.Value is TypeGroup || kvp.Value is NamespaceTracker) {
                     res[kvp.Key] = kvp.Value;
                 } else {
@@ -81,7 +81,7 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static object GetCustomMember(CodeContext/*!*/ context, NamespaceTracker/*!*/ self, string name) {
             MemberTracker mt;
-            if (self.TryGetValue(SymbolTable.StringToId(name), out mt)) {
+            if (self.TryGetValue(name, out mt)) {
                 if (mt.MemberType == TrackerTypes.Namespace || mt.MemberType == TrackerTypes.TypeGroup) {
                     return mt;
                 }

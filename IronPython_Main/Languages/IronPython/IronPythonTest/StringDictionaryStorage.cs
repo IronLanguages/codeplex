@@ -44,7 +44,7 @@ namespace IronPythonTest {
                     _dict[strKey] = value;
                 } else {
                     EnsureObjectDictionary();
-                    _objDict[BaseSymbolDictionary.NullToObj(key)] = value;
+                    _objDict[CustomStringDictionary.NullToObj(key)] = value;
                 }
             }
         }
@@ -57,7 +57,7 @@ namespace IronPythonTest {
                 }
 
                 if (_objDict != null) {
-                    return _objDict.ContainsKey(BaseSymbolDictionary.NullToObj(key));
+                    return _objDict.ContainsKey(CustomStringDictionary.NullToObj(key));
                 }
 
                 return false;
@@ -72,7 +72,7 @@ namespace IronPythonTest {
                 }
 
                 if (_objDict != null) {
-                    return _objDict.Remove(BaseSymbolDictionary.NullToObj(key));
+                    return _objDict.Remove(CustomStringDictionary.NullToObj(key));
                 }
 
                 return false;
@@ -87,7 +87,7 @@ namespace IronPythonTest {
                 }
 
                 if (_objDict != null) {
-                    return _objDict.TryGetValue(BaseSymbolDictionary.NullToObj(key), out value);
+                    return _objDict.TryGetValue(CustomStringDictionary.NullToObj(key), out value);
                 }
 
                 value = null;

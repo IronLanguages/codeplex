@@ -25,7 +25,6 @@ namespace IronPython.Runtime {
     public sealed class ModuleContext {
         private readonly PythonContext/*!*/ _pyContext;
         private readonly PythonDictionary/*!*/ _globals;
-        private readonly Scope/*!*/ _globalScope;
         private readonly CodeContext/*!*/ _globalContext;
         private readonly PythonModule _module;
         private ModuleOptions _features;
@@ -39,10 +38,9 @@ namespace IronPython.Runtime {
 
             _globals = globals;
             _pyContext = creatingContext;
-            _globalScope = new Scope(globals);
             _globalContext = new CodeContext(globals, this);
-            _module = new PythonModule(globals, _globalScope);
-            _globalScope.SetExtension(_pyContext.ContextId, new PythonScopeExtension(_pyContext, _module, this));
+            _module = new PythonModule(globals);
+            _module.Scope.SetExtension(_pyContext.ContextId, new PythonScopeExtension(_pyContext, _module, this));
         }
 
         /// <summary>
@@ -54,7 +52,6 @@ namespace IronPython.Runtime {
 
             _globals = module.__dict__;
             _pyContext = creatingContext;
-            _globalScope = module.Scope;
             _globalContext = new CodeContext(_globals, this);
             _module = module;
         }
@@ -82,7 +79,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public Scope/*!*/ GlobalScope {
             get {
-                return _globalScope;
+                return _module.Scope;
             }
         }
 

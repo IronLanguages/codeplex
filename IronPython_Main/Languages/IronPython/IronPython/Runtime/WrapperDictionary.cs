@@ -28,39 +28,34 @@ namespace IronPython.Runtime {
         }
       
         public override void Add(ref DictionaryStorage storage, object key, object value) {
-            string strKey = key as string;
-            if (strKey != null) {
-                _data[SymbolTable.StringToId(strKey)] = value;
-            } else {
-                _data.AddObjectKey(key, value);
-            }
+            throw CannotModifyNamespaceDict();
+        }
+
+        private static InvalidOperationException CannotModifyNamespaceDict() {
+            return new InvalidOperationException("cannot modify namespace dictionary");
         }
 
         public override bool Contains(object key) {
             string strKey = key as string;
             if (strKey != null) {
-                return _data.ContainsKey(SymbolTable.StringToId(strKey));
-            } else {
-                return _data.ContainsObjectKey(key);
+                return _data.ContainsKey(strKey);
             }
+
+            return false;
         }
 
         public override bool Remove(ref DictionaryStorage storage, object key) {
-            string strKey = key as string;
-            if (strKey != null) {
-                return _data.Remove(SymbolTable.StringToId(strKey));
-            } else {
-                return _data.RemoveObjectKey(key);
-            }
+            throw CannotModifyNamespaceDict();
         }
 
         public override bool TryGetValue(object key, out object value) {
             string strKey = key as string;
             if (strKey != null) {
-                return _data.TryGetValue(SymbolTable.StringToId(strKey), out value);
-            } else {
-                return _data.TryGetObjectValue(key, out value);
+                return _data.TryGetValue(strKey, out value);
             }
+
+            value = null;
+            return false;
         }
 
         public override int Count {
@@ -70,14 +65,15 @@ namespace IronPython.Runtime {
         }
 
         public override void Clear(ref DictionaryStorage storage) {
-            ICollection<object> keys = _data.Keys;
-            foreach (object key in keys) {
-                _data.RemoveObjectKey(key);
-            }
+            throw CannotModifyNamespaceDict();
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {
-            return new List<KeyValuePair<object, object>>(_data);
+            var res = new List<KeyValuePair<object, object>>(_data.Count);
+            foreach (var item in _data) {
+                res.Add(new KeyValuePair<object, object>(item.Key, item.Value));
+            }
+            return res;
         }
     }
 }

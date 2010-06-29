@@ -77,7 +77,7 @@ namespace IronPython.Runtime.Exceptions {
         private object _traceObject;
         internal int _lineNo;
         private readonly PythonDebuggingPayload _debugProperties;
-        private readonly Func<IAttributesCollection> _scopeCallback;
+        private readonly Func<IDictionary<object, object>> _scopeCallback;
 
         private readonly PythonDictionary _globals;
         private readonly object _locals;
@@ -100,7 +100,7 @@ namespace IronPython.Runtime.Exceptions {
             _back = back;
         }
 
-        internal TraceBackFrame(PythonTracebackListener traceAdapter, FunctionCode code, TraceBackFrame back, PythonDebuggingPayload debugProperties, Func<IAttributesCollection> scopeCallback) {
+        internal TraceBackFrame(PythonTracebackListener traceAdapter, FunctionCode code, TraceBackFrame back, PythonDebuggingPayload debugProperties, Func<IDictionary<object, object>> scopeCallback) {
             _traceAdapter = traceAdapter;
             _code = code;
             _back = back;
@@ -148,7 +148,7 @@ namespace IronPython.Runtime.Exceptions {
             get {
                 object context;
                 if (_scopeCallback != null &&
-                    _scopeCallback().TryGetValue(SymbolTable.StringToId(Compiler.Ast.PythonAst.GlobalContextName), out context)) {
+                    _scopeCallback().TryGetValue(Compiler.Ast.PythonAst.GlobalContextName, out context)) {
                     return ((CodeContext)context).GlobalDict;
                 } else {
                     return _globals;
@@ -164,7 +164,7 @@ namespace IronPython.Runtime.Exceptions {
                         return f_globals;
                     }
 
-                    return new PythonDictionary(new AttributesDictionaryStorage(_scopeCallback()));
+                    return new PythonDictionary(new DebuggerDictionaryStorage(_scopeCallback()));
                 } else {
                     return _locals;
                 }

@@ -16,6 +16,7 @@
 //TODO - Parts of this file should NOT be under ClrAssembly as it has dependencies on the DLR!
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Merlin.Testing.TypeSample;
 using Microsoft.Scripting;
@@ -29,7 +30,7 @@ namespace Merlin.Testing.Call {
         public void M200(int arg) { Flag.Set(arg); }
         public void M201([DefaultParameterValue(20)] int arg) { Flag.Set(arg); }
         public void M202(params int[] arg) { Flag.Set(arg.Length); }
-        public void M203([ParamDictionaryAttribute] IAttributesCollection arg) { Flag.Set(arg.Count); }
+        public void M203([ParamDictionaryAttribute] IDictionary<object, object> arg) { Flag.Set(arg.Count); }
 
         // optional (get missing value)
         // - check the value actually passed in
@@ -44,8 +45,8 @@ namespace Merlin.Testing.Call {
         // two parameters
         public void M300(int x, int y) { }
         public void M350(int x, params int[] y) { }
-        public void M351(int x, [ParamDictionary] IAttributesCollection arg) { Flag<object>.Set(arg); }
-        public void M352([ParamDictionary] IAttributesCollection arg, params int[] x) { Flag<object>.Set(arg); }
+        public void M351(int x, [ParamDictionary] IDictionary<object, object> arg) { Flag<object>.Set(arg); }
+        public void M352([ParamDictionary] IDictionary<object, object> arg, params int[] x) { Flag<object>.Set(arg); }
 
         public void M310(int x, [DefaultParameterValue(30)]int y) { Flag.Set(x + y); }
         public void M320([DefaultParameterValue(40)] int y, int x) { Flag.Set(x + y); }
@@ -102,8 +103,8 @@ namespace Merlin.Testing.Call {
         public void M400(ref int arg1, params int[] arg2) { arg1 = 10; }
         public void M401(out int arg1, params int[] arg2) { arg1 = 10; }
 
-        public void M450(ref int arg1, [ParamDictionary] IAttributesCollection arg2) { arg1 = 10; }
-        public void M451(ref int arg1, [ParamDictionary] IAttributesCollection arg2) { arg1 = 10; }
+        public void M450(ref int arg1, [ParamDictionary] IDictionary<object, object> arg2) { arg1 = 10; }
+        public void M451(ref int arg1, [ParamDictionary] IDictionary<object, object> arg2) { arg1 = 10; }
 
         public void M500(ref int arg1, [DefaultParameterValue(10)] int arg2) { arg1 = 10; }
         public void M501([DefaultParameterValue(10)] int arg2, ref int arg1) { arg1 = 10; }
@@ -136,7 +137,7 @@ namespace Merlin.Testing.Call {
         public Ctor104(object[] arg) { }
     }
     public class Ctor105 {
-        public Ctor105([ParamDictionary] IAttributesCollection arg) { }
+        public Ctor105([ParamDictionary] IDictionary<object, object> arg) { }
     }
 
     public class Ctor110 {
@@ -168,7 +169,7 @@ namespace Merlin.Testing.Call {
     }
 
     public class Ctor250 {
-        public Ctor250(int x, [ParamDictionary] IAttributesCollection y) { }
+        public Ctor250(int x, [ParamDictionary] IDictionary<object, object> y) { }
     }
 
     // argument types

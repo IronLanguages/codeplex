@@ -785,8 +785,6 @@ namespace IronPython.Runtime.Binding {
 
             // DLR types
             res[typeof(DynamicNull)] = new ExtensionTypeInfo(typeof(NoneTypeOps), "NoneType");
-            res[typeof(BaseSymbolDictionary)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
-            res[typeof(IAttributesCollection)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(IDictionary<object, object>)] = new ExtensionTypeInfo(typeof(DictionaryOps), "dict");
             res[typeof(NamespaceTracker)] = new ExtensionTypeInfo(typeof(NamespaceTrackerOps), "namespace#");
             res[typeof(TypeGroup)] = new ExtensionTypeInfo(typeof(TypeGroupOps), "type-collision");

@@ -21,12 +21,16 @@ using Microsoft.Scripting.Runtime;
 using System.Threading;
 
 namespace IronPython.Runtime {
+    /// <summary>
+    /// Adapts an IDictionary[object, object] for use as a PythonDictionary used for
+    /// our debug frames.  Also hides the special locals which start with $.
+    /// </summary>
     [Serializable]
-    internal class AttributesDictionaryStorage : DictionaryStorage {
-        private IAttributesCollection _data;
+    internal class DebuggerDictionaryStorage : DictionaryStorage {
+        private IDictionary<object, object> _data;
         private readonly CommonDictionaryStorage _hidden;
 
-        public AttributesDictionaryStorage(IAttributesCollection data) {
+        public DebuggerDictionaryStorage(IDictionary<object, object> data) {
             Debug.Assert(data != null);
 
             _hidden = new CommonDictionaryStorage();
@@ -47,12 +51,7 @@ namespace IronPython.Runtime {
         public override void AddNoLock(ref DictionaryStorage storage, object key, object value) {
             _hidden.Remove(key);
 
-            string strKey = key as string;
-            if (strKey != null) {
-                _data[SymbolTable.StringToId(strKey)] = value;
-            } else {
-                _data.AddObjectKey(key, value);
-            }
+            _data[key] = value;
         }
 
         public override bool Contains(object key) {
@@ -60,24 +59,15 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            string strKey = key as string;
-            if (strKey != null) {
-                return _data.ContainsKey(SymbolTable.StringToId(strKey));
-            } else {
-                return _data.ContainsObjectKey(key);
-            }
+            return _data.ContainsKey(key);
         }
 
         public override bool Remove(ref DictionaryStorage storage, object key) {
             if (_hidden.Contains(key)) {
                 return false;
             }
-            string strKey = key as string;
-            if (strKey != null) {
-                return _data.Remove(SymbolTable.StringToId(strKey));
-            } else {
-                return _data.RemoveObjectKey(key);
-            }
+
+            return _data.Remove(key);
         }
 
         public override bool TryGetValue(object key, out object value) {
@@ -86,12 +76,7 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            string strKey = key as string;
-            if (strKey != null) {
-                return _data.TryGetValue(SymbolTable.StringToId(strKey), out value);
-            }
-
-            return _data.TryGetObjectValue(key, out value);
+            return _data.TryGetValue(key, out value);
         }
 
         public override int Count {
@@ -101,7 +86,7 @@ namespace IronPython.Runtime {
         }
 
         public override void Clear(ref DictionaryStorage storage) {
-            _data = new SymbolDictionary();
+            _data = new Dictionary<object, object>();
             _hidden.Clear();
         }
 
