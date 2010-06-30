@@ -48,7 +48,8 @@ namespace IronPython.Compiler {
         private ErrorSink _errors;
         private Severity _indentationInconsistencySeverity;
         private bool _endContinues, _printFunction, _unicodeLiterals;
-        private List<int> _newLineLocations = new List<int>();
+        private List<int> _newLineLocations;
+        private SourceLocation _initialLocation;
         private TextReader _reader;
         private char[] _buffer;
         private bool _multiEolns;
@@ -127,14 +128,14 @@ namespace IronPython.Compiler {
             if (match < 0) {
                 // If our index = -1, it means we're on the first line.
                 if (match == -1) {
-                    return new SourceLocation(index, 1, checked(index + 1));
+                    return new SourceLocation(index + _initialLocation.Index, _initialLocation.Line, checked(index + _initialLocation.Column));
                 }
                 // If we couldn't find an exact match for this line number, get the nearest
                 // matching line number less than this one
                 match = ~match - 1;
             }
             
-            return new SourceLocation(index, _sourceUnit.MapLine(match + 2), index - _newLineLocations[match] + 1);
+            return new SourceLocation(index + _initialLocation.Index, _sourceUnit.MapLine(match + 2) + _initialLocation.Line - 1, index - _newLineLocations[match] + _initialLocation.Column);
         }
 
         public SourceUnit SourceUnit {
@@ -210,9 +211,11 @@ namespace IronPython.Compiler {
             if (_buffer == null || _buffer.Length < bufferCapacity) {
                 _buffer = new char[bufferCapacity];
             }
-
+            
+            _newLineLocations = new List<int>();
             _tokenEnd = -1;
             _multiEolns = !_disableLineFeedLineSeparator;
+            _initialLocation = initialLocation;
 
             _tokenEndIndex = -1;
             _tokenStartIndex = 0;
