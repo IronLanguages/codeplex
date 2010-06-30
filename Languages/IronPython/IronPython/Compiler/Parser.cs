@@ -1459,6 +1459,7 @@ namespace IronPython.Compiler {
             func.EndIndex = GetEnd();
 
             LambdaExpression ret = new LambdaExpression(func);
+            func.SetLoc(_globalParent, func.IndexSpan);
             ret.SetLoc(_globalParent, func.IndexSpan);
             return ret;
         }
