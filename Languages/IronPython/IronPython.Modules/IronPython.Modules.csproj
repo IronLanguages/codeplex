@@ -34,7 +34,7 @@
     <DefineConstants>DEBUG;TRACE;$(SignedSym);CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'v2Release' ">
     <DebugType>pdbonly</DebugType>
@@ -43,7 +43,7 @@
     <DefineConstants>TRACE;$(SignedSym);CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'FxCop' ">
     <DebugType>pdbonly</DebugType>
@@ -65,7 +65,7 @@
     <NoStdLib>true</NoStdLib>
     <SilverlightBuild>true</SilverlightBuild>
     <SilverlightPath Condition="'$(SilverlightPath)' == ''">$(Silverlight3Path)</SilverlightPath>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight3Release' ">
     <OutputPath>$(SolutionDir)..\bin\Silverlight3Release</OutputPath>
@@ -76,7 +76,7 @@
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
     <SilverlightPath Condition="'$(SilverlightPath)' == ''">$(Silverlight3Path)</SilverlightPath>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -207,7 +207,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Numerics" Condition=" '$(TargetFrameworkVersion)' == 'v4.0' " />
-    <Reference Include="System.Core" Condition=" '$(TargetFrameworkVersion)' == 'v4.0' " />
+    <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup Condition=" '$(SilverlightBuild)' == 'true' ">
     <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
@@ -221,7 +221,6 @@
     <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightPath)\System.Core.dll</HintPath>
-      <Aliases Condition=" '$(TargetFrameworkVersion)' != 'v4.0' ">systemcore</Aliases>
     </Reference>
     <Reference Include="System.Numerics, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition="'$(TargetFrameworkVersion)' == 'v4.0' ">
       <SpecificVersion>False</SpecificVersion>
@@ -232,10 +231,6 @@
     <ProjectReference Include="..\..\..\Runtime\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj" Condition="'$(TargetFrameworkVersion)' != 'v4.0'">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Runtime\Microsoft.Scripting.Core\Microsoft.Scripting.ExtensionAttribute.csproj" Condition="'$(TargetFrameworkVersion)' != 'v4.0'">
-      <Project>{8B0F1074-750E-4D64-BF23-A1E0F54261E5}</Project>
-      <Name>Microsoft.Scripting.ExtensionAttribute</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{02FF0909-F5AD-48CF-A86A-345E721B7E40}</Project>

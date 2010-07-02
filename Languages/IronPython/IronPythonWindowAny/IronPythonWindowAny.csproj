@@ -30,7 +30,7 @@
     <OutputPath>$(SolutionDir)..\bin\v2Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;IRONPYTHON_WINDOW;$(SignedSym);CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'v2Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -38,7 +38,7 @@
     <OutputPath>$(SolutionDir)..\bin\v2Release\</OutputPath>
     <DefineConstants>TRACE;IRONPYTHON_WINDOW;$(SignedSym);CLR2</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
     <DebugType>pdbonly</DebugType>

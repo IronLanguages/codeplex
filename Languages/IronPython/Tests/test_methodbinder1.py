@@ -415,7 +415,7 @@ IListInt Array IEnumerableInt IEnumeratorInt NullableInt
 
 def test_pass_in_clrReference():
     import clr
-    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int]())
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int](0))
     _repeat_with_one_arg('Object', lambda : clr.Reference[object](None))
     _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int](10))
     _repeat_with_one_arg('Object ', lambda : clr.Reference[float](123.123))
@@ -542,7 +542,7 @@ def test_other_concern():
     
     # more ref/out sanity check
     import clr
-    def f1(): return clr.Reference[object]()
+    def f1(): return clr.Reference[object](None)
     def f2(): return clr.Reference[int](10)
     def f3(): return clr.Reference[S1](S1())
     def f4(): return clr.Reference[C1](C2()) # C2 inherits C1
@@ -564,11 +564,11 @@ def test_other_concern():
                 AssertError(TypeError, func, ref)
 
     # call 854
-    AssertError(TypeError, target.M854, clr.Reference[object]())
+    AssertError(TypeError, target.M854, clr.Reference[object](None))
     AssertError(TypeError, target.M854, clr.Reference[int](10))
     
     # call 855
-    AssertError(TypeError, target.M855, clr.Reference[object]())
+    AssertError(TypeError, target.M855, clr.Reference[object](None))
     AssertError(TypeError, target.M855, clr.Reference[int](10))
     
     # call 854 and 855 with Reference[bool]
@@ -576,8 +576,8 @@ def test_other_concern():
     target.M855(clr.Reference[bool](True)); AreEqual(Flag.Value, 855)
     
     # practical
-    ref = clr.Reference[int]()
-    ref2 = clr.Reference[int]()
+    ref = clr.Reference[int](0)
+    ref2 = clr.Reference[int](0)
     ref.Value = 300
     ref2.Value = 100
     ## M860(ref arg1, arg2, out arg3): arg3 = arg1 + arg2; arg1 = 100;
