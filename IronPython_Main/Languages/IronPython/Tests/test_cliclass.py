@@ -1637,7 +1637,7 @@ def test_ctor_field_assign_conversions():
 def test_iterator_dispose():
     # getting an enumerator from an enumerable should dispose the new enumerator
     import clr
-    box = clr.StrongBox[bool]()
+    box = clr.StrongBox[bool](False)
     ietest = EnumerableTest(box)
     for x in ietest:
         pass
@@ -1645,7 +1645,7 @@ def test_iterator_dispose():
     AreEqual(box.Value, True)
     
     # enumerating on an enumerator shouldn't dispose the box
-    box = clr.StrongBox[bool]()
+    box = clr.StrongBox[bool](False)
     ietest = MyEnumerator(box)
     for x in ietest:
         pass

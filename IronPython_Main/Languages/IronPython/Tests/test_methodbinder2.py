@@ -183,7 +183,7 @@ def test_other_concerns():
     AreEqual(Flag.Value, 140); Flag.Value = 99
 
 import clr
-clrRefInt = clr.Reference[int]()
+clrRefInt = clr.Reference[int](0)
 
 ######### generated python code below #########
 
@@ -191,7 +191,7 @@ def test_arg_ClrReference():
     target = COverloads_ClrReference()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (lambda :                         None, _merge(_first('M100 M101 M107 '), _second('M102 M104 M105 M106 ')), 'M103 ', '', ),
-(lambda :      clr.Reference[object](), _second('M100 M104 M105 M107 '), 'M101 M102 M103 M104 M106 ', '', ),
+(lambda :      clr.Reference[object](None), _second('M100 M104 M105 M107 '), 'M101 M102 M103 M104 M106 ', '', ),
 (lambda :  clr.Reference[object](None), _second('M100 M104 M105 M107 '), 'M101 M102 M103 M106 ', '', ),
 (lambda :        clr.Reference[int](9), _merge(_first('M100 M102 M103 M104 '), _second('M105 M107 ')), 'M101 M106 ', '', ),
 (lambda :    clr.Reference[bool](True), _merge(_first('M100 M105 '), _second('M101 M102 M104 M107 ')), 'M103 M106 ', '', ),

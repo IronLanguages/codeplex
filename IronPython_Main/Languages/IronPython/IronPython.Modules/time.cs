@@ -13,11 +13,6 @@
  *
  * ***************************************************************************/
 
-#if SILVERLIGHT && CLR2
-extern alias systemcore;
-using TimeZoneInfo = systemcore::System.TimeZoneInfo;
-#endif
-
 using System;
 using System.Collections;
 using System.Collections.Generic;

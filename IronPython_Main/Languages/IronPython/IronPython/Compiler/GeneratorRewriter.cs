@@ -43,8 +43,8 @@ namespace IronPython.Compiler {
     internal sealed class GeneratorRewriter : ExpressionVisitor {
         private readonly Expression _body;
         private readonly string _name;
-        private readonly StrongBox<Type> _tupleType = new StrongBox<Type>();
-        private readonly StrongBox<ParameterExpression> _tupleExpr = new StrongBox<ParameterExpression>();
+        private readonly StrongBox<Type> _tupleType = new StrongBox<Type>(null);
+        private readonly StrongBox<ParameterExpression> _tupleExpr = new StrongBox<ParameterExpression>(null);
 
         // The one return label, or more than one if we're in a finally
         private readonly Stack<LabelTarget> _returnLabels = new Stack<LabelTarget>();

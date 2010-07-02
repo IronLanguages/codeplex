@@ -122,10 +122,10 @@ def gen_func_action(cw, lo, med, hi, func):
     cw.write("\n#endif")
 
 def gen_func_types(cw):
-    gen_func_action(cw, 2, 9, 17, generate_one_func_type)
+    gen_func_action(cw, 5, 9, 17, generate_one_func_type)
 
 def gen_action_types(cw):
-    gen_func_action(cw, 2, 9, 17, generate_one_action_type)
+    gen_func_action(cw, 5, 9, 17, generate_one_action_type)
 
 #
 # Pregenerated UpdateAndExecute methods for Func, Action delegate types
