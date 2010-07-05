@@ -162,9 +162,5 @@ namespace IronPython.Runtime.Binding {
 
             return res;
         }
-
-        public override Func<object[], object> GetConvertor(int index, DynamicMetaObject metaObject, ParameterInfo info, Type toType) {
-            return Binder.ConvertObject(index, metaObject, toType, ConversionResultKind.ExplicitCast);
-        }
     }
 }
