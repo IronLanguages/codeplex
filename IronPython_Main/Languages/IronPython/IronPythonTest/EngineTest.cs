@@ -1862,14 +1862,14 @@ k = KNew()", SourceCodeKind.Statements);
             // Execute
             _pe.Execute("customSymbolPlusOne = customSymbol + 1", customModule);
             AreEqual(_pe.Execute<int>("customSymbolPlusOne", customModule), CustomDictionary.customSymbolValue + 1);
-            AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
+            AreEqual(customModule.GetVariable<int>("customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
 
             // Compile
             CompiledCode compiledCode = _pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2").Compile();
 
             compiledCode.Execute(customModule);
             AreEqual(_pe.Execute<int>("customSymbolPlusTwo", customModule), CustomDictionary.customSymbolValue + 2);
-            AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
+            AreEqual(customModule.GetVariable<int>("customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
 
             // check overriding of Add
             try {

@@ -101,20 +101,6 @@ namespace IronPython.Runtime.Binding {
             );
         }
 
-        public override Func<object[], object> ConvertObject(int index, DynamicMetaObject knownType, Type toType, ConversionResultKind kind) {            
-            if (toType == typeof(object) || toType.IsAssignableFrom(knownType.LimitType)) {
-                return null;
-            }
-
-            Type visType = CompilerHelpers.GetVisibleType(toType);
-
-            if (knownType.LimitType == typeof(PythonType) && visType == typeof(Type)) {
-                return (args) => (Type)(PythonType)args[index];
-            }
-
-            return (args) => Converter.Convert(args[index], toType);
-        }
-
         internal static MethodInfo GetGenericConvertMethod(Type toType) {
             if (toType.IsValueType) {
                 if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
