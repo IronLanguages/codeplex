@@ -34,6 +34,7 @@ Options:
  -X:MaxRecursion                        Set the maximum recursion level
  -X:MTA                                 Run in multithreaded apartment
  -X:NoAdaptiveCompilation               Disable adaptive compilation
+ -X:NoDebug <regex>                     Provides a regular expression of files which should not be emitted in debug mode
  -X:PassExceptions                      Do not catch exceptions that are unhandled by script code
  -X:PerfStats                           Print performance stats when the process exists [debug only]
  -X:PrivateBinding                      Enable binding to private members

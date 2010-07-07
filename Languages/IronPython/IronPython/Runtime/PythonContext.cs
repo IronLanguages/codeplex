@@ -31,6 +31,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 using Microsoft.Scripting;
@@ -49,6 +50,7 @@ using IronPython.Runtime.Types;
 
 using Debugging = Microsoft.Scripting.Debugging;
 using PyAst = IronPython.Compiler.Ast;
+
 
 namespace IronPython.Runtime {
     public delegate void CommandDispatcher(Delegate command);
@@ -184,7 +186,6 @@ namespace IronPython.Runtime {
         private DynamicMetaObjectBinder _invokeTwoConvertToInt;
         private static CultureInfo _CCulture;
         private DynamicDelegateCreator _delegateCreator;
-
         // tracing / in-proc debugging support
         private Debugging.CompilerServices.DebugContext _debugContext;
         private Debugging.ITracePipeline _tracePipeline;
@@ -787,6 +788,10 @@ namespace IronPython.Runtime {
             SysModule.PerformModuleReload(this, _systemState.__dict__);
         }
 
+        internal bool EmitDebugSymbols(SourceUnit sourceUnit) {
+            return sourceUnit.EmitDebugSymbols && (PythonOptions.NoDebug == null || PythonOptions.NoDebug.IsMatch(sourceUnit.Path));
+        }
+
         private void InitializeSysFlags() {
             // sys.flags
             SysModule.SysFlags flags = new SysModule.SysFlags();
@@ -834,7 +839,7 @@ namespace IronPython.Runtime {
         internal bool ShouldInterpret(PythonCompilerOptions options, SourceUnit source) {
             // We have to turn off adaptive compilation in debug mode to
             // support mangaged debuggers. Also turn off in optimized mode.
-            bool adaptiveCompilation = !_options.NoAdaptiveCompilation && !source.EmitDebugSymbols;
+            bool adaptiveCompilation = !_options.NoAdaptiveCompilation && !EmitDebugSymbols(source);
 
             return options.Interpreted || adaptiveCompilation;
         }

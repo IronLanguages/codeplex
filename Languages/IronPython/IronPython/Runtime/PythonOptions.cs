@@ -16,8 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using IronPython.Runtime.Exceptions;
+using System.Text.RegularExpressions;
+
 using Microsoft.Scripting;
+
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython {
 
@@ -49,6 +52,7 @@ namespace IronPython {
         private readonly bool _verbose;
         private readonly bool _frames, _fullFrames, _tracing;
         private readonly Version _version;
+        private readonly Regex _noDebug;
         private readonly int? _gcStress;
         private bool _enableProfiler;
         private readonly bool _lightweightScopes;
@@ -223,6 +227,15 @@ namespace IronPython {
             get { return _gcStress; }            
         }
 
+        /// <summary>
+        /// Returns a regular expression of Python files which should not be emitted in debug mode.
+        /// </summary>
+        public Regex NoDebug {
+            get {
+                return _noDebug;
+            }
+        }
+
         public PythonOptions() 
             : this(null) {
         }
@@ -262,6 +275,7 @@ namespace IronPython {
             _frames = _fullFrames || GetOption(options, "Frames", false);
             _gcStress = GetOption<int?>(options, "GCStress", null);
             _tracing = GetOption(options, "Tracing", false);
+            _noDebug = GetOption(options, "NoDebug", (Regex)null);
 
             object value;
             if (options != null && options.TryGetValue("PythonVersion", out value)) {

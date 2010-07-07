@@ -518,6 +518,7 @@
     <Compile Include="Runtime\Win32Native.cs" />
     <Compile Include="Runtime\WrapperDescriptorAttribute.cs" />
     <Compile Include="Runtime\WrapperDictionary.cs" />
+    <Compile Include="Runtime\XamlObjectWriterSettings.cs" />
     <Compile Include="Runtime\XRange.cs" />
     <Compile Include="..\AssemblyVersion.cs">
       <Link>Properties\AssemblyVersion.cs</Link>

@@ -764,7 +764,6 @@ namespace IronPython.Compiler.Ast {
         /// runs it against a different scope.
         /// </summary>
         internal PythonAst MakeLookupCode() {
-            //Debug.Assert(false);
             PythonAst res = (PythonAst)MemberwiseClone();
             res._mode = CompilationMode.Lookup;
             res._contextInfo = null;
@@ -912,6 +911,12 @@ namespace IronPython.Compiler.Ast {
                 } else {
                     return "module " + System.IO.Path.GetFileNameWithoutExtension(_name);
                 }
+            }
+        }
+
+        internal new bool EmitDebugSymbols {
+            get {
+                return PyContext.EmitDebugSymbols(SourceUnit);
             }
         }
 

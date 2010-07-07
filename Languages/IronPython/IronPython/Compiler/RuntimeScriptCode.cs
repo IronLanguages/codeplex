@@ -126,7 +126,7 @@ namespace IronPython.Compiler {
             if (pc.ShouldInterpret(pco, SourceUnit)) {
                 return ((Microsoft.Scripting.Ast.LightExpression<Func<FunctionCode, object>>)Ast.GetLambda()).Compile(pc.Options.CompilationThreshold);
             } else {
-                return ((Microsoft.Scripting.Ast.LightExpression<Func<FunctionCode, object>>)Ast.GetLambda()).ReduceToLambda().Compile(SourceUnit.EmitDebugSymbols);
+                return ((Microsoft.Scripting.Ast.LightExpression<Func<FunctionCode, object>>)Ast.GetLambda()).ReduceToLambda().Compile(pc.EmitDebugSymbols(SourceUnit));
             }
         }
     }
