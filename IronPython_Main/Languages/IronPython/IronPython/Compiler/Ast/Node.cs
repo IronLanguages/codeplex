@@ -193,7 +193,7 @@ namespace IronPython.Compiler.Ast {
 
         internal bool EmitDebugSymbols {
             get {
-                return GlobalParent.SourceUnit.EmitDebugSymbols;
+                return GlobalParent.EmitDebugSymbols;
             }
         }
 

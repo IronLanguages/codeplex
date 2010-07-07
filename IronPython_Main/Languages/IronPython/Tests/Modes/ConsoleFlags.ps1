@@ -414,6 +414,16 @@ function test-pymodes($pyexe)
 }
 	
 ###############################################################################
+function nodebug-helper
+{
+	$dlrexe = $args[0]
+	
+	$pyPath = $env:DLR_ROOT + "\External.LCA_RESTRICTED\Languages\IronPython\26\Lib\.*"
+	$pyPath = $pyPath.Replace("\", "\\")
+	echo $pyPath
+	hello-helper $dlrexe "-D" "-X:NoDebug" $pyPath
+}
+
 function assembliesdir-helper
 {
 	$dlrexe = $args[0]
@@ -708,6 +718,12 @@ function test-dlrmodes($dlrexe)
 	$stuff = dlrexe -O -D -c "print __debug__"
 	if ($stuff -ne "False") { show-failure "Failed: $stuff";  }
 
+	#------------------------------------------------------------------------------
+	## -X:NoDebug
+	echo ""
+	echo "Testing -X:NoDebug..."	
+    nodebug-helper $dlrexe
+    
 	#------------------------------------------------------------------------------
 	## -X:AssembliesDir
 	echo ""

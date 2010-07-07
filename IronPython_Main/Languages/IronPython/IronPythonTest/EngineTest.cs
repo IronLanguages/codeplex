@@ -33,6 +33,9 @@ using System.Security;
 using System.Security.Policy;
 using System.Text;
 using System.Threading;
+#if !CLR2 && !SILVERLIGHT
+using System.Windows.Markup;
+#endif
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
@@ -46,6 +49,10 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
+#if !CLR2 && !SILVERLIGHT
+using DependencyObject = System.Windows.DependencyObject;
+#endif
 
 [assembly: ExtensionType(typeof(IronPythonTest.IFooable), typeof(IronPythonTest.FooableExtensions))]
 namespace IronPythonTest {
@@ -85,6 +92,51 @@ namespace IronPythonTest {
     public delegate int RefIntDelegate(ref int arg);
     public delegate T GenericDelegate<T, U, V>(U arg1, V arg2);
 
+#if !CLR2 && !SILVERLIGHT
+    [ContentProperty("Content")]
+    public class XamlTestObject : DependencyObject {
+        public event IntIntDelegate Event;
+        public int Method(int arg) {
+            if (Event != null)
+                return Event(arg);
+            else
+                return -1;
+        }
+
+        public object Content {
+            get;
+            set;
+        }
+    }
+
+    [ContentProperty("Content")]
+    [RuntimeNameProperty("MyName")]
+    public class InnerXamlTextObject : DependencyObject {
+        public object Content {
+            get;
+            set;
+        }
+
+        public string MyName {
+            get;
+            set;
+        }
+    }
+
+    [ContentProperty("Content")]
+    [RuntimeNameProperty("Name")]
+    public class InnerXamlTextObject2 : DependencyObject {
+        public object Content {
+            get;
+            set;
+        }
+
+        public string Name {
+            get;
+            set;
+        }
+    }
+#endif
     public class ClsPart {
         public int Field;
         int m_property;

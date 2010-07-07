@@ -1741,6 +1741,88 @@ def test_silverlight_access_isolated_storage():
         # IsolatedStorage may not actually be available
         pass
     
+
+@skip("silverlight")
+def test_xaml_support():
+    text = """<custom:XamlTestObject 
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   x:Name="TestName"
+   xmlns:custom="clr-namespace:IronPythonTest;assembly=IronPythonTest" Event="MyEventHandler">
+    <custom:InnerXamlTextObject x:Name="Foo">
+        <custom:InnerXamlTextObject x:Name="Bar">
+            <custom:InnerXamlTextObject2 Name="Baz">
+            </custom:InnerXamlTextObject2>
+        </custom:InnerXamlTextObject>
+    </custom:InnerXamlTextObject>
+</custom:XamlTestObject>"""
+    import clr      
+    clr.AddReference('PresentationCore')
+    clr.AddReference('PresentationFramework')
+    clr.AddReference('WindowsBase')
+    clr.AddReference('System.Xml')
+    clr.AddReference('System.Xaml')
+    f = file('test.xaml', 'w')
+            
+    try:
+        f.write(text)
+        f.close()
+        
+        # easy negative tests
+        AssertError(TypeError, clr.LoadComponent, None)
+        AssertError(TypeError, clr.LoadComponent, 'test.xaml', None)
+
+        # try it again w/ a passed in module
+        class MyXamlRootObject(XamlTestObject):
+            def MyEventHandler(self, arg):
+                return arg * 2
+        
+        def inputs():
+            yield 'test.xaml'
+            yield System.IO.FileStream('test.xaml', System.IO.FileMode.Open)
+            yield System.Xml.XmlReader.Create('test.xaml')
+            yield System.IO.StreamReader('test.xaml')
+            
+        for inp in inputs():
+            inst = clr.LoadComponent(inp, MyXamlRootObject())
+            AreEqual(inst.Method(42), 84)
+            AreEqual(type(inst.Foo), InnerXamlTextObject)
+            AreEqual(type(inst.Bar), InnerXamlTextObject)
+            AreEqual(inst.Foo.MyName, 'Foo')
+            AreEqual(inst.Baz.Name, 'Baz')
+            Assert(inst.Foo is not inst.Bar)
+            
+            if isinstance(inp, System.IDisposable):
+                inp.Dispose()                          
+                
+        
+        import imp
+        mod = imp.new_module('foo')
+        
+        class MyXamlRootObject(XamlTestObject):
+            pass
+                
+        for inp in inputs():
+            # null input
+            AssertError(TypeError, clr.LoadComponent, None, mod)
+            
+            # wrong type of root object
+            AssertError(Exception, clr.LoadComponent, inp, mod)
+            
+            if isinstance(inp, System.IDisposable):
+                inp.Dispose()
+                
+        for inp in inputs():
+            # root object missing event handler
+            AssertError(System.Xaml.XamlObjectWriterException, clr.LoadComponent, inp, MyXamlRootObject())
+
+            if isinstance(inp, System.IDisposable):
+                inp.Dispose()
+
+    finally:
+        #nt.unlink('test.xaml')
+        pass
+
 #--MAIN------------------------------------------------------------------------
 run_test(__name__)
 

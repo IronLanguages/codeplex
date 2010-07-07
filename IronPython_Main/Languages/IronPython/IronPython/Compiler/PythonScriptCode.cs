@@ -132,7 +132,7 @@ namespace IronPython.Compiler {
             if (ShouldInterpret(pc)) {
                 func = lambda.Compile(pc.Options.CompilationThreshold);
             } else {
-                func = lambda.ReduceToLambda().Compile(Ast.CompilerContext.SourceUnit.EmitDebugSymbols);
+                func = lambda.ReduceToLambda().Compile(pc.EmitDebugSymbols(Ast.CompilerContext.SourceUnit));
             }
 
             return func;
@@ -193,7 +193,7 @@ namespace IronPython.Compiler {
                 if (ShouldInterpret(pc)) {
                     func = (LookupCompilationDelegate)CompilerHelpers.LightCompile(lambda, pc.Options.CompilationThreshold);
                 } else {
-                    func = (LookupCompilationDelegate)lambda.Compile(Ast.CompilerContext.SourceUnit.EmitDebugSymbols);
+                    func = (LookupCompilationDelegate)lambda.Compile(pc.EmitDebugSymbols(Ast.CompilerContext.SourceUnit));
                 }
 
                 _tracingTarget = func;
