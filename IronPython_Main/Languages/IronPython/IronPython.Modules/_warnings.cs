@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -39,15 +39,18 @@ namespace IronPython.Modules {
 
         [SpecialName]
         public static void PerformModuleReload(PythonContext/*!*/ context, PythonDictionary/*!*/ dict) {
+            List defaultFilters = new List();
+            if (context.PythonOptions.WarnPython30) {
+                defaultFilters.AddNoLock(PythonTuple.MakeTuple("ignore", null, PythonExceptions.DeprecationWarning, null, 0));
+            }
+            defaultFilters.AddNoLock(PythonTuple.MakeTuple("ignore", null, PythonExceptions.PendingDeprecationWarning, null, 0));
+            defaultFilters.AddNoLock(PythonTuple.MakeTuple("ignore", null, PythonExceptions.ImportWarning, null, 0));
+            defaultFilters.AddNoLock(PythonTuple.MakeTuple("ignore", null, PythonExceptions.BytesWarning, null, 0));
+
             context.GetOrCreateModuleState(_keyFields, () => {
                 dict.Add(_keyDefaultAction, "default");
                 dict.Add(_keyOnceRegistry, new PythonDictionary());
-                dict.Add(_keyFilters, new List() {
-                    // Default filters
-                    PythonTuple.MakeTuple("ignore", null, PythonExceptions.PendingDeprecationWarning, null, 0),
-                    PythonTuple.MakeTuple("ignore", null, PythonExceptions.ImportWarning, null, 0),
-                    PythonTuple.MakeTuple("ignore", null, PythonExceptions.BytesWarning, null, 0)
-                });
+                dict.Add(_keyFilters, defaultFilters);
                 return dict;
             });
         }
@@ -69,9 +72,21 @@ namespace IronPython.Modules {
                 throw PythonOps.ValueError("category is not a subclass of Warning");
             }
 
-            // default behavior without sys._getframe
-            PythonDictionary globals = Builtin.globals(context) as PythonDictionary;
-            int lineno = 1;
+            TraceBackFrame caller = null;
+            PythonDictionary globals;
+            int lineno;
+            if (PythonContext.GetContext(context).PythonOptions.Frames) {
+                try {
+                    caller = SysModule._getframeImpl(context, stacklevel);
+                } catch (ValueErrorException) { }
+            }
+            if (caller == null) {
+                globals = Builtin.globals(context) as PythonDictionary;
+                lineno = 1;
+            } else {
+                globals = caller.f_globals;
+                lineno = (int)caller.f_lineno;
+            }
 
             string module;
             string filename;
@@ -106,7 +121,7 @@ namespace IronPython.Modules {
             PythonExceptions.BaseException msg;
             string text; // message text
 
-            if (module == null || module == "") {
+            if (string.IsNullOrEmpty(module)) {
                 module = (filename == null || filename == "") ? "<unknown>" : filename;
                 if (module.EndsWith(".py")) {
                     module = module.Substring(0, module.Length - 3);

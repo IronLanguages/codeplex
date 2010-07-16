@@ -1,7 +1,7 @@
 Implement rest of types_only module
 
 
-IP VERSION AFFECTED: 2.6
+IP VERSION AFFECTED: 2.7
 FLAGS PASSED TO IPY.EXE: None
 OPERATING SYSTEMS AFFECTED: All
 
@@ -124,6 +124,9 @@ from IronPython:
     Type: <type 'datetime.date'>  __getnewargs__                
     Type: <type 'datetime.datetime'>  __getnewargs__                
     Type: <type 'datetime.timedelta'>  __getnewargs__                
+    Type: <type 'dict'>  viewitems                     
+    Type: <type 'dict'>  viewkeys                      
+    Type: <type 'dict'>  viewvalues                    
     Type: <type 'instancemethod'>  __eq__                        
     Type: <type 'instancemethod'>  __ne__                        
     Type: <type 'int'>  bit_length                    

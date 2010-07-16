@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A 
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Public License, please send an email to 
+# you cannot locate the  Apache License, Version 2.0, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -48,7 +48,6 @@ BUILTIN_MODULES =  [
                     "__builtin__",
                     "_ast", #CodePlex 21088
                     "_bisect", #CodePlex 21392
-                    "_bytesio", #CodePlex 21393
                     "_codecs",
                     "_codecs_cn", #CodePlex 15507
                     "_codecs_hk", #CodePlex 15507
@@ -58,7 +57,6 @@ BUILTIN_MODULES =  [
                     "_codecs_tw", #CodePlex 15507
                     "_collections", 
                     "_csv", #CodePlex 21395
-                    "_fileio", #CodePlex 19545
                     "_functools",
                     "_heapq", #CodePlex 21396
                     "_hotshot", #CodePlex 21397

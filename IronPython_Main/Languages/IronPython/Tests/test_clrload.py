@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -316,9 +316,8 @@ result = Test()
     scope1 = engine1.CreateScope()
     script1 = engine1.CreateScriptSourceFromString(script_code, SourceCodeKind.Statements)
     script1.Execute(scope1)
-    result1 = scope1.GetVariable("result").TryGetValue()
-    AreEqual(result1[0], True)
-    AreEqual(result1[1], "resolve test 1")
+    result1 = scope1.GetVariable("result")
+    AreEqual(result1, "resolve test 1")
     
     engine2 = Python.CreateEngine()
     paths2 = engine2.GetSearchPaths()
@@ -327,9 +326,8 @@ result = Test()
     scope2 = engine2.CreateScope()
     script2 = engine2.CreateScriptSourceFromString(script_code, SourceCodeKind.Statements)
     script2.Execute(scope2)
-    result2 = scope2.GetVariable("result").TryGetValue()
-    AreEqual(result2[0], True)
-    AreEqual(result2[1], "resolve test 2")
+    result2 = scope2.GetVariable("result")
+    AreEqual(result2, "resolve test 2")
 
 #####################
 def test_addreference_sanity():

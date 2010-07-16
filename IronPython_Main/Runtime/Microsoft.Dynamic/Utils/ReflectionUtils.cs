@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -20,10 +20,15 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Security;
 using System.Text;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+
+#if !SILVERLIGHT
+using Microsoft.Scripting.Metadata;
+#endif
 
 namespace Microsoft.Scripting.Utils {
     public static class ReflectionUtils {
@@ -531,6 +536,29 @@ namespace Microsoft.Scripting.Utils {
 
         #region Extension Methods
 
+        public static IEnumerable<MethodInfo> GetVisibleExtensionMethods(Assembly assembly) {
+#if !CLR2 && !SILVERLIGHT
+            if (!assembly.IsDynamic && AppDomain.CurrentDomain.IsFullyTrusted) {
+                try {
+                    return GetVisibleExtensionMethodsFast(assembly);
+                } catch (SecurityException) {
+                    // full-demand can still fail if there is a partial trust domain on the stack
+                }
+            }
+#endif
+            return GetVisibleExtensionMethodsSlow(assembly);
+        }
+
+#if !SILVERLIGHT
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2116:AptcaMethodsShouldOnlyCallAptcaMethods")]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static IEnumerable<MethodInfo> GetVisibleExtensionMethodsFast(Assembly assembly) {
+            // Security: link demand
+            return MetadataServices.GetVisibleExtensionMethodInfos(assembly);
+        }
+#endif
+
+        // TODO: make internal
         // TODO: handle type load exceptions
         public static IEnumerable<MethodInfo> GetVisibleExtensionMethodsSlow(Assembly assembly) {
             var ea = typeof(ExtensionAttribute);

@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -17,25 +17,30 @@ Tests the _bytesio standard module.
 '''
 
 #--IMPORTS---------------------------------------------------------------------
+import sys
 from iptest.assert_util import *
 skiptest("silverlight")
 
-import _bytesio
+if sys.winver == '2.6':
+    import _bytesio
+    BytesIO = _bytesio._BytesIO
+else:
+    from _io import BytesIO
 
 #--GLOBALS---------------------------------------------------------------------
 
 #--HELPERS---------------------------------------------------------------------
 def bytesio_helper():
-    return (_bytesio._BytesIO(bytearray(b'')),
-            _bytesio._BytesIO(bytearray(b'a')),
-            _bytesio._BytesIO(bytearray(b'ab')),
-            _bytesio._BytesIO(bytearray(b'abc')),
-            _bytesio._BytesIO(bytearray(b'abcd')),
-            _bytesio._BytesIO(bytearray(b'abcde')),
-            _bytesio._BytesIO(bytearray(b'abcdef')),
-            _bytesio._BytesIO(bytearray(b'abcdefg')),
-            _bytesio._BytesIO(bytearray(b'abcdefgh')),
-            _bytesio._BytesIO(bytearray(b'abcdefghi'))
+    return (BytesIO(bytearray(b'')),
+            BytesIO(bytearray(b'a')),
+            BytesIO(bytearray(b'ab')),
+            BytesIO(bytearray(b'abc')),
+            BytesIO(bytearray(b'abcd')),
+            BytesIO(bytearray(b'abcde')),
+            BytesIO(bytearray(b'abcdef')),
+            BytesIO(bytearray(b'abcdefg')),
+            BytesIO(bytearray(b'abcdefgh')),
+            BytesIO(bytearray(b'abcdefghi'))
             )
 
 #--TEST CASES------------------------------------------------------------------
@@ -150,7 +155,7 @@ def test_coverage():
     Test case holes discovered by code coverage runs. Test cases below need to
     be migrated elsewhere (TODO).
     '''
-    #--_bytesio._BytesIO.readinto(array.array(...))
+    #--BytesIO.readinto(array.array(...))
     import array
     
     readinto_cases = [

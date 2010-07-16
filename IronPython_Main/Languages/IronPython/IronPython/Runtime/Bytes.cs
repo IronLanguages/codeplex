@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -24,6 +24,7 @@ using Microsoft.Scripting.Math;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -764,11 +765,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        public object this[BigInteger index] {
+        public object this[CodeContext/*!*/ context, BigInteger index] {
             get {
                 int iVal;
                 if (index.AsInt32(out iVal)) {
-                    return this[iVal];
+                    return this[context, iVal];
                 }
 
                 throw PythonOps.IndexError("cannot fit long in index");
@@ -796,6 +797,18 @@ namespace IronPython.Runtime {
             }
 
             return curVal as Bytes ?? new Bytes(curVal as IList<byte>);
+        }
+
+        internal static Bytes/*!*/ Concat(IList<Bytes> list, int length) {
+            byte[] res = new byte[length];
+            int count = 0;
+            for (int i = 0; i < list.Count; i++) {
+                Debug.Assert(count + list[i]._bytes.Length <= length);
+                Array.Copy(list[i]._bytes, 0, res, count, list[i]._bytes.Length);
+                count += list[i]._bytes.Length;
+            }
+
+            return new Bytes(res);
         }
 
         #endregion

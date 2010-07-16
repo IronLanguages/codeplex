@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -199,5 +199,75 @@ def test_iterator_closed_file():
         
     AssertError(ValueError, f)
 
+
+def test_no_return_self_in_iter():
+    class A(object):
+        def __iter__(cls):
+            return 1
+
+        def next(cls):
+            return 2
     
+    a = A()
+    AreEqual(next(a), 2)
+
+def test_no_iter():
+    class A(object):
+        def next(cls):
+            return 2    
+    a = A()
+    AreEqual(next(a), 2)
+
+def test_with_iter():
+    class A(object):
+        def __iter__(cls):
+            return cls
+        def next(self):
+            return 2
+             
+    a = A()
+    AreEqual(next(a), 2)
+
+def test_with_iter_next_in_init():
+    class A(object):
+        def __init__(cls):
+            AreEqual(next(cls), 2)
+            AreEqual(cls.next(), 2)
+        def __iter__(cls):
+            return cls
+        def next(cls):
+            return 2
+
+    a = A()
+    AreEqual(next(a), 2)
+
+def test_interacting_iterators():
+    """This test is similar to how Jinga2 fails."""
+    class A(object):
+        def __iter__(cls):
+            return cls
+        def next(self):
+            return 3
+            
+    class B(object):
+        def __iter__(cls):
+            return A()
+        def next(self):
+            return 2
+            
+    b = B()
+    AreEqual(next(b), 2)
+
+def test_call_to_iter_or_next():
+    class A(object):
+        def __iter__(cls):
+            Assert(False, "__iter__ should not be called.")
+            return cls
+        def next(self):
+            return 2
+
+    a = A()
+    AreEqual(next(a), 2)
+
+
 run_test(__name__)

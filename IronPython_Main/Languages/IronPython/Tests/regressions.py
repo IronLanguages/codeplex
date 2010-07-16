@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -135,6 +135,23 @@ def test_cp16831():
     for i in xrange(2):
         if not temp.BProperty==None:
             Fail("Nullable Boolean was set to None")           
+
+def test_cp_27434():
+    tests = {
+        '\d' : 0,
+        '(\d)' : 1,
+        '(\d) (\w)' : 2,
+        '(?:[\d\.]+) (\w)' : 1,
+        '(hello(\w)*world) [\d\.]?' : 2,
+        '(hello(\w)*world) ([\d\.]?)' : 3,
+        '(hello(\w)*world) (?:[\d\.]?)' : 2,
+    }
+    
+    import re
+    for data, groups in tests.iteritems():
+        regex = re.compile(data)
+        message = "'%s' should have %d groups, not %d" % (data, groups, regex.groups)
+        Assert(regex.groups == groups, message)
 
 @skip("win32")
 def test_protected_ctor_inheritance_cp20021():

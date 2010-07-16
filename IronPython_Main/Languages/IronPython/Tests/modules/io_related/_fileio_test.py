@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -20,8 +20,13 @@ Tests for CPython's _fileio module.
 from iptest.assert_util import *
 skiptest("silverlight")
 
-import _fileio
-import os
+import sys, os
+
+if sys.winver == '2.6':
+    import _fileio
+    FileIO = _fileio._FileIO
+else:
+    from _io import FileIO
 
 #--GLOBALS---------------------------------------------------------------------
 TEMP_READINTO_NAME = "_fileio__FileIO_readinto%d.tmp"
@@ -44,10 +49,10 @@ def fileio_helper():
     bytes_io_list = bytesio_helper()
     file_io_list  = []
     for i in xrange(len(bytes_io_list)):
-        f = _fileio._FileIO(TEMP_READINTO_NAME % i, "w")
+        f = FileIO(TEMP_READINTO_NAME % i, "w")
         f.write(bytes_io_list[i])
         f.close()
-        file_io_list.append(_fileio._FileIO(TEMP_READINTO_NAME % i, "r"))
+        file_io_list.append(FileIO(TEMP_READINTO_NAME % i, "r"))
     
     return file_io_list
 
@@ -245,7 +250,7 @@ def test_coverage():
     moved to other functions throughout this module (TODO).
     '''
 
-    #--_fileio._FileIO.readinto(array.array(...))
+    #--FileIO.readinto(array.array(...))
     import array
     
     readinto_cases = [

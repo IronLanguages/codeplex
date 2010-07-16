@@ -1,0 +1,303 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the Apache License, Version 2.0, please send an email to 
+ * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Apache License, Version 2.0.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ * ***************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using IronPython.Compiler.Ast;
+using Microsoft.IronPythonTools.Intellisense;
+using Microsoft.IronStudio.Intellisense;
+using Microsoft.PyAnalysis.Interpreter;
+using Microsoft.PyAnalysis.Values;
+
+namespace Microsoft.PyAnalysis {
+    /// <summary>
+    /// Provides interactions to analysis a single file in a project and get the results back.
+    /// 
+    /// To analyze a file the tree should be updated with a call to UpdateTree and then PreParse
+    /// should be called on all files.  Finally Parse should then be called on all files.
+    /// </summary>
+    internal sealed class ProjectEntry : IPythonProjectEntry {
+        private readonly ProjectState _projectState;
+        private readonly string _moduleName;
+        private readonly string _filePath;
+        private IAnalysisCookie _cookie;
+        private ModuleInfo _myScope;
+        private PythonAst _tree;
+        private Stack<ScopePositionInfo> _scopeTree;
+        private ModuleAnalysis _ddg;
+        private AnalysisUnit _unit;
+        private int _version;
+
+        internal ProjectEntry(ProjectState state, string moduleName, string filePath, IAnalysisCookie cookie) {
+            Debug.Assert(moduleName != null);
+            Debug.Assert(filePath != null);
+
+            _projectState = state;
+            _moduleName = moduleName ?? "";
+            _filePath = filePath;
+            _cookie = cookie;
+            _myScope = new ModuleInfo(_moduleName, this);
+            _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _projectState.BuiltinModule.Scope, _myScope.Scope }, null);
+        }
+
+        public event EventHandler<EventArgs> OnNewParseTree;
+        public event EventHandler<EventArgs> OnNewAnalysis;
+
+        public void UpdateTree(PythonAst newAst, IAnalysisCookie newCookie) {
+            lock (this) {
+                _tree = newAst;
+                _cookie = newCookie;
+            }
+
+            var newParse = OnNewParseTree;
+            if (newParse != null) {
+                newParse(this, EventArgs.Empty);
+            }
+        }
+
+        public void GetTreeAndCookie(out PythonAst tree, out IAnalysisCookie cookie) {
+            lock (this) {
+                tree = _tree;
+                cookie = _cookie;
+            }
+        }
+
+        public void Analyze() {
+            lock (this) {
+                Parse();
+
+                var newAnalysis = OnNewAnalysis;
+                if (newAnalysis != null) {
+                    newAnalysis(this, EventArgs.Empty);
+                }
+                _version++;
+            }
+        }
+
+        public int Version {
+            get {
+                return _version;
+            }
+        }
+
+        public bool IsAnalyzed {
+            get {
+                return CurrentAnalysis != null;
+            }
+        }
+
+        public void Parse() {
+            if (_tree == null) {
+                return;
+            }
+
+            var oldParent = _myScope.ParentPackage;
+            ProjectState.ModulesByFilename[_filePath] = _myScope;
+            ModuleReference existingRef;
+            if (ProjectState.Modules.TryGetValue(_moduleName, out existingRef)) {
+                // if we have dependencies from files which were processed before us
+                // we need to re-enqueue those files.
+                if (existingRef.References != null) {
+                    foreach (var referer in existingRef.References) {
+                        referer.Enqueue();
+                    }
+
+                    // we won't need to process these again, we'll track all of our future dependencies
+                    // via VariableDef's.
+                    existingRef.References = null;
+                }
+            } else {
+                // publish our module ref now so that we don't collect dependencies as we'll be fully processed
+                ProjectState.Modules[_moduleName] = new ModuleReference(_myScope);
+            }
+
+            if (oldParent != null) {
+                // update us in our parent package
+                _myScope.ParentPackage = oldParent;
+                oldParent.Scope.SetVariable(_moduleName.Substring(_moduleName.IndexOf('.') + 1), _myScope.SelfSet, _unit);
+            }
+
+            var unit = _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _projectState.BuiltinModule.Scope, _myScope.Scope }, null);
+
+            var walker = new OverviewWalker(this, unit);
+            _tree.Walk(walker);
+            _scopeTree = walker.ScopeTree;
+
+            PublishPackageChildrenInPackage();
+
+            var head = new ModuleAnalysis(_unit, _scopeTree);
+            _unit.Enqueue();
+
+            new DDG().Analyze(_projectState.Queue);
+
+            _ddg = head;
+
+            foreach (var variableInfo in _myScope.Scope.Variables) {
+                variableInfo.Value.ClearOldValues(this);
+            }
+        }
+
+        private void PublishPackageChildrenInPackage() {
+            if (_filePath.EndsWith("__init__.py")) {
+                string dir = Path.GetDirectoryName(_filePath);
+                if (Directory.Exists(dir)) {
+                    foreach (var file in Directory.GetFiles(dir)) {
+                        if (file.EndsWith("__init__.py")) {
+                            continue;
+                        }
+
+                        ModuleInfo childModule;
+                        if (_projectState.ModulesByFilename.TryGetValue(file, out childModule)) {
+                            _myScope.Scope.SetVariable(Path.GetFileNameWithoutExtension(file), childModule, _unit);
+                            childModule.ParentPackage = _myScope;
+                        }
+                    }
+
+                    foreach (var packageDir in Directory.GetDirectories(dir)) {
+                        string package = Path.Combine(packageDir, "__init__.py");
+                        ModuleInfo childPackage;
+                        if (File.Exists(package) && _projectState.ModulesByFilename.TryGetValue(package, out childPackage)) {
+                            _myScope.Scope.SetVariable(Path.GetFileName(packageDir), childPackage, _unit);
+                            childPackage.ParentPackage = _myScope;
+                        }
+                    }
+                }
+            }
+        }
+
+        public string GetLine(int lineNo) {
+            return _cookie.GetLine(lineNo);
+        }
+
+        public ModuleAnalysis CurrentAnalysis {
+            get { return _ddg; }
+        }
+
+        public string FilePath {
+            get { return _filePath; }
+        }
+
+        public IAnalysisCookie Cookie {
+            get { return _cookie; }
+        }
+
+        internal ProjectState ProjectState {
+            get { return _projectState; }
+        }
+
+        public PythonAst Tree {
+            get { return _tree; }
+        }
+
+        internal ModuleInfo MyScope {
+            get { return _myScope; }
+        }
+    }
+    
+    /// <summary>
+    /// Represents a file which is capable of being analyzed.  Can be cast to other project entry types
+    /// for more functionality.  See also IPythonProjectEntry and IXamlProjectEntry.
+    /// </summary>
+    public interface IProjectEntry {
+        bool IsAnalyzed { get; }
+        void Analyze();
+        int Version {
+            get;
+        }
+
+        string FilePath { get; }
+        string GetLine(int lineNo);
+    }
+
+    public interface IPythonProjectEntry : IProjectEntry {
+        PythonAst Tree {
+            get;
+        }
+
+        ModuleAnalysis CurrentAnalysis {
+            get;
+        }
+
+        void UpdateTree(PythonAst ast, IAnalysisCookie fileCookie);
+
+        event EventHandler<EventArgs> OnNewParseTree;
+        event EventHandler<EventArgs> OnNewAnalysis;
+
+        void GetTreeAndCookie(out PythonAst ast, out IAnalysisCookie cookie);
+    }
+
+    sealed class XamlProjectEntry : IXamlProjectEntry {
+        private XamlAnalysis _analysis;
+        private readonly string _filename;
+        private int _version;
+        private TextReader _content;
+        private IAnalysisCookie _cookie;
+
+        public XamlProjectEntry(string filename) {
+            _filename = filename;
+        }
+
+        public void UpdateContent(TextReader content, IAnalysisCookie fileCookie) {
+            _content = content;
+            _cookie = fileCookie;
+        }
+
+        #region IProjectEntry Members
+
+        public bool IsAnalyzed {
+            get { return _analysis != null; }
+        }
+
+        public void Analyze() {
+            lock (this) {
+                if (_analysis == null) {
+                    _analysis = new XamlAnalysis(_filename);
+                    _cookie = new FileCookie(_filename);
+                }
+                _analysis = new XamlAnalysis(_content);
+                _version++;
+            }
+        }
+
+        public string FilePath { get { return _filename; } }
+
+        public int Version {
+            get {
+                return _version;
+            }
+        }
+
+        public string GetLine(int lineNo) {
+            return _cookie.GetLine(lineNo);
+        }
+
+        #endregion
+
+        #region IXamlProjectEntry Members
+
+        public XamlAnalysis Analysis {
+            get { return _analysis; }
+        }
+
+        #endregion
+    }
+
+    public interface IXamlProjectEntry : IProjectEntry {
+        XamlAnalysis Analysis {
+            get;
+        }
+    }
+}

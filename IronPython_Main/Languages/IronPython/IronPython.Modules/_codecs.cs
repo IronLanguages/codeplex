@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -77,7 +77,7 @@ namespace IronPython.Modules {
         /// <summary>
         /// Decodes the input string using the provided string mapping.
         /// </summary>
-        public static PythonTuple charmap_decode(string input, string errors, [NotNull]string map) {
+        public static PythonTuple charmap_decode([BytesConversion]string input, string errors, [NotNull]string map) {
             StringBuilder res = new StringBuilder();
             for (int i = 0; i < input.Length; i++) {
                 var charIndex = (int)input[i];
@@ -97,7 +97,7 @@ namespace IronPython.Modules {
         /// <summary>
         /// Encodes the input string with the specified optimized encoding map.
         /// </summary>
-        public static PythonTuple charmap_encode(string input, string errors, [NotNull]EncodingMap map) {
+        public static PythonTuple charmap_encode([BytesConversion]string input, string errors, [NotNull]EncodingMap map) {
             StringBuilder res = new StringBuilder();
             var dict = map.Mapping;
             for (int i = 0; i < input.Length; i++) {
@@ -119,7 +119,7 @@ namespace IronPython.Modules {
             throw PythonOps.NotImplementedError("charbuffer_encode");
         }
 
-        public static object charmap_decode(string input, [Optional]string errors, [Optional]IDictionary<object, object> map) {
+        public static object charmap_decode([BytesConversion]string input, [Optional]string errors, [Optional]IDictionary<object, object> map) {
             return CharmapDecodeWorker(input, errors, map, true);
         }
 
@@ -165,7 +165,7 @@ namespace IronPython.Modules {
             return PythonTuple.MakeTuple(res.ToString(), res.Length);
         }
 
-        public static object charmap_encode(string input, [DefaultParameterValue("strict")]string errors, [DefaultParameterValue(null)]IDictionary<object, object> map) {
+        public static object charmap_encode([BytesConversion]string input, [DefaultParameterValue("strict")]string errors, [DefaultParameterValue(null)]IDictionary<object, object> map) {
             return CharmapDecodeWorker(input, errors, map, false);
         }
 

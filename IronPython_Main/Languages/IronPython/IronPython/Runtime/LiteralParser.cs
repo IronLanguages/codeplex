@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -372,19 +372,31 @@ namespace IronPython.Runtime {
             //  Determine base
             if (b == 0) {
                 if (start < end && text[start] == '0') {
-                    start++;
                     // Hex, oct, or bin
-                    b = 8;
-                    if (start < end) {
-                        if (text[start] == 'x' || text[start] == 'X') {
-                            start++;
-                            b = 16;
-                        } else if (text[start] == 'o' || text[start] == 'O') {
-                            start++;
-                        } else if (text[start] == 'b' || text[start] == 'B') {
-                            start++;
-                            b = 2;
+                    if (++start < end) {
+                        switch(text[start]) {
+                            case 'x':
+                            case 'X':
+                                start++;
+                                b = 16;
+                                break;
+                            case 'o':
+                            case 'O':
+                                b = 8;
+                                start++;
+                                break;
+                            case 'b':
+                            case 'B':
+                                start++;
+                                b = 2;
+                                break;
                         }
+                    }
+
+                    if (b == 0) {
+                        // Keep the leading zero
+                        start--;
+                        b = 8;
                     }
                 } else {
                     b = 10;

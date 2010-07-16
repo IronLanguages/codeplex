@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -55,7 +55,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Fields set by Throw() to communicate an exception to the yield point.
         /// These are plumbed through the generator to become parameters to Raise(...) invoked 
-        /// at the yield suspenion point in the generator.
+        /// at the yield suspension point in the generator.
         /// </summary>
         private object[] _excInfo;
         /// <summary>
@@ -162,7 +162,7 @@ namespace IronPython.Runtime {
         public object send(object value) {
             Debug.Assert(_excInfo == null);
 
-            // CPython2.5's behavior is that Send(non-null) on unstaretd generator should:
+            // CPython2.5's behavior is that Send(non-null) on unstarted generator should:
             // - throw a TypeError exception
             // - not change generator state. So leave as unstarted, and allow future calls to succeed.
             if (value != null && State == GeneratorRewriter.NotStarted) {
