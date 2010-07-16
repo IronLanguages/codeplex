@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -251,7 +251,7 @@ namespace IronPython.Modules {
             }
 
             internal RE_Pattern(CodeContext/*!*/ context, object pattern, int flags, bool compiled) {
-                _pre = PreParseRegex(context, ValidatePattern(pattern));
+                _pre = PreParseRegex(context, ValidatePatternAsString(pattern));
                 try {
                     flags |= OptionToFlags(_pre.Options);
                     RegexOptions opts = FlagsToOption(flags);
@@ -490,6 +490,12 @@ namespace IronPython.Modules {
                         _groups = d;
                     }
                     return _groups;
+                }
+            }
+
+            public int groups {
+                get {
+                    return _re.GetGroupNumbers().Length - 1;
                 }
             }
 
@@ -844,10 +850,14 @@ namespace IronPython.Modules {
         #region Private helper functions
 
         private static RE_Pattern GetPattern(CodeContext/*!*/ context, object pattern, int flags) {
-            string strPattern = ValidatePattern(pattern);
+            RE_Pattern res = pattern as RE_Pattern;
+            if (res != null) {
+                return res;
+            }
+
+            string strPattern = ValidatePatternAsString(pattern);
             PatternKey key = new PatternKey(strPattern, flags);
             lock (_cachedPatterns) {
-                RE_Pattern res;
                 if (_cachedPatterns.TryGetValue(new PatternKey(strPattern, flags), out res)) {
                     return res;
                 }
@@ -1192,7 +1202,19 @@ namespace IronPython.Modules {
             return text;
         }
 
-        private static string ValidatePattern(object pattern) {
+        private static object ValidatePattern(object pattern) {
+            if (pattern is string) return pattern as string;
+
+            ExtensibleString es = pattern as ExtensibleString;
+            if (es != null) return es.Value;
+
+            RE_Pattern rep = pattern as RE_Pattern;
+            if (rep != null) return rep;
+
+            throw PythonOps.TypeError("pattern must be a string or compiled pattern");
+        }
+
+        private static string ValidatePatternAsString(object pattern) {
             if (pattern is string) return pattern as string;
 
             ExtensibleString es = pattern as ExtensibleString;

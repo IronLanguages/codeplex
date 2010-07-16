@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -168,6 +168,39 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
         }
 
         /// <summary>
+        /// Creates a new PythonType which is a subclass of the specified PythonTypes.
+        /// 
+        /// Used for runtime defined new-style classes which require multiple inheritance.  The
+        /// primary example of this is the exception system.
+        /// </summary>
+        internal PythonType(PythonType[] baseTypes, string name) {
+            bool isSystemType = false;
+            bool isPythonType = false;
+            foreach (PythonType baseType in baseTypes) {
+                isSystemType |= baseType.IsSystemType;
+                isPythonType |= baseType.IsPythonType;
+            }
+            IsSystemType = isSystemType;
+            IsPythonType = isPythonType;
+            Name = name;
+            _bases = baseTypes;
+            ResolutionOrder = Mro.Calculate(this, _bases);
+            _attrs |= PythonTypeAttributes.HasDictionary;
+        }
+
+        /// <summary>
+        /// Creates a new PythonType which is a subclass of the specified PythonTypes.
+        /// 
+        /// Used for runtime defined new-style classes which require multiple inheritance.  The
+        /// primary example of this is the exception system.
+        /// </summary>
+        internal PythonType(PythonType[] baseTypes, Type underlyingType, string name, Func<string, Exception> exceptionMaker)
+            : this(baseTypes, name) {
+            _underlyingSystemType = underlyingType;
+            _makeException = exceptionMaker;
+        }
+
+        /// <summary>
         /// Creates a new PythonType which is a subclass of the specified PythonType.
         /// 
         /// Used for runtime defined new-style classes which require multiple inheritance.  The
@@ -184,6 +217,41 @@ type(name, bases, dict) -> creates a new type instance with the given name, base
             _pythonContext = context;
             _attrs |= PythonTypeAttributes.HasDictionary;
         }
+
+        /// <summary>
+        /// Creates a new PythonType which is a subclass of the specified PythonTypes.
+        /// 
+        /// Used for runtime defined new-style classes which require multiple inheritance.  The
+        /// primary example of this is the exception system.
+        /// </summary>
+        internal PythonType(PythonContext context, PythonType[] baseTypes, string name, string module, string doc)
+            : this(baseTypes, name) {
+            EnsureDict();
+
+            _dict["__doc__"] = new PythonTypeUserDescriptorSlot(doc, true);
+            _dict["__module__"] = new PythonTypeUserDescriptorSlot(module, true);
+            _pythonContext = context;
+            _attrs |= PythonTypeAttributes.HasDictionary;
+        }
+
+        /// <summary>
+        /// Creates a new PythonType which is a subclass of the specified PythonTypes.
+        /// 
+        /// Used for runtime defined new-style classes which require multiple inheritance.  The
+        /// primary example of this is the exception system.
+        /// </summary>
+        internal PythonType(PythonContext context, PythonType[] baseTypes, Type underlyingType, string name, string module, string doc, Func<string, Exception> exceptionMaker)
+            : this(baseTypes, underlyingType, name, exceptionMaker) {
+            EnsureDict();
+
+            _dict["__doc__"] = new PythonTypeUserDescriptorSlot(doc, true);
+            _dict["__module__"] = new PythonTypeUserDescriptorSlot(module, true);
+            IsSystemType = false;
+            IsPythonType = false;
+            _pythonContext = context;
+            _attrs |= PythonTypeAttributes.HasDictionary;
+        }
+
 
         /// <summary>
         /// Creates a new PythonType object which represents an Old-style class.

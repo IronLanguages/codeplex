@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -132,8 +132,23 @@ def test_cp10983():
     x.close()
     
     AreEqual(data, 'a2\xa33\\u0163\x0f\x0fF\t\\\x0fF\x0fE\x00\x01\x7F\x7E\x80')
+
+@skip('win32')
+def test_cp27179():
+    # file.write() accepting Array[Byte]
+    from System import Array, Byte
+    data_string = 'abcdef\nghijkl\n\n'
+    data = Array[Byte](map(Byte, map(ord, data_string)))
     
+    f = open(temp_file, 'w+')
+    f.write(data)
+    f.close()
     
+    f = open(temp_file, 'r')
+    data_read = f.read()
+    f.close()
+    
+    AreEqual(data_string, data_read)
 
 # Helper used to format newline characters into a visible format.
 def format_newlines(string):

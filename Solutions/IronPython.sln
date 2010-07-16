@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Debuggi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "..\Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj", "{02FF0909-F5AD-48CF-A86A-345E721B7E40}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Metadata", "..\Runtime\Microsoft.Scripting.Metadata\Microsoft.Scripting.Metadata.csproj", "{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -123,6 +125,12 @@ Global
 		{02FF0909-F5AD-48CF-A86A-345E721B7E40}.Silverlight4Debug|Any CPU.Build.0 = Silverlight4Debug|Any CPU
 		{02FF0909-F5AD-48CF-A86A-345E721B7E40}.Silverlight4Release|Any CPU.ActiveCfg = Silverlight4Release|Any CPU
 		{02FF0909-F5AD-48CF-A86A-345E721B7E40}.Silverlight4Release|Any CPU.Build.0 = Silverlight4Release|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Silverlight4Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}.Silverlight4Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

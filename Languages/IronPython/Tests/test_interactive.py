@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Public License. A
+# This source code is subject to terms and conditions of the Apache License, Version 2.0. A
 # copy of the license can be found in the License.html file at the root of this distribution. If
-# you cannot locate the  Microsoft Public License, please send an email to
+# you cannot locate the  Apache License, Version 2.0, please send an email to
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound
-# by the terms of the Microsoft Public License.
+# by the terms of the Apache License, Version 2.0.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -934,7 +934,11 @@ def test_exception_slicing_warning():
     AreEqual(res[2], '')    # no std err
     AreEqual(res[3], 0)     # should return 0
     
-    ipi = IronPythonInstance(executable, exec_prefix, '-3 -c "print Exception(*range(2))[1]"')
+    ipi = IronPythonInstance(executable, exec_prefix,
+        '-3 -c "import warnings;'
+        'warnings.filters.reverse();'
+        'warnings.filters.pop();'
+        'print Exception(*range(2))[1]"')
     res = ipi.StartAndRunToCompletion()
     AreEqual(res[0], True)  # should have started
     AreEqual(res[1], '1\r\n')   # std out

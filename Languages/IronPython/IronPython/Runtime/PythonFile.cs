@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -736,6 +736,9 @@ namespace IronPython.Runtime {
         // the output format as necessary.  Returns the number of bytes written
         public abstract int Write(String/*!*/ data);
 
+        // Write the raw input data to the output stream
+        public abstract int WriteBytes(IList<byte> data);
+
         // Flush any buffered data to the file.
         public abstract void Flush();
     }
@@ -758,6 +761,16 @@ namespace IronPython.Runtime {
             Debug.Assert(bytes.Length == data.Length);
             _stream.Write(bytes, 0, bytes.Length);
             return bytes.Length;
+        }
+
+        // Write the raw input data to the output stream. No newline conversion is performed.
+        public override int WriteBytes(IList<byte> data) {
+            int count = data.Count;
+            for (int i = 0; i < count; i++) {
+                _stream.WriteByte(data[i]);
+            }
+
+            return count;
         }
 
         // Flush any buffered data to the file.
@@ -790,6 +803,26 @@ namespace IronPython.Runtime {
             }
             _writer.Write(data);
             return data.Length;
+        }
+
+        // Write the input data to the output stream, converting line terminators ('\n') into _eoln as necessary.
+        public override int WriteBytes(IList<byte> data) {
+            // Result is equivalent to "return Write(data.MakeString());" but more efficient because
+            // MakeString() and Replace() are done at the same time.
+
+            int count = data.Count;
+            StringBuilder sb = new StringBuilder(_eoln.Length > 1 ? (int)(count * 1.2) : count);
+            for (int i = 0; i < count; i++) {
+                char c = (char)data[i];
+                if (c == '\n') {
+                    sb.Append(_eoln);
+                } else {
+                    sb.Append(c);
+                }
+            }
+
+            _writer.Write(sb.ToString());
+            return count;
         }
 
         // Flush any buffered data to the file.
@@ -1405,19 +1438,7 @@ namespace IronPython.Runtime {
 
                 SavePositionPreSeek();
 
-                SeekOrigin origin;
-                switch (whence) {
-                    default:
-                    case 0:
-                        origin = SeekOrigin.Begin;
-                        break;
-                    case 1:
-                        origin = SeekOrigin.Current;
-                        break;
-                    case 2:
-                        origin = SeekOrigin.End;
-                        break;
-                }
+                SeekOrigin origin = (SeekOrigin)whence;
 
                 long newPos = _stream.Seek(offset, origin);
                 if (_reader != null) {
@@ -1495,15 +1516,33 @@ namespace IronPython.Runtime {
             }
         }
 
-        public virtual void write([BytesConversion]string s) {
+        public virtual void write(string s) {
             lock (this) {
                 WriteNoLock(s);
+            }
+        }
+
+        public virtual void write(IList<byte> bytes) {
+            lock (this) {
+                WriteNoLock(bytes);
             }
         }
 
         private void WriteNoLock(string s) {
             PythonStreamWriter writer = GetWriter();
             int bytesWritten = writer.Write(s);
+            if (!IsConsole && _reader != null && _stream.CanSeek) {
+                _reader.Position += bytesWritten;
+            }
+
+            if (IsConsole) {
+                FlushNoLock();
+            }
+        }
+
+        private void WriteNoLock([NotNull]IList<byte> b) {
+            PythonStreamWriter writer = GetWriter();
+            int bytesWritten = writer.WriteBytes(b);
             if (!IsConsole && _reader != null && _stream.CanSeek) {
                 _reader.Position += bytesWritten;
             }

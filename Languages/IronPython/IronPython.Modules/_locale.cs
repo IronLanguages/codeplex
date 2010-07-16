@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -51,15 +51,21 @@ namespace IronPython.Modules {
         public const int LC_NUMERIC = (int)LocaleCategories.Numeric;
         public const int LC_TIME = (int)LocaleCategories.Time;
 
+        internal static string PreferredEncoding {
+            get {
+#if !SILVERLIGHT    // No ANSICodePage in Silverlight
+                return "cp" + CultureInfo.CurrentCulture.TextInfo.ANSICodePage.ToString();
+#else
+                return "";
+#endif
+            }
+        }
+
         [Documentation("gets the default locale tuple")]
         public static object _getdefaultlocale() {            
             return PythonTuple.MakeTuple(
                 CultureInfo.CurrentCulture.Name.Replace('-', '_').Replace(' ', '_'), 
-#if !SILVERLIGHT    // No ANSICodePage in Silverlight
-                "cp" + CultureInfo.CurrentCulture.TextInfo.ANSICodePage.ToString()
-#else
-                ""
-#endif
+                PreferredEncoding
             );
         }
 

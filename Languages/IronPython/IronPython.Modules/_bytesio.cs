@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Public License, please send an email to 
+ * you cannot locate the  Apache License, Version 2.0, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Public License.
+ * by the terms of the Apache License, Version 2.0.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -17,35 +17,37 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+
 using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime;
+using IronPython.Runtime.Binding;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 
 #if CLR2
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 #else
+using System.Linq.Expressions;
 using System.Numerics;
 #endif
 
-[assembly: PythonModule("_bytesio", typeof(IronPython.Modules.PythonBytesIOModule))]
 namespace IronPython.Modules {
-    public static class PythonBytesIOModule {
-        public const string __doc__ = null;
-
+    public static partial class PythonIOModule {
         /// <summary>
         /// BytesIO([initializer]) -> object
         /// 
         /// Create a buffered I/O implementation using an in-memory bytes
         /// buffer, ready for reading and writing.
         /// </summary>
-        [PythonType("_BytesIO")]
-        [DontMapIDisposableToContextManager]
-        public class _BytesIO : IEnumerator, IDisposable {
+        [PythonType, DontMapIDisposableToContextManager]
+        public class BytesIO : _BufferedIOBase, IEnumerator, IDisposable, IDynamicMetaObjectProvider {
             #region Fields and constructors
 
             private static readonly int DEFAULT_BUF_SIZE = 20;
@@ -53,18 +55,23 @@ namespace IronPython.Modules {
             private byte[] _data;
             private int _pos, _length;
 
-            public _BytesIO([DefaultParameterValue(null)]object buffer) {
-                __init__(buffer);
+            internal BytesIO(CodeContext/*!*/ context) : base(context) {
+                __init__(null);
             }
 
-            public void __init__([DefaultParameterValue(null)]object buffer) {
+            public BytesIO(CodeContext/*!*/ context, [DefaultParameterValue(null)]object initial_bytes)
+                : base(context) {
+                    __init__(initial_bytes);
+            }
+
+            public void __init__([DefaultParameterValue(null)]object initial_bytes) {
                 if (Object.ReferenceEquals(_data, null)) {
                     _data = new byte[DEFAULT_BUF_SIZE];
                 }
 
                 _pos = _length = 0;
-                if (buffer != null) {
-                    DoWrite(buffer);
+                if (initial_bytes != null) {
+                    DoWrite(initial_bytes);
                     _pos = 0;
                 }
             }
@@ -76,23 +83,18 @@ namespace IronPython.Modules {
             /// <summary>
             /// close() -> None.  Disable all I/O operations.
             /// </summary>
-            public void close() {
+            public override void close(CodeContext/*!*/ context) {
                 _data = null;
             }
 
             /// <summary>
             /// True if the file is closed.
             /// </summary>
-            public bool closed {
+            public override bool closed {
                 get {
                     return _data == null;
                 }
             }
-
-            /// <summary>
-            /// flush() -> None.  Does nothing.
-            /// </summary>
-            public void flush() { }
 
             /// <summary>
             /// getvalue() -> bytes.
@@ -100,7 +102,7 @@ namespace IronPython.Modules {
             /// Retrieve the entire contents of the BytesIO object.
             /// </summary>
             public Bytes getvalue() {
-                EnsureOpen();
+                _checkClosed();
 
                 if (_length == 0) {
                     return Bytes.Empty;
@@ -115,8 +117,8 @@ namespace IronPython.Modules {
                 + "Always returns False since BytesIO objects are not connected\n"
                 + "to a TTY-like device."
                 )]
-            public bool isatty() {
-                EnsureOpen();
+            public override bool isatty(CodeContext/*!*/ context) {
+                _checkClosed();
 
                 return false;
             }
@@ -125,12 +127,13 @@ namespace IronPython.Modules {
                 + "If the size argument is negative, read until EOF is reached.\n"
                 + "Return an empty string at EOF."
                 )]
-            public Bytes read([DefaultParameterValue(-1)]int size) {
-                EnsureOpen();
+            public override object read(CodeContext/*!*/ context, [DefaultParameterValue(null)]object size) {
+                _checkClosed();
+                int sz = GetInt(size, -1);
 
                 int len = Math.Max(0, _length - _pos);
-                if (size >= 0) {
-                    len = Math.Min(len, size);
+                if (sz >= 0) {
+                    len = Math.Min(len, sz);
                 }
                 if (len == 0) {
                     return Bytes.Empty;
@@ -143,37 +146,23 @@ namespace IronPython.Modules {
                 return Bytes.Make(arr);
             }
 
-            public Bytes read(object size) {
-                if (size == null) {
-                    return read(-1);
-                }
-
-                EnsureOpen();
-
-                throw PythonOps.TypeError("integer argument expected, got '{0}'", PythonTypeOps.GetName(size));
-            }
-
             [Documentation("read1(size) -> read at most size bytes, returned as a bytes object.\n\n"
                 + "If the size argument is negative or omitted, read until EOF is reached.\n"
                 + "Return an empty string at EOF."
                 )]
-            public Bytes read1(int size) {
-                return read(size);
+            public override Bytes read1(CodeContext/*!*/ context, int size) {
+                return (Bytes)read(context, size);
             }
 
-            public Bytes read1(object size) {
-                return read(size);
-            }
-
-            public bool readable() {
+            public override bool readable(CodeContext/*!*/ context) {
                 return true;
             }
 
             [Documentation("readinto(array_or_bytearray) -> int.  Read up to len(b) bytes into b.\n\n"
                 + "Returns number of bytes read (0 for EOF)."
                 )]
-            public int readinto([NotNull]ByteArray buffer) {
-                EnsureOpen();
+            public BigInteger readinto([NotNull]ByteArray buffer) {
+                _checkClosed();
 
                 int len = Math.Min(_length - _pos, buffer.Count);
                 for (int i = 0; i < len; i++) {
@@ -183,8 +172,8 @@ namespace IronPython.Modules {
                 return len;
             }
 
-            public int readinto([NotNull]ArrayModule.array buffer) {
-                EnsureOpen();
+            public BigInteger readinto([NotNull]ArrayModule.array buffer) {
+                _checkClosed();
 
                 int len = Math.Min(_length - _pos, buffer.__len__() * buffer.itemsize);
                 int tailLen = len % buffer.itemsize;
@@ -202,13 +191,32 @@ namespace IronPython.Modules {
                 return len;
             }
 
+            public override BigInteger readinto(CodeContext/*!*/ context, object buf) {
+                ByteArray bytes = buf as ByteArray;
+                if (bytes != null) {
+                    return readinto(bytes);
+                }
+
+                ArrayModule.array array = buf as ArrayModule.array;
+                if (array != null) {
+                    return readinto(array);
+                }
+
+                _checkClosed();
+                throw PythonOps.TypeError("must be read-write buffer, not {0}", PythonTypeOps.GetName(buf));
+            }
+
             [Documentation("readline([size]) -> next line from the file, as bytes.\n\n"
                 + "Retain newline.  A non-negative size argument limits the maximum\n"
                 + "number of bytes to return (an incomplete line may be returned then).\n"
                 + "Return an empty string at EOF."
                 )]
-            public Bytes readline([DefaultParameterValue(-1)]int size) {
-                EnsureOpen();
+            public override object readline(CodeContext/*!*/ context, [DefaultParameterValue(-1)]int limit) {
+                return readline(limit);
+            }
+
+            private Bytes readline([DefaultParameterValue(-1)]int size) {
+                _checkClosed();
                 if (_pos >= _length || size == 0) {
                     return Bytes.Empty;
                 }
@@ -232,7 +240,7 @@ namespace IronPython.Modules {
                     return readline(-1);
                 }
 
-                EnsureOpen();
+                _checkClosed();
 
                 throw PythonOps.TypeError("integer argument expected, got '{0}'", PythonTypeOps.GetName(size));
             }
@@ -242,8 +250,9 @@ namespace IronPython.Modules {
                 + "The optional size argument, if given, is an approximate bound on the\n"
                 + "total number of bytes in the lines returned."
                 )]
-            public List readlines([DefaultParameterValue(-1)]int size) {
-                EnsureOpen();
+            public override List readlines([DefaultParameterValue(null)]object hint) {
+                _checkClosed();
+                int size = GetInt(hint, -1);
 
                 List lines = new List();
                 for (Bytes line = readline(-1); line.Count > 0; line = readline(-1)) {
@@ -259,16 +268,6 @@ namespace IronPython.Modules {
                 return lines;
             }
 
-            public List readlines(object size) {
-                if (size == null) {
-                    return readlines(-1);
-                }
-
-                EnsureOpen();
-
-                throw PythonOps.TypeError("integer argument expected, got '{0}'", PythonTypeOps.GetName(size));
-            }
-
             [Documentation("seek(pos, whence=0) -> int.  Change stream position.\n\n"
                 + "Seek to byte offset pos relative to position indicated by whence:\n"
                 + "     0  Start of stream (the default).  pos should be >= 0;\n"
@@ -276,13 +275,13 @@ namespace IronPython.Modules {
                 + "     2  End of stream - pos usually negative.\n"
                 + "Returns the new absolute position."
                 )]
-            public int seek(int pos, [DefaultParameterValue(0)]int whence) {
-                EnsureOpen();
-                
+            public BigInteger seek(int pos, [DefaultParameterValue(0)]int whence) {
+                _checkClosed();
+
                 switch (whence) {
                     case 0:
                         if (pos < 0) {
-                           throw PythonOps.ValueError("negative seek value {0}", pos);
+                            throw PythonOps.ValueError("negative seek value {0}", pos);
                         }
                         _pos = pos;
                         return _pos;
@@ -297,59 +296,33 @@ namespace IronPython.Modules {
                 }
             }
 
-            public int seek(CodeContext/*!*/ context, object pos, [DefaultParameterValue(0)]object whence) {
-                EnsureOpen();
+            public BigInteger seek(double pos, [DefaultParameterValue(0)]int whence) {
+                throw PythonOps.TypeError("'float' object cannot be interpreted as an index");
+            }
 
-                if (pos == null || whence == null) {
-                    throw PythonOps.TypeError("an integer is required");
-                }
+            public override BigInteger seek(CodeContext/*!*/ context, BigInteger pos, [DefaultParameterValue(0)]object whence) {
+                _checkClosed();
 
-                int intPos;
-                if (pos is int) {
-                    intPos = (int)pos;
-                } else if (pos is Extensible<int>) {
-                    intPos = ((Extensible<int>)pos).Value;
-                } else if (pos is BigInteger) {
-                    intPos = (int)(BigInteger)pos;
-                } else if (pos is Extensible<BigInteger>) {
-                    intPos = (int)(((Extensible<BigInteger>)pos).Value);
-                } else if (pos is double || pos is Extensible<double>) {
-                    throw PythonOps.TypeError("position argument must be an integer");
-                } else if (PythonContext.GetContext(context).PythonOptions.Python30) {
-                    throw PythonOps.TypeError("'{0}' object cannot be interpreted as an integer", PythonTypeOps.GetOldName(pos));
-                } else {
-                    throw PythonOps.TypeError("an integer is required");
-                }
-
-                if (whence is int) {
-                    return seek(intPos, (int)whence);
-                } else if (whence is Extensible<int>) {
-                    return seek(intPos, ((Extensible<int>)pos).Value);
-                }else if (whence is BigInteger) {
-                    return seek(intPos, (int)(BigInteger)whence);
-                } else if (whence is Extensible<BigInteger>) {
-                    return seek(intPos, (int)(((Extensible<BigInteger>)whence).Value));
-                } else if (whence is double || whence is Extensible<double>) {
+                int posInt = (int)pos;
+                if (whence is double || whence is Extensible<double>) {
                     if (PythonContext.GetContext(context).PythonOptions.Python30) {
                         throw PythonOps.TypeError("integer argument expected, got float");
                     } else {
                         PythonOps.Warn(context, PythonExceptions.DeprecationWarning, "integer argument expected, got float");
-                        return seek(intPos, Converter.ConvertToInt32(whence));
+                        return seek(posInt, Converter.ConvertToInt32(whence));
                     }
-                } else if (PythonContext.GetContext(context).PythonOptions.Python30) {
-                    throw PythonOps.TypeError("'{0}' object cannot be interpreted as an integer", PythonTypeOps.GetOldName(whence));
-                } else {
-                    throw PythonOps.TypeError("an integer is required");
                 }
+                
+                return seek(posInt, GetInt(whence));
             }
 
-            public Boolean seekable() {
+            public override bool seekable(CodeContext/*!*/ context) {
                 return true;
             }
 
             [Documentation("tell() -> current file position, an integer")]
-            public int tell() {
-                EnsureOpen();
+            public override BigInteger tell(CodeContext/*!*/ context) {
+                _checkClosed();
 
                 return _pos;
             }
@@ -358,39 +331,44 @@ namespace IronPython.Modules {
                 + "Size defaults to the current file position, as returned by tell().\n"
                 + "Returns the new size.  Imply an absolute seek to the position size."
                 )]
-            public int truncate() {
+            public BigInteger truncate() {
                 return truncate(_pos);
             }
 
-            public int truncate(int size) {
-                EnsureOpen();
+            public BigInteger truncate(int size) {
+                _checkClosed();
                 if (size < 0) {
                     throw PythonOps.ValueError("negative size value {0}", size);
                 }
 
                 _length = Math.Min(_length, size);
-                return seek(size, 0);
+                return (BigInteger)size;
             }
 
-            public int truncate(object size) {
+            public override BigInteger truncate(CodeContext/*!*/ context, [DefaultParameterValue(null)]object size) {
                 if (size == null) {
                     return truncate();
                 }
 
-                EnsureOpen();
+                int sizeInt;
+                if (TryGetInt(size, out sizeInt)) {
+                    return truncate(sizeInt);
+                }
+
+                _checkClosed();
 
                 throw PythonOps.TypeError("integer argument expected, got '{0}'", PythonTypeOps.GetName(size));
             }
 
-            public bool writable() {
+            public override bool writable(CodeContext/*!*/ context) {
                 return true;
             }
 
             [Documentation("write(bytes) -> int.  Write bytes to file.\n\n"
                 + "Return the number of bytes written."
                 )]
-            public int write(object bytes) {
-                EnsureOpen();
+            public override BigInteger write(CodeContext/*!*/ context, object bytes) {
+                _checkClosed();
 
                 return DoWrite(bytes);
             }
@@ -401,7 +379,7 @@ namespace IronPython.Modules {
                 + "each string."
                 )]
             public void writelines([NotNull]IEnumerable lines) {
-                EnsureOpen();
+                _checkClosed();
 
                 IEnumerator en = lines.GetEnumerator();
                 while (en.MoveNext()) {
@@ -413,9 +391,7 @@ namespace IronPython.Modules {
 
             #region IDisposable methods
 
-            void IDisposable.Dispose() {
-                close();
-            }
+            void IDisposable.Dispose() { }
 
             #endregion
             
@@ -425,7 +401,7 @@ namespace IronPython.Modules {
 
             object IEnumerator.Current {
                 get {
-                    EnsureOpen();
+                    _checkClosed();
                     return _current;
                 }
             }
@@ -442,6 +418,14 @@ namespace IronPython.Modules {
             void IEnumerator.Reset() {
                 seek(0, 0);
                 _current = null;
+            }
+
+            #endregion
+
+            #region IDynamicMetaObjectProvider Members
+
+            DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter) {
+                return new MetaExpandable<BytesIO>(parameter, this);
             }
 
             #endregion
@@ -511,12 +495,6 @@ namespace IronPython.Modules {
                 }
 
                 throw PythonOps.TypeError("expected a readable buffer object");
-            }
-
-            private void EnsureOpen() {
-                if (closed) {
-                    throw PythonOps.ValueError("I/O operation on closed file.");
-                }
             }
 
             private void EnsureSize(int size) {
