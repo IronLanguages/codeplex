@@ -205,7 +205,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 position = Math.Min(position, textBuffer.CurrentSnapshot.Length);
                 var span = textBuffer.CurrentSnapshot.CreateTrackingSpan(position, 0, SpanTrackingMode.EdgeInclusive);
 
-                var sigs = Analysis.GetSignatures(textBuffer.CurrentSnapshot, textBuffer, span);
+                var sigs = _provider._Analyzer.GetSignatures(textBuffer.CurrentSnapshot, textBuffer, span);
                 int curParam = sigs.ParameterIndex;
 
                 if (curParam < sig.Parameters.Count) {

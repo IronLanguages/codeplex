@@ -24,12 +24,12 @@ using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 
 namespace Microsoft.IronPythonTools.Intellisense {
-    internal class NormalCompletionList : CompletionList {
+    internal class NormalCompletionAnalysis : CompletionAnalysis {
         private readonly int _paramIndex;
         private readonly ITextSnapshot _snapshot;
         private readonly bool _intersectMembers, _hideAdvancedMembers;
 
-        internal NormalCompletionList(string text, int pos, ITextSnapshot snapshot, ITrackingSpan span, ITextBuffer textBuffer, int paramIndex, bool intersectMembers = true, bool hideAdvancedMembers = false)
+        internal NormalCompletionAnalysis(string text, int pos, ITextSnapshot snapshot, ITrackingSpan span, ITextBuffer textBuffer, int paramIndex, bool intersectMembers = true, bool hideAdvancedMembers = false)
             : base(text, pos, span, textBuffer) {
             _paramIndex = paramIndex;
             _snapshot = snapshot;
@@ -63,7 +63,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
             if (members == null) {
                 var analysis = GetAnalysisEntry();
                 if (analysis != null) {
-                    members = analysis.GetMembersFromExpression(
+                    members = analysis.GetMembers(
                         Text, 
                         _snapshot.GetLineNumberFromPosition(_pos) + 1, 
                         _intersectMembers).ToArray();
@@ -112,23 +112,23 @@ namespace Microsoft.IronPythonTools.Intellisense {
             return members;
         }
 
-        private ObjectType GetMemberType(MemberDoc member) {
+        private ResultType GetMemberType(MemberDoc member) {
             switch (member.Kind) {
-                case MemberKind.Class: return ObjectType.Class;
-                case MemberKind.Constant: return ObjectType.Constant;
-                case MemberKind.Delegate: return ObjectType.Delegate;
-                case MemberKind.Enum: return ObjectType.Enum;
-                case MemberKind.EnumMember: return ObjectType.EnumMember;
-                case MemberKind.Event: return ObjectType.Event;
-                case MemberKind.Field: return ObjectType.Field;
-                case MemberKind.Function: return ObjectType.Function;
-                case MemberKind.Instance: return ObjectType.Instance;
-                case MemberKind.Method: return ObjectType.Method;
-                case MemberKind.Module: return ObjectType.Module;
-                case MemberKind.Namespace: return ObjectType.Namespace;
-                case MemberKind.Property: return ObjectType.Property;
+                case MemberKind.Class: return ResultType.Class;
+                case MemberKind.Constant: return ResultType.Constant;
+                case MemberKind.Delegate: return ResultType.Delegate;
+                case MemberKind.Enum: return ResultType.Enum;
+                case MemberKind.EnumMember: return ResultType.EnumInstance;
+                case MemberKind.Event: return ResultType.Event;
+                case MemberKind.Field: return ResultType.Field;
+                case MemberKind.Function: return ResultType.Function;
+                case MemberKind.Instance: return ResultType.Instance;
+                case MemberKind.Method: return ResultType.Method;
+                case MemberKind.Module: return ResultType.Module;
+                case MemberKind.Namespace: return ResultType.Namespace;
+                case MemberKind.Property: return ResultType.Property;
                 default:
-                    return ObjectType.Unknown;
+                    return ResultType.Unknown;
             }
         }
 

@@ -13,8 +13,6 @@
  * ***************************************************************************/
 
 using System.ComponentModel.Composition;
-using Microsoft.IronStudio;
-using Microsoft.IronStudio.Core;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Utilities;
@@ -22,8 +20,11 @@ using Microsoft.VisualStudio.Utilities;
 namespace Microsoft.IronPythonTools.Intellisense {
     [Export(typeof(ISignatureHelpSourceProvider)), ContentType(PythonCoreConstants.ContentType), Order, Name("Python Signature Help Source")]
     class SignatureHelpSourceProvider : ISignatureHelpSourceProvider {
+        [Import(typeof(IPythonAnalyzer))]
+        internal IPythonAnalyzer _Analysis = null;
+
         public ISignatureHelpSource TryCreateSignatureHelpSource(ITextBuffer textBuffer) {
-            return new SignatureHelpSource(textBuffer);
+            return new SignatureHelpSource(this, textBuffer);
         }
     }
 }

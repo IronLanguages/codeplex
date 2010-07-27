@@ -21,7 +21,7 @@ namespace Microsoft.PyAnalysis {
         private readonly string _name;
         private string _completion;
         private readonly IEnumerable<Namespace> _vars;
-        private readonly ObjectType? _type;
+        private readonly ResultType? _type;
 
         internal MemberResult(string name, IEnumerable<Namespace> vars) {
             _name = _completion = name;
@@ -37,7 +37,7 @@ namespace Microsoft.PyAnalysis {
         }
 
 
-        internal MemberResult(string name, ObjectType type) {
+        internal MemberResult(string name, ResultType type) {
             _name = name;
             _type = type;
             _completion = _name;
@@ -54,37 +54,25 @@ namespace Microsoft.PyAnalysis {
             get { return _completion; }
         }
 
-        public ObjectType MemberType {
+        public ResultType MemberType {
             get {
                 return _type ?? GetMemberType();
             }
         }
 
-        private ObjectType GetMemberType() {
-            ObjectType result = ObjectType.Unknown;
+        private ResultType GetMemberType() {
+            ResultType result = ResultType.Unknown;
             foreach (var ns in _vars) {
-                var nsType = ns.NamespaceType;
-                if (result == ObjectType.Unknown) {
+                var nsType = ns.ResultType;
+                if (result == ResultType.Unknown) {
                     result = nsType;
                 } else if (result != nsType) {
-                    return ObjectType.Multiple;
+                    return ResultType.Multiple;
                 }
             }
             return result;
         }
-#if FALSE
-        public LocationInfo[] Definitions {
-            get {
-                var result = new List<LocationInfo>();
-                foreach (var ns in _vars) {
-                    if (ns.Location != null) {
-                        result.Add(ns.Location);
-                    }
-                }
-                return result.ToArray();
-            }
-        }
-#endif
+
         internal IEnumerable<Namespace> Namespaces {
             get {
                 return _vars;

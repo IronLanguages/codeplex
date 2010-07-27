@@ -97,9 +97,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Constant;
+                return ResultType.Constant;
             }
         }
 

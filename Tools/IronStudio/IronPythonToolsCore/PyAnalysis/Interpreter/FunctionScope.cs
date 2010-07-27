@@ -12,14 +12,11 @@
  *
  * ***************************************************************************/
 
-using System.Collections.Generic;
+using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Values;
 
 namespace Microsoft.PyAnalysis.Interpreter {
     class FunctionScope : InterpreterScope {
-        private IDictionary<string, VariableDef> _variables;
-        private static Dictionary<string, VariableDef> EmptyVaribles = new Dictionary<string, VariableDef>();
-
         public FunctionScope(FunctionInfo functionInfo)
             : base(functionInfo) {
         }
@@ -34,37 +31,8 @@ namespace Microsoft.PyAnalysis.Interpreter {
             get { return Function.FunctionDefinition.Name;  }
         }
 
-        public override VariableDef GetVariable(string name, AnalysisUnit unit) {
-            VariableDef res;
-            if (_variables != null && _variables.TryGetValue(name, out res)) {
-                return res;
-            }
-
-            return null;
-        }
-        
-        public VariableDef DefineVariable(string name) {
-            if (_variables == null) {
-                _variables = new Dictionary<string, VariableDef>();
-            }
-            return _variables[name] = new VariableDef();
-        }
-
-        public override void SetVariable(string name, IEnumerable<Namespace> value, AnalysisUnit unit) {            
-            if (_variables == null) {
-                _variables = new Dictionary<string, VariableDef>();
-            }
-            VariableDef def;
-            if (!_variables.TryGetValue(name, out def)) {
-                _variables[name] = def = new VariableDef();
-            }
-            def.AddTypes(value, unit);
-        }
-
-        public override IDictionary<string, VariableDef> Variables {
-            get {
-                return _variables ?? EmptyVaribles;
-            }
+        public VariableDef DefineVariable(Parameter node, AnalysisUnit unit) {
+            return Variables[node.Name] = new LocatedVariableDef(unit.DeclaringModule.ProjectEntry, node);
         }
     }
 }

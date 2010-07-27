@@ -115,9 +115,9 @@ namespace Microsoft.PyAnalysis.Values {
             return 2;
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Field;
+                return ResultType.Field;
             }
         }
     }

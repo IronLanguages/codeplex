@@ -14,6 +14,7 @@
 
 using System.Collections.Generic;
 using Microsoft.PyAnalysis.Interpreter;
+using Microsoft.Scripting;
 
 namespace Microsoft.PyAnalysis.Values {
     /// <summary>
@@ -25,17 +26,36 @@ namespace Microsoft.PyAnalysis.Values {
     /// Types -> Types that this VariableRef has received from the Module.
     /// </summary>
     internal class DependencyInfo {
-        public int Version { get; private set; }
-        private TypeUnion _union;
+        private readonly int _version;
         private HashSet<AnalysisUnit> _dependentUnits;
 
-        public DependencyInfo() {
+        public DependencyInfo(int version) {
+            _version = version;
+            _dependentUnits = new HashSet<AnalysisUnit>();
         }
 
-        public DependencyInfo(int version) {
-            Version = version;
-            _dependentUnits = new HashSet<AnalysisUnit>();
-            Types = new TypeUnion();
+        public HashSet<AnalysisUnit> DependentUnits {
+            get {
+                if (_dependentUnits == null) {
+                    _dependentUnits = new HashSet<AnalysisUnit>();
+                }
+                return _dependentUnits; 
+            }
+        }
+
+        public int Version {
+            get {
+                return _version;
+            }
+        }
+    }
+
+    internal class TypedDependencyInfo : DependencyInfo {
+        private TypeUnion _union;
+        public HashSet<SourceSpan> _references, _assignments;
+
+        public TypedDependencyInfo(int version)
+            : base(version) {
         }
 
         public TypeUnion Types {
@@ -50,12 +70,39 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public HashSet<AnalysisUnit> DependentUnits {
+        public bool HasReferences {
             get {
-                if (_dependentUnits == null) {
-                    _dependentUnits = new HashSet<AnalysisUnit>();
+                return _references != null;
+            }
+        }
+
+        public HashSet<SourceSpan> References {
+            get {
+                if (_references == null) {
+                    _references = new HashSet<SourceSpan>();
                 }
-                return _dependentUnits; 
+                return _references;
+            }
+            set {
+                _references = value;
+            }
+        }
+
+        public bool HasAssignments {
+            get {
+                return _assignments != null;
+            }
+        }
+
+        public HashSet<SourceSpan> Assignments {
+            get {
+                if (_assignments == null) {
+                    _assignments = new HashSet<SourceSpan>();
+                }
+                return _assignments;
+            }
+            set {
+                _assignments = value;
             }
         }
     }

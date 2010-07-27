@@ -23,7 +23,6 @@ using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
-using System.IO;
 
 namespace Microsoft.IronStudio.Navigation {
 

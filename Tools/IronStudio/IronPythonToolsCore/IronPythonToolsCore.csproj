@@ -92,6 +92,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IronPythonToolsCore\Intellisense\IPythonAnalyzer.cs" />
     <Compile Include="IronPythonToolsCore\PythonCoreConstants.cs" />
     <Compile Include="IronPythonToolsCore\PythonRuntimeHost.cs" />
     <Compile Include="IronPythonToolsCore\Editor\BraceMatcher.cs" />
@@ -99,22 +100,21 @@
     <Compile Include="IronPythonToolsCore\Extensions.cs" />
     <Compile Include="IronPythonToolsCore\IPythonRuntimeHost.cs" />
     <Compile Include="IronPythonToolsCore\OutliningTaggerProvider.cs" />
-    <Compile Include="IronPythonToolsCore\PythonAnalyzer.cs" />
+    <Compile Include="IronPythonToolsCore\Intellisense\PythonAnalyzer.cs" />
     <Compile Include="IronPythonToolsCore\PythonClassifierProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="IronPythonToolsCore\Repl\PythonEvaluator.cs" />
     <Compile Include="IronPythonToolsCore\Repl\RemotePythonEvaluator.cs" />
     <Compile Include="IronPythonToolsCore\Repl\SwitchModuleCommand.cs" />
-    <Compile Include="IronPythonToolsCore\Intellisense\Analysis.cs" />
-    <Compile Include="IronPythonToolsCore\Intellisense\CompletionList.cs" />
+    <Compile Include="IronPythonToolsCore\Intellisense\CompletionAnalysis.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\CompletionSource.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\CompletionSourceProvider.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\ExpressionAnalysis.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\FileCookie.cs" />
-    <Compile Include="IronPythonToolsCore\Intellisense\FromImportCompletionList.cs" />
-    <Compile Include="IronPythonToolsCore\Intellisense\ImportCompletionList.cs" />
+    <Compile Include="IronPythonToolsCore\Intellisense\FromImportCompletionAnalysis.cs" />
+    <Compile Include="IronPythonToolsCore\Intellisense\ImportCompletionAnalysis.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\LazyCompletion.cs" />
-    <Compile Include="IronPythonToolsCore\Intellisense\NormalCompletionList.cs" />
+    <Compile Include="IronPythonToolsCore\Intellisense\NormalCompletionAnalysis.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\PythonParameter.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\PythonSignature.cs" />
     <Compile Include="IronPythonToolsCore\Intellisense\QuickInfoSource.cs" />
@@ -130,10 +130,12 @@
     <Compile Include="IronPythonToolsCore\Navigation\FunctionScopeNode.cs" />
     <Compile Include="PyAnalysis\HashSetExtensions.cs" />
     <Compile Include="PyAnalysis\IAnalysisCookie.cs" />
+    <Compile Include="PyAnalysis\IAnalysisVariable.cs" />
     <Compile Include="PyAnalysis\ModuleReference.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorInfo.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorNextBoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorSendBoundBuiltinMethodInfo.cs" />
+    <Compile Include="PyAnalysis\Values\IVariableDefContainer.cs" />
     <Compile Include="PyAnalysis\Values\NumericInstanceInfo.cs" />
     <Compile Include="PyAnalysis\Values\ListAppendBoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\ListExtendBoundBuiltinFunction.cs" />
@@ -141,7 +143,7 @@
     <Compile Include="PyAnalysis\Values\ListInsertBoundBuiltinFunction.cs" />
     <Compile Include="PyAnalysis\Values\ListPopBoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\NamespaceSetExtensions.cs" />
-    <Compile Include="PyAnalysis\ObjectType.cs" />
+    <Compile Include="PyAnalysis\ResultType.cs" />
     <Compile Include="PyAnalysis\ProjectEntry.cs" />
     <Compile Include="PyAnalysis\ProjectState.cs" />
     <Compile Include="PyAnalysis\ImportInfo.cs" />
@@ -150,11 +152,12 @@
     <Compile Include="PyAnalysis\MemberResult.cs" />
     <Compile Include="PyAnalysis\OverloadResult.cs" />
     <Compile Include="PyAnalysis\Values\BuiltinNamespace.cs" />
+    <Compile Include="PyAnalysis\Values\SetInfo.cs" />
     <Compile Include="PyAnalysis\Values\SliceInfo.cs" />
     <Compile Include="PyAnalysis\Values\SpecializedBuiltinFunction.cs" />
     <Compile Include="PyAnalysis\Values\BoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\BuiltinInstanceInfo.cs" />
-    <Compile Include="PyAnalysis\VariableResult.cs" />
+    <Compile Include="PyAnalysis\IAnalysisValue.cs" />
     <Compile Include="PyAnalysis\Interpreter\EmptySet.cs" />
     <Compile Include="PyAnalysis\Interpreter\SetOfOne.cs" />
     <Compile Include="PyAnalysis\ModuleAnalysis.cs" />
@@ -164,7 +167,6 @@
     <Compile Include="PyAnalysis\Interpreter\OverviewWalker.cs" />
     <Compile Include="PyAnalysis\Interpreter\ScopePositionInfo.cs" />
     <Compile Include="PyAnalysis\Interpreter\VariableDef.cs" />
-    <Compile Include="PyAnalysis\Interpreter\BuiltinModuleScope.cs" />
     <Compile Include="PyAnalysis\Interpreter\ClassScope.cs" />
     <Compile Include="PyAnalysis\Interpreter\FunctionScope.cs" />
     <Compile Include="PyAnalysis\Interpreter\InterpreterScope.cs" />
@@ -183,13 +185,12 @@
     <Compile Include="PyAnalysis\Values\DictionaryInfo.cs" />
     <Compile Include="PyAnalysis\Values\EnumInstanceInfo.cs" />
     <Compile Include="PyAnalysis\Values\FunctionInfo.cs" />
-    <Compile Include="PyAnalysis\Values\IHaveAst.cs" />
     <Compile Include="PyAnalysis\Values\InstanceInfo.cs" />
     <Compile Include="PyAnalysis\Values\LazyDotNetDict.cs" />
     <Compile Include="PyAnalysis\Values\MethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\ModuleInfo.cs" />
     <Compile Include="PyAnalysis\Values\Namespace.cs" />
-    <Compile Include="PyAnalysis\Values\NamespaceDependencies.cs" />
+    <Compile Include="PyAnalysis\Values\NamespaceReferences.cs" />
     <Compile Include="PyAnalysis\Values\ReflectedNamespace.cs" />
     <Compile Include="PyAnalysis\Values\SequenceInfo.cs" />
     <Compile Include="PyAnalysis\Values\UnboundReference.cs" />

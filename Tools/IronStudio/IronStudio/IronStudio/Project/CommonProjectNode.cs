@@ -456,6 +456,12 @@ namespace Microsoft.IronStudio.Project {
             isDirty = IsFlavorDirty();
             return VSConstants.S_OK;
         }
+        
+        protected override void AddNewFileNodeToHierarchy(HierarchyNode parentNode, string fileName) {
+            base.AddNewFileNodeToHierarchy(parentNode, fileName);
+
+            SetProjectFileDirty(true);
+        }
 
         public override DependentFileNode CreateDependentFileNode(ProjectElement item) {
             DependentFileNode node = base.CreateDependentFileNode(item);

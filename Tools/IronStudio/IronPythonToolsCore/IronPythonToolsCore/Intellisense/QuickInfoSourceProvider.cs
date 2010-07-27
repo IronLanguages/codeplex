@@ -13,18 +13,19 @@
  * ***************************************************************************/
 
 using System.ComponentModel.Composition;
-using Microsoft.IronStudio;
-using Microsoft.IronStudio.Core;
+using Microsoft.IronPythonTools.Library;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Utilities;
 
-
 namespace Microsoft.IronPythonTools.Intellisense {
     [Export(typeof(IQuickInfoSourceProvider)), ContentType(PythonCoreConstants.ContentType), Order, Name("Python Quick Info Source")]
     class QuickInfoSourceProvider : IQuickInfoSourceProvider {
+        [Import(typeof(IPythonAnalyzer))]
+        internal IPythonAnalyzer _Analyzer = null;
+
         public IQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer) {
-            return new QuickInfoSource(textBuffer);
+            return new QuickInfoSource(this, textBuffer);
         }
     }
 }

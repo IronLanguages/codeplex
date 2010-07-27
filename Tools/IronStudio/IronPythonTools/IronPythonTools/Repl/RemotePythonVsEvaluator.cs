@@ -13,13 +13,14 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.IronPythonTools.Library.Repl;
-using Microsoft.IronStudio.Core.Repl;
-using Microsoft.IronStudio;
+using Microsoft.IronPythonTools.Intellisense;
 using Microsoft.IronPythonTools.Language;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Editor;
+using Microsoft.IronPythonTools.Library.Repl;
+using Microsoft.IronStudio;
+using Microsoft.IronStudio.Core.Repl;
 using Microsoft.IronStudio.Repl;
+using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace Microsoft.IronPythonTools.Repl {
     public sealed class RemotePythonVsEvaluator : RemotePythonEvaluator {
@@ -29,7 +30,7 @@ namespace Microsoft.IronPythonTools.Repl {
 
         public override void TextViewCreated(IReplWindow window, VisualStudio.Text.Editor.ITextView view) {
             var adapterFactory = IronPythonToolsPackage.ComponentModel.GetService<IVsEditorAdaptersFactoryService>();
-            new EditFilter((IWpfTextView)view, adapterFactory.GetViewAdapter(view));
+            new EditFilter(IronPythonToolsPackage.ComponentModel.GetService<IPythonAnalyzer>(), (IWpfTextView)view, adapterFactory.GetViewAdapter(view));
             window.UseSmartUpDown = IronPythonToolsPackage.Instance.OptionsPage.ReplSmartHistory;
             base.TextViewCreated(window, view);
         }

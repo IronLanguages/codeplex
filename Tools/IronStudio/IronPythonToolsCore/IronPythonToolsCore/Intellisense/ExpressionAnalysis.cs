@@ -17,32 +17,56 @@ using Microsoft.PyAnalysis;
 using Microsoft.VisualStudio.Text;
 
 namespace Microsoft.IronPythonTools.Intellisense {
+    /// <summary>
+    /// Provides the results of analyzing a simple expression.  Returned from Analysis.AnalyzeExpression.
+    /// </summary>
     public class ExpressionAnalysis {
         private readonly string _expr;
-        private readonly IEnumerable<VariableResult> _vars;
+        private readonly ModuleAnalysis _analysis;
         private readonly ITrackingSpan _span;
+        private readonly int _lineNo;
+        public static readonly ExpressionAnalysis Empty = new ExpressionAnalysis("", null, 0, null);
         
-        public ExpressionAnalysis(string expression, IEnumerable<VariableResult> variables, ITrackingSpan span) {
+        internal ExpressionAnalysis(string expression, ModuleAnalysis analysis, int lineNo, ITrackingSpan span) {
             _expr = expression;
-            _vars = variables;
+            _analysis = analysis;
+            _lineNo = lineNo;
             _span = span;
         }
 
+        /// <summary>
+        /// The expression which this is providing information about.
+        /// </summary>
         public string Expression {
             get {
                 return _expr;
             }
         }
 
-        public IEnumerable<VariableResult> Variables {
-            get {
-                return _vars;
-            }
-        }
-
+        /// <summary>
+        /// The span of the expression being analyzed.
+        /// </summary>
         public ITrackingSpan Span {
             get {
                 return _span;
+            }
+        }
+
+        /// <summary>
+        /// Gets all of the variables (storage locations) associated with the expression.
+        /// </summary>
+        public IEnumerable<IAnalysisVariable> Variables {
+            get {
+                return _analysis.GetVariables(_expr, _lineNo);
+            }
+        }
+
+        /// <summary>
+        /// The possible values of the expression (types, constants, functions, modules, etc...)
+        /// </summary>
+        public IEnumerable<IAnalysisValue> Values {
+            get {
+                return _analysis.GetValues(_expr, _lineNo);
             }
         }
     }

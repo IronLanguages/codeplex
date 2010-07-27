@@ -50,7 +50,7 @@ namespace Microsoft.PyAnalysis {
             _filePath = filePath;
             _cookie = cookie;
             _myScope = new ModuleInfo(_moduleName, this);
-            _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _projectState.BuiltinModule.Scope, _myScope.Scope }, null);
+            _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _myScope.Scope }, null);
         }
 
         public event EventHandler<EventArgs> OnNewParseTree;
@@ -95,7 +95,7 @@ namespace Microsoft.PyAnalysis {
 
         public bool IsAnalyzed {
             get {
-                return CurrentAnalysis != null;
+                return Analysis != null;
             }
         }
 
@@ -105,7 +105,7 @@ namespace Microsoft.PyAnalysis {
             }
 
             var oldParent = _myScope.ParentPackage;
-            ProjectState.ModulesByFilename[_filePath] = _myScope;
+            ProjectState.ModulesByFilename[_filePath] = _myScope;/*
             ModuleReference existingRef;
             if (ProjectState.Modules.TryGetValue(_moduleName, out existingRef)) {
                 // if we have dependencies from files which were processed before us
@@ -122,15 +122,15 @@ namespace Microsoft.PyAnalysis {
             } else {
                 // publish our module ref now so that we don't collect dependencies as we'll be fully processed
                 ProjectState.Modules[_moduleName] = new ModuleReference(_myScope);
-            }
+            }*/
 
             if (oldParent != null) {
                 // update us in our parent package
                 _myScope.ParentPackage = oldParent;
-                oldParent.Scope.SetVariable(_moduleName.Substring(_moduleName.IndexOf('.') + 1), _myScope.SelfSet, _unit);
+                oldParent.Scope.SetVariable(_tree, _unit, _moduleName.Substring(_moduleName.IndexOf('.') + 1), _myScope.SelfSet);
             }
 
-            var unit = _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _projectState.BuiltinModule.Scope, _myScope.Scope }, null);
+            var unit = _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _myScope.Scope }, null);
 
             var walker = new OverviewWalker(this, unit);
             _tree.Walk(walker);
@@ -161,7 +161,7 @@ namespace Microsoft.PyAnalysis {
 
                         ModuleInfo childModule;
                         if (_projectState.ModulesByFilename.TryGetValue(file, out childModule)) {
-                            _myScope.Scope.SetVariable(Path.GetFileNameWithoutExtension(file), childModule, _unit);
+                            _myScope.Scope.SetVariable(childModule.ProjectEntry.Tree, _unit, Path.GetFileNameWithoutExtension(file), childModule);
                             childModule.ParentPackage = _myScope;
                         }
                     }
@@ -170,7 +170,7 @@ namespace Microsoft.PyAnalysis {
                         string package = Path.Combine(packageDir, "__init__.py");
                         ModuleInfo childPackage;
                         if (File.Exists(package) && _projectState.ModulesByFilename.TryGetValue(package, out childPackage)) {
-                            _myScope.Scope.SetVariable(Path.GetFileName(packageDir), childPackage, _unit);
+                            _myScope.Scope.SetVariable(childPackage.ProjectEntry.Tree, _unit, Path.GetFileName(packageDir), childPackage);
                             childPackage.ParentPackage = _myScope;
                         }
                     }
@@ -182,7 +182,7 @@ namespace Microsoft.PyAnalysis {
             return _cookie.GetLine(lineNo);
         }
 
-        public ModuleAnalysis CurrentAnalysis {
+        public ModuleAnalysis Analysis {
             get { return _ddg; }
         }
 
@@ -227,15 +227,14 @@ namespace Microsoft.PyAnalysis {
             get;
         }
 
-        ModuleAnalysis CurrentAnalysis {
+        ModuleAnalysis Analysis {
             get;
         }
-
-        void UpdateTree(PythonAst ast, IAnalysisCookie fileCookie);
 
         event EventHandler<EventArgs> OnNewParseTree;
         event EventHandler<EventArgs> OnNewAnalysis;
 
+        void UpdateTree(PythonAst ast, IAnalysisCookie fileCookie);
         void GetTreeAndCookie(out PythonAst ast, out IAnalysisCookie cookie);
     }
 

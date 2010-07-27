@@ -52,10 +52,10 @@ namespace Microsoft.PyAnalysis {
         private readonly Dictionary<object, object> _itemCache;
         private readonly BuiltinModule _builtinModule;
         private readonly List<KeyValuePair<Assembly, TopNamespaceTracker>> _references;
-        internal readonly Namespace _propertyObj, _classmethodObj, _staticmethodObj, _typeObj, _intType, _setType, _rangeFunc, _frozensetType;
+        internal readonly Namespace _propertyObj, _classmethodObj, _staticmethodObj, _typeObj, _intType, _rangeFunc, _frozensetType;
         internal readonly HashSet<Namespace> _objectSet;
         internal readonly Namespace _functionType;
-        internal readonly BuiltinClassInfo _dictType, _listType, _tupleType, _generatorType, _stringType, _boolType;
+        internal readonly BuiltinClassInfo _dictType, _listType, _tupleType, _generatorType, _stringType, _boolType, _setType;
         internal readonly ConstantInfo _noneInst;
         private readonly Queue<AnalysisUnit> _queue;
         private readonly DocumentationProvider _docProvider;
@@ -107,7 +107,7 @@ namespace Microsoft.PyAnalysis {
             
             _objectSet = new HashSet<Namespace>(new[] { GetBuiltin("object") });
 
-            _setType = GetBuiltin("set");
+            _setType = (BuiltinClassInfo)GetNamespaceFromObjects(TypeCache.Set);
             _rangeFunc = GetBuiltin("range");
             _frozensetType = GetBuiltin("frozenset");
             _functionType = GetNamespaceFromObjects(TypeCache.Function);
@@ -235,8 +235,9 @@ namespace Microsoft.PyAnalysis {
                         foreach (var modItem in mod) {
                             BuiltinModule builtinMod = modItem as BuiltinModule;
                             if (builtinMod != null) {
-                                if (builtinMod.Scope.Variables.TryGetValue(next, out def)) {
-                                    newMod = newMod.Union(def.Types, ref madeSet);
+                                ISet<Namespace> builtinValues;
+                                if (builtinMod.VariableDict.TryGetValue(next, out builtinValues)) {
+                                    newMod = newMod.Union(builtinValues, ref madeSet);
                                 }
                             } else {
                                 ModuleInfo userMod = modItem as ModuleInfo;
@@ -376,7 +377,6 @@ namespace Microsoft.PyAnalysis {
                                 var member = keyValue.Value;
                                 var handler = args[1].GetMember(node, evalUnit, keyValue.Key);
                                 var span = new SourceSpan(new SourceLocation(1, member.LineNumber, member.LineOffset), new SourceLocation(2, member.LineNumber, member.LineOffset + 1));
-                                handler.AddReference(span, xamlProject);
                             }
                         }
                     }

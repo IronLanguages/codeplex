@@ -35,8 +35,6 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
-            AddReference(node, unit);
-
             return _call((CallExpression)node, unit, args) ?? base.Call(node, unit, args, keywordArgNames);
         }
     }

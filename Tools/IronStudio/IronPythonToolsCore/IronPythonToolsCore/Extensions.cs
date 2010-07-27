@@ -23,24 +23,25 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 
 namespace Microsoft.IronPythonTools.Internal {
-    static class Extensions {
-        internal static StandardGlyphGroup ToGlyphGroup(this ObjectType objectType) {
+    public static class Extensions {
+        public static StandardGlyphGroup ToGlyphGroup(this ResultType objectType) {
             StandardGlyphGroup group;
             switch (objectType) {
-                case ObjectType.Class: group = StandardGlyphGroup.GlyphGroupClass; break;
-                case ObjectType.Delegate: group = StandardGlyphGroup.GlyphGroupDelegate; break;
-                case ObjectType.Enum: group = StandardGlyphGroup.GlyphGroupEnum; break;
-                case ObjectType.Namespace: group = StandardGlyphGroup.GlyphGroupNamespace; break;
-                case ObjectType.Multiple: group = StandardGlyphGroup.GlyphGroupOverload; break;
-                case ObjectType.Field: group = StandardGlyphGroup.GlyphGroupField; break;
-                case ObjectType.Module: group = StandardGlyphGroup.GlyphGroupModule; break;
-                case ObjectType.Property: group = StandardGlyphGroup.GlyphGroupProperty; break;
-                case ObjectType.Instance: group = StandardGlyphGroup.GlyphGroupVariable; break;
-                case ObjectType.Constant: group = StandardGlyphGroup.GlyphGroupConstant; break;
-                case ObjectType.EnumMember: group = StandardGlyphGroup.GlyphGroupEnumMember; break;
-                case ObjectType.Event: group = StandardGlyphGroup.GlyphGroupEvent; break;
-                case ObjectType.Function:
-                case ObjectType.Method:
+                case ResultType.Class: group = StandardGlyphGroup.GlyphGroupClass; break;
+                case ResultType.DelegateInstance: 
+                case ResultType.Delegate: group = StandardGlyphGroup.GlyphGroupDelegate; break;
+                case ResultType.Enum: group = StandardGlyphGroup.GlyphGroupEnum; break;
+                case ResultType.Namespace: group = StandardGlyphGroup.GlyphGroupNamespace; break;
+                case ResultType.Multiple: group = StandardGlyphGroup.GlyphGroupOverload; break;
+                case ResultType.Field: group = StandardGlyphGroup.GlyphGroupField; break;
+                case ResultType.Module: group = StandardGlyphGroup.GlyphGroupModule; break;
+                case ResultType.Property: group = StandardGlyphGroup.GlyphGroupProperty; break;
+                case ResultType.Instance: group = StandardGlyphGroup.GlyphGroupVariable; break;
+                case ResultType.Constant: group = StandardGlyphGroup.GlyphGroupConstant; break;
+                case ResultType.EnumInstance: group = StandardGlyphGroup.GlyphGroupEnumMember; break;
+                case ResultType.Event: group = StandardGlyphGroup.GlyphGroupEvent; break;
+                case ResultType.Function:
+                case ResultType.Method:
                 default:
                     group = StandardGlyphGroup.GlyphGroupMethod;
                     break;

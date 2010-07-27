@@ -21,9 +21,11 @@ using Microsoft.VisualStudio.Text;
 namespace Microsoft.IronPythonTools.Intellisense {
     internal class SignatureHelpSource : ISignatureHelpSource {
         private readonly ITextBuffer _textBuffer;
+        private readonly SignatureHelpSourceProvider _provider;
 
-        public SignatureHelpSource(ITextBuffer textBuffer) {
+        public SignatureHelpSource(SignatureHelpSourceProvider provider, ITextBuffer textBuffer) {
             _textBuffer = textBuffer;
+            _provider = provider;
         }
 
         public ISignature GetBestMatch(ISignatureHelpSession session) {
@@ -34,7 +36,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
             var textBuffer = session.TextView.TextBuffer;
             var span = session.CreateTrackingSpan(textBuffer);
             
-            var sigs = Analysis.GetSignatures(textBuffer.CurrentSnapshot, textBuffer, span);
+            var sigs = _provider._Analysis.GetSignatures(textBuffer.CurrentSnapshot, textBuffer, span);
 
             ISignature curSig = null;
             

@@ -13,6 +13,7 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using Microsoft.IronPythonTools.Intellisense;
 using Microsoft.IronPythonTools.Language;
 using Microsoft.PyAnalysis;
 using Microsoft.VisualStudio;
@@ -26,6 +27,7 @@ namespace Microsoft.IronPythonTools.Navigation {
         private readonly IVsCodeWindow _window;
         private readonly IWpfTextView _textView;
         private readonly IEditorOperationsFactoryService _editorOperationsFactory;
+        private readonly IPythonAnalyzer _analyzer;
         private static readonly Dictionary<IWpfTextView, CodeWindowManager> _windows = new Dictionary<IWpfTextView, CodeWindowManager>();
         private DropDownBarClient _client;
 
@@ -33,6 +35,7 @@ namespace Microsoft.IronPythonTools.Navigation {
             _window = codeWindow;
             _textView = textView;
             _editorOperationsFactory = componentModel.GetService<IEditorOperationsFactoryService>();
+            _analyzer = componentModel.GetService<IPythonAnalyzer>();
         }
 
         #region IVsCodeWindowManager Members
@@ -90,7 +93,7 @@ namespace Microsoft.IronPythonTools.Navigation {
         public int OnNewView(IVsTextView pView) {
             // TODO: We pass _textView which may not be right for split buffers, we need
             // to test the case where we split a text file and save it as an existing file?
-            new EditFilter(_textView, pView);
+            new EditFilter(_analyzer, _textView, pView);
             return VSConstants.S_OK;
         }
 

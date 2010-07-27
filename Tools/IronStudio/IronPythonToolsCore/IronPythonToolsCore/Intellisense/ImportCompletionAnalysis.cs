@@ -22,20 +22,20 @@ namespace Microsoft.IronPythonTools.Intellisense {
     /// <summary>
     /// Provides the completion context for when the user is doing an import
     /// </summary>
-    internal class ImportCompletionList : CompletionList {
-        internal ImportCompletionList(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer)
+    internal class ImportCompletionAnalysis : CompletionAnalysis {
+        internal ImportCompletionAnalysis(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer)
             : base(text, pos, span, textBuffer) {
         }
 
-        public static CompletionList Make(ClassificationSpan start, ClassificationSpan end, Span loc,
+        public static CompletionAnalysis Make(ClassificationSpan start, ClassificationSpan end, Span loc,
                 ITextSnapshot snapshot, ITrackingSpan span, ITextBuffer buffer, bool isSpace) {
             if (start == end) {
-                return new ImportCompletionList(String.Empty, loc.Start, span, buffer);
+                return new ImportCompletionAnalysis(String.Empty, loc.Start, span, buffer);
             } else if (!isSpace) {
                 int nsLen = end.Span.End - start.Span.End - 1;
                 var nsSpan = new SnapshotSpan(snapshot, start.Span.End + 1, nsLen);
                 var text = nsSpan.GetText().Trim();
-                return new ImportCompletionList(text, loc.Start, span, buffer);
+                return new ImportCompletionAnalysis(text, loc.Start, span, buffer);
             } else {
                 return EmptyCompletionContext;
             }

@@ -61,7 +61,7 @@ namespace Microsoft.PyAnalysis.Values {
             return result;
         }
 
-        public override PythonType ClrType {
+        public override PythonType PythonType {
             get { return _type; }
         }
 

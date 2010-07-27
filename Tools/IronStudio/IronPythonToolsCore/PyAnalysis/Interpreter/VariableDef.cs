@@ -20,8 +20,84 @@ using System.Linq;
 using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Interpreter;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting;
 
 namespace Microsoft.PyAnalysis.Values {
+    abstract class DependentData<TStorageType>  where TStorageType : DependencyInfo {
+        protected Dictionary<IProjectEntry, TStorageType> _dependencies;
+
+        public void ClearOldValues(IProjectEntry fromModule) {
+            TStorageType deps;
+            if (_dependencies != null) {
+                if (_dependencies.TryGetValue(fromModule, out deps)) {
+                    if (deps.Version != fromModule.Version) {
+                        _dependencies.Remove(fromModule);
+                    }
+                }
+            }
+        }
+
+        protected Dictionary<IProjectEntry, TStorageType> Dependencies {
+            get {
+                if (_dependencies == null) {
+                    _dependencies = new Dictionary<IProjectEntry, TStorageType>();
+                }
+                return _dependencies;
+            }
+        }
+
+        protected TStorageType GetDependentItems(AnalysisUnit unit) {
+            var module = unit.DeclaringModule.ProjectEntry;
+            TStorageType result;
+            if (!Dependencies.TryGetValue(module, out result) || result.Version != module.Version) {
+                Dependencies[module] = result = NewDefinition(module.Version);
+            }
+            return result;
+        }
+
+        protected abstract TStorageType NewDefinition(int version);
+
+        /// <summary>
+        /// Enqueues any nodes which depend upon this type into the provided analysis queue for
+        /// further analysis.
+        /// </summary>
+        public void EnqueueDependents() {
+            if (_dependencies != null) {
+                foreach (var val in _dependencies.Values) {
+                    foreach (var analysisUnit in val.DependentUnits) {
+                        analysisUnit.Enqueue();
+                    }
+                }
+            }
+        }
+
+        public void AddDependency(AnalysisUnit unit) {
+            if (!unit.ForEval) {
+                GetDependentItems(unit).DependentUnits.Add(unit);
+            }
+        }
+    }
+
+    class DependentData : DependentData<DependencyInfo> {
+        protected override DependencyInfo NewDefinition(int version) {
+            return new DependencyInfo(version);
+        }
+    }
+
+    class TypedStorageLocation : DependentData<DependencyInfo> {
+        private readonly TypeUnion _types = new TypeUnion();
+
+        protected override DependencyInfo NewDefinition(int version) {
+            return new DependencyInfo(version);
+        }
+
+        public TypeUnion Types {
+            get {
+                return _types;
+            }
+        }
+    }
+
     /// <summary>
     /// A VariableDef represents a collection of type information and dependencies
     /// upon that type information.  
@@ -35,16 +111,15 @@ namespace Microsoft.PyAnalysis.Values {
     /// 
     /// foo = value
     /// 
-    /// There will be a variable refs for the name "foo", and "value" will evaluate
+    /// There will be a variable def for the name "foo", and "value" will evaluate
     /// to a collection of namespaces.  When value is assigned to
     /// foo the types in value will be propagated to foo's VariableDef by a call
     /// to AddDependentTypes.  If value adds any new type information to foo
-    /// then the caller will then the caller needs to re-analyze anyone who
-    /// is dependent upon foo's values.  If "value" was a VariableDef as well, rather
-    /// than some arbitrary expression, then reading "value" would have made the
-    /// code being analyzed dependent upon "value".  After a call to
-    /// AddDependentTypes the caller needs to check the return value and if
-    /// new types were added needs to re-enque it's scope.
+    /// then the caller needs to re-analyze anyone who is dependent upon foo'
+    /// s values.  If "value" was a VariableDef as well, rather than some arbitrary 
+    /// expression, then reading "value" would have made the code being analyzed dependent 
+    /// upon "value".  After a call to AddTypes the caller needs to check the 
+    /// return value and if new types were added (returns true) needs to re-enque it's scope.
     /// 
     /// Dependecies are stored in a dictionary keyed off of the IProjectEntry object.
     /// This is a consistent object which always represents the same module even
@@ -54,18 +129,23 @@ namespace Microsoft.PyAnalysis.Values {
     /// 
     /// TODO: We should store built-in types not keyed off of the ModuleInfo.
     /// </summary>
-    class VariableDef {
-        private Dictionary<IProjectEntry, DependencyInfo> _dependencies;
-
+    class VariableDef : DependentData<TypedDependencyInfo> {
         public VariableDef() {
         }
 
-        public bool AddTypes(IEnumerable<Namespace> newTypes, AnalysisUnit unit) {
+        protected override TypedDependencyInfo NewDefinition(int version) {
+            return new TypedDependencyInfo(version);
+        }
+
+        public bool AddTypes(Node node, AnalysisUnit unit, IEnumerable<Namespace> newTypes, bool addReference = true) {
             if (TryMigration(newTypes, unit)) {
                 return false;
             }
 
-            var dependencies = GetDependencyInfo(unit);
+            var dependencies = GetDependentItems(unit);
+            if (addReference) {
+                dependencies.References.Add(node.Span);
+            }
             var types = dependencies.Types;
 #if EXTRA_DEBUG
             if (types.Count > 50) {
@@ -97,46 +177,13 @@ namespace Microsoft.PyAnalysis.Values {
             return added;
         }
 
-        public void ClearOldValues(IProjectEntry fromModule) {
-            DependencyInfo deps;
-            if (_dependencies != null) {
-                if (_dependencies.TryGetValue(fromModule, out deps)) {
-                    if (deps.Version != fromModule.Version) {
-                        _dependencies.Remove(fromModule);
-                    }
-                }
-            }
-        }
-
-        private Dictionary<IProjectEntry, DependencyInfo> Dependencies {
-            get {
-                if (_dependencies == null) {
-                    _dependencies = new Dictionary<IProjectEntry, DependencyInfo>();
-                }
-                return _dependencies;
-            }
-        }
-
-        private DependencyInfo GetDependentItems(AnalysisUnit unit) {
-            var module = unit.DeclaringModule.ProjectEntry;
-            DependencyInfo result;
-            if (!Dependencies.TryGetValue(module, out result) || result.Version != module.Version) {
-                Dependencies[module] = result = new DependencyInfo(module.Version);
-            }
-            return result;
-        }
-        
-        private DependencyInfo GetDependencyInfo(AnalysisUnit unit) {
-            return GetDependentItems(unit);
-        }
-
         private bool TryMigration(IEnumerable<Namespace> newTypes, AnalysisUnit unit) {
             if (_dependencies == null) {
                 return false;
             }
 
             var module = unit.DeclaringModule.ProjectEntry;
-            DependencyInfo existing;
+            TypedDependencyInfo existing;
             if (!_dependencies.TryGetValue(module, out existing) || existing == null) {
                 return false;
             }
@@ -161,24 +208,17 @@ namespace Microsoft.PyAnalysis.Values {
                 }                
             }
 
-            var dependencies = GetDependencyInfo(unit);
+            var dependencies = GetDependentItems(unit);
             dependencies.Types = existing.Types;
+            if (existing.HasReferences) {
+                dependencies.References = existing.References;
+            }
+            if (existing.HasAssignments) {
+                dependencies.Assignments = existing.Assignments;
+            }
             return allPresent;
         }
 
-        /// <summary>
-        /// Enqueues any nodes which depend upon this type into the provided analysis queue for
-        /// further analysis.
-        /// </summary>
-        public void EnqueueDependents() {
-            if (_dependencies != null) {
-                foreach (var val in _dependencies.Values) {
-                    foreach (var analysisUnit in val.DependentUnits) {
-                        analysisUnit.Enqueue();
-                    }
-                }
-            }
-        }
 
         public ISet<Namespace> Types {
             get {
@@ -193,9 +233,68 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public void AddDependency(AnalysisUnit unit) {
+        public void AddReference(Node node, AnalysisUnit unit) {
             if (!unit.ForEval) {
-                GetDependencyInfo(unit).DependentUnits.Add(unit);
+                var depUnits = GetDependentItems(unit);
+                depUnits.DependentUnits.Add(unit);
+                depUnits.References.Add(node.Span);
+            }
+        }
+
+        public void AddAssignment(Node node, AnalysisUnit unit) {
+            if (!unit.ForEval) {
+                var depUnits = GetDependentItems(unit);
+                depUnits.DependentUnits.Add(unit);
+                depUnits.Assignments.Add(node.Span);
+            }
+        }
+
+        public IEnumerable<KeyValuePair<IProjectEntry, SourceSpan>> References {
+            get {
+                if (_dependencies != null) {
+                    foreach (var keyValue in _dependencies) {
+                        foreach (var reference in keyValue.Value.References) {
+                            yield return new KeyValuePair<IProjectEntry, SourceSpan>(keyValue.Key, reference);
+                        }
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<KeyValuePair<IProjectEntry, SourceSpan>> Assignments {
+            get {
+                if (_dependencies != null) {
+                    foreach (var keyValue in _dependencies) {
+                        foreach (var reference in keyValue.Value.Assignments) {
+                            yield return new KeyValuePair<IProjectEntry, SourceSpan>(keyValue.Key, reference);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A variable def which has a specific location where it is defined (currently just function parameters).
+    /// </summary>
+    sealed class LocatedVariableDef : VariableDef {
+        private readonly IProjectEntry _entry;
+        private readonly Node _location;
+        
+        public LocatedVariableDef(IProjectEntry entry, Node location) {
+            _entry = entry;
+            _location = location;
+        }
+
+        public IProjectEntry Entry {
+            get {
+                return _entry;
+            }
+        }
+
+        public Node Node {
+            get {
+                return _location;
             }
         }
     }

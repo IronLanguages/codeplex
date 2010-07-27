@@ -19,7 +19,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
     /// <summary>
     /// Provides file path completion
     /// </summary>
-    internal class StringLiteralCompletionList : CompletionList {
+    internal class StringLiteralCompletionList : CompletionAnalysis {
         internal StringLiteralCompletionList(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer)
             : base(text, pos, span, textBuffer) {
         }
