@@ -13,6 +13,7 @@
  * ***************************************************************************/
 
 using System;
+
 namespace Microsoft.PyAnalysis {
     public class LocationInfo : IEquatable<LocationInfo> {
         private readonly int _line, _column, _length;

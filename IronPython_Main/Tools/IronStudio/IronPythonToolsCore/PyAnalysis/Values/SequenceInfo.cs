@@ -22,7 +22,7 @@ namespace Microsoft.PyAnalysis.Values {
     internal class SequenceInfo : BuiltinInstanceInfo {
         private ISet<Namespace> _unionType;        // all types that have been seen
         private ISet<Namespace>[] _indexTypes;     // types for known indices
-        private VariableDef _returnValue;
+        private DependentData _returnValue;
 
         public SequenceInfo(ISet<Namespace>[] indexTypes, BuiltinClassInfo seqType)
             : base(seqType) {
@@ -57,10 +57,10 @@ namespace Microsoft.PyAnalysis.Values {
             return _indexTypes[0];
         }
 
-        public VariableDef ReturnValue {
+        public DependentData ReturnValue {
             get {
                 if (_returnValue == null) {
-                    _returnValue = new VariableDef();
+                    _returnValue = new DependentData();
                 }
                 return _returnValue;
             }

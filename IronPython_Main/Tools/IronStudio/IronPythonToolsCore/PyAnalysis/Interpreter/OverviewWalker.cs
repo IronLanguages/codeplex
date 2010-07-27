@@ -33,7 +33,6 @@ namespace Microsoft.PyAnalysis.Interpreter {
             _curUnit = topAnalysis;
 
             _scopes = new List<InterpreterScope>();
-            _scopes.Push(entry.ProjectState.BuiltinModule.Scope);
             _scopes.Push(entry.MyScope.Scope);
 
             _scopeTree = new Stack<ScopePositionInfo>();
@@ -56,7 +55,9 @@ namespace Microsoft.PyAnalysis.Interpreter {
             var klass = new ClassInfo(unit, _entry);
             var classScope = klass.Scope;
 
-            _scopes.Peek().SetVariable(node.Name, klass.SelfSet, unit);
+            var scope = _scopes.Peek();
+            scope.SetVariable(node, unit, node.Name, klass.SelfSet, false);
+
             _scopes.Push(classScope);
             scopes[scopes.Length - 1] = classScope;            
 
@@ -92,13 +93,14 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
             if (!node.IsLambda) {
                 // lambdas don't have their names published
-                _scopes[_scopes.Count - 2].SetVariable(node.Name, function.SelfSet, unit);
+                var scope = _scopes[_scopes.Count - 2];
+                scope.SetVariable(node, unit, node.Name, function.SelfSet, false);
             }
 
             var newParams = new VariableDef[node.Parameters.Count];
             int index = 0;
             foreach (var param in node.Parameters) {
-                newParams[index++] = funcScope.DefineVariable(param.Name);
+                newParams[index++] = funcScope.DefineVariable(param, _curUnit);
             }
             function.SetParameters(newParams);
 

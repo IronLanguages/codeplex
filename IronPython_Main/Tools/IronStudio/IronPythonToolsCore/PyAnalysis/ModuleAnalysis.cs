@@ -25,11 +25,11 @@ using Microsoft.Scripting.Library;
 
 namespace Microsoft.PyAnalysis {
     /// <summary>
-    /// Encapsulates all of the information about a module which has been analyzed.  
+    /// Encapsulates all of the information about a single module which has been analyzed.  
     /// 
     /// Can be queried for various information about the resulting analysis.
     /// </summary>
-    public class ModuleAnalysis {
+    public sealed class ModuleAnalysis {
         private readonly AnalysisUnit _unit;
         private readonly InterpreterScope[] _scopes;
         private readonly Stack<ScopePositionInfo> _scopeTree;
@@ -40,14 +40,100 @@ namespace Microsoft.PyAnalysis {
             _scopeTree = tree;
         }
 
-        public IEnumerable<VariableResult> GetVariablesFromExpression(string exprText, int lineNumber) {
+        #region Public API
+
+        /// <summary>
+        /// Evaluates the given expression in at the provided line number and returns the values
+        /// that the expression can evaluate to.
+        /// </summary>
+        /// <param name="exprText">The expression to determine the result of.</param>
+        /// <param name="lineNumber">The line number to evaluate at within the module.</param>
+        public IEnumerable<IAnalysisValue> GetValues(string exprText, int lineNumber) {
             var expr = GetExpressionFromText(exprText);
-            foreach (var v in GetVariablesForExpression(expr, lineNumber)) {
-                yield return new VariableResult(v);
+            var scopes = FindScopes(lineNumber);
+            var eval = new ExpressionEvaluator(_unit.CopyForEval(), FindScopes(lineNumber).ToArray());
+
+            var res = eval.Evaluate(expr);
+            foreach (var v in res) {
+                yield return v;
             }
         }
 
-        public IEnumerable<MemberResult> GetMembersFromExpression(string exprText, int lineNumber, bool intersectMultipleResults = true) {
+        /// <summary>
+        /// Gets the variables the given expression evaluates to.  Variables include parameters, locals, and fields assigned on classes, modules and instances.
+        /// 
+        /// Variables are classified as either definitions or references.  Only parameters have unique definition points - all other types of variables
+        /// have only one or more references.
+        /// </summary>
+        public IEnumerable<IAnalysisVariable> GetVariables(string exprText, int lineNumber) {
+            var expr = GetExpressionFromText(exprText);
+            var scopes = FindScopes(lineNumber);
+            var eval = new ExpressionEvaluator(_unit.CopyForEval(), FindScopes(lineNumber).ToArray());
+            NameExpression name = expr as NameExpression;
+            if (name != null) {
+                for (int i = scopes.Count - 1; i >= 0; i--) {
+                    VariableDef def;
+                    if (IncludeScope(scopes, i, lineNumber) && scopes[i].Variables.TryGetValue(name.Name, out def)) {
+
+                        LocatedVariableDef locatedDef = def as LocatedVariableDef;
+                        if (locatedDef != null) {
+                            yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(locatedDef.Entry, locatedDef.Node.Start.Line, locatedDef.Node.Start.Column, locatedDef.Node.Span.Length));
+                        }
+                        
+                        foreach (var reference in def.Assignments) {
+                            yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                        }
+                        
+                        foreach (var reference in def.References) {
+                            yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                        }
+
+                    }
+                }
+            }
+
+            MemberExpression member = expr as MemberExpression;
+            if (member != null) {
+                var objects = eval.Evaluate(member.Target);
+
+                foreach (var v in objects) {
+                    var container = v as IVariableDefContainer;
+                    if (container != null) {
+                        var defs = container.GetDefinitions(member.Name);
+
+                        foreach (var def in defs) {
+                            foreach (var reference in def.Assignments) {
+                                yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                            }
+
+                            foreach (var reference in def.References) {
+                                yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static bool IncludeScope(List<InterpreterScope> scopes, int i, int lineNo) {
+            if(scopes[i].VisibleToChildren || i == scopes.Count - 1) {
+                return true;
+            }
+
+            // if we're on the 1st line of a function include our class def as well
+            if (i == scopes.Count - 2 && scopes[scopes.Count - 1] is FunctionScope) {
+                var funcScope = (FunctionScope)scopes[scopes.Count - 1];
+                if (lineNo == funcScope.Function.FunctionDefinition.Start.Line) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Evaluates a given expression and returns a list of members which exist in the expression.
+        /// </summary>
+        public IEnumerable<MemberResult> GetMembers(string exprText, int lineNumber, bool intersectMultipleResults = true) {
             if (exprText.EndsWith(".")) {
                 exprText = exprText.Substring(0, exprText.Length - 1);
                 if (exprText.Length == 0) {
@@ -63,7 +149,6 @@ namespace Microsoft.PyAnalysis {
                 }
             }
 
-            // try {
             if (exprText.Length == 0) {
                 return GetAllAvailableMembers(lineNumber);
             } else {
@@ -77,74 +162,13 @@ namespace Microsoft.PyAnalysis {
             }
         }
 
-        public IEnumerable<MemberResult> GetAllAvailableMembers(int lineNumber) {
-            var result = new Dictionary<string, List<Namespace>>();
-            foreach (var scope in FindScopes(lineNumber)) {
-                foreach (var kvp in scope.Variables) {
-                    result[kvp.Key] = new List<Namespace>(kvp.Value.Types);
-                }
-            }
-            return MemberDictToResultList(result);
-        }
 
         /// <summary>
-        /// TODO: This method should go away, it's only being used for tests, and the tests should be using GetMembersFromExpression
-        /// which may need to be cleaned up.
+        /// Gets information about the available signatures for the given expression.
         /// </summary>
-        public IEnumerable<string> GetMembersFromName(string name, int lineNumber) {
-            var lookup = GetVariablesForExpression(GetExpressionFromText(name), lineNumber);
-            return GetMemberResults(lookup).Select(m => m.Name);
-        }
-
-        /// <summary>
-        /// Gets the list of valid names available at the given position in the
-        /// analyzed source code.
-        /// </summary>
-        private IEnumerable<string> GetVariableNames(int lineNumber) {
-            var chain = FindScopes(lineNumber);
-            foreach (var scope in chain) {
-                if (scope.VisibleToChildren || scope == chain[chain.Count - 1]) {
-                    foreach (var varName in scope.Variables) {
-                        yield return varName.Key;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Returns a list of valid names available at the given position in
-        /// the analyzed source code minus the builtin variables.
-        /// </summary>
-        /// <param name="lineNumber"></param>
-        /// <returns></returns>
-        public IEnumerable<string> GetVariablesNoBuiltins(int lineNumber) {
-            HashSet<string> v1 = new HashSet<string>(GetVariableNames(lineNumber));
-            v1.ExceptWith(Scopes[0].Variables.Keys);
-            return v1;
-        }
-
-        public IEnumerable<PythonType> GetTypesFromName(string name, int lineNumber) {
-            var chain = FindScopes(lineNumber);
-            var result = new HashSet<PythonType>();
-            foreach (var scope in chain) {
-                if (scope.VisibleToChildren || scope == chain[chain.Count - 1]) {
-                    var v = scope.GetVariable(name, _unit);
-                    if (v == null) {
-                        continue;
-                    }
-                    foreach (var ns in v.Types) {
-                        // add the clr type
-                        // TODO: handle null?
-                        if (ns != null && ns.ClrType != null) {
-                            result.Add(ns.ClrType);
-                        }
-                    }
-                }
-            }
-            return result;
-        }
-
-        public OverloadResult[] GetSignaturesFromExpression(string exprText, int lineNumber) {
+        /// <param name="exprText">The expression to get signatures for.</param>
+        /// <param name="lineNumber">The line number to use for the context of looking up members.</param>
+        public IEnumerable<IOverloadResult> GetSignatures(string exprText, int lineNumber) {
             try {
                 var eval = new ExpressionEvaluator(_unit.CopyForEval(), FindScopes(lineNumber).ToArray());
                 var sourceUnit = ProjectState.GetSourceUnitForExpression(exprText);
@@ -160,8 +184,8 @@ namespace Microsoft.PyAnalysis {
                     var result = new List<OverloadResult>();
 
                     // TODO: Include relevant type info on the parameter...
-                    foreach (var ns in lookup) {                        
-                        result.AddRange(ns.Overloads);                        
+                    foreach (var ns in lookup) {
+                        result.AddRange(ns.Overloads);
                     }
 
                     return result.ToArray();
@@ -173,11 +197,87 @@ namespace Microsoft.PyAnalysis {
         }
 
         /// <summary>
+        /// Gets the available names at the given location.  This includes built-in variables, global variables, and locals.
+        /// </summary>
+        /// <param name="lineNumber">The line number where the available mebmers should be looked up.</param>
+        public IEnumerable<MemberResult> GetAllAvailableMembers(int lineNumber) {
+            var result = new Dictionary<string, List<Namespace>>();
+            
+            // collect builtins
+            foreach (var variable in ProjectState.BuiltinModule.VariableDict) {
+                result[variable.Key] = new List<Namespace>(variable.Value);
+            }
+
+            // collect variables from user defined scopes
+            foreach (var scope in FindScopes(lineNumber)) {
+                foreach (var kvp in scope.Variables) {
+                    result[kvp.Key] = new List<Namespace>(kvp.Value.Types);
+                }
+            }
+            return MemberDictToResultList(result);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// TODO: This should go away, it's only used for tests.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="lineNumber"></param>
+        /// <returns></returns>
+        internal IEnumerable<PythonType> GetTypesFromName(string name, int lineNumber) {
+            var chain = FindScopes(lineNumber);
+            var result = new HashSet<PythonType>();
+            foreach (var scope in chain) {
+                if (scope.VisibleToChildren || scope == chain[chain.Count - 1]) {
+                    VariableDef v;
+                    if (scope.Variables.TryGetValue(name, out v)) {
+                        foreach (var ns in v.Types) {
+                            // add the clr type
+                            // TODO: handle null?
+                            if (ns != null && ns.PythonType != null) {
+                                result.Add(ns.PythonType);
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns a list of valid names available at the given position in the analyzed source code minus the builtin variables.
+        /// 
+        /// TODO: This should go away, it's only used for tests.
+        /// </summary>
+        /// <param name="lineNumber">The line number where the available mebmers should be looked up.</param>
+        /// <returns></returns>
+        internal IEnumerable<string> GetVariablesNoBuiltins(int lineNumber) {
+            var chain = FindScopes(lineNumber);
+            foreach (var scope in chain) {
+                if (scope.VisibleToChildren || scope == chain[chain.Count - 1]) {
+                    foreach (var varName in scope.Variables) {
+                        yield return varName.Key;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// TODO: This method should go away, it's only being used for tests, and the tests should be using GetMembersFromExpression
+        /// which may need to be cleaned up.
+        /// </summary>
+        internal IEnumerable<string> GetMembersFromName(string name, int lineNumber) {
+            var lookup = GetVariablesForExpression(GetExpressionFromText(name), lineNumber);
+            return GetMemberResults(lookup).Select(m => m.Name);
+        }
+
+        /// <summary>
         /// Gets the top-level scope for the module.
         /// </summary>
         internal ModuleInfo GlobalScope {
             get {
-                var result = (Scopes[1] as ModuleScope);
+                var result = (Scopes[0] as ModuleScope);
                 Debug.Assert(result != null);
                 return result.Module;
             }
@@ -318,7 +418,7 @@ namespace Microsoft.PyAnalysis {
         private List<InterpreterScope> FindScopes(int lineNumber) {
             ScopePositionInfo curScope = ScopeTree.First();
             ScopePositionInfo prevScope = null;
-            var chain = new List<InterpreterScope> { Scopes[0], Scopes[1] };
+            var chain = new List<InterpreterScope> { Scopes[0] };
 
             while (curScope != prevScope) {
                 prevScope = curScope;

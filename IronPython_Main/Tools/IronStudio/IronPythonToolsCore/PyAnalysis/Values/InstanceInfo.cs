@@ -21,7 +21,7 @@ namespace Microsoft.PyAnalysis.Values {
     /// <summary>
     /// Represents a class implemented in Python
     /// </summary>
-    internal class InstanceInfo : Namespace {
+    internal class InstanceInfo : Namespace, IVariableDefContainer {
         private readonly ClassInfo _classInfo;
         private Dictionary<string, VariableDef> _instanceAttrs;
 
@@ -65,6 +65,7 @@ namespace Microsoft.PyAnalysis.Values {
             if (!_instanceAttrs.TryGetValue(name, out def)) {
                 _instanceAttrs[name] = def = new VariableDef();
             }
+            def.AddReference(node, unit);
 
             ISet<Namespace> getattrRes = EmptySet<Namespace>.Instance;
             var getAttribute = _classInfo.GetMemberNoReference(node, unit.CopyForEval(), "__getattribute__");
@@ -99,9 +100,6 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
-            AddReference(node, unit);
-            //System.Diagnostics.Debug.Assert(name != "next_color");
-
             if (_instanceAttrs == null) {
                 _instanceAttrs = new Dictionary<string, VariableDef>();
             }
@@ -110,11 +108,21 @@ namespace Microsoft.PyAnalysis.Values {
             if (!_instanceAttrs.TryGetValue(name, out instMember) || instMember == null) {
                 _instanceAttrs[name] = instMember = new VariableDef();
             }
-
-            instMember.AddTypes(value, unit);
+            instMember.AddAssignment(node, unit);
+            instMember.AddTypes(node, unit, value, false);
         }
 
-        public override void AddReference(SourceSpan span, IProjectEntry projectEntry) {
+        public override void DeleteMember(Node node, AnalysisUnit unit, string name) {
+            if (_instanceAttrs == null) {
+                _instanceAttrs = new Dictionary<string, VariableDef>();
+            }
+            
+            VariableDef instMember;
+            if (!_instanceAttrs.TryGetValue(name, out instMember) || instMember == null) {
+                _instanceAttrs[name] = instMember = new VariableDef();
+            }
+
+            instMember.AddReference(node, unit);
         }
 
         public override string Description {
@@ -129,14 +137,25 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Instance;
+                return ResultType.Instance;
             }
         }
 
         public ClassInfo ClassInfo {
             get { return _classInfo; }
         }
+
+        #region IVariableDefContainer Members
+
+        public IEnumerable<VariableDef> GetDefinitions(string name) {
+            VariableDef def;
+            if (_instanceAttrs.TryGetValue(name, out def)) {
+                yield return def;
+            }
+        }
+
+        #endregion
     }
 }

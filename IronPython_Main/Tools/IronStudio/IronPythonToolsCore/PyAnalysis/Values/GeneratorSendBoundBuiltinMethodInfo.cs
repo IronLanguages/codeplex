@@ -28,7 +28,7 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
             if (args.Length == 1) {
-                _generator.AddSend(args[0]);
+                _generator.AddSend(node, unit, args[0]);
             }
 
             return _generator.Yields;

@@ -53,13 +53,13 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                switch (_klass.NamespaceType) {
-                    case ObjectType.Enum: return ObjectType.EnumMember;
-                    case ObjectType.Delegate:
+                switch (_klass.ResultType) {
+                    case ResultType.Enum: return ResultType.EnumInstance;
+                    case ResultType.Delegate: return ResultType.DelegateInstance;
                     default:
-                        return ObjectType.Instance;
+                        return ResultType.Instance;
                 }
             }
         }
@@ -71,7 +71,6 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
             var res = base.GetMember(node, unit, name);
-            res.AddReference(node, unit);
             return res.GetDescriptor(this, unit);
         }
 
@@ -81,9 +80,6 @@ namespace Microsoft.PyAnalysis.Values {
                 res[keyValue.Key] = keyValue.Value.GetDescriptor(this, null);
             }
             return res;
-        }
-
-        public override void AddReference(SourceSpan span, IProjectEntry projectEntry) {
         }
     }
 }

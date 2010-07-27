@@ -18,6 +18,8 @@ using System.Windows;
 using Microsoft.IronPythonTools.Commands;
 using Microsoft.IronPythonTools.Editor.Core;
 using Microsoft.IronPythonTools.Intellisense;
+using Microsoft.IronPythonTools.Internal;
+using Microsoft.IronPythonTools.Library;
 using Microsoft.IronPythonTools.Navigation;
 using Microsoft.IronStudio;
 using Microsoft.IronStudio.Core.Repl;
@@ -33,6 +35,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.TextManager.Interop;
+
 
 namespace Microsoft.IronPythonTools.Language {
     /// <summary>
@@ -52,9 +55,11 @@ namespace Microsoft.IronPythonTools.Language {
     class EditFilter : IOleCommandTarget {
         private readonly IWpfTextView _textView;
         private readonly IOleCommandTarget _next;
+        private readonly IPythonAnalyzer _analyzer;
 
-        public EditFilter(IWpfTextView textView, IVsTextView vsTextView) {
+        public EditFilter(IPythonAnalyzer analyzer, IWpfTextView textView, IVsTextView vsTextView) {
             _textView = textView;
+            _analyzer = analyzer;
             ErrorHandler.ThrowOnFailure(vsTextView.AddCommandFilter(this, out _next));
         }
 
@@ -71,47 +76,42 @@ namespace Microsoft.IronPythonTools.Language {
 
             var analysis = GetExpressionAnalysis();
 
-            StandardGlyphGroup type;
-            List<LocationInfo> locations = GetDefinitions(analysis, out type);
+            Dictionary<LocationInfo, SimpleLocationInfo> references;
+            Dictionary<LocationInfo, SimpleLocationInfo> definitions;
+            GetDefinitionsAndReferences(analysis, out references, out definitions);
 
-            if (locations != null && locations.Count == 1) {
-                var location = locations[0];
+            var values = GetValues(analysis);
 
-                location.GotoSource();
-            } else if (locations == null || locations.Count == 0) {
-                MessageBox.Show(String.Format("Cannot go to definition \"{0}\"", analysis.Expression));
+            if ((values.Count + definitions.Count) == 1) {
+                if (values.Count != 0) {
+                    foreach (var location in values.Keys) {
+                        location.GotoSource();
+                        break;
+                    }
+                } else {
+                    foreach (var location in definitions.Keys) {
+                        location.GotoSource();
+                        break;
+                    }
+                }
+            } else if (values.Count + definitions.Count == 0) {
+                if (references.Count != 0) {
+                    ShowFindSymbolsDialog(analysis, new SymbolList("References", StandardGlyphGroup.GlyphReference, references.Values));
+                } else {
+                    MessageBox.Show(String.Format("Cannot go to definition \"{0}\"", analysis.Expression));
+                }
+            } else if (definitions.Count == 0) {
+                ShowFindSymbolsDialog(analysis, new SymbolList("Values", StandardGlyphGroup.GlyphForwardType, values.Values));
+            } else if (values.Count == 0) {
+                ShowFindSymbolsDialog(analysis, new SymbolList("Definitions", StandardGlyphGroup.GlyphLibrary, definitions.Values));
             } else {
-                ShowFindSymbolsDialog(analysis, new SymbolList(analysis.Expression, locations, type));
+                ShowFindSymbolsDialog(analysis,
+                    new SymbolList("Definitions", StandardGlyphGroup.GlyphLibrary, definitions.Values),
+                    new SymbolList("Values", StandardGlyphGroup.GlyphForwardType, values.Values)
+                );
             }
 
             return VSConstants.S_OK;
-        }
-
-        private static List<LocationInfo> GetDefinitions(ExpressionAnalysis provider, out StandardGlyphGroup type) {
-            var vars = provider.Variables;
-
-            ObjectType? finalType = null;
-
-            List<LocationInfo> locations = new List<LocationInfo>();
-            foreach (VariableResult result in vars) {
-                if (finalType == null) {
-                    finalType = result.Type;
-                } else if (finalType != result.Type) {
-                    finalType = ObjectType.Multiple;
-                }
-
-                if (result.Location != null) {
-                    locations.Add(result.Location);
-                }
-            }
-
-            if (finalType != null) {
-                type = finalType.Value.ToGlyphGroup();
-            } else {
-                type = StandardGlyphGroup.GlyphGroupClass;
-            }
-
-            return locations;
         }
 
         /// <summary>
@@ -125,21 +125,59 @@ namespace Microsoft.IronPythonTools.Language {
 
             var provider = GetExpressionAnalysis();
 
-            StandardGlyphGroup type;
-            List<LocationInfo> definitions = GetDefinitions(provider, out type);
+            Dictionary<LocationInfo, SimpleLocationInfo> references;
+            Dictionary<LocationInfo, SimpleLocationInfo> definitions;
+            GetDefinitionsAndReferences(provider, out references, out definitions);
 
-            IEnumerable<VariableResult> vars = provider.Variables;
+            var values = GetValues(provider);
 
-            var references = new HashSet<LocationInfo>();
-            foreach (var v in vars) {
-                if (v.References != null) {
-                    references.UnionWith(v.References);
-                }
-            }
-
-            ShowFindSymbolsDialog(provider, new SymbolList(provider.Expression, definitions, references, type));
+            ShowFindSymbolsDialog(provider,
+                new SymbolList("Definitions", StandardGlyphGroup.GlyphLibrary, definitions.Values),
+                new SymbolList("Values", StandardGlyphGroup.GlyphForwardType, values.Values),
+                new SymbolList("References", StandardGlyphGroup.GlyphReference, references.Values)
+            );
 
             return VSConstants.S_OK;
+        }
+
+        private static void GetDefinitionsAndReferences(ExpressionAnalysis provider, out Dictionary<LocationInfo, SimpleLocationInfo> references, out Dictionary<LocationInfo, SimpleLocationInfo> definitions) {
+            references = new Dictionary<LocationInfo, SimpleLocationInfo>();
+            definitions = new Dictionary<LocationInfo, SimpleLocationInfo>();
+
+            foreach (var v in provider.Variables) {
+                switch (v.Type) {
+                    case VariableType.Definition:
+                        definitions[v.Location] = new SimpleLocationInfo(provider.Expression, v.Location, StandardGlyphGroup.GlyphGroupField);
+                        break;
+                    case VariableType.Reference:
+                        references[v.Location] = new SimpleLocationInfo(provider.Expression, v.Location, StandardGlyphGroup.GlyphGroupField);
+                        break;
+                }
+            }
+        }
+
+        private static Dictionary<LocationInfo, SimpleLocationInfo> GetValues(ExpressionAnalysis provider) {
+            // then collect the values
+            var values = new Dictionary<LocationInfo, SimpleLocationInfo>();
+            foreach (var value in provider.Values) {
+                switch (value.ResultType) {
+                    case ResultType.Module:
+                        values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupModule);
+                        break;
+                    case ResultType.Class:
+                        if (value.Location != null) {
+                            values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupClass);
+                        }
+                        break;
+                    case ResultType.Method:
+                    case ResultType.Function:
+                        if (value.Location != null) {
+                            values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupMethod);
+                        }
+                        break;
+                }
+            }
+            return values;
         }
 
         /// <summary>
@@ -148,7 +186,7 @@ namespace Microsoft.IronPythonTools.Language {
         /// that request by extracting the prvoided symbol list out and using that for the
         /// search results.
         /// </summary>
-        private static void ShowFindSymbolsDialog(ExpressionAnalysis provider, SymbolList symbols) {
+        private static void ShowFindSymbolsDialog(ExpressionAnalysis provider, params SymbolList[] symbols) {
             // ensure our library is loaded so find all references will go to our library
             Package.GetGlobalService(typeof(IPythonLibraryManager));
 
@@ -156,7 +194,7 @@ namespace Microsoft.IronPythonTools.Language {
                 var findSym = (IVsFindSymbol)IronPythonToolsPackage.GetGlobalService(typeof(SVsObjectSearch));
                 VSOBSEARCHCRITERIA2 searchCriteria = new VSOBSEARCHCRITERIA2();
                 searchCriteria.eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD;
-                searchCriteria.pIVsNavInfo = symbols;
+                searchCriteria.pIVsNavInfo = symbols.Length == 1 ? (IVsNavInfo)symbols[0] : (IVsNavInfo)new LocationCategory("Test", symbols);
                 searchCriteria.grfOptions = (uint)_VSOBSEARCHOPTIONS2.VSOBSO_LISTREFERENCES;
                 searchCriteria.szName = provider.Expression;
 
@@ -203,7 +241,57 @@ namespace Microsoft.IronPythonTools.Language {
                 );
             }
 
-            return Analysis.AnalyzeExpression(snapshot, textBuffer, span);
+            return _analyzer.AnalyzeExpression(snapshot, textBuffer, span);
+        }
+
+        class LocationCategory : SimpleObjectList<SymbolList>, IVsNavInfo, ICustomSearchListProvider {
+            private readonly string _name;
+
+            public LocationCategory(string name, params SymbolList[] locations) {
+                _name = name;
+
+                foreach (var location in locations) {
+                    if (location.Children.Count > 0) {
+                        Children.Add(location);
+                    }
+                }
+            }
+           
+            public override uint CategoryField(LIB_CATEGORY lIB_CATEGORY) {
+                return (uint)(_LIB_LISTTYPE.LLT_HIERARCHY | _LIB_LISTTYPE.LLT_MEMBERS | _LIB_LISTTYPE.LLT_PACKAGE);
+            }
+
+            #region IVsNavInfo Members
+
+            public int EnumCanonicalNodes(out IVsEnumNavInfoNodes ppEnum) {
+                ppEnum = new NodeEnumerator<SymbolList>(Children);
+                return VSConstants.S_OK;
+            }
+
+            public int EnumPresentationNodes(uint dwFlags, out IVsEnumNavInfoNodes ppEnum) {
+                ppEnum = new NodeEnumerator<SymbolList>(Children);
+                return VSConstants.S_OK;
+            }
+
+            public int GetLibGuid(out Guid pGuid) {
+                pGuid = Guid.Empty;
+                return VSConstants.S_OK;
+            }
+
+            public int GetSymbolType(out uint pdwType) {
+                pdwType = (uint)_LIB_LISTTYPE2.LLT_MEMBERHIERARCHY;
+                return VSConstants.S_OK;
+            }
+
+            #endregion
+
+            #region ICustomSearchListProvider Members
+
+            public IVsSimpleObjectList2 GetSearchList() {
+                return this;
+            }
+
+            #endregion
         }
 
         class SimpleLocationInfo : SimpleObject, IVsNavInfoNode {
@@ -284,70 +372,110 @@ namespace Microsoft.IronPythonTools.Language {
             #endregion
         }
 
-        class SymbolList : SimpleObjectList<SimpleLocationInfo>, IVsNavInfo, ICustomSearchListProvider {
-            public SymbolList(string searchText, IEnumerable<LocationInfo> locations, StandardGlyphGroup glyphType) {
-                foreach (var location in locations) {
-                    Children.Add(new SimpleLocationInfo(searchText, location, glyphType));
+        class SymbolList : SimpleObjectList<SimpleLocationInfo>, IVsNavInfo, IVsNavInfoNode, ICustomSearchListProvider, ISimpleObject {
+            private readonly string _name;
+            private readonly StandardGlyphGroup _glyphGroup;
+
+            public SymbolList(string description, StandardGlyphGroup glyphGroup, IEnumerable<SimpleLocationInfo> locations) {
+                _name = description;
+                _glyphGroup = glyphGroup;
+                Children.AddRange(locations);
+            }
+
+            public override uint CategoryField(LIB_CATEGORY lIB_CATEGORY) {
+                return (uint)(_LIB_LISTTYPE.LLT_MEMBERS | _LIB_LISTTYPE.LLT_PACKAGE);
+            }
+
+            #region ISimpleObject Members
+
+            public bool CanDelete {
+                get { return false; }
+            }
+
+            public bool CanGoToSource {
+                get { return false; }
+            }
+
+            public bool CanRename {
+                get { return false; }
+            }
+
+            public string Name {
+                get { return _name; }
+            }
+
+            public string UniqueName {
+                get { return _name; }
+            }
+
+            public string GetTextRepresentation(VSTREETEXTOPTIONS options) {
+                switch(options) {
+                    case VSTREETEXTOPTIONS.TTO_DISPLAYTEXT:
+                        return _name;
+                }
+                return null;
+            }
+
+            public string TooltipText {
+                get { return null; }
+            }
+
+            public object BrowseObject {
+                get { return null; }
+            }
+
+            public System.ComponentModel.Design.CommandID ContextMenuID {
+                get { return null; }
+            }
+
+            public VSTREEDISPLAYDATA DisplayData {
+                get { 
+                    var res = new VSTREEDISPLAYDATA();
+                    res.Image = res.SelectedImage = (ushort)_glyphGroup;
+                    return res;
                 }
             }
 
-            public SymbolList(string searchText, IEnumerable<LocationInfo> locations, IEnumerable<LocationInfo> references, StandardGlyphGroup glyphType) {
-                foreach (var location in locations) {
-                    Children.Add(new SimpleLocationInfo(searchText, location, glyphType));
-                }
-                foreach (var location in references) {
-                    Children.Add(new SimpleLocationInfo(searchText, location, StandardGlyphGroup.GlyphReference));
-                }
+            public void Delete() {
             }
 
-            class NodeEnumerator : IVsEnumNavInfoNodes {
-                private readonly List<SimpleLocationInfo> _locations;
-                private IEnumerator<SimpleLocationInfo> _locationEnum;
-
-                public NodeEnumerator(List<SimpleLocationInfo> locations) {
-                    _locations = locations;
-                    Reset();
-                }
-
-                #region IVsEnumNavInfoNodes Members
-
-                public int Clone(out IVsEnumNavInfoNodes ppEnum) {
-                    ppEnum = new NodeEnumerator(_locations);
-                    return VSConstants.S_OK;
-                }
-
-                public int Next(uint celt, IVsNavInfoNode[] rgelt, out uint pceltFetched) {
-                    pceltFetched = 0;
-                    while (celt-- != 0 && _locationEnum.MoveNext()) {
-                        rgelt[pceltFetched++] = _locationEnum.Current;
-                    }
-                    return VSConstants.S_OK;
-                }
-
-                public int Reset() {
-                    _locationEnum = _locations.GetEnumerator();
-                    return VSConstants.S_OK;
-                }
-
-                public int Skip(uint celt) {
-                    while (celt-- != 0) {
-                        _locationEnum.MoveNext();
-                    }
-                    return VSConstants.S_OK;
-                }
-
-                #endregion
+            public void DoDragDrop(OleDataObject dataObject, uint grfKeyState, uint pdwEffect) {
             }
+
+            public void Rename(string pszNewName, uint grfFlags) {
+            }
+
+            public void GotoSource(VSOBJGOTOSRCTYPE SrcType) {
+            }
+
+            public void SourceItems(out IVsHierarchy ppHier, out uint pItemid, out uint pcItems) {
+                ppHier = null;
+                pItemid = 0;
+                pcItems = 0;
+            }
+
+            public uint EnumClipboardFormats(_VSOBJCFFLAGS _VSOBJCFFLAGS, VSOBJCLIPFORMAT[] rgcfFormats) {
+                return VSConstants.S_OK;
+            }
+
+            public void FillDescription(_VSOBJDESCOPTIONS _VSOBJDESCOPTIONS, IVsObjectBrowserDescription3 pobDesc) {
+            }
+
+            public IVsSimpleObjectList2 FilterView(uint ListType) {
+                return this;
+            }
+
+            #endregion
 
             #region IVsNavInfo Members
 
             public int EnumCanonicalNodes(out IVsEnumNavInfoNodes ppEnum) {
-                ppEnum = new NodeEnumerator(Children);
+                ppEnum = new NodeEnumerator<SimpleLocationInfo>(Children);
                 return VSConstants.S_OK;
             }
 
             public int EnumPresentationNodes(uint dwFlags, out IVsEnumNavInfoNodes ppEnum) {
-                ppEnum = new NodeEnumerator(Children);
+                ppEnum = new NodeEnumerator<SimpleLocationInfo>(Children);
                 return VSConstants.S_OK;
             }
 
@@ -367,6 +495,59 @@ namespace Microsoft.IronPythonTools.Language {
 
             public IVsSimpleObjectList2 GetSearchList() {
                 return this;
+            }
+
+            #endregion
+
+            #region IVsNavInfoNode Members
+
+            public int get_Name(out string pbstrName) {
+                pbstrName = "name";
+                return VSConstants.S_OK;
+            }
+
+            public int get_Type(out uint pllt) {
+                pllt = 16; // (uint)_LIB_LISTTYPE2.LLT_MEMBERHIERARCHY;
+                return VSConstants.S_OK;
+            }
+
+            #endregion
+        }
+
+        class NodeEnumerator<T> : IVsEnumNavInfoNodes where T : IVsNavInfoNode {
+            private readonly List<T> _locations;
+            private IEnumerator<T> _locationEnum;
+
+            public NodeEnumerator(List<T> locations) {
+                _locations = locations;
+                Reset();
+            }
+
+            #region IVsEnumNavInfoNodes Members
+
+            public int Clone(out IVsEnumNavInfoNodes ppEnum) {
+                ppEnum = new NodeEnumerator<T>(_locations);
+                return VSConstants.S_OK;
+            }
+
+            public int Next(uint celt, IVsNavInfoNode[] rgelt, out uint pceltFetched) {
+                pceltFetched = 0;
+                while (celt-- != 0 && _locationEnum.MoveNext()) {
+                    rgelt[pceltFetched++] = _locationEnum.Current;
+                }
+                return VSConstants.S_OK;
+            }
+
+            public int Reset() {
+                _locationEnum = _locations.GetEnumerator();
+                return VSConstants.S_OK;
+            }
+
+            public int Skip(uint celt) {
+                while (celt-- != 0) {
+                    _locationEnum.MoveNext();
+                }
+                return VSConstants.S_OK;
             }
 
             #endregion

@@ -19,7 +19,7 @@ using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class MethodInfo : UserDefinedInfo, IHaveAst {
+    internal class MethodInfo : UserDefinedInfo {
         private readonly FunctionInfo _function;
         private readonly Namespace _instanceInfo;
 
@@ -27,29 +27,16 @@ namespace Microsoft.PyAnalysis.Values {
             : base(function._analysisUnit) {
             _function = function;
             _instanceInfo = instance;
-            ReturnValue = function.ReturnValue;
         }
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
             return _function.Call(node, unit, Utils.Concat(_instanceInfo.SelfSet, args), keywordArgNames);
         }
 
-        public override void AddReference(Scripting.SourceSpan span, IProjectEntry projectEntry) {
-            _function.AddReference(span, projectEntry);
-        }
-
-        public override IEnumerable<LocationInfo> References {
-            get { return _function.References; }
-        }
-
         public override LocationInfo Location {
             get {
                 return _function.Location;
             }
-        }
-
-        public Node FunctionAst {
-            get { return _function.FunctionAst; }
         }
 
         public override string Description {
@@ -103,9 +90,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Method;
+                return ResultType.Method;
             }
         }
 

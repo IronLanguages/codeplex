@@ -20,25 +20,14 @@ using Microsoft.PyAnalysis.Interpreter;
 namespace Microsoft.PyAnalysis.Values {
     internal class UserDefinedInfo : Namespace {
         internal readonly AnalysisUnit _analysisUnit;
-        private VariableDef _returnValue;
         private VariableDef[] _parameters;
 
         protected UserDefinedInfo(AnalysisUnit analysisUnit) {
             _analysisUnit = analysisUnit;
-            _returnValue = new VariableDef();
         }
 
-        public override VariableDef[] ParameterTypes {
+        public VariableDef[] ParameterTypes {
             get { return _parameters; }
-        }
-
-        public VariableDef ReturnValue {
-            get {
-                return _returnValue;
-            }
-            set {
-                _returnValue = value;
-            }
         }
 
         public void SetParameters(VariableDef[] parameters) {

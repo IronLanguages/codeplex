@@ -67,6 +67,14 @@ namespace Microsoft.PyAnalysis.Interpreter {
             return false;
         }
 
+        public ISet<Namespace> ToSet() {
+            if (Count == 0) {
+                return EmptySet<Namespace>.Instance;
+            }
+
+            return new HashSet<Namespace>(this);
+        }
+
         #region IEnumerable<Namespace> Members
 
         public IEnumerator<Namespace> GetEnumerator() {

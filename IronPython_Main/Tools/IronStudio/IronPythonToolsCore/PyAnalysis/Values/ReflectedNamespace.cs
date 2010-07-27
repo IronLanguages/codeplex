@@ -32,13 +32,13 @@ namespace Microsoft.PyAnalysis.Values {
             get { return true; }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
                 var modules = VariableDict.Objects;
                 if (modules.Length > 1 || modules[0] is NamespaceTracker) {
-                    return ObjectType.Namespace;
+                    return ResultType.Namespace;
                 }
-                return ObjectType.Field;
+                return ResultType.Field;
             }
         }
     }

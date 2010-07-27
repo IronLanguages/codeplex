@@ -34,7 +34,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
             var textView = session.TextView;
             var textBuffer = session.TextView.TextBuffer;
             var span = session.CreateTrackingSpan0(textBuffer);
-            var provider = Analysis.GetMembers(textBuffer.CurrentSnapshot, textBuffer, span, _host.IntersectMembers, _host.HideAdvancedMembers);
+            var provider = _provider._Analysis.GetCompletions(textBuffer.CurrentSnapshot, textBuffer, span, _host.IntersectMembers, _host.HideAdvancedMembers);
 
             var completions = provider.GetCompletions(_provider._glyphService);
 

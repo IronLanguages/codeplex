@@ -19,17 +19,16 @@ using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class ModuleInfo : Namespace, IHaveAst {
+    internal class ModuleInfo : Namespace, IVariableDefContainer {
         private readonly string _name;
         private readonly ProjectEntry _projectEntry;
         private readonly Dictionary<Node, ISet<Namespace>> _sequences;  // sequences defined in the module
         private readonly Dictionary<Node, ImportInfo> _imports;         // imports performed during the module
-        private Dictionary<object, DependencyInfo> _dependencies;       // variables which we are dependent upon
         private readonly ModuleScope _scope;
         private readonly WeakReference _weakModule;
         private ModuleInfo _parentPackage;
         public bool ShowClr { get; set; }
-        private VariableDef _definition = new VariableDef();
+        private DependentData _definition = new DependentData();
 
         public ModuleInfo(string moduleName, ProjectEntry projectEntry) {
             _name = moduleName;
@@ -55,9 +54,18 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            AddReference(node, unit);
+            ModuleDefinition.AddDependency(unit);
 
-            return Scope.CreateVariable(name, unit).Types;
+            return Scope.CreateVariable(node, unit, name).Types;
+        }
+
+        public override void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
+            var variable = Scope.CreateVariable(node, unit, name, false);
+            if (variable.AddTypes(node, unit, value)) {
+                ModuleDefinition.EnqueueDependents();
+            }
+            
+            variable.AddAssignment(node, unit);
         }
 
         /// <summary>
@@ -69,7 +77,7 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public VariableDef ModuleDefinition {
+        public DependentData ModuleDefinition {
             get {
                 return _definition;
             }
@@ -89,13 +97,15 @@ namespace Microsoft.PyAnalysis.Values {
             get { return _projectEntry; }
         }
 
-        public Node FunctionAst {
-            get { return _projectEntry.Tree; }
-        }
-
         public Dictionary<Node, ImportInfo> Imports {
             get {
                 return _imports;
+            }
+        }
+
+        public override ResultType ResultType {
+            get {
+                return ResultType.Module;
             }
         }
 
@@ -144,28 +154,15 @@ namespace Microsoft.PyAnalysis.Values {
             return result;
         }
 
-        public DependencyInfo GetDependencyInfo(object key) {
-            DependencyInfo info;
-            if (_dependencies == null) {
-                _dependencies = new Dictionary<object, DependencyInfo>();
+        #region IVariableDefContainer Members
+
+        public IEnumerable<VariableDef> GetDefinitions(string name) {
+            VariableDef def;
+            if (_scope.Variables.TryGetValue(name, out def)) {
+                yield return def;
             }
-            if (!_dependencies.TryGetValue(key, out info)) {
-                _dependencies[key] = info = new DependencyInfo();
-            }
-            return info;
         }
 
-        public void AddDependency(object key, AnalysisUnit unit) {
-            GetDependencyInfo(key).DependentUnits.Add(unit);
-        }
-
-        public void EnqueDependencies(object key) {
-            DependencyInfo units;
-            if (_dependencies != null && _dependencies.TryGetValue(key, out units)) {
-                foreach (var unit in units.DependentUnits) {
-                    unit.Enqueue();
-                }
-            }
-        }
+        #endregion
     }
 }

@@ -22,7 +22,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
         private readonly int _paramIndex;
         private readonly ISignature[] _signatures;
 
-        public SignatureAnalysis(string text, int paramIndex, IList<ISignature> signatures) {
+        internal SignatureAnalysis(string text, int paramIndex, IList<ISignature> signatures) {
             _text = text;
             _paramIndex = paramIndex;
             _signatures = new ISignature[signatures.Count];

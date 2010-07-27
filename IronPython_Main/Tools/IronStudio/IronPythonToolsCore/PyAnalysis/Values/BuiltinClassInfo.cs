@@ -34,8 +34,6 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
-            AddReference(node, unit);
-
             // TODO: Type propagation, references
             return Instance.SelfSet;
         }
@@ -124,14 +122,12 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            AddReference(node, unit);
             return GetMemberNoReference(node, unit, name);
         }
 
         public ISet<Namespace> GetMemberNoReference(Node node, AnalysisUnit unit, string name) {
             bool showClr = (unit != null) ? unit.DeclaringModule.ShowClr : false;
             var res = VariableDict.GetClr(name, showClr, null);
-            res.AddReference(node, unit);
             return (res != null) ? res.GetStaticDescriptor(unit) : EmptySet<Namespace>.Instance;
         }
 
@@ -145,7 +141,7 @@ namespace Microsoft.PyAnalysis.Values {
             var result = new HashSet<Namespace>();
             foreach (var indexType in index) {
                 if (indexType is BuiltinClassInfo) {
-                    var clrIndexType = indexType.ClrType.__clrtype__();
+                    var clrIndexType = indexType.PythonType.__clrtype__();
                     try {
                         var klass = ProjectState.MakeGenericType(clrType, clrIndexType);
                         result.Add(klass);
@@ -201,7 +197,7 @@ namespace Microsoft.PyAnalysis.Values {
                             types[i] = new List<Type>();
                         }
 
-                        types[i].Add(seqIndexType.ClrType.__clrtype__());
+                        types[i].Add(seqIndexType.PythonType.__clrtype__());
                     }
                 }
             }
@@ -237,15 +233,15 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
                 var type = _type.__clrtype__();
                 if (type.IsEnum) {
-                    return ObjectType.Enum;
+                    return ResultType.Enum;
                 } else if (typeof(Delegate).IsAssignableFrom(type)) {
-                    return ObjectType.Delegate;
+                    return ResultType.Delegate;
                 } else {
-                    return ObjectType.Class;
+                    return ResultType.Class;
                 }
             }
         }

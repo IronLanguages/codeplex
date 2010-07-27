@@ -27,7 +27,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
     /// Provides various completion services after the text around the current location has been
     /// processed. The completion services are specific to the current context
     /// </summary>
-    public class CompletionList {
+    public class CompletionAnalysis {
         private readonly string _text;
         protected readonly int _pos;
         private readonly ITrackingSpan _span;
@@ -35,9 +35,9 @@ namespace Microsoft.IronPythonTools.Intellisense {
         internal const Int64 TooMuchTime = 50;
         protected static Stopwatch _stopwatch = MakeStopWatch();
 
-        internal static CompletionList EmptyCompletionContext = new CompletionList(String.Empty, 0, null, null);
+        internal static CompletionAnalysis EmptyCompletionContext = new CompletionAnalysis(String.Empty, 0, null, null);
 
-        public CompletionList(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer) {
+        internal CompletionAnalysis(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer) {
             _text = text ?? String.Empty;
             _pos = pos;
             _span = span;
@@ -248,7 +248,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
         }
 
         internal ModuleAnalysis GetAnalysisEntry() {
-            return ((IPythonProjectEntry)TextBuffer.GetAnalysis()).CurrentAnalysis;
+            return ((IPythonProjectEntry)TextBuffer.GetAnalysis()).Analysis;
         }
 
         private static Stopwatch MakeStopWatch() {
@@ -285,8 +285,8 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 }
             }
 
-            var sortedAndFiltered = NormalCompletionList.FilterCompletions(modules, text, (x, y) => x.StartsWith(y));
-            Array.Sort(sortedAndFiltered, NormalCompletionList.ModuleSort);
+            var sortedAndFiltered = NormalCompletionAnalysis.FilterCompletions(modules, text, (x, y) => x.StartsWith(y));
+            Array.Sort(sortedAndFiltered, NormalCompletionAnalysis.ModuleSort);
 
             var result = new Completion[sortedAndFiltered.Length];
             for (int i = 0; i < sortedAndFiltered.Length; i++) {

@@ -24,7 +24,7 @@ namespace Microsoft.PyAnalysis.Values {
         private readonly GeneratorNextBoundBuiltinMethodInfo _nextMethod;
         private readonly GeneratorSendBoundBuiltinMethodInfo _sendMethod;        
         private ISet<Namespace> _yields = EmptySet<Namespace>.Instance;
-        private ISet<Namespace> _sends = EmptySet<Namespace>.Instance;
+        private VariableDef _sends;
 
         public GeneratorInfo(FunctionInfo functionInfo)
             : base(functionInfo.ProjectState._generatorType) {
@@ -34,6 +34,8 @@ namespace Microsoft.PyAnalysis.Values {
 
             _nextMethod = new GeneratorNextBoundBuiltinMethodInfo(this, (BuiltinMethodInfo)nextMeth.First());
             _sendMethod = new GeneratorSendBoundBuiltinMethodInfo(this, (BuiltinMethodInfo)sendMeth.First());
+
+            _sends = new VariableDef();
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
@@ -53,8 +55,10 @@ namespace Microsoft.PyAnalysis.Values {
             _yields = _yields.Union(yieldValue);
         }
 
-        public void AddSend(ISet<Namespace> sendValue) {
-            _sends = _sends.Union(sendValue);
+        public void AddSend(Node node, AnalysisUnit unit, ISet<Namespace> sendValue) {
+            if (_sends.AddTypes(node, unit, sendValue)) {
+                _functionInfo._analysisUnit.Enqueue();
+            }
         }
 
         public ISet<Namespace> Yields {
@@ -63,7 +67,7 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public ISet<Namespace> Sends {
+        public VariableDef Sends {
             get {
                 return _sends;
             }

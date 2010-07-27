@@ -21,20 +21,6 @@ namespace Microsoft.PyAnalysis.Interpreter {
             : base(moduleInfo) {
         }
 
-        public override VariableDef GetVariable(string name, AnalysisUnit unit) {
-            Module.ModuleDefinition.AddDependency(unit);
-            //Module.ModuleDependencies.AddDependency(Module, unit);
-
-            return base.GetVariable(name, unit);
-        }
-
-        public override void SetVariable(string name, System.Collections.Generic.IEnumerable<Namespace> value, AnalysisUnit unit) {
-            if (CreateVariableWorker(name).AddTypes(value, unit)) {
-                Module.ModuleDefinition.EnqueueDependents();
-                //Module.ModuleDependencies.EnqueueDependents(Module);
-            }
-        }
-
         public ModuleInfo Module { get { return Namespace as ModuleInfo; } }
 
         public override string Name {

@@ -32,9 +32,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Method;
+                return ResultType.Method;
             }
         }
 
@@ -58,22 +58,6 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
             return _method.ReturnTypes;
-        }
-
-        /// <summary>
-        /// References for bound methods are tracked via their non-bound methods.
-        /// </summary>
-        public override void AddReference(SourceSpan span, IProjectEntry projectEntry) {
-            _method.AddReference(span, projectEntry);
-        }
-
-        /// <summary>
-        /// References for bound methods are tracked via their non-bound methods.
-        /// </summary>
-        public override IEnumerable<LocationInfo> References {
-            get {
-                return _method.References;
-            }
         }
 
         public override ICollection<OverloadResult> Overloads {

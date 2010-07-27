@@ -27,9 +27,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.EnumMember;
+                return ResultType.EnumInstance;
             }
         }
     }

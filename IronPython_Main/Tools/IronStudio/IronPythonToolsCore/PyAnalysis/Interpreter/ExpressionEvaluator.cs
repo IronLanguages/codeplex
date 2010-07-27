@@ -43,13 +43,13 @@ namespace Microsoft.PyAnalysis.Interpreter {
         /// <summary>
         /// Returns possible variable refs associated with the expr in the expression evaluators scope.
         /// </summary>
-        public ISet<Namespace> Evaluate(Node node) {
+        public ISet<Namespace> Evaluate(Expression node) {
             var res = EvaluateWorker(node);
             Debug.Assert(res != null);
             return res;
         }
 
-        private ISet<Namespace> EvaluateMaybeNull(Node node) {
+        public ISet<Namespace> EvaluateMaybeNull(Expression node) {
             if (node == null) {
                 return null;
             }
@@ -60,48 +60,37 @@ namespace Microsoft.PyAnalysis.Interpreter {
         /// <summary>
         /// Returns a sequence of possible types associated with the name in the expression evaluators scope.
         /// </summary>
-        public List<Namespace> LookupNamespaceByName(string name) {
+        public ISet<Namespace> LookupNamespaceByName(Node node, string name, bool addRef = true) {
             for (int i = Scopes.Length - 1; i >= 0; i--) {
-                var refs = Scopes[i].GetVariable(name, _unit);
-                if (refs != null) {
-                    return new List<Namespace>(refs.Types);
+                if (i == Scopes.Length - 1 || Scopes[i].VisibleToChildren) {
+                    var refs = Scopes[i].GetVariable(node, _unit, name, addRef);
+                    if (refs != null) {
+                        return refs.Types;
+                    }
                 }
             }
+
+            ISet<Namespace> res;
+            if (ProjectState.BuiltinModule.VariableDict.TryGetValue(name, out res)) {
+                return res;
+            }
+
             return null;
         }
 
         /// <summary>
-        /// Returns a sequence of possible variable refs associated with the given name in the current scope
+        /// Returns the variable definition for the given name.
         /// </summary>
-        public VariableDef LookupVariablesByName(string name, Node node) {
+        public VariableDef LookupVariableByName(string name, Node node, bool addReference = true) {
             for (int i = Scopes.Length - 1; i >= 0; i--) {
-                if (Scopes[i] != null) {
-                    // TODO: Check scope.VisibleToChildren for non-children
-                    var value = Scopes[i].GetVariable(name, _unit);
+                if (i == Scopes.Length - 1 || Scopes[i].VisibleToChildren) {
+                    var value = Scopes[i].GetVariable(node, _unit, name, addReference);
                     if (value != null) {
                         return value;
                     }
                 }
             }
-            return null;
-        }
 
-        /// <summary>
-        /// Returns a possible variable ref associated with the given name in the current scope
-        /// </summary>
-        /// <param name="name"></param>
-        public VariableDef LookupVariableAndScope(string name, out InterpreterScope scope) {
-            for (int i = Scopes.Length - 1; i >= 0; i--) {
-                if (Scopes[i] != null) {
-                    // TODO: Check scope.VisibleToChildren for non-children
-                    var value = Scopes[i].GetVariable(name, _unit);
-                    if (value != null) {
-                        scope = Scopes[i];
-                        return value;
-                    }
-                }
-            }
-            scope = null;
             return null;
         }
 
@@ -151,6 +140,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             { typeof(ConditionalExpression),  ExpressionEvaluator.EvaluateConditional},
             { typeof(ConstantExpression),  ExpressionEvaluator.EvaluateConstant},
             { typeof(DictionaryExpression),  ExpressionEvaluator.EvaluateDictionary},
+            { typeof(SetExpression),  ExpressionEvaluator.EvaluateSet},
             { typeof(GeneratorExpression),  ExpressionEvaluator.EvaluateGenerator},
             { typeof(IndexExpression),  ExpressionEvaluator.EvaluateIndex},
             { typeof(LambdaExpression),  ExpressionEvaluator.EvaluateLambda},
@@ -185,9 +175,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
         private static ISet<Namespace> EvaluateName(ExpressionEvaluator ee, Node node) {
             var n = (NameExpression)node;
-            InterpreterScope scope;
-            var v = ee.LookupVariableAndScope(n.Name, out scope);
-            return (v == null) ? (ISet<Namespace>)EmptySet<Namespace>.Instance : v.Types;
+            return ee.LookupNamespaceByName(node, n.Name) ?? EmptySet<Namespace>.Instance;
         }
 
         private static ISet<Namespace> EvaluateMember(ExpressionEvaluator ee, Node node) {
@@ -212,6 +200,21 @@ namespace Microsoft.PyAnalysis.Interpreter {
             bool madeSet = false;            
             foreach (var varRef in member) {
                 result = result.Union(varRef.GetIndex(node, ee._unit, index), ref madeSet);
+            }
+            return result;
+        }
+
+        private static ISet<Namespace> EvaluateSet(ExpressionEvaluator ee, Node node) {
+            var n = (SetExpression)node;
+            ISet<Namespace> result;
+            if (!ee.GlobalScope.NodeVariables.TryGetValue(node, out result)) {
+                var values = new HashSet<Namespace>();
+                foreach (var x in n.Items) {
+                    values.Union(ee.Evaluate(x));
+                }
+
+                result = new DictionaryInfo(values, values, ee.ProjectState, ee.GlobalScope.ShowClr).SelfSet;
+                ee.GlobalScope.NodeVariables[node] = result;
             }
             return result;
         }
@@ -244,6 +247,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
         private static ISet<Namespace> EvaluateConditional(ExpressionEvaluator ee, Node node) {
             var n = (ConditionalExpression)node;
+            ee.Evaluate(n.Test);
             var result = ee.Evaluate(n.TrueExpression);
             return result.Union(ee.Evaluate(n.FalseExpression));
         }
@@ -312,27 +316,26 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
                 gen.AddYield(ee.Evaluate(yield.Expression));
 
-                return gen.Sends;
+                return gen.Sends.Types;
             }
 
             return EmptySet<Namespace>.Instance;
         }
 
         private static ISet<Namespace> EvaluateListComprehension(ExpressionEvaluator ee, Node node) {
-            /*
             ListComprehension listComp = (ListComprehension)node;
+                       
             for(int i = 0; i<listComp.Iterators.Count;i++) {
                 
                 ComprehensionFor compFor = listComp.Iterators[i] as ComprehensionFor;
                 if (compFor != null) {
                     foreach (var listType in ee.Evaluate(compFor.List)) {                        
-                        ee.AssignTo(node, node.Left, listType.GetEnumeratorTypes(node, _unit));
+                        //ee.AssignTo(node, node.Left, listType.GetEnumeratorTypes(node, _unit));
                     }
-
                 }
             }
-            //listComp.Iterators[0].
-            return ee.GlobalScope.GetOrMakeNodeVariable(
+
+/*            return ee.GlobalScope.GetOrMakeNodeVariable(
                 node, 
                 (x) => new ListInfo(new[] { ee.Evaluate(listComp.Item) }, ee._unit.ProjectState._listType).SelfSet);*/
 
@@ -342,7 +345,9 @@ namespace Microsoft.PyAnalysis.Interpreter {
         }
 
         private static ISet<Namespace> EvaluateLambda(ExpressionEvaluator ee, Node node) {
-            return ee.GlobalScope.GetOrMakeNodeVariable(node, n => MakeLambdaFunction((LambdaExpression)node, ee));
+            var lambda = (LambdaExpression)node;
+
+            return ee.GlobalScope.GetOrMakeNodeVariable(node, n => MakeLambdaFunction(lambda, ee));
         }
 
         private static ISet<Namespace> MakeLambdaFunction(LambdaExpression node, ExpressionEvaluator ee) {
@@ -350,6 +355,10 @@ namespace Microsoft.PyAnalysis.Interpreter {
         }
 
         private static ISet<Namespace> EvaluateGenerator(ExpressionEvaluator ee, Node node) {
+            GeneratorExpression gen = (GeneratorExpression)node;
+
+            ee.Evaluate(gen.Iterable);
+
             // TODO: Implement
             return EmptySet<Namespace>.Instance;
         }

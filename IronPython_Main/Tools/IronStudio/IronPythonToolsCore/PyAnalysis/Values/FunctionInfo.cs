@@ -21,11 +21,12 @@ using Microsoft.PyAnalysis.Interpreter;
 using System;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class FunctionInfo : UserDefinedInfo, IHaveAst {
+    internal class FunctionInfo : UserDefinedInfo {
         private readonly ProjectEntry _entry;
         private Dictionary<Namespace, ISet<Namespace>> _methods;
         private Dictionary<string, VariableDef> _functionAttrs;
         private GeneratorInfo _generator;
+        private TypedStorageLocation _returnValue;
         public bool IsStatic;
         public bool IsClassMethod;
         public bool IsProperty;
@@ -34,7 +35,14 @@ namespace Microsoft.PyAnalysis.Values {
         internal FunctionInfo(AnalysisUnit unit, ProjectEntry entry)
             : base(unit) {
             _entry = entry;
+            _returnValue = new TypedStorageLocation();
             // TODO: pass NoneInfo if we can't determine the function always returns
+        }
+
+        public ProjectEntry ProjectEntry {
+            get {
+                return _entry;
+            }
         }
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {            
@@ -42,13 +50,11 @@ namespace Microsoft.PyAnalysis.Values {
                 AddCall(node, keywordArgNames, unit, args);
             }
 
-            AddReference(node, unit);
-
             if (_generator != null) {
                 return _generator.SelfSet;
             }
 
-            return ReturnValue.Types;
+            return ReturnValue.Types.ToSet();
         }
 
         private void AddCall(Node node, string[] keywordArgNames, AnalysisUnit unit, ISet<Namespace>[] args) {
@@ -88,7 +94,7 @@ namespace Microsoft.PyAnalysis.Values {
                                         int paramIndex = lastPos + j;
                                         if (paramIndex >= ParameterTypes.Length) {
                                             break;
-                                        } else if (ParameterTypes[lastPos + j].AddTypes(indexType, unit)) {
+                                        } else if (ParameterTypes[lastPos + j].AddTypes(FunctionDefinition.Parameters[lastPos + j], unit, indexType, addReference: false)) {
                                             added = true;
                                         }
                                     }
@@ -102,7 +108,7 @@ namespace Microsoft.PyAnalysis.Values {
                             for (int j = 0; j < ParameterTypes.Length; j++) {
                                 string paramName = GetParameterName(j);
                                 if (paramName == curArg) {
-                                    if (ParameterTypes[j].AddTypes(args[i], unit)) {
+                                    if (ParameterTypes[j].AddTypes(FunctionDefinition.Parameters[j], unit, args[i], addReference: false)) {
                                         added = true;
                                         break;
                                     }
@@ -114,7 +120,7 @@ namespace Microsoft.PyAnalysis.Values {
                     }
                 } else if (i < ParameterTypes.Length) {
                     // positional argument
-                    if (ParameterTypes[i].AddTypes(args[i], unit)) {
+                    if (ParameterTypes[i].AddTypes(FunctionDefinition.Parameters[i], unit, args[i], addReference: false)) {
                         added = true;
                     }
 
@@ -191,7 +197,7 @@ namespace Microsoft.PyAnalysis.Values {
                 return SelfSet;
             }
             if (IsProperty) {
-                return ReturnValue.Types;
+                return ReturnValue.Types.ToSet();
             }
 
             if (_methods == null) {
@@ -214,18 +220,14 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return IsProperty ? ObjectType.Property : ObjectType.Function;
+                return IsProperty ? ResultType.Property : ResultType.Function;
             }
         }
 
         public override string ToString() {
             return "FunctionInfo" /* + hex(id(this)) */ + " " + FunctionDefinition.Name;
-        }
-
-        public Node FunctionAst {
-            get { return (FunctionDefinition)_analysisUnit.Ast; }
         }
 
         public override LocationInfo Location {
@@ -317,7 +319,7 @@ namespace Microsoft.PyAnalysis.Values {
                 _functionAttrs[name] = varRef = new VariableDef();
             }
 
-            varRef.AddTypes(value, unit);
+            varRef.AddTypes(node, unit, value);
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
@@ -358,6 +360,10 @@ namespace Microsoft.PyAnalysis.Values {
                 }
                 return _generator;
             }
+        }
+
+        public TypedStorageLocation ReturnValue {
+            get { return _returnValue; }
         }
 
         public ProjectState ProjectState { get { return _entry.ProjectState; } }

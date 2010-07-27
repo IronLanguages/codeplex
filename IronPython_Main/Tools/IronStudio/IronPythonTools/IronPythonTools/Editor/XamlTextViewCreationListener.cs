@@ -12,13 +12,11 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.ComponentModel.Composition;
-using Microsoft.IronPythonTools.Editor.Core;
+using Microsoft.IronPythonTools.Intellisense;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.IronPythonTools.Library;
 
 namespace Microsoft.IronPythonTools.Editor {
     /// <summary>

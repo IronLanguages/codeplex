@@ -38,19 +38,15 @@ namespace Microsoft.PyAnalysis.Values {
             switch (name) {
                 case "append":
                     EnsureAppend();
-                    _appendMethod.AddReference(node, unit);
                     return _appendMethod.SelfSet;
                 case "pop":
                     EnsurePop();
-                    _popMethod.AddReference(node, unit);
                     return _popMethod.SelfSet;
                 case "insert":
                     EnsureInsert();
-                    _insertMethod.AddReference(node, unit);
                     return _insertMethod.SelfSet;
                 case "extend":
                     EnsureExtend();
-                    _extendMethod.AddReference(node, unit);
                     return _extendMethod.SelfSet;                
             }
 

@@ -63,6 +63,17 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         /// <summary>
+        /// Performs a delete index operation propagating the index types into the provided object.
+        /// </summary>
+        public static void DeleteMember(this ISet<Namespace> self, Node node, AnalysisUnit unit, string name) {
+            if (name != null && name.Length > 0) {
+                foreach (var ns in self) {
+                    ns.DeleteMember(node, unit, name);
+                }
+            }
+        }
+
+        /// <summary>
         /// Performs a call operation propagating the argument types into any user defined functions
         /// or classes and returns the set of types which result from the call.
         /// </summary>
@@ -114,8 +125,7 @@ namespace Microsoft.PyAnalysis.Values {
         /// <summary>
         /// Performs a delete index operation propagating the index types into the provided object.
         /// </summary>
-        public static void DeleteIndex(this ISet<Namespace> self, Node node, ModuleAnalysis analysisState, ISet<Namespace> index) {
-            throw new NotImplementedException();
+        public static void DeleteIndex(this ISet<Namespace> self, Node node, AnalysisUnit analysisState, ISet<Namespace> index) {
         }
 
         /// <summary>
@@ -225,22 +235,6 @@ namespace Microsoft.PyAnalysis.Values {
             }
 
             return res ?? EmptySet<Namespace>.Instance;
-        }
-
-        public static void AddReference(this ISet<Namespace> self, Node node, AnalysisUnit unit) {
-            if (self != null) {
-                foreach (var member in self) {
-                    member.AddReference(node, unit);
-                }
-            }
-        }
-
-        public static void AddReference(this ISet<Namespace> self, SourceSpan span, IProjectEntry projectEntry) {
-            if (self != null) {
-                foreach (var member in self) {
-                    member.AddReference(span, projectEntry);
-                }
-            }
         }
 
         public static Namespace GetUnionType(this ISet<Namespace> types) {

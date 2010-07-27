@@ -27,9 +27,7 @@ namespace Microsoft.PyAnalysis.Values {
     /// A namespace represents a set of variables and code.  Examples of 
     /// namespaces include top-level code, classes, and functions.
     /// </summary>
-    internal class Namespace : ISet<Namespace> {
-        private Dictionary<IProjectEntry, NamespaceReferences> _references;
-        
+    internal class Namespace : ISet<Namespace>, IAnalysisValue {
         [ThreadStatic] private static HashSet<Namespace> _processing;
 
         public Namespace() { }
@@ -45,50 +43,7 @@ namespace Microsoft.PyAnalysis.Values {
 
         #region Namespace Information
 
-        /// <summary>
-        /// adds a reference to the given node to this namespace.  The node should exist
-        /// in the file which AnalysisUnit defines.
-        /// </summary>
-        public void AddReference(Node node, AnalysisUnit unit) {
-            Debug.Assert(unit != null);
-            if (!unit.ForEval) {
-                AddReference(node.Span, unit.DeclaringModule.ProjectEntry);
-            }
-        }
-       
-        /// <summary>
-        /// adds a reference from the span to this namespace.  The span is in the
-        /// file represented by the provided analysis unit.
-        /// </summary>
-        public virtual void AddReference(SourceSpan span, IProjectEntry projectEntry) {
-            var deps = GetUpdatedReferences(projectEntry);
-            if (deps.References == null) {
-                deps.References = new HashSet<SourceSpan>();
-            }
-            deps.References.Add(span);
-        }
-
-        /// <summary>
-        /// Locations which reference this namespace
-        /// </summary>
-        public virtual IEnumerable<LocationInfo> References {
-            get {
-                if (_references != null) {
-                    foreach (var kvp in _references) {
-                        foreach (var reference in kvp.Value.References) {
-                            // combine the files cookie and path with the references exact location
-                            yield return new LocationInfo(kvp.Key, reference.Start.Line, reference.Start.Column, reference.Length);
-                        }
-                    }
-                }
-            }
-        }
-
         public virtual LocationInfo Location {
-            get { return null; }
-        }
-
-        public virtual VariableDef[] ParameterTypes {
             get { return null; }
         }
 
@@ -115,8 +70,8 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public virtual ObjectType NamespaceType {
-            get { return ObjectType.Unknown; }
+        public virtual ResultType ResultType {
+            get { return ResultType.Unknown; }
         }
 
         public virtual bool IsBuiltin {
@@ -131,7 +86,7 @@ namespace Microsoft.PyAnalysis.Values {
             return new Dictionary<string, ISet<Namespace>>();
         }
 
-        public virtual PythonType ClrType {
+        public virtual PythonType PythonType {
             get { return null; }
         }
 
@@ -147,21 +102,20 @@ namespace Microsoft.PyAnalysis.Values {
         /// <param name="args">The arguments being passed to the function</param>
         /// <param name="keywordArgNames">Keyword argument names, * and ** are included in here for splatting calls</param>
         public virtual ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
-            AddReference(node, unit);
             return EmptySet<Namespace>.Instance;
         }
 
         public virtual ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            AddReference(node, unit);
             return EmptySet<Namespace>.Instance;
         }
 
         public virtual void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
-            AddReference(node, unit);
+        }
+
+        public virtual void DeleteMember(Node node, AnalysisUnit unit, string name) {
         }
 
         public virtual void AugmentAssign(AugmentedAssignStatement node, AnalysisUnit unit, ISet<Namespace> value) {
-            AddReference(node, unit);
         }
 
         public virtual ISet<Namespace> BinaryOperation(Node node, AnalysisUnit unit, PythonOperator operation, ISet<Namespace> rhs) {            
@@ -209,21 +163,6 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         #endregion
-
-        /// <summary>
-        /// Gets the references collection for the given project entry.  If the collection doesn't
-        /// exist or is for a previous version a new collection is created.
-        /// </summary>
-        private NamespaceReferences GetUpdatedReferences(IProjectEntry entry) {
-            if (_references == null) {
-                _references = new Dictionary<IProjectEntry, NamespaceReferences>();
-            }
-            NamespaceReferences result;
-            if (!_references.TryGetValue(entry, out result) || result.Version != entry.Version) {
-                _references[entry] = result = new NamespaceReferences(entry.Version);
-            }
-            return result;
-        }
 
         #region Union Equality
 

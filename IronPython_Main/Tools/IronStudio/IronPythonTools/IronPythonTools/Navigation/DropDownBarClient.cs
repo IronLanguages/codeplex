@@ -573,7 +573,7 @@ namespace Microsoft.IronPythonTools.Navigation {
         private static int ComparisonFunction(DropDownEntryInfo x, DropDownEntryInfo y) {
             string xName = x.Name ?? String.Empty, yName = y.Name ?? String.Empty;
 
-            return NormalCompletionList.MemberSortComparison(xName, yName);
+            return NormalCompletionAnalysis.MemberSortComparison(xName, yName);
         }
 
         /// <summary>

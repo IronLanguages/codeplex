@@ -28,6 +28,20 @@ namespace Microsoft.PyAnalysis.Values {
             _type = ClrModule.GetPythonType(value.FieldType);
         }
 
+        public override ISet<Namespace> GetDescriptor(Namespace instance, Interpreter.AnalysisUnit unit) {
+            BuiltinClassInfo klass = (BuiltinClassInfo)ProjectState.GetNamespaceFromObjects(_value.FieldType);
+            return klass.Instance.SelfSet;
+        }
+
+        public override ISet<Namespace> GetStaticDescriptor(Interpreter.AnalysisUnit unit) {
+            if (_value.Info.IsStatic) {
+                BuiltinClassInfo klass = (BuiltinClassInfo)ProjectState.GetNamespaceFromObjects(_value.FieldType);
+                return klass.Instance.SelfSet;
+            }
+
+            return base.GetStaticDescriptor(unit);
+        }
+
         public override string Description {
             get {
                 return "field of type " + PythonType.Get__name__(_value.FieldType);
@@ -40,9 +54,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Field;
+                return ResultType.Field;
             }
         }
 

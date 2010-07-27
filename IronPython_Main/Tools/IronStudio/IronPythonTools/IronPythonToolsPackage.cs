@@ -16,25 +16,22 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.IronPythonTools.Library;
+using Microsoft.IronPythonTools.Editor;
+using Microsoft.IronPythonTools.Intellisense;
 using Microsoft.IronPythonTools.Navigation;
 using Microsoft.IronPythonTools.Options;
-using Microsoft.IronPythonTools.Project;
 using Microsoft.IronStudio;
 using Microsoft.IronStudio.Navigation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.IronPythonTools.Editor;
-using Microsoft.VisualStudio.OLE.Interop;
 
 namespace Microsoft.IronPythonTools {
     /// <summary>
@@ -241,5 +238,6 @@ namespace Microsoft.IronPythonTools {
                 return RuntimeHost.ContentType;
             }
         }
+
     }
 }

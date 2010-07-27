@@ -97,8 +97,8 @@ namespace Microsoft.PyAnalysis.Interpreter {
         public ModuleInfo DeclaringModule {
             get {
 
-                Debug.Assert(_scopes[1] != null);
-                return ((ModuleScope)_scopes[1]).Module;
+                Debug.Assert(_scopes[0] != null);
+                return ((ModuleScope)_scopes[0]).Module;
             }
         }
 

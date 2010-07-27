@@ -12,8 +12,8 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
+using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Values;
 
 namespace Microsoft.PyAnalysis.Interpreter {
@@ -29,27 +29,33 @@ namespace Microsoft.PyAnalysis.Interpreter {
             get;
         }
 
-        public virtual void SetVariable(string name, IEnumerable<Namespace> value, AnalysisUnit unit) {
-            CreateVariable(name, unit).AddTypes(value, unit);
+        public void SetVariable(Node node, AnalysisUnit unit, string name, IEnumerable<Namespace> value, bool addRef = true) {
+            CreateVariable(node, unit, name, addRef).AddTypes(node, unit, value, addRef);
         }
 
-        public virtual VariableDef GetVariable(string name, AnalysisUnit unit) {
+        public VariableDef GetVariable(Node node, AnalysisUnit unit, string name, bool addRef = true) {
             VariableDef res;
             if (_variables.TryGetValue(name, out res)) {
+                if (addRef) {
+                    res.AddReference(node, unit);
+                }
                 return res;
             }
             return null;
         }
 
-        public virtual VariableDef CreateVariable(string name, AnalysisUnit unit) {
-            var res = GetVariable(name, unit);
+        public VariableDef CreateVariable(Node node, AnalysisUnit unit, string name, bool addRef = true) {
+            var res = GetVariable(node, unit, name, addRef);
             if (res == null) {
                 _variables[name] = res = new VariableDef();
+                if (addRef) {
+                    res.AddReference(node, unit);
+                }
             }
             return res;
         }
 
-        protected VariableDef CreateVariableWorker(string name) {
+        protected VariableDef CreateVariableWorker(Node node, AnalysisUnit unit, string name) {
             VariableDef res;
             if (!_variables.TryGetValue(name, out res)) {
                 _variables[name] = res = new VariableDef();
@@ -57,7 +63,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             return res;
         }
 
-        public virtual IDictionary<string, VariableDef> Variables {
+        public IDictionary<string, VariableDef> Variables {
             get {
                 return _variables;
             }

@@ -15,10 +15,11 @@
 using System;
 using System.Collections.Generic;
 using IronPython.Compiler.Ast;
+using IronPython.Runtime.Types;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class ClassInfo : UserDefinedInfo, IHaveAst {
+    internal class ClassInfo : UserDefinedInfo, IVariableDefContainer {
         private readonly List<ISet<Namespace>> _bases;
         private readonly InstanceInfo _instanceInfo;
         private readonly ClassScope _scope;
@@ -27,7 +28,6 @@ namespace Microsoft.PyAnalysis.Values {
         internal ClassInfo(AnalysisUnit unit, ProjectEntry entry)
             : base(unit) {
             _instanceInfo = new InstanceInfo(this);
-            ReturnValue.AddTypes(_instanceInfo.SelfSet, unit);
             _bases = new List<ISet<Namespace>>();
             _entry = entry;
             _scope = new ClassScope(this);
@@ -38,14 +38,12 @@ namespace Microsoft.PyAnalysis.Values {
                 AddCall(node, keywordArgNames, unit, args);
             }
             
-            AddReference(node, unit);
-
-            return ReturnValue.Types;
+            return _instanceInfo.SelfSet;
         }
 
         private void AddCall(Node node, string[] keywordArgNames, AnalysisUnit unit, ISet<Namespace>[] argumentVars) {
             var init = GetMember(node, unit, "__init__");
-            var initArgs = Utils.Concat(ReturnValue.Types, argumentVars);
+            var initArgs = Utils.Concat(_instanceInfo.SelfSet, argumentVars);
             foreach (var initFunc in init) {
                 initFunc.Call(node, unit, initArgs, keywordArgNames);
             }
@@ -59,12 +57,14 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public Node FunctionAst {
-            get { return _analysisUnit.Ast; }
-        }
-
         public ClassDefinition ClassDefinition {
             get { return _analysisUnit.Ast as ClassDefinition; }
+        }
+
+        public override string ShortDescription {
+            get {
+                return ClassDefinition.Name;
+            }
         }
 
         public override string Description {
@@ -92,11 +92,17 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
+        public override PythonType PythonType {
+            get {
+                return TypeCache.PythonType;
+            }
+        }
+
         public override ICollection<OverloadResult> Overloads {
             get {
                 var result = new List<OverloadResult>();
-                var init = Scope.GetVariable("__init__", _analysisUnit);
-                if (init != null) {
+                VariableDef init;
+                if (Scope.Variables.TryGetValue("__init__", out init)) {
                     // this type overrides __init__, display that for it's help
                     foreach (var initFunc in init.Types) {
                         foreach (var overload in initFunc.Overloads) {
@@ -105,8 +111,8 @@ namespace Microsoft.PyAnalysis.Values {
                     }
                 }
 
-                var @new = Scope.GetVariable("__new__", _analysisUnit);
-                if (@new != null) {
+                VariableDef @new;
+                if (Scope.Variables.TryGetValue("__new__", out @new)) {
                     foreach (var newFunc in @new.Types) {
                         foreach (var overload in newFunc.Overloads) {
                             result.Add(GetNewOverloadResult(overload));
@@ -163,7 +169,7 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public InstanceInfo InstanceInfo {
+        public InstanceInfo Instance {
             get {
                 return _instanceInfo;
             }
@@ -201,19 +207,16 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            AddReference(node, unit);
-
             return GetMemberNoReference(node, unit, name);
         }
 
         public ISet<Namespace> GetMemberNoReference(Node node, AnalysisUnit unit, string name) {
             ISet<Namespace> result = null;
             bool ownResult = false;
-            var v = Scope.GetVariable(name, unit);
+            var v = Scope.GetVariable(node, unit, name);
             if (v != null) {
                 ownResult = false;
                 result = v.Types;
-                result.AddReference(node, unit);
             }
 
             // TODO: Need to search MRO, not bases
@@ -245,9 +248,16 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
-            var variable = Scope.CreateVariable(name, unit);
-            System.Diagnostics.Debug.Assert(name != "tagStack");
-            variable.AddTypes(value, unit);
+            var variable = Scope.CreateVariable(node, unit, name, false);
+            variable.AddAssignment(node, unit);
+            variable.AddTypes(node, unit, value);
+        }
+
+        public override void DeleteMember(Node node, AnalysisUnit unit, string name) {
+            var v = Scope.GetVariable(node, unit, name);
+            if (v != null) {
+                v.AddReference(node, unit);
+            }
         }
 
         private static void AddNewMembers(ref ISet<Namespace> result, ref bool ownResult, ISet<Namespace> newMembers) {
@@ -271,9 +281,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Class;
+                return ResultType.Class;
             }
         }
 
@@ -286,5 +296,16 @@ namespace Microsoft.PyAnalysis.Values {
                 return _scope;
             }
         }
+
+        #region IVariableDefContainer Members
+
+        public IEnumerable<VariableDef> GetDefinitions(string name) {
+            VariableDef def;
+            if (_scope.Variables.TryGetValue(name, out def)) {
+                yield return def;
+            }
+        }
+
+        #endregion
     }
 }

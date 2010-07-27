@@ -20,7 +20,6 @@ using Microsoft.PyAnalysis.Interpreter;
 namespace Microsoft.PyAnalysis.Values {
     internal class BuiltinModule : BuiltinNamespace {
         private readonly string _name;
-        private readonly BuiltinModuleScope _scope;
 
         public BuiltinModule(PythonModule module, ProjectState projectState, bool showClr)
             : base(new LazyDotNetDict(new object[] { module }, projectState, showClr)) {
@@ -30,18 +29,11 @@ namespace Microsoft.PyAnalysis.Values {
             } else {
                 _name = name as string;
             }
-            _scope = new BuiltinModuleScope(this);
         }
 
         public override IDictionary<string, ISet<Namespace>> GetAllMembers(bool showClr) {
             // no showClr filtering on modules
             return VariableDict;
-        }
-
-        public BuiltinModuleScope Scope {
-            get {
-                return _scope;
-            }
         }
 
         public override string Description {
@@ -60,8 +52,8 @@ namespace Microsoft.PyAnalysis.Values {
             get { return true; }
         }
 
-        public override ObjectType NamespaceType {
-            get { return ObjectType.Module; }
+        public override ResultType ResultType {
+            get { return ResultType.Module; }
         }
     }
 }

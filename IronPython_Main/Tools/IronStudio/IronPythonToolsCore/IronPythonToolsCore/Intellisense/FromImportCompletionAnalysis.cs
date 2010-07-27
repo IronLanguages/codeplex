@@ -23,18 +23,18 @@ namespace Microsoft.IronPythonTools.Intellisense {
     /// <summary>
     /// Provides the completion context for when the user is doing an "import from"
     /// </summary>
-    internal class FromImportCompletionList : CompletionList {
+    internal class FromImportCompletionAnalysis : CompletionAnalysis {
         private readonly string _namespace;
 
-        public FromImportCompletionList(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer, string ns)
+        public FromImportCompletionAnalysis(string text, int pos, ITrackingSpan span, ITextBuffer textBuffer, string ns)
             : base(text, pos, span, textBuffer) {
             _namespace = ns;
         }
 
-        public static CompletionList Make(IList<ClassificationSpan> classifications, ClassificationSpan start,
+        public static CompletionAnalysis Make(IList<ClassificationSpan> classifications, ClassificationSpan start,
                 Span loc, ITextSnapshot snapshot, ITrackingSpan span, ITextBuffer buffer, bool isSpace) {
             if (classifications.Count == 1) {
-                return new ImportCompletionList(String.Empty, loc.Start, span, buffer);
+                return new ImportCompletionAnalysis(String.Empty, loc.Start, span, buffer);
             }
 
             ClassificationSpan imp = null;
@@ -55,7 +55,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 // from xxx.[completion]
                 //  or
                 // from xxx[Ctrl-Space completion]
-                return new ImportCompletionList(GetText(snapshot, start, end, true), loc.Start, span, buffer);
+                return new ImportCompletionAnalysis(GetText(snapshot, start, end, true), loc.Start, span, buffer);
             }
 
             // from xyz import [completion]
@@ -76,7 +76,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 itemText = itemSpan.GetText();
             }
 
-            return new FromImportCompletionList(itemText, loc.Start, span, buffer, nsText);
+            return new FromImportCompletionAnalysis(itemText, loc.Start, span, buffer, nsText);
         }
 
         private static string GetText(ITextSnapshot snapshot, ClassificationSpan start, ClassificationSpan target, bool includeEnd) {

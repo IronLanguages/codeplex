@@ -22,25 +22,14 @@ namespace Microsoft.PyAnalysis.Values {
         private string _doc;
 
         public BuiltinPropertyInfo(ReflectedGetterSetter value, ProjectState projectState)
-            : base(new LazyDotNetDict(GetType(value), projectState, true)) {
+            : base(new LazyDotNetDict(value.PropertyType, projectState, true)) {
             _value = value;
             _doc = null;
-            _type = GetType(value);
+            _type = _value.PropertyType;
         }
 
         public override ISet<Namespace> GetDescriptor(Namespace instance, Interpreter.AnalysisUnit unit) {
-            ReflectedProperty rp = _value as ReflectedProperty;
-            if (rp != null) {
-                BuiltinClassInfo klass = (BuiltinClassInfo)ProjectState.GetNamespaceFromObjects(rp.PropertyType);
-                return klass.Instance.SelfSet;
-            }
-            ReflectedExtensionProperty rep = _value as ReflectedExtensionProperty;
-            if (rep != null) {
-                BuiltinClassInfo klass = (BuiltinClassInfo)ProjectState.GetNamespaceFromObjects(rep.PropertyType);
-                return klass.Instance.SelfSet;
-            }
-
-            return base.GetDescriptor(instance, unit);
+            return ((BuiltinClassInfo)ProjectState.GetNamespaceFromObjects(_value.PropertyType)).Instance.SelfSet;
         }
 
         public override ISet<Namespace> GetStaticDescriptor(Interpreter.AnalysisUnit unit) {
@@ -53,15 +42,6 @@ namespace Microsoft.PyAnalysis.Values {
             return base.GetStaticDescriptor(unit);
         }
 
-        private static PythonType GetType(ReflectedGetterSetter value) {
-            if (value is ReflectedProperty) {
-                return ClrModule.GetPythonType(((ReflectedProperty)value).PropertyType);
-            } else {
-                // TODO: Should be ReflectedGetterSetter.PropertyType once it's available
-                return TypeCache.Object;
-            }
-        }
-
         public override string Description {
             get {
                 var typeName = _type.__repr__(ProjectState.CodeContext);
@@ -69,9 +49,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Property;
+                return ResultType.Property;
             }
         }
 

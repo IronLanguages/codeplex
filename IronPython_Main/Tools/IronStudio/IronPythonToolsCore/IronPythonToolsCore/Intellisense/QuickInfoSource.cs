@@ -24,18 +24,19 @@ using Microsoft.VisualStudio.Text;
 namespace Microsoft.IronPythonTools.Intellisense {
     internal class QuickInfoSource : IQuickInfoSource {
         private readonly ITextBuffer _textBuffer;
+        private readonly QuickInfoSourceProvider _provider;
 
-        public QuickInfoSource(ITextBuffer textBuffer) {
+        public QuickInfoSource(QuickInfoSourceProvider provider, ITextBuffer textBuffer) {
             _textBuffer = textBuffer;
+            _provider = provider;
         }
 
         #region IQuickInfoSource Members
 
         public void AugmentQuickInfoSession(IQuickInfoSession session, System.Collections.Generic.IList<object> quickInfoContent, out ITrackingSpan applicableToSpan) {
-            var start = Analysis.Stopwatch.ElapsedMilliseconds;
             var textBuffer = session.TextView.TextBuffer;
 
-            var vars = Analysis.AnalyzeExpression(
+            var vars = _provider._Analyzer.AnalyzeExpression(
                 textBuffer.CurrentSnapshot,
                 textBuffer,
                 session.CreateTrackingSpan(textBuffer)
@@ -49,7 +50,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
             bool first = true;
             var result = new StringBuilder();            
             int count = 0;
-            List<VariableResult> listVars = new List<VariableResult>(vars.Variables);
+            List<IAnalysisValue> listVars = new List<IAnalysisValue>(vars.Values);
             HashSet<string> descriptions = new HashSet<string>();
             bool multiline = false;
             foreach (var v in listVars) {
@@ -83,10 +84,6 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 result.Insert(0, vars.Expression + ": " + Environment.NewLine);
             } else {
                 result.Insert(0, vars.Expression + ": ");
-            }
-            var end = Analysis.Stopwatch.ElapsedMilliseconds;
-            if (/*Logging &&*/ (end - start) > CompletionList.TooMuchTime) {
-                Trace.WriteLine(String.Format("{0} lookup time {1} for {2} members", this, end - start, count));
             }
 
             quickInfoContent.Add(result.ToString());

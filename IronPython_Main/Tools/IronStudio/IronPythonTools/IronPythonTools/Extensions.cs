@@ -32,30 +32,6 @@ namespace Microsoft.IronPythonTools {
                 location.Column - 1);
         }
 
-        internal static StandardGlyphGroup ToGlyphGroup(this ObjectType objectType) {
-            StandardGlyphGroup group;
-            switch (objectType) {
-                case ObjectType.Class: group = StandardGlyphGroup.GlyphGroupClass; break;
-                case ObjectType.Delegate: group = StandardGlyphGroup.GlyphGroupDelegate; break;
-                case ObjectType.Enum: group = StandardGlyphGroup.GlyphGroupEnum; break;
-                case ObjectType.Namespace: group = StandardGlyphGroup.GlyphGroupNamespace; break;
-                case ObjectType.Multiple: group = StandardGlyphGroup.GlyphGroupOverload; break;
-                case ObjectType.Field: group = StandardGlyphGroup.GlyphGroupField; break;
-                case ObjectType.Module: group = StandardGlyphGroup.GlyphGroupModule; break;
-                case ObjectType.Property: group = StandardGlyphGroup.GlyphGroupProperty; break;
-                case ObjectType.Instance: group = StandardGlyphGroup.GlyphGroupVariable; break;
-                case ObjectType.Constant: group = StandardGlyphGroup.GlyphGroupConstant; break;
-                case ObjectType.EnumMember: group = StandardGlyphGroup.GlyphGroupEnumMember; break;
-                case ObjectType.Event: group = StandardGlyphGroup.GlyphGroupEvent; break;
-                case ObjectType.Function:
-                case ObjectType.Method:
-                default:
-                    group = StandardGlyphGroup.GlyphGroupMethod;
-                    break;
-            }
-            return group;
-        }
-
         internal static bool TryGetAnalysis(this ITextBuffer buffer, out IProjectEntry analysis) {
             return buffer.Properties.TryGetProperty<IProjectEntry>(typeof(IProjectEntry), out analysis);
         }

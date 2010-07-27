@@ -35,8 +35,6 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> Call(Node node, Interpreter.AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
-            AddReference(node, unit);
-
             return _returnTypes;
         }
 
@@ -82,9 +80,9 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public override ObjectType NamespaceType {
+        public override ResultType ResultType {
             get {
-                return ObjectType.Function;
+                return ResultType.Function;
             }
         }
     }

@@ -18,6 +18,7 @@ using Microsoft.IronStudio.Core;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.IronPythonTools.Library;
 
 namespace Microsoft.IronPythonTools.Intellisense {
     [Export(typeof(ICompletionSourceProvider)), ContentType(PythonCoreConstants.ContentType), Order, Name("CompletionProvider")]
@@ -26,6 +27,8 @@ namespace Microsoft.IronPythonTools.Intellisense {
 
         [Import]
         internal IGlyphService _glyphService = null; // Assigned from MEF
+        [Import]
+        internal IPythonAnalyzer _Analysis;
 
         [ImportingConstructor]
         public CompletionSourceProvider(IPythonRuntimeHost host) {
