@@ -19,7 +19,7 @@ using System.Reflection;
 using System.Runtime.Remoting;
 using System.Threading;
 using IronPython.Hosting;
-using Microsoft.IronStudio;
+using Microsoft.IronStudio.RemoteEvaluation;
 using Microsoft.IronStudio.Repl;
 using Microsoft.Scripting.Hosting;
 
@@ -39,7 +39,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
         }
 
         public static RemoteScriptFactory CreateFactory() {
-            return new RemoteScriptFactory(Path.GetDirectoryName(typeof(PythonEvaluator).Assembly.Location), ApartmentState.STA);
+            return new RemoteScriptFactory(Path.GetDirectoryName(typeof(RemoteScriptFactory).Assembly.Location), ApartmentState.STA);
         }
 
         public RemoteScriptFactory RemoteScriptFactory {

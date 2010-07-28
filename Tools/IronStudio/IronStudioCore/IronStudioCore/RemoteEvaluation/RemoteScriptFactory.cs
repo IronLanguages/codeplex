@@ -24,7 +24,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Threading;
 using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.IronStudio {
+namespace Microsoft.IronStudio.RemoteEvaluation {
     /// <summary>
     /// Provides creation of a remote ScriptRuntime for DLR based languages.
     /// 
@@ -60,6 +60,7 @@ namespace Microsoft.IronStudio {
 
                 process = new Process();
                 process.StartInfo = GetProcessStartInfo(aptState, processBasePath);
+                process.StartInfo.FileName = "RemoteScriptFactory.exe";
 
                 _remoteRuntimeProcess = process;
 
@@ -122,6 +123,9 @@ namespace Microsoft.IronStudio {
 
         #region Public APIs
 
+        public static void RunServer(ApartmentState state) {
+            new RemoteProxy(state).StartServer();
+        }
 
         /// <summary>
         /// Creates a ScriptRuntime in the remote process.
@@ -204,25 +208,6 @@ namespace Microsoft.IronStudio {
         #endregion
 
         #region Internal Implementation Details
-
-        /// <summary>
-        /// Called when we start the remote server
-        /// </summary>
-        private static int Main(string[] args) {
-            ApartmentState state;
-            if (args.Length != 1 || !Enum.TryParse<ApartmentState>(args[0], out state)) {
-                Console.WriteLine("Expected no arguments");
-                return 1;
-            }
-
-            try {
-                new RemoteProxy(state).StartServer();
-                return 0;
-            } catch(Exception e) {
-                Console.WriteLine(e);
-                return 2;
-            }
-        }
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern int TerminateProcess(IntPtr processIdOrHandle, uint exitCode);

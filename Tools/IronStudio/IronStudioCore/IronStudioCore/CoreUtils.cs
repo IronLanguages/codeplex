@@ -20,33 +20,17 @@ using Microsoft.VisualStudio.Utilities;
 
 namespace Microsoft.IronStudio.Core {
     public static class CoreUtils {
-        public static IContentType/*!*/ RegisterContentType(
+        public static void RegisterExtensions(
             IContentTypeRegistryService/*!*/ contentTypeRegistryService, 
             IFileExtensionRegistryService/*!*/ fileExtensionRegistryService,
-            string/*!*/ contentTypeName,
-            IEnumerable<string>/*!*/ contentSubtypes,
+            IContentType/*!*/ contentType,
             IEnumerable<string>/*!*/ fileExtensions
         ) {
-            var existing = contentTypeRegistryService.GetContentType(contentTypeName);
-            if (existing != null) {
-                foreach (var extension in new List<string>(fileExtensionRegistryService.GetExtensionsForContentType(existing))) {
-                    fileExtensionRegistryService.RemoveFileExtension(extension);
-                }
-
-                // our content type has been registered by VS (attribute ProvideLanguageService on Package),
-                // but we want it to be a subtype of DlrContentType, so go ahead and remove it and re-register it ourselves.
-                contentTypeRegistryService.RemoveContentType(contentTypeName);
-            }
-
-            var result = contentTypeRegistryService.AddContentType(contentTypeName, contentSubtypes);
-
             foreach (var extension in fileExtensions) {
                 if (fileExtensionRegistryService.GetContentTypeForExtension(extension) == contentTypeRegistryService.UnknownContentType) {
-                    fileExtensionRegistryService.AddFileExtension(extension, result);
+                    fileExtensionRegistryService.AddFileExtension(extension, contentType);
                 }
             }
-
-            return result;
         }
     }
 }

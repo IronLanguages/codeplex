@@ -24,12 +24,12 @@ using System.Runtime.Remoting.Lifetime;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization.Formatters;
 using System.Threading;
-using IronPython.Hosting;
-using IronPython.Runtime;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Win32.SafeHandles;
+using IronPython.Runtime;
+using IronPython.Hosting;
 
-namespace Microsoft.IronStudio {
+namespace Microsoft.IronStudio.RemoteEvaluation {
     class RemoteProxy : MarshalByRefObject {
         private AutoResetEvent _processEvent = new AutoResetEvent(false);
         private AutoResetEvent _shutdownEvent = new AutoResetEvent(false);

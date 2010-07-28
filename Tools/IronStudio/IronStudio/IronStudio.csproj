@@ -15,7 +15,6 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
-    <DeployExtension>false</DeployExtension>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -42,6 +41,17 @@
     <ProjectReference Include="..\IronStudioCore\IronStudioCore.csproj">
       <Project>{843716AE-38B3-4723-963C-950DD06BC4B8}</Project>
       <Name>IronStudioCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\RemoteScriptFactory\RemoteScriptFactory.csproj">
+      <Project>{D10C905C-7F15-41DF-9FF9-CCE461F571FD}</Project>
+      <Name>RemoteScriptFactory</Name>
+      <Private>False</Private>
+      <IncludeOutputGroupsInVSIX>
+        BuiltProjectOutputGroup
+      </IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>
+        DebugSymbolsProjectOutputGroup
+      </IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -297,6 +307,44 @@
     <Compile Include="VisualStudio\Project\VSShellUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
+    <!-- VSIX -->
+    <Content Include="IronStudio.Custom.pkgdef">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+    </Content>
+    <Content Include="$(LanguageBinPath)\Microsoft.Dynamic.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.Metadata.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe.Config">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Resources -->
     <EmbeddedResource Include="IronStudio\Navigation\Resources.resx" />
     <EmbeddedResource Include="IronStudio\Project\Resources.resx">
       <DependentUpon>Resources.cs</DependentUpon>

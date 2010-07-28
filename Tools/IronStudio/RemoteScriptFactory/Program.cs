@@ -13,24 +13,28 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
+using Microsoft.IronStudio.RemoteEvaluation;
 
 namespace Microsoft.IronStudio {
-    /// <summary>
-    /// Special MarshalByRefObject which is used to communicate we need to abort
-    /// the current work item on a 2ndary async communication channel.
-    /// </summary>
-    class AsyncAbort : MarshalByRefObject {
-        private readonly RemoteProxy _proxy;
+    class Program {
+        /// <summary>
+        /// Called when we start the remote server
+        /// </summary>
+        private static int Main(string[] args) {
+            ApartmentState state;
+            if (args.Length != 1 || !Enum.TryParse<ApartmentState>(args[0], out state)) {
+                Console.WriteLine("Expected no arguments");
+                return 1;
+            }
 
-        public AsyncAbort(RemoteProxy proxy) {
-            _proxy = proxy;
-        }
-
-        public void Abort() {
-            _proxy.Abort();
+            try {
+                RemoteScriptFactory.RunServer(state);
+                return 0;
+            } catch (Exception e) {
+                Console.WriteLine(e);
+                return 2;
+            }
         }
     }
 }

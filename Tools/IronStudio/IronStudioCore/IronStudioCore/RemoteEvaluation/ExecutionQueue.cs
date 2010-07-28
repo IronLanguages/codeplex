@@ -18,7 +18,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Microsoft.IronStudio {
+namespace Microsoft.IronStudio.RemoteEvaluation {
     class ExecutionQueue {
         private readonly Thread _executionThread;
         private bool _shouldShutDown;

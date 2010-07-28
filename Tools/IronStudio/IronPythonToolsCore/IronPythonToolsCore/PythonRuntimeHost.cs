@@ -30,13 +30,8 @@ namespace Microsoft.IronPythonTools {
         [ImportingConstructor]
         internal PythonRuntimeHost(IContentTypeRegistryService/*!*/ contentTypeRegistryService, IFileExtensionRegistryService/*!*/ fileExtensionRegistryService) {
             _engine = Python.CreateEngine(new Dictionary<string, object> { { "NoAssemblyResolveHook", true } });
-            _contentType = CoreUtils.RegisterContentType(
-                contentTypeRegistryService,
-                fileExtensionRegistryService,
-                PythonCoreConstants.ContentType,
-                new[] { CoreConstants.DlrContentTypeName },
-                _engine.Setup.FileExtensions
-            );   
+            _contentType = contentTypeRegistryService.GetContentType(PythonCoreConstants.ContentType);
+            CoreUtils.RegisterExtensions(contentTypeRegistryService, fileExtensionRegistryService, _contentType, _engine.Setup.FileExtensions);   
         }
 
         public ScriptEngine ScriptEngine {

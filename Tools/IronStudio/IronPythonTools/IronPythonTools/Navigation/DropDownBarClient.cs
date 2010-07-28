@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -67,6 +68,9 @@ namespace Microsoft.IronPythonTools.Navigation {
         private const int NestedComboBoxId = 1;
 
         public DropDownBarClient(IWpfTextView textView, IPythonProjectEntry classifier) {
+            Debug.Assert(textView != null);
+            Debug.Assert(classifier != null);
+                
             _classifier = classifier;
             _classifier.OnNewParseTree += ParserOnNewParseTree;
             _textView = textView;

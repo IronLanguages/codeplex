@@ -22,15 +22,15 @@
     </SupportedProducts>
     <SupportedFrameworkRuntimeEdition MinVersion="4.0" MaxVersion="4.0" />
   </Identifier>
-  <References />
+  <References>
+    <Reference Id="F2D788A4-C316-4623-AE3A-FBE7E3E59E1A" MinVersion="1.0" MaxVersion="1.0">
+      <Name>IronStudio</Name>
+    </Reference>
+  </References>
   <Content>
-    <VsPackage>|%CurrentProject%;PkgdefProjectOutputGroup|</VsPackage>
-    <VsPackage>|IronStudio;PkgdefProjectOutputGroup|</VsPackage>
+    <VsPackage>|%CurrentProject%|</VsPackage>
     <Assembly AssemblyName="IronPython">IronPython</Assembly>
-    <Assembly AssemblyName="IronStudio">IronStudio</Assembly>
     <MefComponent>|%CurrentProject%|</MefComponent>
-    <MefComponent>|IronStudio|</MefComponent>
-    <MefComponent>|IronStudioCore|</MefComponent>
     <MefComponent>|IronPythonToolsCore|</MefComponent>
     <ProjectTemplate>Templates\Projects\ConsoleAppProject</ProjectTemplate>
     <ProjectTemplate>Templates\Projects\WinformsProject</ProjectTemplate>
