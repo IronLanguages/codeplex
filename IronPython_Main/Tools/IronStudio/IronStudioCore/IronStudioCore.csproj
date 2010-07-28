@@ -40,8 +40,8 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="IronPython, Version=0.0.0.0, Culture=neutral">
-      <SpecificVersion>False</SpecificVersion>
+    <!-- TODO: Remove this reference. We shouldn't depend on IronPython -->
+    <Reference Include="IronPython">
       <HintPath>$(LanguageBinPath)\IronPython.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic">
@@ -87,6 +87,8 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.XML" />
@@ -109,6 +111,11 @@
     <Compile Include="IronStudioCore\Intellisense\XamlAnalysis.cs" />
     <Compile Include="IronStudioCore\ISnapshotTextContentProvider.cs" />
     <Compile Include="IronStudioCore\Navigation\IScopeNode.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\AsyncAbort.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\ExecutionQueue.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\ExecutionQueueItem.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\RemoteProxy.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\RemoteScriptFactory.cs" />
     <Compile Include="IronStudioCore\Repl\Reader.cs" />
     <Compile Include="IronStudioCore\Repl\ReplIntellisenseMode.cs" />
     <Compile Include="IronStudioCore\Repl\ReplPrompt.cs" />

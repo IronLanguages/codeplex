@@ -144,13 +144,13 @@ namespace Microsoft.IronStudio.Project {
 
         public virtual string InstallPath {
             get {
-                return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                return Path.GetDirectoryName(typeof(CommonStarter).Assembly.Location);
             }
         }
 
         public virtual string ChironPath {
             get {
-                return "Silverlight\\bin\\Chiron.exe";
+                return Path.Combine(Path.GetDirectoryName(typeof(CommonStarter).Assembly.Location), "Chiron.exe");
             }
         }
 
@@ -168,7 +168,7 @@ namespace Microsoft.IronStudio.Project {
 
             if (_chironProcess == null || _chironProcess.HasExited) {                
                 // start Chiron
-                var chironPath = Path.Combine(InstallPath, ChironPath);
+                var chironPath = ChironPath;
                 // Get a free port
                 _chironPort = GetFreePort();
 

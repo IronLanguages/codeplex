@@ -61,11 +61,12 @@ namespace Microsoft.IronPythonTools.Navigation {
         }
 
         private int AddDropDownBar() {
-            DropDownBarClient dropDown = _client = new DropDownBarClient(
-                _textView,
-                _textView.TextBuffer.GetAnalysis() as IPythonProjectEntry
-            );
+            var pythonProjectEntry = _textView.TextBuffer.GetAnalysis() as IPythonProjectEntry;
+            if (pythonProjectEntry == null) {
+                return VSConstants.E_FAIL;
+            }
 
+            DropDownBarClient dropDown = _client = new DropDownBarClient(_textView, pythonProjectEntry);
             IVsDropdownBarManager manager = (IVsDropdownBarManager)_window;
 
             IVsDropdownBar dropDownBar;

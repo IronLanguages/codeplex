@@ -12,13 +12,15 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.ComponentModel.Composition;
+using Microsoft.IronStudio;
+using Microsoft.VisualStudio.Utilities;
 
 namespace Microsoft.IronPythonTools {
     internal static class PythonCoreConstants {
         public const string ContentType = "IronPython";
+
+        [Export, Name(ContentType), BaseDefinition(CoreConstants.DlrContentTypeName)]
+        internal static ContentTypeDefinition ContentTypeDefinition = null;
     }
 }

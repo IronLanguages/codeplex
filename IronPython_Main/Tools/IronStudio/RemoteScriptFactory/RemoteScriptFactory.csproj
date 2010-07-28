@@ -13,7 +13,8 @@
     <RootNamespace>Microsoft.IronStudio</RootNamespace>
     <AssemblyName>RemoteScriptFactory</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
@@ -40,9 +41,6 @@
     <AssemblyOriginatorKeyFile>..\..\..\Internal\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="IronPython">
-      <HintPath>$(LanguageBinPath)\IronPython.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Dynamic">
       <HintPath>$(LanguageBinPath)\Microsoft.Dynamic.dll</HintPath>
     </Reference>
@@ -60,12 +58,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AsyncAbort.cs" />
-    <Compile Include="ExecutionQueue.cs" />
-    <Compile Include="ExecutionQueueItem.cs" />
-    <Compile Include="RemoteProxy.cs" />
-    <Compile Include="RemoteScriptFactory.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IronStudioCore\IronStudioCore.csproj">
+      <Project>{843716AE-38B3-4723-963C-950DD06BC4B8}</Project>
+      <Name>IronStudioCore</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

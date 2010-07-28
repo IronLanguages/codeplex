@@ -40,7 +40,6 @@ namespace Microsoft.IronStudio.Library.Repl {
     public class ReplWindow : IReplWindow, IReplWindowCommands, IReplPromptProvider, IMixedBuffer, IDisposable {
         private DockPanel _panel;
         private ComboBox _scopebox;
-        private int _tabSize = 4;
         private AutoResetEvent _inputEvent = new AutoResetEvent(false);
         private bool _useSmartUpDown;
 

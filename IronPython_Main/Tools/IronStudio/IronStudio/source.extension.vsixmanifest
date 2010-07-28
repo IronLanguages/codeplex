@@ -23,8 +23,9 @@
   </Identifier>
   <References />
   <Content>
-    <VsPackage>|%CurrentProject%;PkgdefProjectOutputGroup|</VsPackage>
+    <VsPackage>|%CurrentProject%|</VsPackage>
     <Assembly AssemblyName="IronStudio">IronStudio</Assembly>
-    <MefComponent>|IronStudio|</MefComponent>
+    <MefComponent>|%CurrentProject%|</MefComponent>
+    <MefComponent>|IronStudioCore|</MefComponent>
   </Content>
 </Vsix>

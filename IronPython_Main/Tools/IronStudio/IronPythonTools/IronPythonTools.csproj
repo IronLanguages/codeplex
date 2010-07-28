@@ -41,47 +41,58 @@
     <ProjectReference Include="..\IronPythonToolsCore\IronPythonToolsCore.csproj">
       <Project>{B2E267A2-4836-40D7-817E-49D9D0E88435}</Project>
       <Name>IronPythonToolsCore</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+      <IncludeOutputGroupsInVSIX>
+        BuiltProjectOutputGroup
+      </IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>
+        DebugSymbolsProjectOutputGroup
+      </IncludeOutputGroupsInVSIXLocalOnly>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\IronStudioCore\IronStudioCore.csproj">
       <Project>{843716AE-38B3-4723-963C-950DD06BC4B8}</Project>
       <Name>IronStudioCore</Name>
+      <IncludeOutputGroupsInVSIX>
+      </IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>
+      </IncludeOutputGroupsInVSIXLocalOnly>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\IronStudio\IronStudio.csproj">
       <Project>{C98DE16D-417E-4079-8939-1F8C8E28E2C8}</Project>
       <Name>IronStudio</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bPkgdefProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
-    <ProjectReference Include="..\RemoteScriptFactory\RemoteScriptFactory.csproj">
-      <Project>{D10C905C-7F15-41DF-9FF9-CCE461F571FD}</Project>
-      <Name>RemoteScriptFactory</Name>
       <IncludeOutputGroupsInVSIX>
-        BuiltProjectOutputGroup;
       </IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>
+      </IncludeOutputGroupsInVSIXLocalOnly>
+      <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="IronPython">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(LanguageBinPath)\IronPython.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="IronPython.Modules">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(LanguageBinPath)\IronPython.Modules.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Dynamic">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(LanguageBinPath)\Microsoft.Dynamic.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Scripting">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(LanguageBinPath)\Microsoft.Scripting.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Scripting.Debugging">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Accessibility">
       <EmbedInteropTypes>False</EmbedInteropTypes>
@@ -255,16 +266,6 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe.Config">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
     <Content Include="$(LanguageBinPath)\ipyw.exe">
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>.</VSIXSubPath>
@@ -281,21 +282,6 @@
       <Visible>false</Visible>
     </Content>
     <Content Include="$(LanguageBinPath)\IronPython.Modules.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Dynamic.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.dll">
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>.</VSIXSubPath>
       <Visible>false</Visible>

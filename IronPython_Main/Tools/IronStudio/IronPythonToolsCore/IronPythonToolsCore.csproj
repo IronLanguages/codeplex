@@ -203,10 +203,6 @@
       <Project>{843716AE-38B3-4723-963C-950DD06BC4B8}</Project>
       <Name>IronStudioCore</Name>
     </ProjectReference>
-    <ProjectReference Include="..\RemoteScriptFactory\RemoteScriptFactory.csproj">
-      <Project>{D10C905C-7F15-41DF-9FF9-CCE461F571FD}</Project>
-      <Name>RemoteScriptFactory</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
