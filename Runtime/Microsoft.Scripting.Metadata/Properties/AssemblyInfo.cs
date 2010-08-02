@@ -61,7 +61,7 @@ using System.Security.Permissions;
 [assembly: InternalsVisibleTo("Metadata")]
 #endif
 
-[assembly: AssemblyVersion("1.1.0.1")]
-[assembly: AssemblyFileVersion("2.7.1007.0")]
+[assembly: AssemblyVersion("1.1.0.10")]
+[assembly: AssemblyFileVersion("2.7.1008.0")]
 [assembly: AssemblyInformationalVersion("2.7")]
 
