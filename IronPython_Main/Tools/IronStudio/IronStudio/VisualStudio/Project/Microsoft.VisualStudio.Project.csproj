@@ -205,6 +205,7 @@
     <None Include="Diagrams\HierarchyClasses.cd" />
     <None Include="Diagrams\PropertiesClasses.cd" />
     <None Include="Diagrams\ReferenceClasses.cd" />
+    <None Include="Key.snk" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="VisualStudio.Project.resx">
