@@ -21,7 +21,7 @@ namespace Microsoft.IronStudio.Intellisense {
     /// Walks the XAML file and provides data based upon things which should be provided via intellisense.
     /// </summary>
     public sealed class XamlAnalysis {
-        private readonly Dictionary<string, XamlType> _knownTypes = new Dictionary<string, XamlType>();
+        private readonly Dictionary<string, XamlTypeReference> _knownTypes = new Dictionary<string, XamlTypeReference>();
         private readonly Dictionary<string, XamlMemberReference> _eventInfo = new Dictionary<string, XamlMemberReference>();
 
         enum MemberType {
@@ -97,7 +97,7 @@ namespace Microsoft.IronStudio.Intellisense {
                             switch (nameStack.Peek()) {
                                 case MemberType.XName:
                                     // we are writing a x:Name, save it so we can later get the name from the scope                                    
-                                    _knownTypes[(string)value] = objectTypes.Peek();
+                                    _knownTypes[(string)value] = new XamlTypeReference(objectTypes.Peek(), reader.LineNumber, reader.LinePosition);
                                     break;
                                 case MemberType.Event:
                                     // we have an event handler, save the method name and the XamlMember for the event
@@ -114,7 +114,7 @@ namespace Microsoft.IronStudio.Intellisense {
         /// <summary>
         /// Dictionary from object name to type information for that object.
         /// </summary>
-        public Dictionary<string, XamlType> NamedObjects {
+        public Dictionary<string, XamlTypeReference> NamedObjects {
             get {
                 return _knownTypes;
             }
@@ -139,6 +139,18 @@ namespace Microsoft.IronStudio.Intellisense {
 
         public XamlMemberReference(XamlMember member, int lineNo, int lineOffset) {
             Member = member;
+            LineNumber = lineNo;
+            LineOffset = lineOffset;
+        }
+    }
+
+    public struct XamlTypeReference {
+        public readonly XamlType Type;
+        public readonly int LineNumber;
+        public readonly int LineOffset;
+
+        public XamlTypeReference(XamlType type, int lineNo, int lineOffset) {
+            Type = type;
             LineNumber = lineNo;
             LineOffset = lineOffset;
         }

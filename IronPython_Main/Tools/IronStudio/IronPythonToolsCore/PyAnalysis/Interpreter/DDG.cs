@@ -55,7 +55,6 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 // we need to re-enqueue those files.
                 if (existingRef.References != null) {
                     foreach (var referer in existingRef.References) {
-                        Console.WriteLine("Enqueueing references");
                         referer.Enqueue();
                     }
 
@@ -95,12 +94,10 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
         public T LookupDefinition<T>(Node node, string name) where T : Namespace {
             var defined = _eval.LookupNamespaceByName(node, name, false);
-            if (defined != null) {
-                foreach (var definition in defined) {
-                    T result = definition as T;
-                    if (result != null) {
-                        return result;
-                    }
+            foreach (var definition in defined) {
+                T result = definition as T;
+                if (result != null) {
+                    return result;
                 }
             }
             return null;
@@ -115,7 +112,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 }
 
                 vars.AddAssignment(left, _unit);
-                vars.AddTypes(l, _unit, values, false);
+                vars.AddTypes(l, _unit, values);
             } else if (left is MemberExpression) {
                 var l = (MemberExpression)left;
                 foreach (var obj in _eval.Evaluate(l.Target)) {
@@ -147,8 +144,10 @@ namespace Microsoft.PyAnalysis.Interpreter {
         }
 
         public override bool Walk(AugmentedAssignStatement node) {
+            var right = _eval.Evaluate(node.Right);
+
             foreach (var x in _eval.Evaluate(node.Left)) {
-                x.AugmentAssign(node, _unit, _eval.Evaluate(node.Right));
+                x.AugmentAssign(node, _unit, right);
             }
             return false;
         }
@@ -376,7 +375,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             
             if (newScope.IsClassMethod) {
                 if (newScope.ParameterTypes.Length > 0) {
-                    newScope.ParameterTypes[0].AddTypes(funcdef.Parameters[0], _unit, ProjectState._typeObj.SelfSet, addReference: false);
+                    newScope.ParameterTypes[0].AddTypes(funcdef.Parameters[0], _unit, ProjectState._typeObj.SelfSet);
                 }
             } else if (!newScope.IsStatic) {
                 // self is always an instance of the class
@@ -390,7 +389,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                     }
                 }
                 if (selfInst != null && newScope.ParameterTypes.Length > 0) {
-                    newScope.ParameterTypes[0].AddTypes(funcdef.Parameters[0], _unit, selfInst.SelfSet, addReference: false);
+                    newScope.ParameterTypes[0].AddTypes(funcdef.Parameters[0], _unit, selfInst.SelfSet);
                 }
             }
         }
@@ -427,7 +426,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 if (p.DefaultValue != null) {
                     var val = _eval.Evaluate(p.DefaultValue);
                     if (val != null) {
-                        v.AddTypes(p, _unit, val, addReference: false);
+                        v.AddTypes(p, _unit, val);
                     }
                 }
             }
@@ -524,7 +523,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 var retVal = curFunc.Function.ReturnValue;
                 int typeCount = retVal.Types.Count;
                 foreach (var type in lookupRes) {
-                    retVal.Types.Add(type, _unit);
+                    retVal.AddTypes(node, _unit, type);
                 }
                 if (typeCount != retVal.Types.Count) {
                     retVal.EnqueueDependents();

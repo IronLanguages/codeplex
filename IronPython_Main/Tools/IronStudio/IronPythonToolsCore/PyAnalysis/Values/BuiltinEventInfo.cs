@@ -34,21 +34,25 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override void AugmentAssign(AugmentedAssignStatement node, AnalysisUnit unit, ISet<Namespace> value) {
             base.AugmentAssign(node, unit, value);
-            var p = ((Type)_type).GetMethod("Invoke").GetParameters();
-            var args = new ISet<Namespace>[p.Length];
-            for (int i = 0; i < p.Length; i++) {
-                var argType = ClrModule.GetPythonType(p[i].ParameterType);
-                var ns = ProjectState.GetNamespaceFromObjects(argType);
-                args[i] = ns.SelfSet;
-            }
+            var args = GetEventInvokeArgs(ProjectState,  _type);
             foreach (var r in value) {
                 r.Call(node, unit, args, ArrayUtils.EmptyStrings);
             }
         }
 
+        internal static ISet<Namespace>[] GetEventInvokeArgs(ProjectState state, Type type) {
+            var p = type.GetMethod("Invoke").GetParameters();
+
+            var args = new ISet<Namespace>[p.Length];
+            for (int i = 0; i < p.Length; i++) {
+                args[i] = state.GetInstance(p[i].ParameterType).SelfSet;
+            }
+            return args;
+        }
+
         public override string Description {
             get {
-                return "event of type " + _value.ToString();
+                return "event of type " + _value.Info.EventHandlerType.ToString();
             }
         }
 

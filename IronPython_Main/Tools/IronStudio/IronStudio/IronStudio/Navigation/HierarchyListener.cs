@@ -121,7 +121,7 @@ namespace Microsoft.IronStudio.Navigation {
         public int OnItemAdded(uint itemidParent, uint itemidSiblingPrev, uint itemidAdded) {
             // Check if the item is my language file.
             string name;
-            if (!IsMyLanguageFile(itemidAdded, out name)) {
+            if (!IsAnalyzableSource(itemidAdded, out name)) {
                 return VSConstants.S_OK;
             }
 
@@ -136,7 +136,7 @@ namespace Microsoft.IronStudio.Navigation {
         public int OnItemDeleted(uint itemid) {
             // Notify that the item is deleted only if it is my language file.
             string name;
-            if (!IsMyLanguageFile(itemid, out name)) {
+            if (!IsAnalyzableSource(itemid, out name)) {
                 return VSConstants.S_OK;
             }
             if (null != onItemDeleted) {
@@ -178,7 +178,7 @@ namespace Microsoft.IronStudio.Navigation {
             while (VSConstants.VSITEMID_NIL != currentItem) {
                 // If this item is a my language file, then send the add item event.
                 string itemName;
-                if ((null != onItemAdded) && IsMyLanguageFile(currentItem, out itemName)) {
+                if ((null != onItemAdded) && IsAnalyzableSource(currentItem, out itemName)) {
                     HierarchyEventArgs args = new HierarchyEventArgs(currentItem, itemName);
                     onItemAdded(_hierarchy, args);
                 }
@@ -214,7 +214,7 @@ namespace Microsoft.IronStudio.Navigation {
             }
         }
 
-        private bool IsMyLanguageFile(uint itemId, out string canonicalName) {
+        private bool IsAnalyzableSource(uint itemId, out string canonicalName) {
             // Find out if this item is a physical file.
             Guid typeGuid;
             canonicalName = null;
@@ -230,7 +230,8 @@ namespace Microsoft.IronStudio.Navigation {
             if (ErrorHandler.Failed(hr)) {
                 return false;
             }
-            return CommonUtils.IsRecognizedFile(canonicalName, _engine);
+            return (System.IO.Path.GetExtension(canonicalName).Equals(".xaml", StringComparison.OrdinalIgnoreCase)) || 
+                   CommonUtils.IsRecognizedFile(canonicalName, _engine);
         }        
 
         /// <summary>

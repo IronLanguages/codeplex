@@ -51,11 +51,26 @@ namespace Microsoft.PyAnalysis {
         public IEnumerable<IAnalysisValue> GetValues(string exprText, int lineNumber) {
             var expr = GetExpressionFromText(exprText);
             var scopes = FindScopes(lineNumber);
-            var eval = new ExpressionEvaluator(_unit.CopyForEval(), FindScopes(lineNumber).ToArray());
+            var eval = new ExpressionEvaluator(_unit.CopyForEval(), scopes.ToArray());
 
             var res = eval.Evaluate(expr);
             foreach (var v in res) {
                 yield return v;
+            }
+        }
+
+        private IEnumerable<IAnalysisVariable> ToVariables(IReferenceable referenceable) {
+            LocatedVariableDef locatedDef = referenceable as LocatedVariableDef;
+            if (locatedDef != null) {
+                yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(locatedDef.Entry, locatedDef.Node.Start.Line, locatedDef.Node.Start.Column, locatedDef.Node.Span.Length));
+            }
+
+            foreach (var reference in referenceable.Definitions) {
+                yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Line, reference.Value.Column, reference.Value.Length));
+            }
+
+            foreach (var reference in referenceable.References) {
+                yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Line, reference.Value.Column, reference.Value.Length));
             }
         }
 
@@ -74,20 +89,36 @@ namespace Microsoft.PyAnalysis {
                 for (int i = scopes.Count - 1; i >= 0; i--) {
                     VariableDef def;
                     if (IncludeScope(scopes, i, lineNumber) && scopes[i].Variables.TryGetValue(name.Name, out def)) {
-
-                        LocatedVariableDef locatedDef = def as LocatedVariableDef;
-                        if (locatedDef != null) {
-                            yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(locatedDef.Entry, locatedDef.Node.Start.Line, locatedDef.Node.Start.Column, locatedDef.Node.Span.Length));
-                        }
-                        
-                        foreach (var reference in def.Assignments) {
-                            yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
-                        }
-                        
-                        foreach (var reference in def.References) {
-                            yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                        foreach (var res in ToVariables(def)) {
+                            yield return res;
                         }
 
+                        if (scopes[i] is FunctionScope) {
+                            // if this is a parameter or a local indicate any values which we know are assigned to it.
+                            foreach (var type in def.Types) {
+                                if (type.Location != null) {
+                                    yield return new AnalysisVariable(VariableType.Value, type.Location);
+                                }
+                            }
+                        } else if (scopes[i] is ModuleScope) {
+                            foreach (var type in def.Types) {
+                                if (type.Location != null) {
+                                    yield return new AnalysisVariable(VariableType.Definition, type.Location);
+                                }
+
+                                foreach (var reference in type.References) {
+                                    yield return new AnalysisVariable(VariableType.Reference, reference);
+                                }
+                            }
+                        }
+
+                    }
+                }
+
+                var variables = _unit.ProjectState.BuiltinModule.GetDefinitions(name.Name);
+                foreach (var referenceable in variables) {
+                    foreach (var res in ToVariables(referenceable)) {
+                        yield return res;
                     }
                 }
             }
@@ -97,17 +128,17 @@ namespace Microsoft.PyAnalysis {
                 var objects = eval.Evaluate(member.Target);
 
                 foreach (var v in objects) {
-                    var container = v as IVariableDefContainer;
+                    var container = v as IReferenceableContainer;
                     if (container != null) {
                         var defs = container.GetDefinitions(member.Name);
 
                         foreach (var def in defs) {
-                            foreach (var reference in def.Assignments) {
-                                yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                            foreach (var reference in def.Definitions) {
+                                yield return new AnalysisVariable(VariableType.Definition, new LocationInfo(reference.Key, reference.Value.Line, reference.Value.Column, reference.Value.Length));
                             }
 
                             foreach (var reference in def.References) {
-                                yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Start.Line, reference.Value.Start.Column, reference.Value.Length));
+                                yield return new AnalysisVariable(VariableType.Reference, new LocationInfo(reference.Key, reference.Value.Line, reference.Value.Column, reference.Value.Length));
                             }
                         }
                     }
@@ -424,7 +455,15 @@ namespace Microsoft.PyAnalysis {
                 prevScope = curScope;
 
                 // TODO: Binary search?
-                foreach (var scope in curScope.Children) {
+                // We currently search backwards because the end positions are sometimes unreliable
+                // and go onto the next line overlapping w/ the previous definition.  Therefore searching backwards always 
+                // hits the valid method first matching on Start.  For example:
+                // def f():  # Starts on 1, ends on 3
+                //     pass
+                // def g():  # starts on 3, ends on 4
+                //     pass
+                for (int i = curScope.Children.Count - 1; i >= 0; i--) {
+                    var scope = curScope.Children[i];
                     if (scope.Start <= lineNumber && scope.Stop >= lineNumber) {
                         curScope = scope;                        
                         chain.Add(curScope.Scope);

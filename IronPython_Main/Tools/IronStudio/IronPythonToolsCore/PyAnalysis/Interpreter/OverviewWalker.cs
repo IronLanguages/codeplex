@@ -26,6 +26,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
         private readonly List<InterpreterScope> _scopes;
         private readonly ProjectEntry _entry;
         private readonly Stack<ScopePositionInfo> _scopeTree;
+        private readonly Stack<AnalysisUnit> _analysisStack = new Stack<AnalysisUnit>();
         private AnalysisUnit _curUnit;
 
         public OverviewWalker(ProjectEntry entry, AnalysisUnit topAnalysis) {
@@ -50,13 +51,14 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
             var scopes = new InterpreterScope[_scopes.Count + 1];
             _scopes.CopyTo(scopes);
-
+            
+            _analysisStack.Push(_curUnit);
             var unit = _curUnit = new AnalysisUnit(node, scopes, _curUnit);
             var klass = new ClassInfo(unit, _entry);
             var classScope = klass.Scope;
 
             var scope = _scopes.Peek();
-            scope.SetVariable(node, unit, node.Name, klass.SelfSet, false);
+            scope.SetVariable(node, unit, node.Name, klass.SelfSet);
 
             _scopes.Push(classScope);
             scopes[scopes.Length - 1] = classScope;            
@@ -71,6 +73,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             if (node.Body != null && node.Name != null) {
                 _scopes.Pop();
                 _scopeTree.Pop();
+                _curUnit = _analysisStack.Pop();
             }
         }
 
@@ -82,7 +85,8 @@ namespace Microsoft.PyAnalysis.Interpreter {
             var queue = _entry.ProjectState.Queue;
             var scopes = new InterpreterScope[_scopes.Count + 1];
             _scopes.CopyTo(scopes);
-            
+
+            _analysisStack.Push(_curUnit);
             var unit = _curUnit = new AnalysisUnit(node, scopes, _curUnit);
             var function = new FunctionInfo(unit, _entry);
             var funcScope = new FunctionScope(function);
@@ -94,7 +98,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             if (!node.IsLambda) {
                 // lambdas don't have their names published
                 var scope = _scopes[_scopes.Count - 2];
-                scope.SetVariable(node, unit, node.Name, function.SelfSet, false);
+                scope.SetVariable(node, unit, node.Name, function.SelfSet);
             }
 
             var newParams = new VariableDef[node.Parameters.Count];
@@ -113,6 +117,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
             if (node.Body != null && node.Name != null) {
                 _scopes.Pop();
                 _scopeTree.Pop();
+                _curUnit = _analysisStack.Pop();
             }
         }
 

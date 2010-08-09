@@ -29,7 +29,7 @@ namespace Microsoft.IronStudio.Library.Repl {
     public abstract class DlrEvaluator : ReplEvaluator, IDlrEvaluator {
         protected ScriptEngine _engine;
         protected ScriptScope _currentScope;
-        protected Thread _thread, _targetThread;
+        protected Thread _thread;
         protected Dispatcher _currentDispatcher;
         private int _varCounter;
 
@@ -70,25 +70,6 @@ namespace Microsoft.IronStudio.Library.Repl {
             _thread.Start();
         }
 
-        // [ReplCommand("to_gui")
-        public void SwitchToTargetThread() {
-            if (_targetThread == null) {
-                WriteException(new ObjectHandle(new Exception("Not attached to running program")));
-                return;
-            }
-            var dispatcher = Dispatcher.FromThread(_targetThread);
-            if (dispatcher == null) {
-                WriteException(new ObjectHandle(new Exception("Running program is not a GUI application")));
-                return;
-            }
-            _currentDispatcher = dispatcher;
-        }
-
-        // [ReplCommand("to_repl")
-        public void SwitchToOurThread() {
-            _currentDispatcher = Dispatcher.FromThread(_thread);
-        }
-
         protected void OutputResult(object result, ObjectHandle exception) {
             if (exception != null) {
                 WriteException(exception);
@@ -99,7 +80,6 @@ namespace Microsoft.IronStudio.Library.Repl {
         }
 
         public override string FormatException(ObjectHandle exception) {
-            // TODO: ???
             return _engine.GetService<ExceptionOperations>().FormatException(exception);
         }
 
@@ -118,12 +98,7 @@ namespace Microsoft.IronStudio.Library.Repl {
         protected Dispatcher Dispatcher {
             get {
                 if (_currentDispatcher == null) {
-                    // First try the target thread and use its dispatcher if possible
-                    _currentDispatcher = Dispatcher.FromThread(_targetThread);
-                    if (_currentDispatcher == null) {
-                        // Fall back to our own dispatcher
-                        _currentDispatcher = Dispatcher.FromThread(_thread);
-                    }
+                    _currentDispatcher = Dispatcher.FromThread(_thread);
                 }
                 return _currentDispatcher;
             }
@@ -149,49 +124,7 @@ namespace Microsoft.IronStudio.Library.Repl {
         }
 
         public override bool ExecuteText(string text, Action<bool, ObjectHandle> completionFunction) {
-            return ExecuteTextInScope(text, _currentScope, completionFunction);
-        }
-
-        // Called by debugger to do an Eval at a breakpoint. 
-        // This should be called on the Eval thread.
-        // This is a blocking call and pumps our own thread to execute until the eval finishes.
-        // So this will invoke completionFunction before it returns.
-        // In a debug-context, all other threads may be suspended by the debugger, so 
-        // be careful of cross-thread calls.
-        public bool ExecuteTextInScopeAndBlock(string text, Scope scope, Action<bool, ObjectHandle> completionFunction) {
-            Debug.Assert(scope != null);
-
-            // Setup a nested dispatcher pump.
-            DispatcherFrame frame = new DispatcherFrame();
-
-
-            var d = this.Dispatcher;
-
-            // This should be called on the current thread
-            Debug.Assert(Dispatcher.CurrentDispatcher == d);
-            Debug.Assert(_thread == Thread.CurrentThread);
-
-
-            var ss = Microsoft.Scripting.Hosting.Providers.HostingHelpers.CreateScriptScope(_engine, scope);
-            var result = ExecuteTextInScope(text, ss, completionFunction);
-
-            // Queue exit message after we queue the real work.
-            d.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(ExitFrameHelper), frame);
-
-            Dispatcher.PushFrame(frame); // blocks for exit message.
-
-
-            return result;
-        }
-
-        // Helper to get our nested Dispatched to exit.
-        private object ExitFrameHelper(object f) {
-            ((DispatcherFrame)f).Continue = false;
-            return null;
-        }
-
-        public bool ExecuteTextInScope(string text, ScriptScope scope, Action<bool, ObjectHandle> completionFunction) {
-            return ExecuteTextInScopeWorker(text, scope, SourceCodeKind, (r, e) => FinishExecution(r, e, completionFunction));
+            return ExecuteTextInScopeWorker(text, _currentScope, SourceCodeKind, (r, e) => FinishExecution(r, e, completionFunction));
         }
 
         private bool ExecuteTextInScopeWorker(string text, ScriptScope scope, SourceCodeKind kind, Action<ObjectHandle, ObjectHandle> completionFunction) {
@@ -205,15 +138,6 @@ namespace Microsoft.IronStudio.Library.Repl {
                 return false;
             }
             // Allow re-entrant execution.
-
-            if (Dispatcher.HasShutdownStarted) {
-                SwitchToOurThread();
-                if (Dispatcher.HasShutdownStarted) {
-                    WriteException(new ObjectHandle(new Exception("This dispatcher is no longer running")));
-                    return false;
-                }
-                WriteLine("(switching back to REPL dispatcher)");
-            }
 
             Dispatcher.BeginInvoke(new Action(() => {
                 ObjectHandle result = null;
@@ -326,10 +250,6 @@ namespace Microsoft.IronStudio.Library.Repl {
             if (dispatcher != null) {
                 dispatcher.BeginInvokeShutdown(DispatcherPriority.Send);
             }
-            var otherDispatcher = Dispatcher.FromThread(_targetThread);
-            if (otherDispatcher != null && otherDispatcher != dispatcher) {
-                otherDispatcher.BeginInvokeShutdown(DispatcherPriority.Send);
-            }
         }
 
         private void Execute() {
@@ -386,23 +306,6 @@ namespace Microsoft.IronStudio.Library.Repl {
             return _currentScope;
         }
 
-        internal override object GetObjectMember(object obj, string name) {
-            var dobj = (obj as DispatcherObject);
-            if (dobj != null && dobj.CheckAccess()) {
-                var dlg = (Func<object, string, object>)GetObjectMember;
-                return dobj.Dispatcher.Invoke(dlg, obj, name);
-            }
-
-            object result = null;
-            try {
-                // TODO: case-sensitivity
-                _engine.Operations.TryGetMember(obj, name, false, out result);
-            } catch {
-                // TODO: Log error?
-            }
-            return result;
-        }
-
         protected override string[] GetObjectMemberNames(ObjectHandle obj, string startsWith) {
             try {
                 return FilterNames(_engine.Operations.GetMemberNames(obj), startsWith);
@@ -436,21 +339,6 @@ namespace Microsoft.IronStudio.Library.Repl {
                     severity));
             }
         }
-#if FALSE
-        public override WorkspaceVariable[] GetVariablesInGlobalScope() {
-            var result = new List<WorkspaceVariable>();
-            foreach (var v in _scope.GetItems())
-            {
-                var obj = v.Value;
-                result.Add(new WorkspaceVariable {
-                    Name = v.Key,
-                    Value = (obj == null) ? "null" : obj.ToString(),
-                    Type = (obj == null) ? "none" : obj.GetType().Name
-                });
-            }
-            return result.ToArray();
-        }
-#endif
     }
 }
     

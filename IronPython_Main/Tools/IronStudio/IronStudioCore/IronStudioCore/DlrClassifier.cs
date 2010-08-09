@@ -115,7 +115,8 @@ namespace Microsoft.IronStudio.Core {
 
                 if (mixedBuffer != null) {
                     foreach (SnapshotSpan codeSpan in mixedBuffer.GetLanguageSpans(snapshot)) {
-                        SnapshotSpan? intersection = codeSpan.Overlap(change.NewSpan);
+                        // we want the intersection here because we care about empty spans for deletes.
+                        SnapshotSpan? intersection = codeSpan.Intersection(change.NewSpan);
                         if (intersection != null) {
                             var firstCodeLine = codeSpan.Start.GetContainingLine();
                             ApplyChange(snapshot, intersection.Value.Span, firstCodeLine.LineNumber, codeSpan.Start - firstCodeLine.Start);

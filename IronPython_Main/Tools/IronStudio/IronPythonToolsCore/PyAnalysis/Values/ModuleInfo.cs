@@ -19,7 +19,7 @@ using IronPython.Compiler.Ast;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class ModuleInfo : Namespace, IVariableDefContainer {
+    internal class ModuleInfo : Namespace, IReferenceableContainer {
         private readonly string _name;
         private readonly ProjectEntry _projectEntry;
         private readonly Dictionary<Node, ISet<Namespace>> _sequences;  // sequences defined in the module
@@ -156,7 +156,7 @@ namespace Microsoft.PyAnalysis.Values {
 
         #region IVariableDefContainer Members
 
-        public IEnumerable<VariableDef> GetDefinitions(string name) {
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
             VariableDef def;
             if (_scope.Variables.TryGetValue(name, out def)) {
                 yield return def;

@@ -13,15 +13,27 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using IronPython.Compiler.Ast;
+using Microsoft.PyAnalysis.Interpreter;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.PyAnalysis.Values {
     /// <summary>
     /// Represents a .NET namespace as exposed to Python
     /// </summary>
-    internal class ReflectedNamespace : BuiltinNamespace {
+    internal class ReflectedNamespace : BuiltinNamespace, IReferenceableContainer {
+        private readonly MemberReferences _references = new MemberReferences();
+
         public ReflectedNamespace(IEnumerable<object> objects, ProjectState projectState)
             : base(new LazyDotNetDict(objects, projectState, true)) {
+        }
+
+        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
+            var res = base.GetMember(node, unit, name);
+            if (res.Count > 0) {
+                _references.AddReference(node, unit, name);
+            }
+            return res;
         }
 
         public override IDictionary<string, ISet<Namespace>> GetAllMembers(bool showClr) {
@@ -41,5 +53,13 @@ namespace Microsoft.PyAnalysis.Values {
                 return ResultType.Field;
             }
         }
+
+        #region IReferenceableContainer Members
+
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
+            return _references.GetDefinitions(name);
+        }
+
+        #endregion
     }
 }

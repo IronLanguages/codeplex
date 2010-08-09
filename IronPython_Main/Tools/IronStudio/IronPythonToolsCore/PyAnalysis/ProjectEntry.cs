@@ -37,7 +37,7 @@ namespace Microsoft.PyAnalysis {
         private ModuleInfo _myScope;
         private PythonAst _tree;
         private Stack<ScopePositionInfo> _scopeTree;
-        private ModuleAnalysis _ddg;
+        private ModuleAnalysis _currentAnalysis;
         private AnalysisUnit _unit;
         private int _version;
 
@@ -77,13 +77,14 @@ namespace Microsoft.PyAnalysis {
 
         public void Analyze() {
             lock (this) {
+                _version++;
+                
                 Parse();
 
                 var newAnalysis = OnNewAnalysis;
                 if (newAnalysis != null) {
                     newAnalysis(this, EventArgs.Empty);
                 }
-                _version++;
             }
         }
 
@@ -99,51 +100,37 @@ namespace Microsoft.PyAnalysis {
             }
         }
 
-        public void Parse() {
+        private void Parse() {
             if (_tree == null) {
                 return;
             }
 
             var oldParent = _myScope.ParentPackage;
-            ProjectState.ModulesByFilename[_filePath] = _myScope;/*
-            ModuleReference existingRef;
-            if (ProjectState.Modules.TryGetValue(_moduleName, out existingRef)) {
-                // if we have dependencies from files which were processed before us
-                // we need to re-enqueue those files.
-                if (existingRef.References != null) {
-                    foreach (var referer in existingRef.References) {
-                        referer.Enqueue();
-                    }
-
-                    // we won't need to process these again, we'll track all of our future dependencies
-                    // via VariableDef's.
-                    existingRef.References = null;
-                }
-            } else {
-                // publish our module ref now so that we don't collect dependencies as we'll be fully processed
-                ProjectState.Modules[_moduleName] = new ModuleReference(_myScope);
-            }*/
+            ProjectState.ModulesByFilename[_filePath] = _myScope;
 
             if (oldParent != null) {
                 // update us in our parent package
                 _myScope.ParentPackage = oldParent;
-                oldParent.Scope.SetVariable(_tree, _unit, _moduleName.Substring(_moduleName.IndexOf('.') + 1), _myScope.SelfSet);
+                oldParent.Scope.SetVariable(_tree, _unit, _moduleName.Substring(_moduleName.IndexOf('.') + 1), _myScope.SelfSet, false);
             }
 
             var unit = _unit = new AnalysisUnit(_tree, new InterpreterScope[] { _myScope.Scope }, null);
 
+            // collect top-level definitions first
             var walker = new OverviewWalker(this, unit);
             _tree.Walk(walker);
             _scopeTree = walker.ScopeTree;
 
             PublishPackageChildrenInPackage();
 
-            var head = new ModuleAnalysis(_unit, _scopeTree);
+            // create new analysis object and analyze the code.
+            var newAnalysis = new ModuleAnalysis(_unit, _scopeTree);
             _unit.Enqueue();
 
             new DDG().Analyze(_projectState.Queue);
 
-            _ddg = head;
+            // publish the analysis now that it's complete
+            _currentAnalysis = newAnalysis;
 
             foreach (var variableInfo in _myScope.Scope.Variables) {
                 variableInfo.Value.ClearOldValues(this);
@@ -161,7 +148,7 @@ namespace Microsoft.PyAnalysis {
 
                         ModuleInfo childModule;
                         if (_projectState.ModulesByFilename.TryGetValue(file, out childModule)) {
-                            _myScope.Scope.SetVariable(childModule.ProjectEntry.Tree, _unit, Path.GetFileNameWithoutExtension(file), childModule);
+                            _myScope.Scope.SetVariable(childModule.ProjectEntry.Tree, _unit, Path.GetFileNameWithoutExtension(file), childModule, false);
                             childModule.ParentPackage = _myScope;
                         }
                     }
@@ -170,7 +157,7 @@ namespace Microsoft.PyAnalysis {
                         string package = Path.Combine(packageDir, "__init__.py");
                         ModuleInfo childPackage;
                         if (File.Exists(package) && _projectState.ModulesByFilename.TryGetValue(package, out childPackage)) {
-                            _myScope.Scope.SetVariable(childPackage.ProjectEntry.Tree, _unit, Path.GetFileName(packageDir), childPackage);
+                            _myScope.Scope.SetVariable(childPackage.ProjectEntry.Tree, _unit, Path.GetFileName(packageDir), childPackage, false);
                             childPackage.ParentPackage = _myScope;
                         }
                     }
@@ -183,7 +170,7 @@ namespace Microsoft.PyAnalysis {
         }
 
         public ModuleAnalysis Analysis {
-            get { return _ddg; }
+            get { return _currentAnalysis; }
         }
 
         public string FilePath {
@@ -244,14 +231,21 @@ namespace Microsoft.PyAnalysis {
         private int _version;
         private TextReader _content;
         private IAnalysisCookie _cookie;
+        private readonly ProjectState _projectState;
+        private HashSet<IProjectEntry> _dependencies = new HashSet<IProjectEntry>();
 
-        public XamlProjectEntry(string filename) {
+        public XamlProjectEntry(ProjectState projectState, string filename) {
+            _projectState = projectState;
             _filename = filename;
         }
 
         public void UpdateContent(TextReader content, IAnalysisCookie fileCookie) {
             _content = content;
             _cookie = fileCookie;
+        }
+
+        public void AddDependency(AnalysisUnit unit) {
+            _dependencies.Add(unit.ProjectEntry);
         }
 
         #region IProjectEntry Members
@@ -267,7 +261,13 @@ namespace Microsoft.PyAnalysis {
                     _cookie = new FileCookie(_filename);
                 }
                 _analysis = new XamlAnalysis(_content);
+
                 _version++;
+
+                // update any .py files which depend upon us.
+                foreach (var dep in _dependencies) {
+                    dep.Analyze();
+                }
             }
         }
 

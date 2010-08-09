@@ -19,7 +19,7 @@ using Microsoft.PyAnalysis.Interpreter;
 using Microsoft.Scripting;
 
 namespace Microsoft.PyAnalysis.Values {
-    class BuiltinInstanceInfo : BuiltinNamespace {
+    class BuiltinInstanceInfo : BuiltinNamespace, IReferenceableContainer {
         private readonly BuiltinClassInfo _klass;
 
         public BuiltinInstanceInfo(BuiltinClassInfo klass)
@@ -71,7 +71,18 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
             var res = base.GetMember(node, unit, name);
-            return res.GetDescriptor(this, unit);
+            if (res.Count > 0) {
+                _klass.AddMemberReference(node, unit, name);
+                return res.GetDescriptor(this, unit);
+            }
+            return res;
+        }
+
+        public override void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
+            var res = base.GetMember(node, unit, name);
+            if (res.Count > 0) {
+                _klass.AddMemberReference(node, unit, name);
+            }
         }
 
         public override IDictionary<string, ISet<Namespace>> GetAllMembers(bool showClr) {
@@ -81,5 +92,13 @@ namespace Microsoft.PyAnalysis.Values {
             }
             return res;
         }
+
+        #region IReferenceableContainer Members
+
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
+            return _klass.GetDefinitions(name);
+        }
+
+        #endregion
     }
 }

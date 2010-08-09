@@ -18,8 +18,6 @@ using System.Windows;
 using Microsoft.IronPythonTools.Commands;
 using Microsoft.IronPythonTools.Editor.Core;
 using Microsoft.IronPythonTools.Intellisense;
-using Microsoft.IronPythonTools.Internal;
-using Microsoft.IronPythonTools.Library;
 using Microsoft.IronPythonTools.Navigation;
 using Microsoft.IronStudio;
 using Microsoft.IronStudio.Core.Repl;
@@ -35,7 +33,6 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.TextManager.Interop;
-
 
 namespace Microsoft.IronPythonTools.Language {
     /// <summary>
@@ -76,11 +73,8 @@ namespace Microsoft.IronPythonTools.Language {
 
             var analysis = GetExpressionAnalysis();
 
-            Dictionary<LocationInfo, SimpleLocationInfo> references;
-            Dictionary<LocationInfo, SimpleLocationInfo> definitions;
-            GetDefinitionsAndReferences(analysis, out references, out definitions);
-
-            var values = GetValues(analysis);
+            Dictionary<LocationInfo, SimpleLocationInfo> references, definitions, values;
+            GetDefsRefsAndValues(analysis, out definitions, out references, out values);
 
             if ((values.Count + definitions.Count) == 1) {
                 if (values.Count != 0) {
@@ -123,15 +117,12 @@ namespace Microsoft.IronPythonTools.Language {
         private int FindAllReferences() {
             UpdateStatusForIncompleteAnalysis();
 
-            var provider = GetExpressionAnalysis();
+            var analysis = GetExpressionAnalysis();
 
-            Dictionary<LocationInfo, SimpleLocationInfo> references;
-            Dictionary<LocationInfo, SimpleLocationInfo> definitions;
-            GetDefinitionsAndReferences(provider, out references, out definitions);
+            Dictionary<LocationInfo, SimpleLocationInfo> references, definitions, values;
+            GetDefsRefsAndValues(analysis, out definitions, out references, out values);
 
-            var values = GetValues(provider);
-
-            ShowFindSymbolsDialog(provider,
+            ShowFindSymbolsDialog(analysis,
                 new SymbolList("Definitions", StandardGlyphGroup.GlyphLibrary, definitions.Values),
                 new SymbolList("Values", StandardGlyphGroup.GlyphForwardType, values.Values),
                 new SymbolList("References", StandardGlyphGroup.GlyphReference, references.Values)
@@ -140,44 +131,27 @@ namespace Microsoft.IronPythonTools.Language {
             return VSConstants.S_OK;
         }
 
-        private static void GetDefinitionsAndReferences(ExpressionAnalysis provider, out Dictionary<LocationInfo, SimpleLocationInfo> references, out Dictionary<LocationInfo, SimpleLocationInfo> definitions) {
+        private static void GetDefsRefsAndValues(ExpressionAnalysis provider, out Dictionary<LocationInfo, SimpleLocationInfo> definitions, out Dictionary<LocationInfo, SimpleLocationInfo> references, out Dictionary<LocationInfo, SimpleLocationInfo> values) {
             references = new Dictionary<LocationInfo, SimpleLocationInfo>();
             definitions = new Dictionary<LocationInfo, SimpleLocationInfo>();
+            values = new Dictionary<LocationInfo,SimpleLocationInfo>();
 
             foreach (var v in provider.Variables) {
                 switch (v.Type) {
                     case VariableType.Definition:
+                        values.Remove(v.Location);
                         definitions[v.Location] = new SimpleLocationInfo(provider.Expression, v.Location, StandardGlyphGroup.GlyphGroupField);
                         break;
                     case VariableType.Reference:
                         references[v.Location] = new SimpleLocationInfo(provider.Expression, v.Location, StandardGlyphGroup.GlyphGroupField);
                         break;
-                }
-            }
-        }
-
-        private static Dictionary<LocationInfo, SimpleLocationInfo> GetValues(ExpressionAnalysis provider) {
-            // then collect the values
-            var values = new Dictionary<LocationInfo, SimpleLocationInfo>();
-            foreach (var value in provider.Values) {
-                switch (value.ResultType) {
-                    case ResultType.Module:
-                        values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupModule);
-                        break;
-                    case ResultType.Class:
-                        if (value.Location != null) {
-                            values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupClass);
-                        }
-                        break;
-                    case ResultType.Method:
-                    case ResultType.Function:
-                        if (value.Location != null) {
-                            values[value.Location] = new SimpleLocationInfo(provider.Expression, value.Location, StandardGlyphGroup.GlyphGroupMethod);
+                    case VariableType.Value:
+                        if (!definitions.ContainsKey(v.Location)) {
+                            values[v.Location] = new SimpleLocationInfo(provider.Expression, v.Location, StandardGlyphGroup.GlyphGroupField);
                         }
                         break;
                 }
             }
-            return values;
         }
 
         /// <summary>

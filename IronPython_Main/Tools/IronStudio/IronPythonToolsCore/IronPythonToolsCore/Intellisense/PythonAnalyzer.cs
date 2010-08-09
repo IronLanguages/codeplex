@@ -330,7 +330,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 if (_projectFiles.TryGetValue(fileContent.Path, out analysis) && 
                     (xamlProject = analysis as XamlProjectEntry) != null) {
                     xamlProject.UpdateContent(fileContent.GetReader(), new FileCookie(fileContent.Path));
-                    analysis.Analyze();
+                    _analysisQueue.Enqueue(analysis, AnalysisPriority.Normal);
                 }
             }
         }
@@ -379,7 +379,7 @@ namespace Microsoft.IronPythonTools.Intellisense {
                     if (_projectFiles.TryGetValue(path, out analysis) &&
                         (xamlProject = analysis as XamlProjectEntry) != null) {
                         xamlProject.UpdateContent(((TextContentProvider)snapshotContent).GetReader(), new SnapshotCookie(snapshotContent.Snapshot));
-                        analysis.Analyze();
+                        _analysisQueue.Enqueue(analysis, AnalysisPriority.High);
                     }
                 }
 
@@ -544,6 +544,10 @@ namespace Microsoft.IronPythonTools.Intellisense {
             if (exprRange == null) {
                 return CompletionAnalysis.EmptyCompletionContext;
             }
+            if (IsSpaceCompletion(parser, loc)) {
+                return CompletionAnalysis.EmptyCompletionContext;
+            }
+
             var text = exprRange.Value.GetText();
 
             var applicableSpan = parser.Snapshot.CreateTrackingSpan(

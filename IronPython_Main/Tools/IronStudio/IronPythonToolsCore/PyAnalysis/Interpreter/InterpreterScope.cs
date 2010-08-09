@@ -30,7 +30,12 @@ namespace Microsoft.PyAnalysis.Interpreter {
         }
 
         public void SetVariable(Node node, AnalysisUnit unit, string name, IEnumerable<Namespace> value, bool addRef = true) {
-            CreateVariable(node, unit, name, addRef).AddTypes(node, unit, value, addRef);
+            var variable = CreateVariable(node, unit, name, false);
+            
+            variable.AddTypes(node, unit, value);
+            if (addRef) {
+                variable.AddAssignment(node, unit);
+            }
         }
 
         public VariableDef GetVariable(Node node, AnalysisUnit unit, string name, bool addRef = true) {

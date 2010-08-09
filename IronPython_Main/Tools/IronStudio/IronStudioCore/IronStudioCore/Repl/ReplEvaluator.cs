@@ -147,10 +147,6 @@ namespace Microsoft.IronStudio.Library.Repl {
             return null;
         }
 
-        internal virtual object GetObjectMember(object obj, string name) {
-            return null;
-        }
-
         protected virtual string[] GetObjectMemberNames(ObjectHandle obj, string startsWith) {
             return ArrayUtils.EmptyStrings;
         }

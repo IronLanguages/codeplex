@@ -26,20 +26,18 @@ using System.Runtime.Serialization.Formatters;
 using System.Threading;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Win32.SafeHandles;
-using IronPython.Runtime;
-using IronPython.Hosting;
 
 namespace Microsoft.IronStudio.RemoteEvaluation {
     class RemoteProxy : MarshalByRefObject {
         private AutoResetEvent _processEvent = new AutoResetEvent(false);
         private AutoResetEvent _shutdownEvent = new AutoResetEvent(false);
         private WaitHandle _processHandle;
-        private AsyncAbort _abort;
+        private AsyncAccess _abort;
         
         private static ExecutionQueue _queue;
 
         public RemoteProxy(ApartmentState state) {
-            _abort = new AsyncAbort(this);
+            _abort = new AsyncAccess(this);
             _queue = new ExecutionQueue(state);
         }
 
@@ -50,6 +48,15 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         public void Shutdown() {
             _queue.Shutdown();
             _shutdownEvent.Set();
+        }
+
+        public ObjectHandle CommandDispatcher {
+            get {
+                return _queue.CommandDispatcher;
+            }
+            set {
+                _queue.CommandDispatcher = value;
+            }
         }
 
         /// <summary>
@@ -240,16 +247,9 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
             }
 
             public ServerProcessing ProcessMessage(IServerChannelSinkStack sinkStack, IMessage requestMsg, ITransportHeaders requestHeaders, Stream requestStream, out IMessage responseMsg, out ITransportHeaders responseHeaders, out Stream responseStream) {
-                if (_queue.Running) {
-                    // Remote side called us, we called back, and now they're calling back again.  Process this request synchronously so we don't hang
-                    return _iServerChannelSink.ProcessMessage(sinkStack, requestMsg, requestHeaders, requestStream, out responseMsg, out responseHeaders, out responseStream);
-                }
-
                 // marshal the request onto our dedicated thread for processing requests
                 var msgInfo = new MessageInfo(_iServerChannelSink, sinkStack, requestMsg, requestHeaders, requestStream);
-                _queue.Enqueue(msgInfo);
-
-                msgInfo.Wait();
+                _queue.Process(msgInfo);
 
                 responseMsg = msgInfo.ResponseMsg;
                 responseHeaders = msgInfo.ResponseHeaders;
@@ -298,24 +298,6 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
 
         public void SetCurrentDirectory(string dir) {
             Environment.CurrentDirectory = dir;
-        }
-
-        // Temporary hack until we can get this functionality into IronPython's service
-        public string[] GetModuleNames(ScriptEngine engine) {
-            PythonDictionary dict = engine.GetSysModule().GetVariable("modules");
-            List<string> res = new List<string>();
-            foreach (var kvp in dict) {
-                string key = kvp.Key as string;
-                PythonModule module = kvp.Value as PythonModule;
-                if (key != null && module != null) {
-                    var modDict = module.Get__dict__();
-                    object file;
-                    if (modDict.TryGetValue("__file__", out file) && file != null) {
-                        res.Add(key);
-                    }
-                }
-            }
-            return res.ToArray();
         }
     }
 }

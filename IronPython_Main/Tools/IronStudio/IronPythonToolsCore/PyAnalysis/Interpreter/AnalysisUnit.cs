@@ -75,6 +75,12 @@ namespace Microsoft.PyAnalysis.Interpreter {
             return new AnalysisUnit(_ast, _scopes, _parent, true);
         }
 
+        public AnalysisUnit Parent {
+            get {
+                return _parent;
+            }
+        }
+
         public void Enqueue() {
             if (!ForEval && !IsInQueue) {
                 Queue.Enqueue(this);
@@ -99,6 +105,12 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
                 Debug.Assert(_scopes[0] != null);
                 return ((ModuleScope)_scopes[0]).Module;
+            }
+        }
+
+        public IProjectEntry ProjectEntry {
+            get {
+                return DeclaringModule.ProjectEntry;
             }
         }
 

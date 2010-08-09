@@ -131,11 +131,14 @@
     <Compile Include="PyAnalysis\HashSetExtensions.cs" />
     <Compile Include="PyAnalysis\IAnalysisCookie.cs" />
     <Compile Include="PyAnalysis\IAnalysisVariable.cs" />
+    <Compile Include="PyAnalysis\Interpreter\SingleDict.cs" />
     <Compile Include="PyAnalysis\ModuleReference.cs" />
+    <Compile Include="PyAnalysis\SimpleSrcLocation.cs" />
+    <Compile Include="PyAnalysis\Values\MemberReferences.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorInfo.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorNextBoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\GeneratorSendBoundBuiltinMethodInfo.cs" />
-    <Compile Include="PyAnalysis\Values\IVariableDefContainer.cs" />
+    <Compile Include="PyAnalysis\Values\IReferenceable.cs" />
     <Compile Include="PyAnalysis\Values\NumericInstanceInfo.cs" />
     <Compile Include="PyAnalysis\Values\ListAppendBoundBuiltinMethodInfo.cs" />
     <Compile Include="PyAnalysis\Values\ListExtendBoundBuiltinFunction.cs" />

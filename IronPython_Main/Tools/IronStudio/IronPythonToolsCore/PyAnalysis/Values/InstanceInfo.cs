@@ -21,7 +21,7 @@ namespace Microsoft.PyAnalysis.Values {
     /// <summary>
     /// Represents a class implemented in Python
     /// </summary>
-    internal class InstanceInfo : Namespace, IVariableDefContainer {
+    internal class InstanceInfo : Namespace, IReferenceableContainer {
         private readonly ClassInfo _classInfo;
         private Dictionary<string, VariableDef> _instanceAttrs;
 
@@ -57,18 +57,16 @@ namespace Microsoft.PyAnalysis.Values {
             set.UnionWith(types);
         }
 
-        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            if (_instanceAttrs == null) {
-                _instanceAttrs = new Dictionary<string, VariableDef>();
+        public Dictionary<string, VariableDef> InstanceAttributes {
+            get {
+                return _instanceAttrs;
             }
-            VariableDef def;
-            if (!_instanceAttrs.TryGetValue(name, out def)) {
-                _instanceAttrs[name] = def = new VariableDef();
-            }
-            def.AddReference(node, unit);
+        }
 
+        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
+            // __getattribute__ takes precedence over everything.
             ISet<Namespace> getattrRes = EmptySet<Namespace>.Instance;
-            var getAttribute = _classInfo.GetMemberNoReference(node, unit.CopyForEval(), "__getattribute__");
+            var getAttribute = _classInfo.GetMemberNoReferences(node, unit.CopyForEval(), "__getattribute__");
             if (getAttribute.Count > 0) {
                 foreach (var getAttrFunc in getAttribute) {
                     var func = getAttrFunc as BuiltinMethodInfo;
@@ -83,11 +81,28 @@ namespace Microsoft.PyAnalysis.Values {
                 }
             }
             
+            // then check class members
+            var classMem = _classInfo.GetMemberNoReferences(node, unit, name).GetDescriptor(this, unit);
+            if (classMem.Count > 0) {
+                // TODO: Check if it's a data descriptor...
+                return classMem;
+            }
+
+            // ok, it most be an instance member...
+            if (_instanceAttrs == null) {
+                _instanceAttrs = new Dictionary<string, VariableDef>();
+            }
+            VariableDef def;
+            if (!_instanceAttrs.TryGetValue(name, out def)) {
+                _instanceAttrs[name] = def = new VariableDef();
+            }
+            def.AddReference(node, unit);
             def.AddDependency(unit);
 
-            var res = def.Types.Union(_classInfo.GetMember(node, unit, name).GetDescriptor(this, unit));
+            var res = def.Types;
             if (res.Count == 0) {
-                var getAttr = _classInfo.GetMember(node, unit, "__getattr__");
+                // and if that doesn't exist fall back to __getattr__
+                var getAttr = _classInfo.GetMemberNoReferences(node, unit, "__getattr__");
                 if (getAttr.Count > 0) {
                     foreach (var getAttrFunc in getAttr) {
                         // TODO: We should really do a get descriptor / call here
@@ -109,7 +124,7 @@ namespace Microsoft.PyAnalysis.Values {
                 _instanceAttrs[name] = instMember = new VariableDef();
             }
             instMember.AddAssignment(node, unit);
-            instMember.AddTypes(node, unit, value, false);
+            instMember.AddTypes(node, unit, value);
         }
 
         public override void DeleteMember(Node node, AnalysisUnit unit, string name) {
@@ -123,6 +138,18 @@ namespace Microsoft.PyAnalysis.Values {
             }
 
             instMember.AddReference(node, unit);
+        }
+
+        public override IProjectEntry DeclaringModule {
+            get {
+                return _classInfo.DeclaringModule;
+            }
+        }
+
+        public override int DeclaringVersion {
+            get {
+                return _classInfo.DeclaringVersion;
+            }
         }
 
         public override string Description {
@@ -149,10 +176,14 @@ namespace Microsoft.PyAnalysis.Values {
 
         #region IVariableDefContainer Members
 
-        public IEnumerable<VariableDef> GetDefinitions(string name) {
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
             VariableDef def;
-            if (_instanceAttrs.TryGetValue(name, out def)) {
+            if (_instanceAttrs != null && _instanceAttrs.TryGetValue(name, out def)) {
                 yield return def;
+            }
+
+            foreach (var classDef in _classInfo.GetDefinitions(name)) {
+                yield return classDef;
             }
         }
 

@@ -43,6 +43,21 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
+        public void AddDependentUnit(AnalysisUnit unit) {
+            if (_dependentUnits != null) {
+                var checking = unit;
+                while (checking != null) {
+                    if (_dependentUnits.Contains(checking)) {
+                        return;
+                    }
+                    checking = checking.Parent;
+                }
+            } else {
+                _dependentUnits = new HashSet<AnalysisUnit>();
+            }
+            _dependentUnits.Add(unit);
+        }
+
         public int Version {
             get {
                 return _version;
@@ -52,7 +67,7 @@ namespace Microsoft.PyAnalysis.Values {
 
     internal class TypedDependencyInfo : DependencyInfo {
         private TypeUnion _union;
-        public HashSet<SourceSpan> _references, _assignments;
+        public HashSet<SimpleSrcLocation> _references, _assignments;
 
         public TypedDependencyInfo(int version)
             : base(version) {
@@ -76,10 +91,10 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public HashSet<SourceSpan> References {
+        public HashSet<SimpleSrcLocation> References {
             get {
                 if (_references == null) {
-                    _references = new HashSet<SourceSpan>();
+                    _references = new HashSet<SimpleSrcLocation>();
                 }
                 return _references;
             }
@@ -94,10 +109,10 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public HashSet<SourceSpan> Assignments {
+        public HashSet<SimpleSrcLocation> Assignments {
             get {
                 if (_assignments == null) {
-                    _assignments = new HashSet<SourceSpan>();
+                    _assignments = new HashSet<SimpleSrcLocation>();
                 }
                 return _assignments;
             }
