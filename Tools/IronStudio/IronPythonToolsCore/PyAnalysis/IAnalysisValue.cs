@@ -42,6 +42,10 @@ namespace Microsoft.PyAnalysis {
             get;
         }
 
+        IEnumerable<LocationInfo> References {
+            get;
+        }
+
         /// <summary>
         /// Gets the type of variable result.
         /// </summary>

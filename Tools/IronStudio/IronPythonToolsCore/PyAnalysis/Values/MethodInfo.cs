@@ -33,6 +33,18 @@ namespace Microsoft.PyAnalysis.Values {
             return _function.Call(node, unit, Utils.Concat(_instanceInfo.SelfSet, args), keywordArgNames);
         }
 
+        public override IProjectEntry DeclaringModule {
+            get {
+                return _function.DeclaringModule;
+            }
+        }
+
+        public override int DeclaringVersion {
+            get {
+                return _function.DeclaringVersion;
+            }
+        }
+
         public override LocationInfo Location {
             get {
                 return _function.Location;

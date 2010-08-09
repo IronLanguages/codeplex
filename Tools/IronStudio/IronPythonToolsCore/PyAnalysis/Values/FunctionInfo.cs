@@ -21,27 +21,43 @@ using Microsoft.PyAnalysis.Interpreter;
 using System;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class FunctionInfo : UserDefinedInfo {
+    internal class FunctionInfo : UserDefinedInfo, IReferenceableContainer {
         private readonly ProjectEntry _entry;
         private Dictionary<Namespace, ISet<Namespace>> _methods;
         private Dictionary<string, VariableDef> _functionAttrs;
         private GeneratorInfo _generator;
-        private TypedStorageLocation _returnValue;
+        private VariableDef _returnValue;
         public bool IsStatic;
         public bool IsClassMethod;
         public bool IsProperty;
-        [ThreadStatic] private static List<Namespace> _descriptionStack;
+        private ReferenceDict _references;
+        private readonly int _declVersion;
+        [ThreadStatic]
+        private static List<Namespace> _descriptionStack;
 
         internal FunctionInfo(AnalysisUnit unit, ProjectEntry entry)
             : base(unit) {
             _entry = entry;
-            _returnValue = new TypedStorageLocation();
+            _returnValue = new VariableDef();
+            _declVersion = entry.Version;
             // TODO: pass NoneInfo if we can't determine the function always returns
         }
 
         public ProjectEntry ProjectEntry {
             get {
                 return _entry;
+            }
+        }
+
+        public override IProjectEntry DeclaringModule {
+            get {
+                return _entry;
+            }
+        }
+
+        public override int DeclaringVersion {
+            get {
+                return _declVersion;
             }
         }
 
@@ -54,7 +70,7 @@ namespace Microsoft.PyAnalysis.Values {
                 return _generator.SelfSet;
             }
 
-            return ReturnValue.Types.ToSet();
+            return ReturnValue.Types;
         }
 
         private void AddCall(Node node, string[] keywordArgNames, AnalysisUnit unit, ISet<Namespace>[] args) {
@@ -94,7 +110,7 @@ namespace Microsoft.PyAnalysis.Values {
                                         int paramIndex = lastPos + j;
                                         if (paramIndex >= ParameterTypes.Length) {
                                             break;
-                                        } else if (ParameterTypes[lastPos + j].AddTypes(FunctionDefinition.Parameters[lastPos + j], unit, indexType, addReference: false)) {
+                                        } else if (ParameterTypes[lastPos + j].AddTypes(FunctionDefinition.Parameters[lastPos + j], unit, indexType)) {
                                             added = true;
                                         }
                                     }
@@ -108,7 +124,7 @@ namespace Microsoft.PyAnalysis.Values {
                             for (int j = 0; j < ParameterTypes.Length; j++) {
                                 string paramName = GetParameterName(j);
                                 if (paramName == curArg) {
-                                    if (ParameterTypes[j].AddTypes(FunctionDefinition.Parameters[j], unit, args[i], addReference: false)) {
+                                    if (ParameterTypes[j].AddTypes(FunctionDefinition.Parameters[j], unit, args[i])) {
                                         added = true;
                                         break;
                                     }
@@ -120,7 +136,7 @@ namespace Microsoft.PyAnalysis.Values {
                     }
                 } else if (i < ParameterTypes.Length) {
                     // positional argument
-                    if (ParameterTypes[i].AddTypes(FunctionDefinition.Parameters[i], unit, args[i], addReference: false)) {
+                    if (ParameterTypes[i].AddTypes(FunctionDefinition.Parameters[i], unit, args[i])) {
                         added = true;
                     }
 
@@ -197,7 +213,7 @@ namespace Microsoft.PyAnalysis.Values {
                 return SelfSet;
             }
             if (IsProperty) {
-                return ReturnValue.Types.ToSet();
+                return ReturnValue.Types;
             }
 
             if (_methods == null) {
@@ -318,7 +334,7 @@ namespace Microsoft.PyAnalysis.Values {
             if (!_functionAttrs.TryGetValue(name, out varRef)) {
                 _functionAttrs[name] = varRef = new VariableDef();
             }
-
+            varRef.AddAssignment(node, unit);
             varRef.AddTypes(node, unit, value);
         }
 
@@ -326,6 +342,8 @@ namespace Microsoft.PyAnalysis.Values {
             VariableDef tmp;
             if (_functionAttrs != null && _functionAttrs.TryGetValue(name, out tmp)) {
                 tmp.AddDependency(unit);
+                tmp.AddReference(node, unit);
+
                 return tmp.Types;
             }
             // TODO: Create one and add a dependency
@@ -362,10 +380,40 @@ namespace Microsoft.PyAnalysis.Values {
             }
         }
 
-        public TypedStorageLocation ReturnValue {
+        public VariableDef ReturnValue {
             get { return _returnValue; }
         }
 
         public ProjectState ProjectState { get { return _entry.ProjectState; } }
+
+        internal override void AddReference(Node node, AnalysisUnit unit) {
+            if (!unit.ForEval) {
+                if (_references == null) {
+                    _references = new ReferenceDict();
+                }
+                _references.GetReferences(unit.DeclaringModule.ProjectEntry).References.Add(new SimpleSrcLocation(node.Span));
+            }
+        }
+
+        public override IEnumerable<LocationInfo> References {
+            get {
+                if (_references != null) {
+                    return _references.AllReferences;
+                }
+                return new LocationInfo[0];
+            }
+        }
+
+        #region IReferenceableContainer Members
+
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
+            VariableDef def;
+            if (_functionAttrs != null && _functionAttrs.TryGetValue(name, out def)) {
+                return new IReferenceable[] { def };
+            }
+            return new IReferenceable[0];
+        }
+
+        #endregion
     }
 }

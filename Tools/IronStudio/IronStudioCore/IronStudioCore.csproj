@@ -111,7 +111,7 @@
     <Compile Include="IronStudioCore\Intellisense\XamlAnalysis.cs" />
     <Compile Include="IronStudioCore\ISnapshotTextContentProvider.cs" />
     <Compile Include="IronStudioCore\Navigation\IScopeNode.cs" />
-    <Compile Include="IronStudioCore\RemoteEvaluation\AsyncAbort.cs" />
+    <Compile Include="IronStudioCore\RemoteEvaluation\AsyncAccess.cs" />
     <Compile Include="IronStudioCore\RemoteEvaluation\ExecutionQueue.cs" />
     <Compile Include="IronStudioCore\RemoteEvaluation\ExecutionQueueItem.cs" />
     <Compile Include="IronStudioCore\RemoteEvaluation\RemoteProxy.cs" />

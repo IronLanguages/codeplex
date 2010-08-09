@@ -12,13 +12,15 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using IronPython.Hosting;
-using Microsoft.IronStudio;
 using Microsoft.IronStudio.Core;
 using Microsoft.Scripting.Hosting;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.Win32;
 
 namespace Microsoft.IronPythonTools {
     [Export(typeof(IPythonRuntimeHost))]
@@ -72,5 +74,57 @@ namespace Microsoft.IronPythonTools {
                 _hideAdvancedMembers = value;
             }
         }
+
+        internal static string GetPythonInstallDir() {
+#if DEBUG
+            string result = Environment.GetEnvironmentVariable("DLR_ROOT");
+            if (result != null) {
+                result = Path.Combine(result, @"Bin\Debug");
+                if (PythonRuntimeHost.IronPythonExistsIn(result)) {
+                    return result;
+                }
+            }
+#endif
+            
+            using (var ipy = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\IronPython")) {
+                if (ipy != null) {
+                    using (var twoSeven = ipy.OpenSubKey("2.7")) {
+                        if (twoSeven != null) {
+                            var path = twoSeven.GetValue("") as string;
+                            if (path != null) {
+                                return path;
+                            }
+                        }
+                    }
+                }
+            }
+
+            var paths = Environment.GetEnvironmentVariable("PATH");
+            if (paths != null) {
+                foreach (string dir in paths.Split(Path.PathSeparator)) {
+                    try {
+                        if (IronPythonExistsIn(dir)) {
+                            return dir;
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+
+            string extensionDir = Path.GetDirectoryName(typeof(PythonRuntimeHost).Assembly.GetFiles()[0].Name);
+            if (PythonRuntimeHost.IronPythonExistsIn(extensionDir)) {
+                return extensionDir;
+            }
+
+            return null;
+        }
+
+        private static bool IronPythonExistsIn(string/*!*/ dir) {
+            return File.Exists(Path.Combine(dir, "ipy.exe"))
+                && File.Exists(Path.Combine(dir, "IronPython.dll"))
+                && File.Exists(Path.Combine(dir, "IronPython.Modules.dll"));
+        }
+
     }
 }

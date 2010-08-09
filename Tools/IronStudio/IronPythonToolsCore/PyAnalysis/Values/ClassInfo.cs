@@ -19,11 +19,13 @@ using IronPython.Runtime.Types;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class ClassInfo : UserDefinedInfo, IVariableDefContainer {
+    internal class ClassInfo : UserDefinedInfo, IReferenceableContainer {
         private readonly List<ISet<Namespace>> _bases;
         private readonly InstanceInfo _instanceInfo;
         private readonly ClassScope _scope;
         private readonly ProjectEntry _entry;
+        private readonly int _declVersion;
+        private ReferenceDict _references;
 
         internal ClassInfo(AnalysisUnit unit, ProjectEntry entry)
             : base(unit) {
@@ -31,6 +33,7 @@ namespace Microsoft.PyAnalysis.Values {
             _bases = new List<ISet<Namespace>>();
             _entry = entry;
             _scope = new ClassScope(this);
+            _declVersion = entry.Version;
         }
         
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
@@ -44,6 +47,7 @@ namespace Microsoft.PyAnalysis.Values {
         private void AddCall(Node node, string[] keywordArgNames, AnalysisUnit unit, ISet<Namespace>[] argumentVars) {
             var init = GetMember(node, unit, "__init__");
             var initArgs = Utils.Concat(_instanceInfo.SelfSet, argumentVars);
+
             foreach (var initFunc in init) {
                 initFunc.Call(node, unit, initArgs, keywordArgNames);
             }
@@ -95,6 +99,18 @@ namespace Microsoft.PyAnalysis.Values {
         public override PythonType PythonType {
             get {
                 return TypeCache.PythonType;
+            }
+        }
+
+        public override IProjectEntry DeclaringModule {
+            get {
+                return _entry;
+            }
+        }
+
+        public override int DeclaringVersion {
+            get {
+                return _declVersion;
             }
         }
 
@@ -206,11 +222,20 @@ namespace Microsoft.PyAnalysis.Values {
             return result;
         }
 
-        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            return GetMemberNoReference(node, unit, name);
+        internal override void AddReference(Node node, AnalysisUnit unit) {
+            if (!unit.ForEval) {
+                if (_references == null) {
+                    _references = new ReferenceDict();
+                }
+                _references.GetReferences(unit.DeclaringModule.ProjectEntry).References.Add(new SimpleSrcLocation(node.Span));
+            }
         }
 
-        public ISet<Namespace> GetMemberNoReference(Node node, AnalysisUnit unit, string name) {
+        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
+            return GetMemberNoReferences(node, unit, name);
+        }
+        
+        public ISet<Namespace> GetMemberNoReferences(Node node, AnalysisUnit unit, string name) {
             ISet<Namespace> result = null;
             bool ownResult = false;
             var v = Scope.GetVariable(node, unit, name);
@@ -227,11 +252,11 @@ namespace Microsoft.PyAnalysis.Values {
                             ClassInfo klass = baseRef as ClassInfo;
                             ISet<Namespace> baseMembers;
                             if (klass != null) {
-                                baseMembers = klass.GetMemberNoReference(node, unit, name);
+                                baseMembers = klass.GetMember(node, unit, name);
                             } else {
                                 BuiltinClassInfo builtinClass = baseRef as BuiltinClassInfo;
                                 if (builtinClass != null) {
-                                    baseMembers = builtinClass.GetMemberNoReference(node, unit, name);
+                                    baseMembers = builtinClass.GetMember(node, unit, name);
                                 } else {
                                     baseMembers = baseRef.GetMember(node, unit, name);
                                 }
@@ -299,10 +324,34 @@ namespace Microsoft.PyAnalysis.Values {
 
         #region IVariableDefContainer Members
 
-        public IEnumerable<VariableDef> GetDefinitions(string name) {
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
             VariableDef def;
             if (_scope.Variables.TryGetValue(name, out def)) {
                 yield return def;
+            }
+
+            foreach (var baseClassSet in Bases) {
+                foreach (var baseClass in baseClassSet) {
+                    IReferenceableContainer container = baseClass as IReferenceableContainer;
+                    if (container != null) {
+                        foreach (var baseDef in container.GetDefinitions(name)) {
+                            yield return baseDef;
+                        }
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region IReferenceable Members
+
+        public override IEnumerable<LocationInfo> References {
+            get {
+                if (_references != null) {
+                    return _references.AllReferences;
+                }
+                return new LocationInfo[0];
             }
         }
 

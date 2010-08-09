@@ -360,6 +360,9 @@ namespace Microsoft.IronStudio.Library.Repl {
                 edit.Delete(0, CurrentSnapshot.Length);
                 edit.Apply();
             }
+
+            PrepareForInput();
+            ApplyProtection();
         }
 
         /// <summary>

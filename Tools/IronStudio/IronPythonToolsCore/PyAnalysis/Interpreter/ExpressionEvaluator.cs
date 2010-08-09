@@ -70,12 +70,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 }
             }
 
-            ISet<Namespace> res;
-            if (ProjectState.BuiltinModule.VariableDict.TryGetValue(name, out res)) {
-                return res;
-            }
-
-            return null;
+            return ProjectState.BuiltinModule.GetMember(node, _unit, name);
         }
 
         /// <summary>
@@ -175,33 +170,22 @@ namespace Microsoft.PyAnalysis.Interpreter {
 
         private static ISet<Namespace> EvaluateName(ExpressionEvaluator ee, Node node) {
             var n = (NameExpression)node;
-            return ee.LookupNamespaceByName(node, n.Name) ?? EmptySet<Namespace>.Instance;
+            var res = ee.LookupNamespaceByName(node, n.Name);
+            foreach (var value in res) {
+                value.AddReference(node, ee._unit);
+            }
+            return res;
         }
 
         private static ISet<Namespace> EvaluateMember(ExpressionEvaluator ee, Node node) {
             var n = (MemberExpression)node;
-            ISet<Namespace> result = EmptySet<Namespace>.Instance;
-            if (n.Name != null) {
-                bool madeSet = false;
-                foreach (var ns in ee.Evaluate(n.Target)) {
-                    result = result.Union(ns.GetMember(n, ee._unit, n.Name), ref madeSet);
-                }
-            }
-
-            return result;
+            return ee.Evaluate(n.Target).GetMember(node, ee._unit, n.Name);
         }
 
         private static ISet<Namespace> EvaluateIndex(ExpressionEvaluator ee, Node node) {
             var n = (IndexExpression)node;
-            var member = ee.Evaluate(n.Target);
-            var index = ee.Evaluate(n.Index);
 
-            ISet<Namespace> result = EmptySet<Namespace>.Instance;
-            bool madeSet = false;            
-            foreach (var varRef in member) {
-                result = result.Union(varRef.GetIndex(node, ee._unit, index), ref madeSet);
-            }
-            return result;
+            return ee.Evaluate(n.Target).GetIndex(n, ee._unit, ee.Evaluate(n.Index));
         }
 
         private static ISet<Namespace> EvaluateSet(ExpressionEvaluator ee, Node node) {

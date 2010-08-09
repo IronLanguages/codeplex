@@ -36,6 +36,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
         // Constructed via reflection when deserialized from the registry.
         public RemotePythonEvaluator() {
             _factory = CreateFactory();
+
         }
 
         public static RemoteScriptFactory CreateFactory() {
@@ -60,6 +61,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
             WriteLine("Remote process has exited, restarting...");
             _factory = CreateFactory();
             Start();
+            _factory.CommandDispatcher = _engine.GetService<PythonService>(_engine).GetLocalCommandDispatcher();
             
             var changed = AvailableScopesChanged;
             if (changed != null) {
@@ -73,6 +75,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
 
             _factory = CreateFactory();
             Start();
+            _factory.CommandDispatcher = _engine.GetService<PythonService>(_engine).GetLocalCommandDispatcher();
 
             var changed = AvailableScopesChanged;
             if (changed != null) {
@@ -135,7 +138,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
         public event EventHandler<EventArgs> CurrentScopeChanged;
 
         public IEnumerable<string> GetAvailableScopes() {
-            return _factory.GetModuleNames(_engine);
+            return _engine.GetModuleFilenames();
         }
 
         public override ICollection<OverloadDoc> GetSignatureDocumentation(string expression) {

@@ -25,7 +25,7 @@ using IronPython.Modules;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.IronStudio.Intellisense;
+using Microsoft.IronPythonTools;
 using Microsoft.PyAnalysis.Interpreter;
 using Microsoft.PyAnalysis.Values;
 using Microsoft.Scripting;
@@ -85,6 +85,7 @@ namespace Microsoft.PyAnalysis {
             _references = new List<KeyValuePair<Assembly, TopNamespaceTracker>>();
             AddAssembly(LoadAssemblyInfo(typeof(string).Assembly));
             AddAssembly(LoadAssemblyInfo(typeof(Debug).Assembly));
+            
 
             // cached for quick checks to see if we're a call to clr.AddReference
             SpecializeFunction("clr", "AddReference", (n, unit, args) => AddReference(n, null));
@@ -92,7 +93,13 @@ namespace Microsoft.PyAnalysis {
             SpecializeFunction("clr", "AddReferenceByName", (n, unit, args) => AddReference(n, null));
             SpecializeFunction("clr", "AddReferenceToFile", (n, unit, args) => AddReference(n, (s) => ClrModule.LoadAssemblyFromFile(_codeContext, s)));
             SpecializeFunction("clr", "AddReferenceToFileAndPath", (n, unit, args) => AddReference(n, (s) => ClrModule.LoadAssemblyFromFileWithPath(_codeContext, s)));
-            SpecializeFunction("clr", "LoadComponent", LoadComponent);
+            
+            try {
+                SpecializeFunction("wpf", "LoadComponent", LoadComponent);
+            } catch (KeyNotFoundException) {
+                // IronPython.Wpf.dll isn't available...
+            }
+
             SpecializeFunction("__builtin__", "range", (n, unit, args) => unit.DeclaringModule.GetOrMakeNodeVariable(n, (nn) => new RangeInfo(ClrModule.GetPythonType(typeof(List)), unit.ProjectState).SelfSet));
             SpecializeFunction("__builtin__", "min", ReturnUnionOfInputs);
             SpecializeFunction("__builtin__", "max", ReturnUnionOfInputs);
@@ -143,7 +150,7 @@ namespace Microsoft.PyAnalysis {
         }
 
         public XamlProjectEntry AddXamlFile(string filePath) {
-            var entry = new XamlProjectEntry(filePath);
+            var entry = new XamlProjectEntry(this, filePath);
             _xamlByFilename[filePath] = entry;
             return entry;
         }
@@ -307,7 +314,19 @@ namespace Microsoft.PyAnalysis {
         }
 
         private void InitializeBuiltinModules() {
-            // TODO: Shared cache for these?
+            string installDir = PythonRuntimeHost.GetPythonInstallDir();
+            if (installDir != null) {
+                var dllDir = Path.Combine(installDir, "DLLs");
+                if (Directory.Exists(dllDir)) {
+                    foreach (var assm in Directory.GetFiles(dllDir)) {
+                        try {
+                            _pythonEngine.Runtime.LoadAssembly(Assembly.LoadFile(Path.Combine(dllDir, assm)));
+                        } catch {
+                        }
+                    }
+                }
+            }
+
             var names = _pythonEngine.Operations.GetMember<PythonTuple>(_pythonEngine.GetSysModule(), "builtin_module_names");
             foreach (string modName in names) {
                 PythonModule mod = Importer.Import(_codeContextCls, modName, PythonOps.EmptyTuple, 0) as PythonModule;
@@ -344,8 +363,10 @@ namespace Microsoft.PyAnalysis {
 
         private ISet<Namespace> LoadComponent(CallExpression node, AnalysisUnit unit, ISet<Namespace>[]args) {
             if (args.Length == 2) {
-                
-                foreach (var arg in args[0]) {
+                var xaml = args[1];
+                var self = args[0];
+
+                foreach (var arg in xaml) {
                     string strConst = arg.GetConstantValue() as string;
                     if (strConst != null) {
                         // process xaml file, add attributes to self
@@ -357,33 +378,68 @@ namespace Microsoft.PyAnalysis {
 
                             if (analysis == null) {
                                 xamlProject.Analyze();
+                                analysis = xamlProject.Analysis;
                             }
 
-                            var evalUnit = unit.CopyForEval();  // avoid adding references here to our LoadComponent method.
+                            xamlProject.AddDependency(unit);
 
+                            var evalUnit = unit.CopyForEval();
+
+                            // add named objects to instance
                             foreach (var keyValue in analysis.NamedObjects) {
-                                var type = keyValue.Value.UnderlyingType;
-                                if (type != null) {
-                                    var ns = GetNamespaceFromObjects(DynamicHelpers.GetPythonTypeFromType(type));
+                                var type = keyValue.Value;
+                                if (type.Type.UnderlyingType != null) {
+                                    var ns = GetNamespaceFromObjects(DynamicHelpers.GetPythonTypeFromType(type.Type.UnderlyingType));
                                     if (ns is BuiltinClassInfo) {
                                         ns = ((BuiltinClassInfo)ns).Instance;
                                     }
-                                    args[1].SetMember(node, evalUnit, keyValue.Key, ns.SelfSet);
+                                    self.SetMember(node, evalUnit, keyValue.Key, ns.SelfSet);
+                                }
+
+                                // TODO: Better would be if SetMember took something other than a node, then we'd
+                                // track references w/o this extra effort.
+                                foreach (var inst in self) {
+                                    InstanceInfo instInfo = inst as InstanceInfo;
+                                    if (instInfo != null) {
+                                        VariableDef def;
+                                        if (instInfo.InstanceAttributes.TryGetValue(keyValue.Key, out def)) {
+                                            def.AddAssignment(
+                                                new SimpleSrcLocation(type.LineNumber, type.LineOffset, keyValue.Key.Length),
+                                                xamlProject
+                                            );
+                                        }
+                                    }
                                 }
                             }
 
+                            // add references to event handlers
                             foreach (var keyValue in analysis.EventHandlers) {
                                 // add reference to methods...
                                 var member = keyValue.Value;
-                                var handler = args[1].GetMember(node, evalUnit, keyValue.Key);
-                                var span = new SourceSpan(new SourceLocation(1, member.LineNumber, member.LineOffset), new SourceLocation(2, member.LineNumber, member.LineOffset + 1));
+
+                                // TODO: Better would be if SetMember took something other than a node, then we'd
+                                // track references w/o this extra effort.
+                                foreach (var inst in self) {
+                                    InstanceInfo instInfo = inst as InstanceInfo;
+                                    if (instInfo != null) {
+                                        ClassInfo ci = instInfo.ClassInfo;
+
+                                        VariableDef def;
+                                        if (ci.Scope.Variables.TryGetValue(keyValue.Key, out def)) {
+                                            def.AddReference(
+                                                new SimpleSrcLocation(member.LineNumber, member.LineOffset, keyValue.Key.Length),
+                                                xamlProject
+                                            );
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
                 // load component returns self
-                return args[1];
+                return self;
             }
             
             return EmptySet<Namespace>.Instance;
@@ -535,6 +591,22 @@ namespace Microsoft.PyAnalysis {
             get { return _docProvider; }
         }
 
+        internal BuiltinInstanceInfo GetInstance(Type type) {
+            return GetInstance(ClrModule.GetPythonType(type));
+        }
+
+        internal BuiltinInstanceInfo GetInstance(PythonType type) {
+            return GetBuiltinType(type).Instance;
+        }
+
+        internal BuiltinClassInfo GetBuiltinType(Type type) {
+            return GetBuiltinType(ClrModule.GetPythonType(type));
+        }
+
+        internal BuiltinClassInfo GetBuiltinType(PythonType type) {
+            return GetCached(type, () => new BuiltinClassInfo(type, this));
+        }
+
         internal Namespace GetNamespaceFromObjects(params object[] attrs) {
             return GetNamespaceFromObjects((IEnumerable<object>)attrs);
         }
@@ -544,7 +616,7 @@ namespace Microsoft.PyAnalysis {
             foreach (var attr in attrs) {
                 var attrType = (attr != null) ? attr.GetType() : typeof(DynamicNull);
                 if (attr is PythonType) {
-                    values.Add(GetCached(attr, () => new BuiltinClassInfo((PythonType)attr, this)));
+                    values.Add(GetBuiltinType((PythonType)attr));
                 } else if (attr is BuiltinFunction) {
                     var bf = (BuiltinFunction)attr;
                     if (bf.__self__ == null) {

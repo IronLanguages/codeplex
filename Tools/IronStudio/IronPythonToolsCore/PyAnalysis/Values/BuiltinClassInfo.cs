@@ -19,11 +19,14 @@ using IronPython.Compiler.Ast;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using Microsoft.PyAnalysis.Interpreter;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class BuiltinClassInfo : BuiltinNamespace {
+    internal class BuiltinClassInfo : BuiltinNamespace, IReferenceableContainer {
         private BuiltinInstanceInfo _inst;
         private string _doc;
+        private readonly MemberReferences _referencedMembers = new MemberReferences();
+        private ReferenceDict _references;
 
         public BuiltinClassInfo(PythonType classObj, ProjectState projectState)
             : base(new LazyDotNetDict(classObj, projectState, true)) {
@@ -34,7 +37,14 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> Call(Node node, AnalysisUnit unit, ISet<Namespace>[] args, string[] keywordArgNames) {
-            // TODO: Type propagation, references
+            // TODO: More Type propagation
+
+            if (args.Length == 1 && typeof(Delegate).IsAssignableFrom(_type.__clrtype__())) {
+                var invokeArgs = BuiltinEventInfo.GetEventInvokeArgs(ProjectState, _type.__clrtype__());
+                foreach (var arg in args) {
+                    arg.Call(node, unit, invokeArgs, ArrayUtils.EmptyStrings);
+                }
+            }
             return Instance.SelfSet;
         }
 
@@ -122,13 +132,19 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            return GetMemberNoReference(node, unit, name);
+            var res = base.GetMember(node, unit, name);
+            if (res.Count > 0) {
+                _referencedMembers.AddReference(node, unit, name);
+                return res.GetStaticDescriptor(unit);
+            }
+            return res;
         }
 
-        public ISet<Namespace> GetMemberNoReference(Node node, AnalysisUnit unit, string name) {
-            bool showClr = (unit != null) ? unit.DeclaringModule.ShowClr : false;
-            var res = VariableDict.GetClr(name, showClr, null);
-            return (res != null) ? res.GetStaticDescriptor(unit) : EmptySet<Namespace>.Instance;
+        public override void SetMember(Node node, AnalysisUnit unit, string name, ISet<Namespace> value) {
+            var res = base.GetMember(node, unit, name);
+            if (res.Count > 0) {
+                _referencedMembers.AddReference(node, unit, name);
+            }
         }
 
         public override ISet<Namespace> GetIndex(Node node, AnalysisUnit unit, ISet<Namespace> index) {
@@ -188,6 +204,7 @@ namespace Microsoft.PyAnalysis.Values {
                 }
             }
         }
+
         private static List<Type>[] GetSequenceTypes(SequenceInfo seq) {
             List<Type>[] types = new List<Type>[seq.IndexTypes.Length];
             for (int i = 0; i < types.Length; i++) {
@@ -258,6 +275,36 @@ namespace Microsoft.PyAnalysis.Values {
                     _type == TypeCache.Double ||
                     _type == TypeCache.Complex ||
                     _type == TypeCache.Boolean;
+            }
+        }
+
+        #region IReferenceableContainer Members
+
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
+            return _referencedMembers.GetDefinitions(name);
+        }
+
+        #endregion
+
+        internal void AddMemberReference(Node node, AnalysisUnit unit, string name) {
+            _referencedMembers.AddReference(node, unit, name);
+        }
+
+        internal override void AddReference(Node node, AnalysisUnit unit) {
+            if (!unit.ForEval) {
+                if (_references == null) {
+                    _references = new ReferenceDict();
+                }
+                _references.GetReferences(unit.DeclaringModule.ProjectEntry).References.Add(new SimpleSrcLocation(node.Span));
+            }
+        }
+
+        public override IEnumerable<LocationInfo> References {
+            get {
+                if (_references != null) {
+                    return _references.AllReferences;
+                }
+                return new LocationInfo[0];
             }
         }
     }

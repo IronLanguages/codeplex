@@ -76,6 +76,10 @@ namespace Microsoft.PyAnalysis.Values {
 
         public override string Description {
             get {
+                if (_value == null) {
+                    return "None";
+                }
+
                 return PythonType.Get__name__(_type);
                 //return PythonOps.Repr(ProjectState.CodeContext, _value);
             }

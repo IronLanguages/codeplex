@@ -14,12 +14,14 @@
 
 using System;
 using System.Collections.Generic;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime;
 using Microsoft.PyAnalysis.Interpreter;
 
 namespace Microsoft.PyAnalysis.Values {
-    internal class BuiltinModule : BuiltinNamespace {
+    internal class BuiltinModule : BuiltinNamespace, IReferenceableContainer {
         private readonly string _name;
+        private readonly MemberReferences _references = new MemberReferences();
 
         public BuiltinModule(PythonModule module, ProjectState projectState, bool showClr)
             : base(new LazyDotNetDict(new object[] { module }, projectState, showClr)) {
@@ -29,6 +31,14 @@ namespace Microsoft.PyAnalysis.Values {
             } else {
                 _name = name as string;
             }
+        }
+
+        public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
+            var res = base.GetMember(node, unit, name);
+            if (res.Count > 0) {
+                _references.AddReference(node, unit, name);
+            }
+            return res;
         }
 
         public override IDictionary<string, ISet<Namespace>> GetAllMembers(bool showClr) {
@@ -55,5 +65,13 @@ namespace Microsoft.PyAnalysis.Values {
         public override ResultType ResultType {
             get { return ResultType.Module; }
         }
+
+        #region IReferenceableContainer Members
+
+        public IEnumerable<IReferenceable> GetDefinitions(string name) {
+            return _references.GetDefinitions(name);
+        }
+
+        #endregion
     }
 }

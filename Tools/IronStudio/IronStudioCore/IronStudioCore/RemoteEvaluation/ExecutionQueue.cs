@@ -14,8 +14,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Runtime.Remoting;
 using System.Threading;
 
 namespace Microsoft.IronStudio.RemoteEvaluation {
@@ -25,6 +24,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         private AutoResetEvent _event = new AutoResetEvent(false);
         private List<ExecutionQueueItem> _items = new List<ExecutionQueueItem>();
         private bool _running, _aborting;
+        private Action<Action> _commandDispatcher;
 
         public ExecutionQueue(ApartmentState state) {
             _executionThread = new Thread(ExecutionThread);
@@ -32,6 +32,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
             _executionThread.Name = "ExecutionThread";
             _executionThread.SetApartmentState(state);
             _executionThread.Start();
+            _commandDispatcher = (action) => action();
         }
 
         private void ExecutionThread() {
@@ -48,7 +49,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
                     try {
                         _running = true;
                         try {
-                            curItem.Process();
+                            _commandDispatcher(() => curItem.Process());
                         } finally {
                             _running = false;
                         }
@@ -64,6 +65,27 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
                 } else {
                     _event.WaitOne();
                 }
+            }
+        }
+
+        public void Process(ExecutionQueueItem item) {
+            if (Running) {
+                // Remote side called us, we called back, and now they're calling back again.  Process this request synchronously so we don't hang
+                _commandDispatcher(() => {
+                    item.Process();
+                });
+            } else {
+                Enqueue(item);
+                item.Wait();
+            }
+        }
+
+        public ObjectHandle CommandDispatcher {
+            get {
+                return new ObjectHandle(_commandDispatcher);
+            }
+            set {
+                _commandDispatcher = (Action<Action>)value.Unwrap();
             }
         }
 

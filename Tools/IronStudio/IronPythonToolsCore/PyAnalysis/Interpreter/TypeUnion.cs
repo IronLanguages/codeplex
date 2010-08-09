@@ -27,7 +27,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
         private static IEqualityComparer<Namespace> ObjectComparer = EqualityComparer<Namespace>.Default;
         public static IEqualityComparer<Namespace> UnionComparer = new UnionEqualityComparer();
 
-        public bool Add(Namespace ns, AnalysisUnit unit) {
+        public bool Add(Namespace ns, ProjectState state) {
             if (_isObject) {
                 return false;
             }
@@ -41,7 +41,7 @@ namespace Microsoft.PyAnalysis.Interpreter {
                         _ns = new HashSet<Namespace>(_ns, UnionComparer);
                     } else {
                         // TODO: We should warn here in debug builds so see if we can improve tracking
-                        _ns = unit.ProjectState._objectSet;
+                        _ns = state._objectSet;
                         _isObject = true;
                     }
                 }

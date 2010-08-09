@@ -37,8 +37,9 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         public override ISet<Namespace> GetMember(Node node, AnalysisUnit unit, string name) {
-            ISet<Namespace> res;
-            if (VariableDict.TryGetValue(name, out res)) {
+            bool showClr = (unit != null) ? unit.DeclaringModule.ShowClr : false;
+            var res = VariableDict.GetClr(name, showClr, null);
+            if (res != null) {
                 return res;
             }
             return EmptySet<Namespace>.Instance;

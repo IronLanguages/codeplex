@@ -248,6 +248,58 @@ namespace Microsoft.IronStudio.Repl {
 
         #endregion
 
+        /// <summary>
+        /// A command filter which runs before the text view for all commands used for certain commands we need to intercept.
+        /// </summary>
+        class EarlyCommandFilter : IOleCommandTarget {
+            internal IOleCommandTarget _nextTarget;
+            private VsReplWindow _vsReplWindow;
+
+            public EarlyCommandFilter(VsReplWindow vsReplWindow) {
+                _vsReplWindow = vsReplWindow;
+            }
+
+            #region IOleCommandTarget Members
+
+            public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut) {
+                if (pguidCmdGroup == VSConstants.VSStd2K) {
+                    switch ((VSConstants.VSStd2KCmdID)nCmdID) {
+                        case VSConstants.VSStd2KCmdID.SHOWCONTEXTMENU:
+                            _vsReplWindow.ShowContextMenu();
+                            return VSConstants.S_OK;
+                        case VSConstants.VSStd2KCmdID.TYPECHAR:
+                            char typedChar = (char)(ushort)Marshal.GetObjectForNativeVariant(pvaIn);
+                            if (!_vsReplWindow._replWindow.CaretInInputRegion) {
+                                _vsReplWindow.EditorOperations.MoveToEndOfDocument(false);
+                            }
+                            _vsReplWindow.EditorOperations.InsertText(typedChar.ToString());
+                            return VSConstants.S_OK;
+                        case VSConstants.VSStd2KCmdID.PASTE:
+                            break;
+                    }
+                } else if (pguidCmdGroup == VSConstants.GUID_VSStandardCommandSet97) {
+                    switch ((VSConstants.VSStd97CmdID)nCmdID) {
+                        case VSConstants.VSStd97CmdID.Paste:
+                            // move the cursor into a valid input region and then paste.
+                            if (!_vsReplWindow._replWindow.CaretInInputRegion) {
+                                _vsReplWindow.EditorOperations.MoveToEndOfDocument(false);
+                            }
+
+                            _vsReplWindow.EditorOperations.Paste();
+                            return VSConstants.S_OK;
+                    }
+                }
+
+                return _nextTarget.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+            }
+
+            public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText) {
+                return _nextTarget.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
+            }
+
+            #endregion
+        }
+
         #region IOleCommandTarget Members
 
         public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut) {
@@ -263,13 +315,6 @@ namespace Microsoft.IronStudio.Repl {
                 }
             } else if (pguidCmdGroup == VSConstants.VSStd2K) {
                 switch ((VSConstants.VSStd2KCmdID)nCmdID) {
-                    case VSConstants.VSStd2KCmdID.TYPECHAR:
-                        char typedChar = (char)(ushort)Marshal.GetObjectForNativeVariant(pvaIn);
-                        if (!_replWindow.CaretInInputRegion) {
-                            EditorOperations.MoveToEndOfDocument(false);
-                        }
-                        EditorOperations.InsertText(typedChar.ToString());
-                        return VSConstants.S_OK;
                     case VSConstants.VSStd2KCmdID.RETURN:
                         int res = VSConstants.S_OK;
                         var position = _replWindow.CurrentView.Caret.Position.BufferPosition.GetContainingLine();
@@ -296,7 +341,6 @@ namespace Microsoft.IronStudio.Repl {
                     return VSConstants.S_OK;
                 }
             }
-
             if (_commandService != null) {
                 return ((IOleCommandTarget)_commandService).Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
             }
@@ -427,7 +471,9 @@ namespace Microsoft.IronStudio.Repl {
         public override void OnToolWindowCreated() {
             Guid commandUiGuid = Microsoft.VisualStudio.VSConstants.GUID_TextEditorFactory;
             ((IVsWindowFrame)Frame).SetGuidProperty((int)__VSFPROPID.VSFPROPID_InheritKeyBindings, ref commandUiGuid);
-            
+
+            var earlyFilter = new EarlyCommandFilter(this);
+            ErrorHandler.ThrowOnFailure(_view.AddCommandFilter(earlyFilter, out earlyFilter._nextTarget));
             _commandService = new OleMenuCommandService(this, (IOleCommandTarget)_view);
 
             AddCommand(VSConstants.VSStd2KCmdID.CANCEL, () => _replWindow.Cancel());

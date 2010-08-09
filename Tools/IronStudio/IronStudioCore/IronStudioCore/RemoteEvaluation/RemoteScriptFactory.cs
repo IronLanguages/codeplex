@@ -35,7 +35,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         private readonly Process _remoteRuntimeProcess;
         private readonly AutoResetEvent _remoteOutputReceived = new AutoResetEvent(false);
         private readonly RemoteProxy _proxy;
-        private readonly AsyncAbort _abort;        
+        private readonly AsyncAccess _asyncAccess;        
 
         private static bool _registeredChannel;
         private static object _lock = new object();
@@ -60,7 +60,6 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
 
                 process = new Process();
                 process.StartInfo = GetProcessStartInfo(aptState, processBasePath);
-                process.StartInfo.FileName = "RemoteScriptFactory.exe";
 
                 _remoteRuntimeProcess = process;
 
@@ -84,7 +83,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
                 _proxy = (RemoteProxy)RemotingServices.Connect(typeof(RemoteProxy), uri.Substring(5));
                 _proxy.SetParentProcess(Process.GetCurrentProcess().Id);
 
-                _abort = (AsyncAbort)RemotingServices.Connect(typeof(AsyncAbort), abortUri.Substring(10));
+                _asyncAccess = (AsyncAccess)RemotingServices.Connect(typeof(AsyncAccess), abortUri.Substring(10));
             } finally {
                 if (_proxy == null) {                    
                     if (process != null) {
@@ -113,10 +112,6 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
             }
         }
 
-        public string[] GetModuleNames(ScriptEngine engine) {
-            return _proxy.GetModuleNames(engine);
-        }
-        
         ~RemoteScriptFactory() {
             Dispose();
         }
@@ -150,9 +145,18 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         /// and will not be executed.
         /// </summary>
         public void Abort() {
-            _abort.Abort();
+            _asyncAccess.Abort();
         }
 
+
+        public ObjectHandle CommandDispatcher {
+            get {
+                return _asyncAccess.CommandDispatcher;
+            }
+            set {
+                _asyncAccess.CommandDispatcher = value;
+            }
+        }
         /// <summary>
         /// Sets the TextWriter that is used for output in the remote process.
         /// </summary>
@@ -214,7 +218,7 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
 
         private ProcessStartInfo GetProcessStartInfo(ApartmentState state, string processBasePath) {
             ProcessStartInfo processInfo = new ProcessStartInfo();
-            processInfo.FileName = Path.Combine(processBasePath, Path.GetFileName(typeof(RemoteScriptFactory).Assembly.Location));
+            processInfo.FileName = Path.Combine(processBasePath, "RemoteScriptFactory.exe");
             processInfo.CreateNoWindow = true;
 
             // Set UseShellExecute to false to enable redirection.

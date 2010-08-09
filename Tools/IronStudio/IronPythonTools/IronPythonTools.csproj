@@ -89,11 +89,6 @@
       <HintPath>$(LanguageBinPath)\Microsoft.Scripting.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.Scripting.Debugging">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Accessibility">
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
@@ -284,6 +279,11 @@
     <Content Include="$(LanguageBinPath)\IronPython.Modules.dll">
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>.</VSIXSubPath>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LanguageBinPath)\DLLs\IronPython.Wpf.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>DLLs</VSIXSubPath>
       <Visible>false</Visible>
     </Content>
   </ItemGroup>

@@ -12,25 +12,20 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace Microsoft.IronStudio.RemoteEvaluation {
-    /// <summary>
-    /// Special MarshalByRefObject which is used to communicate we need to abort
-    /// the current work item on a 2ndary async communication channel.
-    /// </summary>
-    class AsyncAbort : MarshalByRefObject {
-        private readonly RemoteProxy _proxy;
+namespace Microsoft.PyAnalysis.Values {
+    interface IReferenceableContainer {
+        IEnumerable<IReferenceable> GetDefinitions(string name);
+    }
 
-        public AsyncAbort(RemoteProxy proxy) {
-            _proxy = proxy;
+    interface IReferenceable {
+        IEnumerable<KeyValuePair<IProjectEntry, SimpleSrcLocation>> Definitions {
+            get;
         }
-
-        public void Abort() {
-            _proxy.Abort();
+        IEnumerable<KeyValuePair<IProjectEntry, SimpleSrcLocation>> References {
+            get;
         }
     }
+
 }

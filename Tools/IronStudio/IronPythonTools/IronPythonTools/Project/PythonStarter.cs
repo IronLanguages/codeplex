@@ -32,49 +32,9 @@ namespace Microsoft.IronPythonTools.Project {
 
         public PythonStarter(IServiceProvider serviceProvider) : base(serviceProvider) {}
 
-        private static string GetPythonInstallDir() {
-            using (var ipy = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\IronPython")) {
-                if (ipy != null) {
-                    using (var twoSeven = ipy.OpenSubKey("2.7")) {
-                        if (twoSeven != null) {
-                            var path = twoSeven.GetValue("") as string;
-                            if (path != null) {
-                                return path;
-                            }
-                        }
-                    }
-                }
-            }
-
-            var paths = Environment.GetEnvironmentVariable("PATH");
-            if (paths != null) {
-                foreach (string dir in paths.Split(Path.PathSeparator)) {
-                    try {
-                        if (IronPythonExistsIn(dir)) {
-                            return dir;
-                        }
-                    } catch {
-                        // ignore
-                    }
-                }
-            }
-
-            return null;
-        }
-
         public override string InstallPath {
             get {
-                string result;
-#if DEBUG
-                result = Environment.GetEnvironmentVariable("DLR_ROOT");
-                if (result != null) {
-                    result = Path.Combine(result, @"Bin\Debug");
-                    if (IronPythonExistsIn(result)) {
-                        return result;
-                    }
-                }
-#endif
-                return GetPythonInstallDir() ?? Path.GetDirectoryName(typeof(PythonStarter).Assembly.Location);
+                return PythonRuntimeHost.GetPythonInstallDir() ?? Path.GetDirectoryName(typeof(PythonStarter).Assembly.Location);
             }
         }
 
@@ -90,7 +50,7 @@ namespace Microsoft.IronPythonTools.Project {
                     }
                 }
 #endif
-                result = GetPythonInstallDir();
+                result = PythonRuntimeHost.GetPythonInstallDir();
                 if (result != null) {
                     result = Path.Combine(result, @"Silverlight\bin\Chiron.exe");
                     if (File.Exists(result)) {
@@ -100,12 +60,6 @@ namespace Microsoft.IronPythonTools.Project {
 
                 return base.ChironPath;
             }
-        }
-
-        private static bool IronPythonExistsIn(string/*!*/ dir) {
-            return File.Exists(Path.Combine(dir, "ipy.exe"))
-                && File.Exists(Path.Combine(dir, "IronPython.dll"))
-                && File.Exists(Path.Combine(dir, "IronPython.Modules.dll"));
         }
 
         private string InterpreterExecutable {

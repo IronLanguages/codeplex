@@ -90,6 +90,18 @@ namespace Microsoft.PyAnalysis.Values {
             get { return null; }
         }
 
+        public virtual IProjectEntry DeclaringModule {
+            get {
+                return null;
+            }
+        }
+
+        public virtual int DeclaringVersion {
+            get {
+                return -1;
+            }
+        }
+
         #endregion
 
         #region Dynamic Operations
@@ -118,7 +130,12 @@ namespace Microsoft.PyAnalysis.Values {
         public virtual void AugmentAssign(AugmentedAssignStatement node, AnalysisUnit unit, ISet<Namespace> value) {
         }
 
-        public virtual ISet<Namespace> BinaryOperation(Node node, AnalysisUnit unit, PythonOperator operation, ISet<Namespace> rhs) {            
+        public virtual ISet<Namespace> BinaryOperation(Node node, AnalysisUnit unit, PythonOperator operation, ISet<Namespace> rhs) {
+            switch (operation) {
+                case PythonOperator.Is:
+                case PythonOperator.IsNot:
+                    return unit.DeclaringModule.ProjectEntry.ProjectState._boolType.Instance;
+            }
             return SelfSet.Union(rhs);
         }
 
@@ -346,5 +363,14 @@ namespace Microsoft.PyAnalysis.Values {
         }
 
         #endregion
+
+        internal virtual void AddReference(Node node, AnalysisUnit analysisUnit) {
+        }
+
+        public virtual IEnumerable<LocationInfo> References {
+            get {
+                yield break;
+            }
+        }
     }
 }

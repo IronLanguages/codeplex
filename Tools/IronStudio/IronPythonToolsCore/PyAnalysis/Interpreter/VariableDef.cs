@@ -24,33 +24,21 @@ using Microsoft.Scripting;
 
 namespace Microsoft.PyAnalysis.Values {
     abstract class DependentData<TStorageType>  where TStorageType : DependencyInfo {
-        protected Dictionary<IProjectEntry, TStorageType> _dependencies;
+        protected SingleDict<IProjectEntry, TStorageType> _dependencies;  
 
         public void ClearOldValues(IProjectEntry fromModule) {
             TStorageType deps;
-            if (_dependencies != null) {
-                if (_dependencies.TryGetValue(fromModule, out deps)) {
-                    if (deps.Version != fromModule.Version) {
-                        _dependencies.Remove(fromModule);
-                    }
+            if (_dependencies.TryGetValue(fromModule, out deps)) {
+                if (deps.Version != fromModule.Version) {
+                    _dependencies.Remove(fromModule);
                 }
             }
         }
 
-        protected Dictionary<IProjectEntry, TStorageType> Dependencies {
-            get {
-                if (_dependencies == null) {
-                    _dependencies = new Dictionary<IProjectEntry, TStorageType>();
-                }
-                return _dependencies;
-            }
-        }
-
-        protected TStorageType GetDependentItems(AnalysisUnit unit) {
-            var module = unit.DeclaringModule.ProjectEntry;
+        protected TStorageType GetDependentItems(IProjectEntry module) {
             TStorageType result;
-            if (!Dependencies.TryGetValue(module, out result) || result.Version != module.Version) {
-                Dependencies[module] = result = NewDefinition(module.Version);
+            if (!_dependencies.TryGetValue(module, out result) || result.Version != module.Version) {
+                _dependencies[module] = result = NewDefinition(module.Version);
             }
             return result;
         }
@@ -62,18 +50,16 @@ namespace Microsoft.PyAnalysis.Values {
         /// further analysis.
         /// </summary>
         public void EnqueueDependents() {
-            if (_dependencies != null) {
-                foreach (var val in _dependencies.Values) {
-                    foreach (var analysisUnit in val.DependentUnits) {
-                        analysisUnit.Enqueue();
-                    }
+            foreach (var val in _dependencies.Values) {
+                foreach (var analysisUnit in val.DependentUnits) {
+                    analysisUnit.Enqueue();
                 }
             }
         }
 
         public void AddDependency(AnalysisUnit unit) {
             if (!unit.ForEval) {
-                GetDependentItems(unit).DependentUnits.Add(unit);
+                GetDependentItems(unit.DeclaringModule.ProjectEntry).AddDependentUnit(unit);
             }
         }
     }
@@ -81,20 +67,6 @@ namespace Microsoft.PyAnalysis.Values {
     class DependentData : DependentData<DependencyInfo> {
         protected override DependencyInfo NewDefinition(int version) {
             return new DependencyInfo(version);
-        }
-    }
-
-    class TypedStorageLocation : DependentData<DependencyInfo> {
-        private readonly TypeUnion _types = new TypeUnion();
-
-        protected override DependencyInfo NewDefinition(int version) {
-            return new DependencyInfo(version);
-        }
-
-        public TypeUnion Types {
-            get {
-                return _types;
-            }
         }
     }
 
@@ -129,100 +101,37 @@ namespace Microsoft.PyAnalysis.Values {
     /// 
     /// TODO: We should store built-in types not keyed off of the ModuleInfo.
     /// </summary>
-    class VariableDef : DependentData<TypedDependencyInfo> {
-        public VariableDef() {
-        }
+    class VariableDef : DependentData<TypedDependencyInfo>, IReferenceable {
+        public VariableDef() { }
 
         protected override TypedDependencyInfo NewDefinition(int version) {
             return new TypedDependencyInfo(version);
         }
 
-        public bool AddTypes(Node node, AnalysisUnit unit, IEnumerable<Namespace> newTypes, bool addReference = true) {
-            if (TryMigration(newTypes, unit)) {
-                return false;
-            }
-
-            var dependencies = GetDependentItems(unit);
-            if (addReference) {
-                dependencies.References.Add(node.Span);
-            }
-            var types = dependencies.Types;
-#if EXTRA_DEBUG
-            if (types.Count > 50) {
-                Dictionary<Type, int> dist = new Dictionary<Type, int>();
-                foreach (var type in types) {
-                    int count;
-                    if (!dist.TryGetValue(type.GetType(), out count)) {
-                        dist[type.GetType()] = 1;
-                    } else {
-                        dist[type.GetType()] = count + 1;
-                    }
-                }
-
-                List<KeyValuePair<Type, int>> list = new List<KeyValuePair<Type, int>>(dist);
-                list.Sort((x, y) => x.Value - y.Value);
-            }
-#endif
-
+        public bool AddTypes(Node node, AnalysisUnit unit, IEnumerable<Namespace> newTypes) {
             bool added = false;
-            foreach (var ns in newTypes) {
-                if (dependencies.Types.Add(ns, unit)) {
-                    added = true;                    
+
+            foreach (var value in newTypes) {
+                var declaringModule = value.DeclaringModule;
+                if (declaringModule == null || declaringModule.Version == value.DeclaringVersion) {
+                    var dependencies = GetDependentItems(declaringModule ?? unit.ProjectEntry);
+
+                    if (dependencies.Types.Add(value, unit.ProjectState)) {
+                        added = true;
+                    }
                 }
             }
 
             if (added) {
                 EnqueueDependents();
             }
+
             return added;
         }
 
-        private bool TryMigration(IEnumerable<Namespace> newTypes, AnalysisUnit unit) {
-            if (_dependencies == null) {
-                return false;
-            }
-
-            var module = unit.DeclaringModule.ProjectEntry;
-            TypedDependencyInfo existing;
-            if (!_dependencies.TryGetValue(module, out existing) || existing == null) {
-                return false;
-            }
-
-            bool hasUserDefined = false;
-            foreach (var t in existing.Types) {
-                if (!t.IsBuiltin) {
-                    hasUserDefined = true;
-                    break;
-                }
-            }
-
-            if (hasUserDefined) {
-                return false;
-            }
-
-            bool allPresent = true;
-            foreach (var ns in newTypes) {
-                if (!existing.Types.Contains(ns)) {
-                    allPresent = false;
-                    break;
-                }                
-            }
-
-            var dependencies = GetDependentItems(unit);
-            dependencies.Types = existing.Types;
-            if (existing.HasReferences) {
-                dependencies.References = existing.References;
-            }
-            if (existing.HasAssignments) {
-                dependencies.Assignments = existing.Assignments;
-            }
-            return allPresent;
-        }
-
-
         public ISet<Namespace> Types {
             get {
-                if (_dependencies != null) {
+                if (_dependencies.Count != 0) {
                     HashSet<Namespace> res = new HashSet<Namespace>();
                     foreach (var mod in _dependencies.Values) {
                         res.UnionWith(mod.Types);
@@ -235,38 +144,45 @@ namespace Microsoft.PyAnalysis.Values {
 
         public void AddReference(Node node, AnalysisUnit unit) {
             if (!unit.ForEval) {
-                var depUnits = GetDependentItems(unit);
-                depUnits.DependentUnits.Add(unit);
-                depUnits.References.Add(node.Span);
+                AddReference(new SimpleSrcLocation(node.Span), unit.DeclaringModule.ProjectEntry).AddDependentUnit(unit);
             }
+        }
+
+        public TypedDependencyInfo AddReference(SimpleSrcLocation location, IProjectEntry module) {
+            var depUnits = GetDependentItems(module);
+            depUnits.References.Add(location);
+            return depUnits;
+        }
+
+        public void AddAssignment(SimpleSrcLocation location, IProjectEntry entry) {
+            var depUnits = GetDependentItems(entry);
+            depUnits.Assignments.Add(location);
         }
 
         public void AddAssignment(Node node, AnalysisUnit unit) {
             if (!unit.ForEval) {
-                var depUnits = GetDependentItems(unit);
-                depUnits.DependentUnits.Add(unit);
-                depUnits.Assignments.Add(node.Span);
+                AddAssignment(new SimpleSrcLocation(node.Span), unit.DeclaringModule.ProjectEntry);
             }
         }
 
-        public IEnumerable<KeyValuePair<IProjectEntry, SourceSpan>> References {
+        public IEnumerable<KeyValuePair<IProjectEntry, SimpleSrcLocation>> References {
             get {
-                if (_dependencies != null) {
+                if (_dependencies.Count != 0) {
                     foreach (var keyValue in _dependencies) {
                         foreach (var reference in keyValue.Value.References) {
-                            yield return new KeyValuePair<IProjectEntry, SourceSpan>(keyValue.Key, reference);
+                            yield return new KeyValuePair<IProjectEntry, SimpleSrcLocation>(keyValue.Key, reference);
                         }
                     }
                 }
             }
         }
 
-        public IEnumerable<KeyValuePair<IProjectEntry, SourceSpan>> Assignments {
+        public IEnumerable<KeyValuePair<IProjectEntry, SimpleSrcLocation>> Definitions {
             get {
-                if (_dependencies != null) {
+                if (_dependencies.Count != 0) {
                     foreach (var keyValue in _dependencies) {
                         foreach (var reference in keyValue.Value.Assignments) {
-                            yield return new KeyValuePair<IProjectEntry, SourceSpan>(keyValue.Key, reference);
+                            yield return new KeyValuePair<IProjectEntry, SimpleSrcLocation>(keyValue.Key, reference);
                         }
                     }
                 }
