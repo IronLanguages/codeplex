@@ -126,6 +126,11 @@ namespace Microsoft.IronPythonTools.Intellisense {
                             _sigHelpSession.Dismiss();
                             _sigHelpSession = null;
                         }
+
+                        if (IronPythonToolsPackage.Instance.LangPrefs.AutoListParams) {
+                            // trigger help for outer call if there is one
+                            TriggerSignatureHelp();
+                        }
                         break;
                     case ",":
                         if (_sigHelpSession == null) {
@@ -155,8 +160,12 @@ namespace Microsoft.IronPythonTools.Intellisense {
                             }
                         }
                     } else if (deleting == "(") {
-                        // TODO: See if we should pop to an outer nesting of signature help
                         _sigHelpSession.Dismiss();
+
+                        // Pop to an outer nesting of signature help
+                        if (IronPythonToolsPackage.Instance.LangPrefs.AutoListParams) {
+                            TriggerSignatureHelp();
+                        }
                     }
                 }
             }
@@ -164,12 +173,8 @@ namespace Microsoft.IronPythonTools.Intellisense {
 
         private void OpenParenStartSignatureSession() {
             if (_activeSession != null) {
-                // TODO: Should we complete here instead?
                 _activeSession.Dismiss();
             }
-
-            SnapshotPoint? caretPoint = GetCaretPoint();
-
             if (_sigHelpSession != null) {
                 _sigHelpSession.Dismiss();
             }
@@ -247,18 +252,19 @@ namespace Microsoft.IronPythonTools.Intellisense {
                     _activeSession.Commit();
                 } else {
                     AttachKeyboardFilter();
-                    _activeSession.Dismissed += new EventHandler(OnSessionDismissedOrCommitted);
-                    _activeSession.Committed += new EventHandler(OnSessionDismissedOrCommitted);
+                    _activeSession.Dismissed += new EventHandler(OnCompletionSessionDismissedOrCommitted);
+                    _activeSession.Committed += new EventHandler(OnCompletionSessionDismissedOrCommitted);
                 }
             }
         }
 
         private void TriggerSignatureHelp() {
+            Debug.Assert(_sigHelpSession == null);
             _sigHelpSession = SignatureBroker.TriggerSignatureHelp(_textView);
 
             if (_sigHelpSession != null) {
                 AttachKeyboardFilter();
-                _sigHelpSession.Dismissed += new EventHandler(OnSessionDismissedOrCommitted);
+                _sigHelpSession.Dismissed += new EventHandler(OnSignatureSessionDismissed);
 
                 ISignature sig;
                 if (_sigHelpSession.Properties.TryGetProperty(typeof(PythonSignature), out sig)) {
@@ -272,9 +278,16 @@ namespace Microsoft.IronPythonTools.Intellisense {
             }
         }
 
-        private void OnSessionDismissedOrCommitted(object sender, System.EventArgs e) {
+        private void OnCompletionSessionDismissedOrCommitted(object sender, System.EventArgs e) {
             // We've just been told that our active session was dismissed.  We should remove all references to it.
+            _activeSession.Committed -= OnCompletionSessionDismissedOrCommitted;
+            _activeSession.Dismissed -= OnCompletionSessionDismissedOrCommitted;
             _activeSession = null;
+        }
+
+        private void OnSignatureSessionDismissed(object sender, System.EventArgs e) {
+            // We've just been told that our active session was dismissed.  We should remove all references to it.
+            _sigHelpSession.Dismissed -= OnSignatureSessionDismissed;
             _sigHelpSession = null;
         }
 
