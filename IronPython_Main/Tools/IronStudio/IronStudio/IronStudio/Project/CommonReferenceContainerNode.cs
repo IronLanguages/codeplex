@@ -33,6 +33,10 @@ namespace Microsoft.IronStudio.Project {
             return new CommonReferenceNode(this.ProjectMgr, selectorData.bstrTitle, selectorData.bstrFile, selectorData.bstrProjRef);
         }
 
+        protected override NodeProperties CreatePropertiesObject() {
+            return new NodeProperties(this);
+        }
+
         /// <summary>
         /// Creates a reference node.  By default we don't add references and this returns null.
         /// </summary>

@@ -65,35 +65,33 @@ namespace Microsoft.IronStudio.Core.Repl {
             int indentation = GetIndentation(baseline, view.Options.GetTabSize());
             var sline = baseline.Trim();
             int tabSize = view.Options.GetIndentSize();
-            if (sline.Length > 0) {
+            var tokens = classifier.GetClassificationSpans(line.Extent);
+            if (tokens.Count > 0) {
                 var lastChar = sline[sline.Length - 1];
-                if (lastChar == ':') {
-                    indentation += tabSize;
-                } else if (IsGroupingChar(lastChar)) {
-                    var curLineExtent = line.Extent;
-                    var tokens = classifier.GetClassificationSpans(curLineExtent);
-                    if (tokens != null) {
-                        var groupings = new Stack<ClassificationSpan>();
-                        foreach (var token in tokens) {
-                            if (token.Span.Start.Position > view.Caret.Position.BufferPosition.Position) {
-                                break;
+                if (!tokens[tokens.Count - 1].ClassificationType.IsOfType(PredefinedClassificationTypeNames.Comment)) {
+                    if (lastChar == ':') {
+                        indentation += tabSize;
+                    } else if (IsGroupingChar(lastChar)) {
+                        if (tokens != null) {
+                            var groupings = new Stack<ClassificationSpan>();
+                            foreach (var token in tokens) {
+                                if (token.Span.Start.Position > view.Caret.Position.BufferPosition.Position) {
+                                    break;
+                                }
+                                if (StartsGrouping(token)) {
+                                    groupings.Push(token);
+                                } else if (groupings.Count > 0 && EndsGrouping(token)) {
+                                    groupings.Pop();
+                                }
                             }
-                            if (StartsGrouping(token)) {
-                                groupings.Push(token);
-                            } else if (groupings.Count > 0 && EndsGrouping(token)) {
-                                groupings.Pop();
+                            if (groupings.Count > 0) {
+                                indentation = groupings.Peek().Span.End.Position - line.Extent.Start.Position;
                             }
                         }
-                        if (groupings.Count > 0) {
-                            indentation = groupings.Peek().Span.End.Position - curLineExtent.Start.Position;
+                    } else if (indentation >= tabSize) {
+                        if (tokens.Count > 0 && tokens[0].ClassificationType.Classification == PredefinedClassificationTypeNames.Keyword && tokens[0].Span.GetText() == "return") {
+                            indentation -= tabSize;
                         }
-                    }
-                } else if(indentation >= tabSize) {
-                    var curLineExtent = line.Extent;
-                    var tokens = classifier.GetClassificationSpans(curLineExtent);
-
-                    if (tokens.Count > 0 && tokens[0].ClassificationType.Classification == PredefinedClassificationTypeNames.Keyword && tokens[0].Span.GetText() == "return") {
-                        indentation -= tabSize;
                     }
                 }
             }
@@ -132,7 +130,12 @@ namespace Microsoft.IronStudio.Core.Repl {
             ITextSnapshotLine line;
             do {
                 line = view.TextSnapshot.GetLineFromLineNumber(curLine);
-                lineText = line.GetText();
+                if (curLine == startLine) {
+                    // if we're in the middle of a line only consider text to the left for white space detection
+                    lineText = line.GetText().Substring(0, view.Caret.Position.BufferPosition.Position - view.Caret.Position.BufferPosition.GetContainingLine().Start);
+                } else {
+                    lineText = line.GetText();
+                }
                 foreach (char c in lineText) {
                     if (!Char.IsWhiteSpace(c)) {
                         hasNonWhiteSpace = true;

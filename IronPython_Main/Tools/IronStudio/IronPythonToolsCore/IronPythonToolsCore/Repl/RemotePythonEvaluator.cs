@@ -118,12 +118,16 @@ namespace Microsoft.IronPythonTools.Library.Repl {
             return null;
         }
 
+        public virtual Dictionary<string, object> GetOptions() {
+            return new Dictionary<string, object>();
+        }
+
         protected override ScriptEngine MakeEngine(Stream stream, TextWriter writer, TextReader reader) {
             _factory.SetConsoleOut(writer);
             _factory.SetConsoleError(writer);
             _factory.SetConsoleIn(reader);
-
-            var runtime = (ScriptRuntime)_factory.CreateRuntime(Python.CreateRuntimeSetup(new Dictionary<string, object>()));
+            
+            var runtime = (ScriptRuntime)_factory.CreateRuntime(Python.CreateRuntimeSetup(GetOptions()));
             var res = runtime.GetEngine("Python");
             InitializeEngine(stream, writer, res);
             return res;

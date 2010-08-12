@@ -31,7 +31,7 @@ namespace Microsoft.IronStudio.Core.Repl {
         #region IReplCommand Members
 
         public void Execute(IReplWindow window, string arguments) {
-            window.Evaluator.AbortCommand();
+            window.AbortCommand();
         }
 
         public string Description {

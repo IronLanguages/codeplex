@@ -177,7 +177,7 @@ namespace Microsoft.IronPythonTools {
             if (null != mcs) {
                 foreach (var command in Commands.CommandTable.Commands) {
                     var beforeQueryStatus = command.BeforeQueryStatus;
-                    CommandID toolwndCommandID = new CommandID(GuidList.guidIronPythonToolsCmdSet, command.CommandId);                    
+                    CommandID toolwndCommandID = new CommandID(GuidList.guidIronPythonToolsCmdSet, command.CommandId);
                     if (beforeQueryStatus == null) {
                         MenuCommand menuToolWin = new MenuCommand(command.DoCommand, toolwndCommandID);
                         mcs.AddCommand(menuToolWin);
@@ -193,7 +193,7 @@ namespace Microsoft.IronPythonTools {
             if (RuntimeHost == null) {
                 throw new InvalidOperationException("Unable to obtain the DLR Runtime hosting component");
             }
-            
+
             RuntimeHost.EnterOutliningModeOnOpen = OptionsPage.EnterOutliningModeOnOpen;
 
             // register our language service so that we can support features like the navigation bar

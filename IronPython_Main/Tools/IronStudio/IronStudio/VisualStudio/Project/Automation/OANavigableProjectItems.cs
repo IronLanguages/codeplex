@@ -209,10 +209,11 @@ namespace Microsoft.VisualStudio.Project.Automation
 		/// Get Project Item from index
 		/// </summary>
 		/// <param name="index">Either index by number (1-based) or by name can be used to get the item</param>
-		/// <returns>Project Item. null is return if invalid index is specified</returns>
+		/// <returns>Project Item. ArgumentException if invalid index is specified</returns>
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
 		public virtual EnvDTE.ProjectItem Item(object index)
 		{
+            // Changed from MPFProj: throws ArgumentException instead of returning null (http://mpfproj10.codeplex.com/workitem/9158)
 			if(index is int)
 			{
 				int realIndex = (int)index - 1;
@@ -220,7 +221,6 @@ namespace Microsoft.VisualStudio.Project.Automation
 				{
 					return (EnvDTE.ProjectItem)items[realIndex];
 				}
-				return null;
 			}
 			else if(index is string)
 			{
@@ -233,7 +233,7 @@ namespace Microsoft.VisualStudio.Project.Automation
 					}
 				}
 			}
-			return null;
+            throw new ArgumentException();
 		}
 
 		/// <summary>

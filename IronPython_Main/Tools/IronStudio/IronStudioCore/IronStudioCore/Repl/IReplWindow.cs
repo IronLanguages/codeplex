@@ -102,6 +102,8 @@ namespace Microsoft.IronStudio.Repl {
         /// </summary>
         void Reset();
 
+        void AbortCommand();
+
         /// <summary>
         /// Writes a line into the output buffer as if it was outputted by the program.
         /// </summary>

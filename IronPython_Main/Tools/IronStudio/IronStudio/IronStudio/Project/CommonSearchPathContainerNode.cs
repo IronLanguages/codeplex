@@ -38,6 +38,10 @@ namespace Microsoft.IronStudio.Project {
             this.ExcludeNodeFromScc = true;
         }
 
+        protected override NodeProperties CreatePropertiesObject() {
+            return new NodeProperties(this);
+        }
+
         /// <summary>
         /// Gets the default sort priority of this node.
         /// By default returns HierarchyNode. 
