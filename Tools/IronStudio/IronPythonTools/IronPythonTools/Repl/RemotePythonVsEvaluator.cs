@@ -13,6 +13,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using Microsoft.IronPythonTools.Intellisense;
 using Microsoft.IronPythonTools.Language;
 using Microsoft.IronPythonTools.Library.Repl;
@@ -38,6 +39,17 @@ namespace Microsoft.IronPythonTools.Repl {
         public override void Reset() {
             base.Reset(); 
             Initialize();
+        }
+
+        public override Dictionary<string, object> GetOptions() {
+            Dictionary<string, object> res = new Dictionary<string, object>();
+            foreach (string option in IronPythonToolsPackage.Instance.OptionsPage.InteractiveOptions.Split(';')) {
+                string[] nameValue = option.Split(new[] { '=' }, 2);
+                if (nameValue.Length == 2) {
+                    res[nameValue[0]] = nameValue[1];
+                }
+            }
+            return res;
         }
 
         public void Initialize() {

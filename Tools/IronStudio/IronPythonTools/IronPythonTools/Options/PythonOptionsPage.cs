@@ -12,8 +12,7 @@
  *
  * ***************************************************************************/
 
-using System.ComponentModel;
-using Microsoft.VisualStudio.Shell;
+using System;
 using Microsoft.IronPythonTools.Commands;
 using Microsoft.IronStudio.Core.Repl;
 
@@ -23,6 +22,7 @@ namespace Microsoft.IronPythonTools.Options {
         private ReplIntellisenseMode _replIntellisenseMode;
         private PythonOptionsControl _window;
         private int _fillParagraphColumns;
+        private string _interactiveOptions;
 
         public PythonOptionsPage()
             : base("Advanced") {
@@ -76,6 +76,11 @@ namespace Microsoft.IronPythonTools.Options {
             set { _fillParagraphColumns = value; }
         }
 
+        public string InteractiveOptions {
+            get { return _interactiveOptions; }
+            set { _interactiveOptions = value; }
+        }
+
         #endregion
 
         public override void ResetSettings() {
@@ -88,12 +93,14 @@ namespace Microsoft.IronPythonTools.Options {
         private const string SmartHistorySetting = "InteractiveSmartHistory";
         private const string ReplIntellisenseModeSetting = "InteractiveIntellisenseMode";
         private const string FillParagraphColumnsSetting = "FillParagraphColumns";
+        private const string InteractiveOptionsSetting = "InteractiveOptions";
 
         public override void LoadSettingsFromStorage() {
             _enterOutliningMode = LoadBool(EnterOutlingModeOnOpenSetting) ?? true;
             _smartHistory = LoadBool(SmartHistorySetting) ?? true;
             _replIntellisenseMode = LoadEnum<ReplIntellisenseMode>(ReplIntellisenseModeSetting) ?? ReplIntellisenseMode.DontEvaluateCalls;
             _fillParagraphColumns = LoadInt(FillParagraphColumnsSetting) ?? 80;
+            _interactiveOptions = LoadString(InteractiveOptionsSetting) ?? String.Empty;
         }
 
         public override void SaveSettingsToStorage() {
@@ -101,6 +108,7 @@ namespace Microsoft.IronPythonTools.Options {
             SaveBool(SmartHistorySetting, _smartHistory);
             SaveEnum<ReplIntellisenseMode>(ReplIntellisenseModeSetting, _replIntellisenseMode);
             SaveInt(FillParagraphColumnsSetting, _fillParagraphColumns);
+            SaveString(InteractiveOptionsSetting, _interactiveOptions);
         }
     }
 }

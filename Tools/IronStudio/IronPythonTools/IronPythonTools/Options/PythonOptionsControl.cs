@@ -24,11 +24,17 @@ namespace Microsoft.IronPythonTools.Options {
             _outliningOnOpen.Checked = IronPythonToolsPackage.Instance.OptionsPage.EnterOutliningModeOnOpen;
             _smartReplHistory.Checked = IronPythonToolsPackage.Instance.OptionsPage.ReplSmartHistory;
             _fillParagraphText.Text = IronPythonToolsPackage.Instance.OptionsPage.FillParagraphColumns.ToString();
+            _interactiveOptionsValue.Text = IronPythonToolsPackage.Instance.OptionsPage.InteractiveOptions;
+
             switch (IronPythonToolsPackage.Instance.OptionsPage.ReplIntellisenseMode) {
                 case ReplIntellisenseMode.AlwaysEvaluate: _evalAlways.Checked = true; break;
                 case ReplIntellisenseMode.DontEvaluateCalls: _evalNoCalls.Checked = true; break;
                 case ReplIntellisenseMode.NeverEvaluate: _evalNever.Checked = true; break;
             }
+
+            const string optionsToolTip = "Options for the interactive window process.  For example: Frames=True;RecursionLimit=1001\r\n\r\nChanges take effect after interactive window reset.";
+            _toolTips.SetToolTip(_interactiveOptionsValue, optionsToolTip);
+            _toolTips.SetToolTip(_interactiveOptions, optionsToolTip);
         }
 
         private void _outliningOnOpen_CheckedChanged(object sender, EventArgs e) {
@@ -51,6 +57,9 @@ namespace Microsoft.IronPythonTools.Options {
             IronPythonToolsPackage.Instance.OptionsPage.ReplIntellisenseMode = ReplIntellisenseMode.AlwaysEvaluate;
         }
 
+        private void _interactiveOptionsValue_TextChanged(object sender, EventArgs e) {
+            IronPythonToolsPackage.Instance.OptionsPage.InteractiveOptions = _interactiveOptionsValue.Text;
+        }
 
         private void _fillParagraphText_TextChanged(object sender, EventArgs e) {
             for (int i = 0; i < _fillParagraphText.Text.Length; i++) {

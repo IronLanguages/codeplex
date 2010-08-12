@@ -145,7 +145,10 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         /// and will not be executed.
         /// </summary>
         public void Abort() {
-            _asyncAccess.Abort();
+            try {
+                _asyncAccess.Abort();
+            } catch (RemotingException) {
+            }
         }
 
 

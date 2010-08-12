@@ -23,6 +23,7 @@ namespace Microsoft.IronPythonTools.Options {
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent() {
+            this.components = new System.ComponentModel.Container();
             this._editorGroup = new System.Windows.Forms.GroupBox();
             this._outliningOnOpen = new System.Windows.Forms.CheckBox();
             this._fillParagraphText = new System.Windows.Forms.TextBox();
@@ -33,6 +34,9 @@ namespace Microsoft.IronPythonTools.Options {
             this._evalAlways = new System.Windows.Forms.RadioButton();
             this._evalNoCalls = new System.Windows.Forms.RadioButton();
             this._evalNever = new System.Windows.Forms.RadioButton();
+            this._interactiveOptions = new System.Windows.Forms.Label();
+            this._interactiveOptionsValue = new System.Windows.Forms.TextBox();
+            this._toolTips = new System.Windows.Forms.ToolTip(this.components);
             this._editorGroup.SuspendLayout();
             this._interactiveGroup.SuspendLayout();
             this._completionModeGroup.SuspendLayout();
@@ -81,11 +85,13 @@ namespace Microsoft.IronPythonTools.Options {
             // _interactiveGroup
             // 
             this._interactiveGroup.Controls.Add(this._smartReplHistory);
+            this._interactiveGroup.Controls.Add(this._interactiveOptionsValue);
+            this._interactiveGroup.Controls.Add(this._interactiveOptions);
             this._interactiveGroup.Controls.Add(this._completionModeGroup);
             this._interactiveGroup.Location = new System.Drawing.Point(3, 79);
             this._interactiveGroup.Name = "_interactiveGroup";
-            this._interactiveGroup.Size = new System.Drawing.Size(389, 142);
-            this._interactiveGroup.TabIndex = 20;
+            this._interactiveGroup.Size = new System.Drawing.Size(389, 160);
+            this._interactiveGroup.TabIndex = 1;
             this._interactiveGroup.TabStop = false;
             this._interactiveGroup.Text = "Interactive Window";
             // 
@@ -100,15 +106,32 @@ namespace Microsoft.IronPythonTools.Options {
             this._smartReplHistory.UseVisualStyleBackColor = true;
             this._smartReplHistory.CheckedChanged += new System.EventHandler(this._smartReplHistory_CheckedChanged);
             // 
+            // _interactiveOptions
+            // 
+            this._interactiveOptions.AutoSize = true;
+            this._interactiveOptions.Location = new System.Drawing.Point(12, 40);
+            this._interactiveOptions.Name = "_interactiveOptions";
+            this._interactiveOptions.Size = new System.Drawing.Size(46, 13);
+            this._interactiveOptions.TabIndex = 1;
+            this._interactiveOptions.Text = "Options:";
+            // 
+            // _interactiveOptionsValue
+            // 
+            this._interactiveOptionsValue.Location = new System.Drawing.Point(69, 40);
+            this._interactiveOptionsValue.Name = "_interactiveOptionsValue";
+            this._interactiveOptionsValue.Size = new System.Drawing.Size(314, 20);
+            this._interactiveOptionsValue.TabIndex = 2;
+            this._interactiveOptionsValue.TextChanged += new System.EventHandler(this._interactiveOptionsValue_TextChanged);
+            // 
             // _completionModeGroup
             // 
             this._completionModeGroup.Controls.Add(this._evalAlways);
             this._completionModeGroup.Controls.Add(this._evalNoCalls);
             this._completionModeGroup.Controls.Add(this._evalNever);
-            this._completionModeGroup.Location = new System.Drawing.Point(19, 44);
+            this._completionModeGroup.Location = new System.Drawing.Point(19, 64);
             this._completionModeGroup.Name = "_completionModeGroup";
             this._completionModeGroup.Size = new System.Drawing.Size(364, 86);
-            this._completionModeGroup.TabIndex = 10;
+            this._completionModeGroup.TabIndex = 3;
             this._completionModeGroup.TabStop = false;
             this._completionModeGroup.Text = "Completion Mode";
             // 
@@ -147,7 +170,7 @@ namespace Microsoft.IronPythonTools.Options {
             this._evalNever.Text = "&Never evaluate expressions";
             this._evalNever.UseVisualStyleBackColor = true;
             this._evalNever.CheckedChanged += new System.EventHandler(this._evalNever_CheckedChanged);
-            // 
+             // 
             // PythonOptionsControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -178,5 +201,8 @@ namespace Microsoft.IronPythonTools.Options {
         private System.Windows.Forms.RadioButton _evalNever;
         private System.Windows.Forms.Label _fillParaColumnLabel;
         private System.Windows.Forms.TextBox _fillParagraphText;
+        private System.Windows.Forms.Label _interactiveOptions;
+        private System.Windows.Forms.TextBox _interactiveOptionsValue;
+        private System.Windows.Forms.ToolTip _toolTips;
     }
 }

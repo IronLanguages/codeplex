@@ -209,6 +209,10 @@ namespace Microsoft.IronStudio.Repl {
             _replWindow.Reset();
         }
 
+        public void AbortCommand() {
+            _replWindow.AbortCommand();
+        }
+
         /// <summary>
         /// See IReplWindow
         /// </summary>
@@ -540,7 +544,7 @@ namespace Microsoft.IronStudio.Repl {
         }
 
         public void BreakRepl(object sender, EventArgs args) {
-            _replWindow.Evaluator.AbortCommand();
+            _replWindow.AbortCommand();
         }
 
         public void ResetRepl(object sender, EventArgs args) {

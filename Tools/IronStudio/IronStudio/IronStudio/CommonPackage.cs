@@ -126,16 +126,19 @@ namespace Microsoft.IronStudio {
                 return null;
             }
 
-            IVsTextView textView;
-            if (ErrorHandler.Failed(((IVsCodeWindow)docView).GetPrimaryView(out textView))) {
-                // TODO: Report error
-                return null;
-            }
+            if (docView is IVsCodeWindow) {
+                IVsTextView textView;
+                if (ErrorHandler.Failed(((IVsCodeWindow)docView).GetPrimaryView(out textView))) {
+                    // TODO: Report error
+                    return null;
+                }
 
-            var model = (IComponentModel)GetGlobalService(typeof(SComponentModel));
-            var adapterFactory = model.GetService<IVsEditorAdaptersFactoryService>();
-            var wpfTextView = adapterFactory.GetWpfTextView(textView);
-            return wpfTextView;
+                var model = (IComponentModel)GetGlobalService(typeof(SComponentModel));
+                var adapterFactory = model.GetService<IVsEditorAdaptersFactoryService>();
+                var wpfTextView = adapterFactory.GetWpfTextView(textView);
+                return wpfTextView;
+            }
+            return null;
         }
 
         public static IComponentModel ComponentModel {

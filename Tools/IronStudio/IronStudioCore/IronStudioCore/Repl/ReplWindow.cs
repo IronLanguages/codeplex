@@ -416,6 +416,12 @@ namespace Microsoft.IronStudio.Library.Repl {
             Evaluator.Reset();
         }
 
+        public void AbortCommand() {
+            Evaluator.AbortCommand();
+            EnsureNewLine();
+            PrepareForInput();
+        }
+
         /// <summary>
         /// See IReplWindow
         /// </summary>
@@ -1555,6 +1561,7 @@ namespace Microsoft.IronStudio.Library.Repl {
                         // show the keyboard command to the user
                         ClearCurrentInput();
                         PasteText(_commandPrefix + command.Command);
+                        EnsureNewLine();
                         ExecuteText();
                     } else {
                         // no keyboard command, just execute it.
