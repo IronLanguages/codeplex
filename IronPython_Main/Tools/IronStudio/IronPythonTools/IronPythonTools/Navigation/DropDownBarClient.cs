@@ -620,8 +620,9 @@ namespace Microsoft.IronPythonTools.Navigation {
         /// to update the navigation bar with the new data.
         /// </summary>
         private void ParserOnNewParseTree(object sender, EventArgs e) {
-            if (_dropDownBar != null) {
-                Action callback = () => { _dropDownBar.RefreshCombo(0, 0); };
+            var dropDownBar = _dropDownBar;
+            if (dropDownBar != null) {
+                Action callback = () => { dropDownBar.RefreshCombo(0, 0); };
                 _dispatcher.BeginInvoke(callback, DispatcherPriority.Background);
             }
         }
