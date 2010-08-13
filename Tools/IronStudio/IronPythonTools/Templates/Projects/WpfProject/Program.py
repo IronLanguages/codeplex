@@ -1,11 +1,10 @@
-import clr
-clr.AddReference('PresentationFramework')
+import wpf
 
 from System.Windows import Application, Window
 
 class MyWindow(Window):
     def __init__(self):
-        clr.LoadComponent('$safeprojectname$.xaml', self)
+        wpf.LoadComponent(self, '$safeprojectname$.xaml')
     
 
 if __name__ == '__main__':
