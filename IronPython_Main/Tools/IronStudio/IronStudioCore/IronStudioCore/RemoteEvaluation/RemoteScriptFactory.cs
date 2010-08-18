@@ -42,24 +42,16 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
 
         /// <summary>
         /// Creates a new RemoteScriptFactory.  A remote process will be created for
-        /// execution of code.  The code will execute on an MTA thread.
-        /// </summary>
-        public RemoteScriptFactory(string processBasePath)
-            : this(processBasePath, ApartmentState.MTA) {
-        }
-
-        /// <summary>
-        /// Creates a new RemoteScriptFactory.  A remote process will be created for
         /// execution of code.  The code will execute on a thread with the specified
         /// apartment state.
         /// </summary>
-        public RemoteScriptFactory(string processBasePath, ApartmentState aptState) {            
+        public RemoteScriptFactory(ApartmentState aptState) {            
             Process process = null;
             try {
                 RegisterChannel();
 
                 process = new Process();
-                process.StartInfo = GetProcessStartInfo(aptState, processBasePath);
+                process.StartInfo = GetProcessStartInfo(aptState);
 
                 _remoteRuntimeProcess = process;
 
@@ -219,9 +211,25 @@ namespace Microsoft.IronStudio.RemoteEvaluation {
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern int TerminateProcess(IntPtr processIdOrHandle, uint exitCode);
 
-        private ProcessStartInfo GetProcessStartInfo(ApartmentState state, string processBasePath) {
+        private ProcessStartInfo GetProcessStartInfo(ApartmentState state) {
+            const string exeName = "RemoteScriptFactory.exe";
+
+            // The exe is located in the IronStudio install dir. The repl can't run though unless IronPython and IronRuby dlls are GAC'd.
+            string processBasePath = Path.GetDirectoryName(typeof(RemoteScriptFactory).Assembly.Location); 
+
+#if DEBUG
+            // While developing the tooling use an exe located in Bin\Debug as we don't GAC any dlls.
+            string devBinPath = Environment.GetEnvironmentVariable("DLR_ROOT");
+            if (devBinPath != null) {
+                devBinPath = Path.Combine(devBinPath, @"Bin\Debug");
+                if (File.Exists(Path.Combine(devBinPath, exeName))) {
+                    processBasePath = devBinPath;
+                }
+            }
+#endif
+
             ProcessStartInfo processInfo = new ProcessStartInfo();
-            processInfo.FileName = Path.Combine(processBasePath, "RemoteScriptFactory.exe");
+            processInfo.FileName = Path.Combine(processBasePath, exeName);
             processInfo.CreateNoWindow = true;
 
             // Set UseShellExecute to false to enable redirection.
