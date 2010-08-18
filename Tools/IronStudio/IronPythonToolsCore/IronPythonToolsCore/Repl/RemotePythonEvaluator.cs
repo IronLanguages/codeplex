@@ -40,7 +40,7 @@ namespace Microsoft.IronPythonTools.Library.Repl {
         }
 
         public static RemoteScriptFactory CreateFactory() {
-            return new RemoteScriptFactory(Path.GetDirectoryName(typeof(RemoteScriptFactory).Assembly.Location), ApartmentState.STA);
+            return new RemoteScriptFactory(ApartmentState.STA);
         }
 
         public RemoteScriptFactory RemoteScriptFactory {

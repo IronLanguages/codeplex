@@ -38,6 +38,18 @@
     <AssemblyOriginatorKeyFile>..\..\..\Internal\MSSharedLibKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Hosts\SilverLight\Chiron\Chiron.csproj">
+      <Project>{7D07B0CE-FFA3-4402-BFF2-5F42B4267D2A}</Project>
+      <Name>Chiron</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Runtime\Microsoft.Dynamic\Microsoft.Dynamic.csproj">
+      <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
+      <Name>Microsoft.Dynamic</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj">
+      <Project>{02FF0909-F5AD-48CF-A86A-345E721B7E40}</Project>
+      <Name>Microsoft.Scripting</Name>
+    </ProjectReference>
     <ProjectReference Include="..\IronStudioCore\IronStudioCore.csproj">
       <Project>{843716AE-38B3-4723-963C-950DD06BC4B8}</Project>
       <Name>IronStudioCore</Name>
@@ -55,18 +67,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Dynamic">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(LanguageBinPath)\Microsoft.Dynamic.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Scripting">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(LanguageBinPath)\Microsoft.Scripting.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Scripting.Debugging">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll</HintPath>
-    </Reference>
     <Reference Include="Accessibility">
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
@@ -311,36 +311,6 @@
     <Content Include="IronStudio.Custom.pkgdef">
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>.</VSIXSubPath>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Dynamic.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.Debugging.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageBinPath)\Microsoft.Scripting.Metadata.dll">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LanguageSilverlightBinPath)\Chiron.exe.Config">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>.</VSIXSubPath>
-      <Visible>false</Visible>
     </Content>
   </ItemGroup>
   <ItemGroup>
