@@ -67,8 +67,8 @@ namespace Microsoft.IronStudio.Core.Repl {
             int tabSize = view.Options.GetIndentSize();
             var tokens = classifier.GetClassificationSpans(line.Extent);
             if (tokens.Count > 0) {
-                var lastChar = sline[sline.Length - 1];
                 if (!tokens[tokens.Count - 1].ClassificationType.IsOfType(PredefinedClassificationTypeNames.Comment)) {
+                    var lastChar = sline.Length == 0 ? '\0' : sline[sline.Length - 1];
                     if (lastChar == ':') {
                         indentation += tabSize;
                     } else if (IsGroupingChar(lastChar)) {
