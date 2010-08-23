@@ -302,6 +302,7 @@
     <Content Include="Templates\Projects\WpfProject\WpfApp.vstemplate" />
     <Content Include="Templates\Projects\WpfProject\__TemplateIcon.ico" />
     <Content Include="Templates\Files\EmptyPackage\EmptyPackage.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Templates\Files\EmptyPackage\package\__init__.py" />
@@ -309,28 +310,34 @@
     <Content Include="Templates\Files\EmptyPackage\package.vstemplate" />
     <Content Include="Templates\Files\EmptyPackage\__TemplateIcon.ico" />
     <Content Include="Templates\Files\EmptyPyFile\EmptyPyFile.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Templates\Files\PyClass\class.py" />
     <Content Include="Templates\Files\PyClass\PyClass.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Templates\Files\WpfWindow\WpfWindow.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Templates\Projects\SilverlightProject\Program.py" />
     <None Include="Templates\Projects\SilverlightProject\SilverlightProject.pyproj" />
     <Content Include="Templates\Projects\SilverlightProject\SilverlightProject.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Templates\Projects\WinformsProject\Program.py" />
     <None Include="Templates\Projects\WinformsProject\WinformsApp.pyproj" />
     <Content Include="Templates\Projects\WinformsProject\WinformsApp.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Templates\Projects\WpfProject\Program.py" />
     <None Include="Templates\Projects\WpfProject\WpfApp.pyproj" />
     <Content Include="Templates\Projects\WpfProject\WpfApp.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Templates\Files\EmptyPyFile\empty.vstemplate" />
@@ -342,6 +349,7 @@
     <Content Include="Templates\Projects\ConsoleAppProject\IPConsoleApp.vstemplate" />
     <Content Include="Templates\Projects\ConsoleAppProject\__TemplateIcon.ico" />
     <Content Include="Templates\Projects\ConsoleAppProject\ConsoleApp.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Page Include="Templates\Files\WpfWindow\WpfWindow.xaml">
