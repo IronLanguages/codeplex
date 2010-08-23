@@ -62,6 +62,6 @@ using System.Security.Permissions;
 #endif
 
 [assembly: AssemblyVersion("1.1.0.10")]
-[assembly: AssemblyFileVersion("2.7.1008.0")]
-[assembly: AssemblyInformationalVersion("2.7")]
+[assembly: AssemblyFileVersion("$ip.1008.0")]
+[assembly: AssemblyInformationalVersion("$ip")]
 

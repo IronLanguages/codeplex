@@ -1,0 +1,79 @@
+;==============================================================================
+;= Folder navigation
+;=
+
+t       =cd /d %DLR_ROOT%\Test
+ts      =cd /d %DLR_ROOT%\Test\Scripts
+slb     =cd /d %DLR_ROOT%\Util\Internal\Silverlight\x86ret
+mwt     =cd /d %DLR_ROOT%\Hosts\MerlinWeb\Test\TestSuites
+slt     =cd /d %DLR_ROOT%\Hosts\Silverlight\Tests
+
+;==============================================================================
+;= VS solutions and projects
+;=
+
+rowan   =%DLR_ROOT%\Internal\Dlr.sln
+
+;==============================================================================
+;= Build commands
+;=
+
+bd      =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Debug" $*
+bdc     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Debug" /t:Rebuild $*
+br      =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Release" $*
+brc     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Release" /t:Rebuild $*
+
+bd2     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="v2Debug" $*
+bdc2    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="v2Debug" /t:Rebuild $*
+br2     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="v2Release" $*
+brc2    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="v2Release" /t:Rebuild $*
+
+bfx     =%DLR_ROOT%\Scripts\Bat\Check.cmd
+
+bsd     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight3Debug" $*
+bsr     =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight3Release" $*
+bsdc    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight3Debug" /t:Rebuild $*
+bsrc    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight3Release" /t:Rebuild $*
+
+bsd4    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight4Debug" $*
+bsr4    =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight4Release" $*
+bsdc4   =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight4Debug" /t:Rebuild $*
+bsrc4   =%DLR_ROOT%\Scripts\Bat\BuildRowan.cmd /p:Configuration="Silverlight4Release" /t:Rebuild $*
+
+bslt    ="%DLR_ROOT%\Hosts\SilverLight\TestSuites\setup\BuildSilverLightTests.bat" $*
+
+;==============================================================================
+;= [Iron]Python program aliases
+;=
+
+ipt     =%DLR_ROOT%\Util\Internal\Silverlight\x86ret\run_host.cmd /lang:py $*
+iptd    =%DLR_ROOT%\Util\Internal\Silverlight\x86ret\run_host_debug.cmd /lang:py -D $*
+cpy     =%DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\27\Python.exe $*
+26      =%DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\26\Python.exe $*
+27      =%DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\27\Python.exe $*
+mscp    =%windir%\system32\WindowsPowerShell\v1.0\powershell.exe measure-command { %DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\27\Python.exe $* }
+mscp26  =%windir%\system32\WindowsPowerShell\v1.0\powershell.exe measure-command { %DLR_ROOT%\External.LCA_RESTRICTED\Languages\IronPython\26\Python.exe $* }
+
+;==============================================================================
+;= [Iron]Ruby program aliases
+;=
+
+rbt     =%DLR_ROOT%\Util\Internal\Silverlight\x86ret\run_host.cmd /lang:rb $*
+rbtd    =%DLR_ROOT%\Util\Internal\Silverlight\x86ret\run_host_debug.cmd /lang:rb -D $*
+
+;==============================================================================
+
+n2      =notepad2.exe $*
+getall  =tf get %DLR_ROOT% /recursive $*
+getrec  =tf get * /recursive $*
+
+;==============================================================================
+;= Utility scripts
+;=
+
+update_silverlight ="%DLR_ROOT%\Bin\Release\ir.exe"  %DLR_ROOT%\Scripts\Bat\update_silverlight.rb $*
+update_manifest    ="%DLR_ROOT%\Bin\Release\ipy.exe" %DLR_ROOT%\Scripts\Python\silverlight_manifest.py $*
+nmf                =%DLR_ROOT%\External\Tools\NoMoreFailures.exe $*
+
+;==============================================================================
+;=
