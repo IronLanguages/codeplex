@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/projects/!svn/ver/72937/python/branches/release26-maint/Doc/reference
+END
+datamodel.rst
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/projects/!svn/ver/72937/python/branches/release26-maint/Doc/reference/datamodel.rst
+END
+compound_stmts.rst
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/projects/!svn/ver/72075/python/branches/release26-maint/Doc/reference/compound_stmts.rst
+END
+toplevel_components.rst
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/reference/toplevel_components.rst
+END
+introduction.rst
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/projects/!svn/ver/69898/python/branches/release26-maint/Doc/reference/introduction.rst
+END
+expressions.rst
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/projects/!svn/ver/72066/python/branches/release26-maint/Doc/reference/expressions.rst
+END
+simple_stmts.rst
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/projects/!svn/ver/72937/python/branches/release26-maint/Doc/reference/simple_stmts.rst
+END
+executionmodel.rst
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/projects/!svn/ver/72075/python/branches/release26-maint/Doc/reference/executionmodel.rst
+END
+lexical_analysis.rst
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/projects/!svn/ver/72935/python/branches/release26-maint/Doc/reference/lexical_analysis.rst
+END
+grammar.rst
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/reference/grammar.rst
+END
+index.rst
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/71270/python/branches/release26-maint/Doc/reference/index.rst
+END

@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/74308/python/branches/release26-maint/Doc/tools/sphinxext
+END
+layout.html
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/projects/!svn/ver/74308/python/branches/release26-maint/Doc/tools/sphinxext/layout.html
+END
+indexsidebar.html
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/projects/!svn/ver/73578/python/branches/release26-maint/Doc/tools/sphinxext/indexsidebar.html
+END
+indexcontent.html
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/projects/!svn/ver/72976/python/branches/release26-maint/Doc/tools/sphinxext/indexcontent.html
+END
+pyspecific.py
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/projects/!svn/ver/71499/python/branches/release26-maint/Doc/tools/sphinxext/pyspecific.py
+END
+opensearch.xml
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/tools/sphinxext/opensearch.xml
+END
+susp-ignored.csv
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/projects/!svn/ver/72066/python/branches/release26-maint/Doc/tools/sphinxext/susp-ignored.csv
+END
+download.html
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/projects/!svn/ver/69746/python/branches/release26-maint/Doc/tools/sphinxext/download.html
+END
+suspicious.py
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/projects/!svn/ver/68984/python/branches/release26-maint/Doc/tools/sphinxext/suspicious.py
+END
+patchlevel.py
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/tools/sphinxext/patchlevel.py
+END
