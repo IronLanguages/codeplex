@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/projects/!svn/ver/74790/python/branches/release26-maint/Doc/using
+END
+windows.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/68234/python/branches/release26-maint/Doc/using/windows.rst
+END
+cmdline.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/72075/python/branches/release26-maint/Doc/using/cmdline.rst
+END
+mac.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/74790/python/branches/release26-maint/Doc/using/mac.rst
+END
+unix.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/68234/python/branches/release26-maint/Doc/using/unix.rst
+END
+index.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/71270/python/branches/release26-maint/Doc/using/index.rst
+END

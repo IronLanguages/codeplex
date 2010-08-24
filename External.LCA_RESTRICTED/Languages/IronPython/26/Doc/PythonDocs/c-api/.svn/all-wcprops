@@ -1,0 +1,335 @@
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/projects/!svn/ver/74959/python/branches/release26-maint/Doc/c-api
+END
+memory.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/memory.rst
+END
+sequence.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/sequence.rst
+END
+gen.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/gen.rst
+END
+buffer.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/buffer.rst
+END
+cobject.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/cobject.rst
+END
+list.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/list.rst
+END
+file.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/file.rst
+END
+exceptions.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/69898/python/branches/release26-maint/Doc/c-api/exceptions.rst
+END
+structures.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/structures.rst
+END
+module.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/module.rst
+END
+gcsupport.rst
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/gcsupport.rst
+END
+iterator.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/iterator.rst
+END
+reflection.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/reflection.rst
+END
+intro.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/72075/python/branches/release26-maint/Doc/c-api/intro.rst
+END
+set.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/set.rst
+END
+datetime.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/datetime.rst
+END
+long.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/long.rst
+END
+none.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/none.rst
+END
+slice.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/slice.rst
+END
+bytearray.rst
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/74959/python/branches/release26-maint/Doc/c-api/bytearray.rst
+END
+concrete.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/concrete.rst
+END
+iter.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/iter.rst
+END
+init.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/74842/python/branches/release26-maint/Doc/c-api/init.rst
+END
+abstract.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/abstract.rst
+END
+float.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/float.rst
+END
+class.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/class.rst
+END
+object.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/object.rst
+END
+string.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/string.rst
+END
+index.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/index.rst
+END
+complex.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/complex.rst
+END
+arg.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/arg.rst
+END
+import.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/import.rst
+END
+utilities.rst
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/utilities.rst
+END
+typeobj.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/typeobj.rst
+END
+descriptor.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/descriptor.rst
+END
+sys.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/sys.rst
+END
+cell.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/cell.rst
+END
+method.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/method.rst
+END
+type.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/type.rst
+END
+dict.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/dict.rst
+END
+refcounting.rst
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/refcounting.rst
+END
+weakref.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/weakref.rst
+END
+function.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/function.rst
+END
+allocation.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/allocation.rst
+END
+conversion.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/conversion.rst
+END
+veryhigh.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/projects/!svn/ver/71270/python/branches/release26-maint/Doc/c-api/veryhigh.rst
+END
+unicode.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/unicode.rst
+END
+marshal.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/marshal.rst
+END
+number.rst
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/projects/!svn/ver/71104/python/branches/release26-maint/Doc/c-api/number.rst
+END
+tuple.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/tuple.rst
+END
+int.rst
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/int.rst
+END
+mapping.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/mapping.rst
+END
+bool.rst
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/projects/!svn/ver/69201/python/branches/release26-maint/Doc/c-api/bool.rst
+END
+objimpl.rst
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/projects/!svn/ver/66717/python/branches/release26-maint/Doc/c-api/objimpl.rst
+END
+objbuffer.rst
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/projects/!svn/ver/72093/python/branches/release26-maint/Doc/c-api/objbuffer.rst
+END
