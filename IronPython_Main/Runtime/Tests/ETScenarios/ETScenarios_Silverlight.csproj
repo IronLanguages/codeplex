@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{95C3D3C3-786D-42A2-905C-921FCE5BC00A}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ETScenarios</RootNamespace>
+    <AssemblyName>ETScenarios</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight 4' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight 4|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 4\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Silverlight 4 Quirks %28v3 Compat%29|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 4 Quirks %28v3 Compat%29\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;SILVERLIGHT3</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Debug\ETScenarios.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <NoConfig>true</NoConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Silverlight 3|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 3\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;SILVERLIGHT3;TRUESL3</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Debug\ETScenarios.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <NoConfig>true</NoConfig>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Dynamic">
+      <HintPath>$(DLR_ROOT)\Bin\Silverlight4Debug\Microsoft.Dynamic.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssignRead\ArrayAccess.cs" />
+    <Compile Include="AssignRead\Field.cs" />
+    <Compile Include="AssignRead\Property.cs" />
+    <Compile Include="AssignRead\Variable.cs" />
+    <Compile Include="ControlFlow\Block.cs" />
+    <Compile Include="ControlFlow\BreakAndContinue.cs" />
+    <Compile Include="ControlFlow\Coalesce.cs" />
+    <Compile Include="ControlFlow\Condition.cs" />
+    <Compile Include="ControlFlow\IfStatement.cs" />
+    <Compile Include="ControlFlow\Loops.cs" />
+    <Compile Include="ControlFlow\Return.cs" />
+    <Compile Include="ControlFlow\Switch.cs" />
+    <Compile Include="ControlFlow\Throw.cs" />
+    <Compile Include="ControlFlow\TryCatchStatement.cs" />
+    <Compile Include="Conversions.cs" />
+    <Compile Include="ConvertCallInvoke\Call.cs" />
+    <Compile Include="ConvertCallInvoke\Convert.cs" />
+    <Compile Include="ConvertCallInvoke\ConvertChecked.cs" />
+    <Compile Include="ConvertCallInvoke\Invoke.cs" />
+    <Compile Include="Miscellaneous\Comma.cs" />
+    <Compile Include="Miscellaneous\Constant.cs" />
+    <Compile Include="Miscellaneous\DebugInfo.cs" />
+    <Compile Include="Miscellaneous\DebugView.cs" />
+    <Compile Include="Miscellaneous\DynamicNode.cs" />
+    <Compile Include="Miscellaneous\FuncAction.cs" />
+    <Compile Include="Miscellaneous\Generator.cs" />
+    <Compile Include="Miscellaneous\Goto.cs" />
+    <Compile Include="Miscellaneous\Lambda.cs" />
+    <Compile Include="Miscellaneous\Miscellaneous.cs" />
+    <Compile Include="Miscellaneous\Quote.cs" />
+    <Compile Include="Miscellaneous\Reducibility.cs" />
+    <Compile Include="Miscellaneous\ToString.cs" />
+    <Compile Include="Miscellaneous\TypeAs.cs" />
+    <Compile Include="Miscellaneous\TypeEqual.cs" />
+    <Compile Include="Miscellaneous\TypeIs.cs" />
+    <Compile Include="Miscellaneous\Visitor.cs" />
+    <Compile Include="Miscellaneous\VisitorChanges.cs" />
+    <Compile Include="Miscellaneous\Yield.cs" />
+    <Compile Include="ObjectInstantiation\Arrays.cs" />
+    <Compile Include="ObjectInstantiation\New.cs" />
+    <Compile Include="Operators\Add.cs" />
+    <Compile Include="Operators\AddAssign.cs" />
+    <Compile Include="Operators\AddAssignChecked.cs" />
+    <Compile Include="Operators\AddChecked.cs" />
+    <Compile Include="Operators\And.cs" />
+    <Compile Include="Operators\AndAlso.cs" />
+    <Compile Include="Operators\AndAssign.cs" />
+    <Compile Include="Operators\Decrement.cs" />
+    <Compile Include="Operators\Divide.cs" />
+    <Compile Include="Operators\DivideAssign.cs" />
+    <Compile Include="Operators\Equal.cs" />
+    <Compile Include="Operators\ExclusiveOr.cs" />
+    <Compile Include="Operators\ExclusiveOrAssign.cs" />
+    <Compile Include="Operators\GreaterThan.cs" />
+    <Compile Include="Operators\GreaterThanOrEqual.cs" />
+    <Compile Include="Operators\Increment.cs" />
+    <Compile Include="Operators\IsFalse.cs" />
+    <Compile Include="Operators\IsTrue.cs" />
+    <Compile Include="Operators\LeftShift.cs" />
+    <Compile Include="Operators\LeftShiftAssign.cs" />
+    <Compile Include="Operators\LessThan.cs" />
+    <Compile Include="Operators\LessThanOrEqual.cs" />
+    <Compile Include="Operators\Modulo.cs" />
+    <Compile Include="Operators\ModuloAssign.cs" />
+    <Compile Include="Operators\Multiply.cs" />
+    <Compile Include="Operators\MultiplyAssign.cs" />
+    <Compile Include="Operators\MultiplyChecked.cs" />
+    <Compile Include="Operators\MultiplyCheckedAssign.cs" />
+    <Compile Include="Operators\Negate.cs" />
+    <Compile Include="Operators\NegateChecked.cs" />
+    <Compile Include="Operators\Not.cs" />
+    <Compile Include="Operators\NotEqual.cs" />
+    <Compile Include="Operators\OnesComplement.cs" />
+    <Compile Include="Operators\Or.cs" />
+    <Compile Include="Operators\OrAssign.cs" />
+    <Compile Include="Operators\OrElse.cs" />
+    <Compile Include="Operators\PostDecrementAssign.cs" />
+    <Compile Include="Operators\PostIncrementAssign.cs" />
+    <Compile Include="Operators\PowerAssign.cs" />
+    <Compile Include="Operators\PreDecrementAssign.cs" />
+    <Compile Include="Operators\PreIncrementAssign.cs" />
+    <Compile Include="Operators\RightShift.cs" />
+    <Compile Include="Operators\RightShiftAssign.cs" />
+    <Compile Include="Operators\Subtract.cs" />
+    <Compile Include="Operators\SubtractAssign.cs" />
+    <Compile Include="Operators\SubtractAssignChecked.cs" />
+    <Compile Include="Operators\SubtractChecked.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="NoPia\NoPiaHelper2.dll" />
+    <Content Include="NoPia\NoPiaHelperClass.dll" />
+    <Content Include="NoPia\NoPiaPia.dll" />
+    <Content Include="NoPia\NoPiaTests.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="LegacyCore\" />
+    <Folder Include="LegacySC\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ETUtils\ETUtils_Silverlight.csproj">
+      <Project>{E201BA51-6AAF-4581-B92E-74CB7F870538}</Project>
+      <Name>ETUtils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

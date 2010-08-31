@@ -1,0 +1,12 @@
+﻿<UserControl x:Class="SilverlightHostingPython.Page"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="LayoutRoot" Background="Black">
+        <StackPanel Orientation="Vertical" Margin="10">
+            <TextBox x:Name="Code" Foreground="White" Background="Gray" FontFamily="Consolas" FontSize="18" KeyDown="Code_KeyDown"/>
+        </StackPanel>
+        <StackPanel Orientation="Vertical" Margin="10">
+            <TextBlock x:Name="Result" Foreground="White" FontFamily="Consolas" FontSize="18" Text=""/>
+        </StackPanel>
+    </Grid>
+</UserControl>

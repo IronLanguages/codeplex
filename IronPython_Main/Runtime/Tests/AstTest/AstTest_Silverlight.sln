@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstTest_Silverlight", "AstTest_Silverlight.csproj", "{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ETUtils_Silverlight", "..\ETUtils\ETUtils_Silverlight.csproj", "{E201BA51-6AAF-4581-B92E-74CB7F870538}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ETScenarios_Silverlight", "..\ETScenarios\ETScenarios_Silverlight.csproj", "{95C3D3C3-786D-42A2-905C-921FCE5BC00A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ETScenariosCSLinq_Silverlight", "..\ETScenariosCSLinq\ETScenariosCSLinq_Silverlight.csproj", "{18B9FC64-2953-46C0-90B1-B134216994BE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Silverlight 3|Any CPU = Silverlight 3|Any CPU
+		Silverlight 4 Quirks (v3 Compat)|Any CPU = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		Silverlight 4|Any CPU = Silverlight 4|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 3|Any CPU.ActiveCfg = Silverlight 3|Any CPU
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 3|Any CPU.Build.0 = Silverlight 3|Any CPU
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 4 Quirks (v3 Compat)|Any CPU.ActiveCfg = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 4 Quirks (v3 Compat)|Any CPU.Build.0 = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 4|Any CPU.ActiveCfg = Silverlight 4|Any CPU
+		{9B9BE5AA-D6AF-4613-B203-C1BC6AD19A0B}.Silverlight 4|Any CPU.Build.0 = Silverlight 4|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 3|Any CPU.ActiveCfg = Silverlight 3|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 3|Any CPU.Build.0 = Silverlight 3|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 4 Quirks (v3 Compat)|Any CPU.ActiveCfg = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 4 Quirks (v3 Compat)|Any CPU.Build.0 = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 4|Any CPU.ActiveCfg = Silverlight 4|Any CPU
+		{E201BA51-6AAF-4581-B92E-74CB7F870538}.Silverlight 4|Any CPU.Build.0 = Silverlight 4|Any CPU
+		{95C3D3C3-786D-42A2-905C-921FCE5BC00A}.Silverlight 3|Any CPU.ActiveCfg = Silverlight 3|Any CPU
+		{95C3D3C3-786D-42A2-905C-921FCE5BC00A}.Silverlight 4 Quirks (v3 Compat)|Any CPU.ActiveCfg = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{95C3D3C3-786D-42A2-905C-921FCE5BC00A}.Silverlight 4|Any CPU.ActiveCfg = Silverlight 4|Any CPU
+		{95C3D3C3-786D-42A2-905C-921FCE5BC00A}.Silverlight 4|Any CPU.Build.0 = Silverlight 4|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 3|Any CPU.ActiveCfg = Silverlight 3|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 3|Any CPU.Build.0 = Silverlight 3|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 4 Quirks (v3 Compat)|Any CPU.ActiveCfg = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 4 Quirks (v3 Compat)|Any CPU.Build.0 = Silverlight 4 Quirks (v3 Compat)|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 4|Any CPU.ActiveCfg = Silverlight 4|Any CPU
+		{18B9FC64-2953-46C0-90B1-B134216994BE}.Silverlight 4|Any CPU.Build.0 = Silverlight 4|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

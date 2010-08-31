@@ -1,0 +1,1 @@
+﻿If you update this project, remember to build the .build project also on a dev10 machine, and update ETScenariosCSLinq.dll and ETScenariosCSLinqV4.dll on ETScenarios, making sure that copy to output is set to always.

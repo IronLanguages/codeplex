@@ -1,0 +1,17 @@
+Compiling: [csc /debug+ /o+  Test.cs MethodBodyReader.cs ]
+Microsoft (R) Visual C# 2008 Compiler version 4.0.10714
+for Microsoft (R) .NET Framework version 3.5
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Test.cs(2,14): error CS0234: The type or namespace name 'Linq' does not exist in the namespace 'System' (are you missing an assembly reference?)
+Test.cs(11,14): error CS0234: The type or namespace name 'Xml' does not exist in the namespace 'System' (are you missing an assembly reference?)
+Test.cs(15,52): error CS0246: The type or namespace name 'XmlDocument' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(15,12): error CS0246: The type or namespace name 'XmlElement' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(51,60): error CS0246: The type or namespace name 'XmlDocument' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(51,12): error CS0246: The type or namespace name 'XmlElement' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(66,44): error CS0246: The type or namespace name 'XmlDocument' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(66,12): error CS0246: The type or namespace name 'XmlElement' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(109,23): error CS0246: The type or namespace name 'XmlNode' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(109,37): error CS0246: The type or namespace name 'XmlNode' could not be found (are you missing a using directive or an assembly reference?)
+Compile Unexpectedly Failed: 256 
+FAIL

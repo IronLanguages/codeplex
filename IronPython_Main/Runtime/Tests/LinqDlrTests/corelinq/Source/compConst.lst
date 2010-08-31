@@ -1,0 +1,9 @@
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# Standard Query Operators
+# Tag NONORDER is used by the PLINQ team. Please DO NOT remove them.
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+
+# Expression Tree Compiler
+exprcomp,constant	ExpressionCompiler\constant\test0

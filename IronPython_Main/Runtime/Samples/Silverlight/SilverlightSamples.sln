@@ -1,0 +1,85 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilverlightHostingRuby", "Hosting\Ruby\SilverlightHostingRuby.csproj", "{32E139A2-6960-4224-930E-67BCB0ECEC51}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SilverlightHostingPython", "Hosting\Python\SilverlightHostingPython.csproj", "{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6}"
+EndProject
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "Python", "App\Python", "{B302654B-9932-447D-9BE8-AC49202B646D}"
+	ProjectSection(WebsiteProperties) = preProject
+		TargetFramework = "2.0"
+		Debug.AspNetCompiler.VirtualPath = "/Python"
+		Debug.AspNetCompiler.PhysicalPath = "App\Python\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\Python\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/Python"
+		Release.AspNetCompiler.PhysicalPath = "App\Python\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\Python\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		VWDPort = "44570"
+	EndProjectSection
+EndProject
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "Ruby", "App\Ruby", "{F3E0E202-8C9F-465F-966A-1E28752327BE}"
+	ProjectSection(WebsiteProperties) = preProject
+		TargetFramework = "2.0"
+		Debug.AspNetCompiler.VirtualPath = "/Ruby"
+		Debug.AspNetCompiler.PhysicalPath = "App\Ruby\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\Ruby\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/Ruby"
+		Release.AspNetCompiler.PhysicalPath = "App\Ruby\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\Ruby\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		VWDPort = "44582"
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{B5A0D6B4-46BC-40E6-9642-BC1C1ADEB0A2}"
+	ProjectSection(SolutionItems) = preProject
+		README.txt = README.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "App", "App", "{BFDD16C6-16A0-44D2-879B-8797CB83CCF3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Hosting", "Hosting", "{901E9A9D-8236-4A1D-A33A-FB4E948949BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		v2Debug|Any CPU = v2Debug|Any CPU
+		v2Release|Any CPU = v2Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{32E139A2-6960-4224-930E-67BCB0ECEC51}.v2Debug|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{32E139A2-6960-4224-930E-67BCB0ECEC51}.v2Debug|Any CPU.Build.0 = v2Debug|Any CPU
+		{32E139A2-6960-4224-930E-67BCB0ECEC51}.v2Release|Any CPU.ActiveCfg = v2Release|Any CPU
+		{32E139A2-6960-4224-930E-67BCB0ECEC51}.v2Release|Any CPU.Build.0 = v2Release|Any CPU
+		{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6}.v2Debug|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6}.v2Debug|Any CPU.Build.0 = v2Debug|Any CPU
+		{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6}.v2Release|Any CPU.ActiveCfg = v2Release|Any CPU
+		{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6}.v2Release|Any CPU.Build.0 = v2Release|Any CPU
+		{B302654B-9932-447D-9BE8-AC49202B646D}.v2Debug|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{B302654B-9932-447D-9BE8-AC49202B646D}.v2Release|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{F3E0E202-8C9F-465F-966A-1E28752327BE}.v2Debug|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{F3E0E202-8C9F-465F-966A-1E28752327BE}.v2Release|Any CPU.ActiveCfg = v2Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B302654B-9932-447D-9BE8-AC49202B646D} = {BFDD16C6-16A0-44D2-879B-8797CB83CCF3}
+		{F3E0E202-8C9F-465F-966A-1E28752327BE} = {BFDD16C6-16A0-44D2-879B-8797CB83CCF3}
+		{27CFFEEF-A189-4AA7-AA9D-E97AB434DDC6} = {901E9A9D-8236-4A1D-A33A-FB4E948949BD}
+		{32E139A2-6960-4224-930E-67BCB0ECEC51} = {901E9A9D-8236-4A1D-A33A-FB4E948949BD}
+	EndGlobalSection
+EndGlobal

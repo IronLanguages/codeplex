@@ -1,0 +1,1 @@
+del failures*.* results*.* *.log* "*,*.*"

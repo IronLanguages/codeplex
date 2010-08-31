@@ -1,0 +1,8 @@
+Compiling: [csc /debug+ /o+ /r:AssemblyA.dll /out:PartialTrustAssemblyA2X.exe PartialTrustedDomain.cs ]
+Microsoft (R) Visual C# 2008 Compiler version 4.0.10714
+for Microsoft (R) .NET Framework version 3.5
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+error CS0006: Metadata file 'AssemblyA.dll' could not be found
+Compile Unexpectedly Failed: 256 
+FAIL

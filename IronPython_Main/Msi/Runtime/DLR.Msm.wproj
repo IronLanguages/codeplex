@@ -27,15 +27,15 @@
     <BaseInputPaths Condition="$(BaseInputPaths)==''">$(SolutionDir)..\Bin\$(Configuration)</BaseInputPaths>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+    <ProjectReference Include="$(SolutionDir)..\Runtime\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{02FF0909-F5AD-48CF-A86A-345E721B7E40}</Project>
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Microsoft.Dynamic\Microsoft.Dynamic.csproj">
+    <ProjectReference Include="$(SolutionDir)..\Runtime\Microsoft.Dynamic\Microsoft.Dynamic.csproj">
       <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
       <Name>Microsoft.Dynamic</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Microsoft.Scripting.Metadata\Microsoft.Scripting.Metadata.csproj">
+    <ProjectReference Include="$(SolutionDir)..\Runtime\Microsoft.Scripting.Metadata\Microsoft.Scripting.Metadata.csproj">
       <Project>{ACDD9B9E-8FE6-439C-9521-1CCBA47F6143}</Project>
       <Name>Microsoft.Dynamic</Name>
     </ProjectReference>
