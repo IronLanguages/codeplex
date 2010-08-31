@@ -1,0 +1,165 @@
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# Standard Query Operators
+# Tag NONORDER is used by the PLINQ team. Please DO NOT remove them.
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# Expression Tree Compilers
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+## Expression Compiler
+##
+##ExpressionCompiler\binary\arithmetic
+##ExpressionCompiler\binary\bitwise
+##ExpressionCompiler\binary\checked
+##ExpressionCompiler\binary\logical
+##ExpressionCompiler\unary\arithmetic
+##ExpressionCompiler\unary\bitwise
+##ExpressionCompiler\unary\logical
+
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# Expression Tree Nodes
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+## Expression Tree Nodes
+##
+nodes	ExpressionTreeNodes\Add
+nodes	ExpressionTreeNodes\AddChecked
+nodes	ExpressionTreeNodes\And
+nodes	ExpressionTreeNodes\AndAlso
+nodes	ExpressionTreeNodes\ArrayIndex
+nodes	ExpressionTreeNodes\ArrayLength
+nodes	ExpressionTreeNodes\Call
+nodes	ExpressionTreeNodes\Coalesce
+nodes	ExpressionTreeNodes\Condition
+nodes	ExpressionTreeNodes\Constant
+nodes	ExpressionTreeNodes\Convert
+nodes	ExpressionTreeNodes\ConvertChecked
+nodes	ExpressionTreeNodes\Divide
+nodes	ExpressionTreeNodes\ElementInit
+nodes	ExpressionTreeNodes\Equal
+nodes	ExpressionTreeNodes\ExclusiveOr
+nodes	ExpressionTreeNodes\GreaterThan
+nodes	ExpressionTreeNodes\GreaterThanOrEqual
+nodes	ExpressionTreeNodes\Invoke
+nodes	ExpressionTreeNodes\Lambda
+nodes	ExpressionTreeNodes\LambdaOfT
+nodes	ExpressionTreeNodes\LeftShift
+nodes	ExpressionTreeNodes\LessThan
+nodes	ExpressionTreeNodes\LessThanOrEqual
+nodes	ExpressionTreeNodes\ListInit
+nodes	ExpressionTreeNodes\MakeBinary
+nodes	ExpressionTreeNodes\MakeMemberAccess
+nodes	ExpressionTreeNodes\MakeUnary
+nodes	ExpressionTreeNodes\MemberAccess
+nodes	ExpressionTreeNodes\MemberAssignment
+nodes	ExpressionTreeNodes\MemberInit
+nodes	ExpressionTreeNodes\MemberListBinding
+nodes	ExpressionTreeNodes\MemberMemberBinding
+nodes	ExpressionTreeNodes\Modulo
+nodes	ExpressionTreeNodes\Multiply
+nodes	ExpressionTreeNodes\MultiplyChecked
+nodes	ExpressionTreeNodes\Negate
+nodes	ExpressionTreeNodes\NegateChecked
+nodes	ExpressionTreeNodes\New
+nodes	ExpressionTreeNodes\NewArrayBounds
+nodes	ExpressionTreeNodes\NewArrayInit
+nodes	ExpressionTreeNodes\Not
+nodes	ExpressionTreeNodes\NotEqual
+nodes	ExpressionTreeNodes\Or
+nodes	ExpressionTreeNodes\OrElse
+nodes	ExpressionTreeNodes\Parameter
+nodes	ExpressionTreeNodes\Power
+nodes	ExpressionTreeNodes\Quote
+nodes	ExpressionTreeNodes\ReadOnlyCollection
+nodes	ExpressionTreeNodes\RightShift
+nodes	ExpressionTreeNodes\Subtract
+nodes	ExpressionTreeNodes\SubtractChecked
+nodes	ExpressionTreeNodes\TypeAs
+nodes	ExpressionTreeNodes\TypeIs
+nodes	ExpressionTreeNodes\UnaryPlus
+
+
+# Expression Tree Compiler
+exprcomp,array		ExpressionCompiler\array\index\test0
+exprcomp,array		ExpressionCompiler\array\index\test1
+exprcomp,array		ExpressionCompiler\array\index\test2
+exprcomp,array		ExpressionCompiler\array\length\test0
+exprcomp,array		ExpressionCompiler\array\length\test1
+exprcomp,array		ExpressionCompiler\array\length\test2
+exprcomp,array		ExpressionCompiler\array\new\bounds\test0
+exprcomp,array		ExpressionCompiler\array\new\bounds\test1
+exprcomp,array		ExpressionCompiler\array\new\bounds\test2
+exprcomp,array		ExpressionCompiler\array\new\bounds\test3
+exprcomp,array		ExpressionCompiler\array\new\bounds\test4
+exprcomp,array		ExpressionCompiler\array\new\list\test0
+exprcomp,array		ExpressionCompiler\array\new\list\test1
+exprcomp,binary		ExpressionCompiler\binary\arithmetic\test0
+exprcomp,binary		ExpressionCompiler\binary\arithmetic\test1
+exprcomp,binary		ExpressionCompiler\binary\arithmetic\test2
+exprcomp,binary		ExpressionCompiler\binary\bitwise\test0
+exprcomp,binary		ExpressionCompiler\binary\bitwise\test1
+exprcomp,binary		ExpressionCompiler\binary\coalesce\test0
+exprcomp,binary		ExpressionCompiler\binary\coalesce\test1
+exprcomp,binary		ExpressionCompiler\binary\comparison\test0
+exprcomp,binary		ExpressionCompiler\binary\comparison\test1
+exprcomp,binary		ExpressionCompiler\binary\comparison\test2
+exprcomp,binary		ExpressionCompiler\binary\comparison\test3
+exprcomp,binary		ExpressionCompiler\binary\logical\test0
+exprcomp,binary		ExpressionCompiler\binary\logical\test1
+exprcomp,cast,cast1		ExpressionCompiler\cast\as\test0
+exprcomp,cast,cast1		ExpressionCompiler\cast\as\test1
+exprcomp,cast,cast1		ExpressionCompiler\cast\cast\test0
+exprcomp,cast,cast1		ExpressionCompiler\cast\cast\test1
+exprcomp,cast,cast1		ExpressionCompiler\cast\is\test0
+exprcomp,cast,cast2		ExpressionCompiler\cast\is\test1
+exprcomp,constant	ExpressionCompiler\constant\test0
+exprcomp,cast,cast2		ExpressionCompiler\convert\test0
+exprcomp,cast,cast2		ExpressionCompiler\convert\test1
+exprcomp,labmda		ExpressionCompiler\lambda\binary\test0
+exprcomp,labmda		ExpressionCompiler\lambda\binary\test1
+exprcomp,labmda		ExpressionCompiler\lambda\identity\test0
+exprcomp,labmda		ExpressionCompiler\lambda\identity\test1
+exprcomp,labmda		ExpressionCompiler\lambda\unary\test0
+exprcomp,labmda		ExpressionCompiler\lambda\unary\test1
+exprcomp,lift		ExpressionCompiler\lift\equal\test0
+exprcomp,lift		ExpressionCompiler\lift\equal\test1
+exprcomp,lift		ExpressionCompiler\lift\equal\test2
+#exprcomp,lift		ExpressionCompiler\lift\false\test0
+exprcomp,lift		ExpressionCompiler\lift\false\test1
+exprcomp,lift		ExpressionCompiler\lift\false\test2
+exprcomp,lift		ExpressionCompiler\lift\lift\test0
+exprcomp,lift		ExpressionCompiler\lift\lift\test1
+exprcomp,lift		ExpressionCompiler\lift\lift\test2
+exprcomp,lift		ExpressionCompiler\lift\lift\test3
+#exprcomp,lift		ExpressionCompiler\lift\notequal\test0
+#exprcomp,lift		ExpressionCompiler\lift\notequal\test1
+#exprcomp,lift		ExpressionCompiler\lift\notequal\test2
+#exprcomp,lift		ExpressionCompiler\lift\true\test0
+#exprcomp,lift		ExpressionCompiler\lift\true\test1
+#exprcomp,lift		ExpressionCompiler\lift\true\test2
+exprcomp,new		ExpressionCompiler\new\test0
+exprcomp,new		ExpressionCompiler\new\test1
+exprcomp,new		ExpressionCompiler\new\test2
+exprcomp,quote		ExpressionCompiler\quote\binary\arithmetic\test0
+exprcomp,quote		ExpressionCompiler\quote\binary\arithmetic\test1
+exprcomp,ternary	ExpressionCompiler\ternary\test0
+exprcomp,ternary	ExpressionCompiler\ternary\test1
+exprcomp,ternary	ExpressionCompiler\ternary\test2
+exprcomp,ternary	ExpressionCompiler\ternary\test3
+exprcomp,unary		ExpressionCompiler\unary\arithmetic\test0
+exprcomp,unary		ExpressionCompiler\unary\arithmetic\test1
+exprcomp,unary		ExpressionCompiler\unary\bitwise\test0
+exprcomp,unary		ExpressionCompiler\unary\bitwise\test1
+exprcomp,unary		ExpressionCompiler\unary\logical\test0
+exprcomp,unary		ExpressionCompiler\unary\logical\test1
+exprcomp,other		ExpressionCompiler\other\test0
+exprcomp,other		ExpressionCompiler\other\test1
+exprcomp,other		ExpressionCompiler\other\test2
+
+
+#partial trust cases
+aptca			APTCA\ExpressionCompiler
+#aptca			APTCA\FunkyDelegate
+#aptca			APTCA\SecurityUsageFinder
+aptca			APTCA\SequenceQuery
+aptca			APTCA\Shared
+

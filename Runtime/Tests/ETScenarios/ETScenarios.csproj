@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1CE29B7E-181C-443E-A76F-9E3322ABE784}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ETScenarios</RootNamespace>
+    <AssemblyName>ETScenarios</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'v2Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>$(SolutionDir)..\bin\v2Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;CLR2</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'v2Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>$(SolutionDir)..\bin\v2Release\</OutputPath>
+    <DefineConstants>TRACE;CLR2</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CLR4</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>$(SolutionDir)..\bin\Debug\ETScenarios.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;c:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;c:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;CLR4</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>$(SolutionDir)..\bin\Release\ETScenarios.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;c:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;c:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <HintPath>C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TeamSystem.Data.UnitTesting, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.XML" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssignRead\ArrayAccess.cs" />
+    <Compile Include="AssignRead\Field.cs" />
+    <Compile Include="AssignRead\Variable.cs" />
+    <Compile Include="ControlFlow\Block.cs" />
+    <Compile Include="ControlFlow\IfStatement.cs" />
+    <Compile Include="ControlFlow\TryCatchStatement.cs" />
+    <Compile Include="ControlFlow\Loops.cs" />
+    <Compile Include="ControlFlow\Switch.cs" />
+    <Compile Include="ControlFlow\BreakAndContinue.cs" />
+    <Compile Include="ControlFlow\Throw.cs" />
+    <Compile Include="ControlFlow\Return.cs" />
+    <Compile Include="ControlFlow\Coalesce.cs" />
+    <Compile Include="ControlFlow\Condition.cs" />
+    <Compile Include="Conversions.cs" />
+    <Compile Include="ConvertCallInvoke\Call.cs" />
+    <Compile Include="ConvertCallInvoke\Convert.cs" />
+    <Compile Include="ConvertCallInvoke\ConvertChecked.cs" />
+    <Compile Include="ConvertCallInvoke\Invoke.cs" />
+    <Compile Include="Miscellaneous\DebugView.cs" />
+    <Compile Include="Miscellaneous\FuncAction.cs" />
+    <Compile Include="Miscellaneous\Generator.cs" />
+    <Compile Include="Miscellaneous\Miscellaneous.cs" />
+    <Compile Include="Miscellaneous\DebugInfo.cs" />
+    <Compile Include="Miscellaneous\Comma.cs" />
+    <Compile Include="Miscellaneous\Constant.cs" />
+    <Compile Include="Miscellaneous\DynamicNode.cs" />
+    <Compile Include="Miscellaneous\Goto.cs" />
+    <Compile Include="Miscellaneous\Lambda.cs" />
+    <Compile Include="Miscellaneous\Quote.cs" />
+    <Compile Include="Miscellaneous\Reducibility.cs" />
+    <Compile Include="Miscellaneous\ToString.cs" />
+    <Compile Include="Miscellaneous\TypeAs.cs" />
+    <Compile Include="Miscellaneous\TypeEqual.cs" />
+    <Compile Include="Miscellaneous\TypeIs.cs" />
+    <Compile Include="Miscellaneous\Visitor.cs" />
+    <Compile Include="Miscellaneous\VisitorChanges.cs" />
+    <Compile Include="Miscellaneous\Yield.cs" />
+    <Compile Include="ObjectInstantiation\Arrays.cs" />
+    <Compile Include="ObjectInstantiation\New.cs" />
+    <Compile Include="Operators\Add.cs" />
+    <Compile Include="Operators\AddAssign.cs" />
+    <Compile Include="Operators\AddAssignChecked.cs" />
+    <Compile Include="Operators\AddChecked.cs" />
+    <Compile Include="Operators\And.cs" />
+    <Compile Include="Operators\AndAssign.cs" />
+    <Compile Include="Operators\IsTrue.cs" />
+    <Compile Include="Operators\IsFalse.cs" />
+    <Compile Include="Operators\OnesComplement.cs" />
+    <Compile Include="Operators\PowerAssign.cs" />
+    <Compile Include="Operators\Decrement.cs" />
+    <Compile Include="Operators\Increment.cs" />
+    <Compile Include="Operators\LeftShift.cs" />
+    <Compile Include="Operators\LeftShiftAssign.cs" />
+    <Compile Include="Operators\Multiply.cs" />
+    <Compile Include="Operators\MultiplyAssign.cs" />
+    <Compile Include="Operators\MultiplyChecked.cs" />
+    <Compile Include="Operators\MultiplyCheckedAssign.cs" />
+    <Compile Include="Operators\Negate.cs" />
+    <Compile Include="Operators\NegateChecked.cs" />
+    <Compile Include="Operators\Not.cs" />
+    <Compile Include="Operators\NotEqual.cs" />
+    <Compile Include="Operators\OrAssign.cs" />
+    <Compile Include="Operators\PostDecrementAssign.cs" />
+    <Compile Include="Operators\PostIncrementAssign.cs" />
+    <Compile Include="Operators\PreDecrementAssign.cs" />
+    <Compile Include="Operators\PreIncrementAssign.cs" />
+    <Compile Include="Operators\RightShift.cs" />
+    <Compile Include="Operators\RightShiftAssign.cs" />
+    <Compile Include="Operators\Subtract.cs" />
+    <Compile Include="Operators\SubtractAssign.cs" />
+    <Compile Include="Operators\SubtractChecked.cs" />
+    <Compile Include="Operators\SubtractAssignChecked.cs" />
+    <Compile Include="Operators\AndAlso.cs" />
+    <Compile Include="Operators\Divide.cs" />
+    <Compile Include="Operators\DivideAssign.cs" />
+    <Compile Include="Operators\Equal.cs" />
+    <Compile Include="Operators\ExclusiveOr.cs" />
+    <Compile Include="Operators\ExclusiveOrAssign.cs" />
+    <Compile Include="Operators\GreaterThan.cs" />
+    <Compile Include="Operators\GreaterThanOrEqual.cs" />
+    <Compile Include="Operators\LessThan.cs" />
+    <Compile Include="Operators\LessThanOrEqual.cs" />
+    <Compile Include="Operators\Modulo.cs" />
+    <Compile Include="Operators\ModuloAssign.cs" />
+    <Compile Include="Operators\Or.cs" />
+    <Compile Include="Operators\OrElse.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AssignRead\Property.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Dynamic\Microsoft.Dynamic.csproj">
+      <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
+      <Name>Microsoft.Dynamic</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ETUtils\ETUtils.csproj">
+      <Project>{BE601F39-38C8-4248-9850-AA21D5583A89}</Project>
+      <Name>ETUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VBClassLib\VBClassLib.vbproj">
+      <Project>{70E7495B-6D3F-4B63-A6CF-36A9E15B6986}</Project>
+      <Name>VBClassLib</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ETScenariosCSLinq.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ETScenariosCSLinqV4.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NoPia\NoPiaHelper2.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NoPia\NoPiaHelperClass.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NoPia\NoPiaPia.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NoPia\NoPiaTests.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="LegacyCore\" />
+    <Folder Include="LegacySC\" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

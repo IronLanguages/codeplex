@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{18B9FC64-2953-46C0-90B1-B134216994BE}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ETScenariosCSLinq</RootNamespace>
+    <AssemblyName>ETScenariosCSLinq</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight 4' ">
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight 4|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 4\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Silverlight 4 Quirks %28v3 Compat%29|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 4 Quirks %28v3 Compat%29\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;SILVERLIGHT3</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Debug\ETScenariosCSLinq.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <NoConfig>true</NoConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Silverlight 3|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(DLR_ROOT)\Bin\AstTest Silverlight 3\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;SILVERLIGHT3;TRUESL3</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Debug\ETScenariosCSLinq.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <NoConfig>true</NoConfig>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_index_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_index_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_index_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_length_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_length_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_length_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_bounds_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_bounds_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_bounds_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_bounds_BackSl_test3.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_bounds_BackSl_test4.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_list_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\array_BackSl_new_BackSl_list_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_arithmetic_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_arithmetic_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_arithmetic_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_bitwise_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_bitwise_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_coalesce_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_coalesce_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_comparison_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_comparison_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_comparison_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_comparison_BackSl_test3.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_logical_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\binary_BackSl_logical_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_as_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_as_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_cast_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_cast_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_is_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\cast_BackSl_is_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\constant_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\convert_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\convert_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_binary_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_binary_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_identity_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_identity_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_unary_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lambda_BackSl_unary_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_equal_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_equal_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_equal_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_false_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_false_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_lift_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_lift_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_lift_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\lift_BackSl_lift_BackSl_test3.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\new_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\new_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\new_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\other_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\other_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\other_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\ternary_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\ternary_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\ternary_BackSl_test2.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\ternary_BackSl_test3.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_arithmetic_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_arithmetic_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_bitwise_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_bitwise_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_logical_BackSl_test0.cs" />
+    <Compile Include="CSLinq\ExpressionCompiler\unary_BackSl_logical_BackSl_test1.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Add.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\AddChecked.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\And.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\AndAlso.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ArrayIndex.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ArrayLength.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Call.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Coalesce.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Condition.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Constant.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Convert.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ConvertChecked.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Divide.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ElementInit.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Equal.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ExclusiveOr.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\GreaterThan.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\GreaterThanOrEqual.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Invoke.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Lambda.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\LambdaOfT.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\LeftShift.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\LessThan.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\LessThanOrEqual.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ListInit.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MakeBinary.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MakeMemberAccess.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MakeUnary.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MemberAccess.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MemberAssignment.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MemberInit.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MemberListBinding.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MemberMemberBinding.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Modulo.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Multiply.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\MultiplyChecked.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Negate.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\NegateChecked.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\New.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\NewArrayBounds.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\NewArrayInit.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Not.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\NotEqual.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Or.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\OrElse.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Parameter.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Power.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Quote.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\ReadOnlyCollection.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\RightShift.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\Subtract.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\SubtractChecked.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\TypeAs.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\TypeIs.cs" />
+    <Compile Include="CSLinq\ExpressionTreeNodes\UnaryPlus.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ETUtils\ETUtils_Silverlight.csproj">
+      <Project>{E201BA51-6AAF-4581-B92E-74CB7F870538}</Project>
+      <Name>ETUtils</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

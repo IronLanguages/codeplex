@@ -1,0 +1,11 @@
+Compiling: [csc /debug+ /o+  Test.cs ]
+Microsoft (R) Visual C# 2008 Compiler version 4.0.10714
+for Microsoft (R) .NET Framework version 3.5
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Test.cs(9,9): error CS0246: The type or namespace name 'ProcessStartInfo' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(9,35): error CS0246: The type or namespace name 'ProcessStartInfo' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(13,9): error CS0246: The type or namespace name 'Process' could not be found (are you missing a using directive or an assembly reference?)
+Test.cs(13,22): error CS0103: The name 'Process' does not exist in the current context
+Compile Unexpectedly Failed: 256 
+FAIL

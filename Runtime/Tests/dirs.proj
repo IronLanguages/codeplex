@@ -1,0 +1,20 @@
+<Project DefaultTargets="Build" ToolsVersion="dogfood" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  
+  <!--Import the settings-->
+  <Import Project="$(_NTDRIVE)$(_NTROOT)\tools\Microsoft.DevDiv.Native.Settings.targets" />
+
+  <!--DIRS-->
+  <ItemGroup Condition=" '$(BuildExePhase)' == '' ">
+    <ProjectFile Include="RowanTest.Common\RowanTest.Common.Build.csproj" />
+    <ProjectFile Include="ETUtils\ETUtils.Build.csproj" />
+    <ProjectFile Include="ETScenarios\ETScenarios.Build.csproj" />
+    <ProjectFile Include="AstTest\AstTest.Build.csproj" />
+    <ProjectFile Include="ComTest\ComTest.Build.csproj" />
+    <ProjectFile Include="SiteTest\SiteTest.Build.csproj" />
+    <ProjectFile Include="TestAst\TestAst.Build.csproj" />
+    <ProjectFile Include="TestInternalDLR\TestInternalDLR.Build.csproj" />
+  </ItemGroup>
+  
+  <!--Import the targets-->
+  <Import Project="$(_NTDRIVE)$(_NTROOT)\tools\microsoft.devdiv.traversal.targets" />
+</Project> 

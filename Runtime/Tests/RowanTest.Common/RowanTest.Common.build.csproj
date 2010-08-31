@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="dogfood" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(_NTDRIVE)$(_NTROOT)\ndp\fx\Microsoft.Fx.Settings.targets" />
+  <Import Project="..\..\..\Internal\Common.Build.proj" />
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>RowanTest.Common</RootNamespace>
+    <AssemblyName>RowanTest.Common</AssemblyName>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <BinPlaceSymbols>false</BinPlaceSymbols>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateAssemblyAttribute>false</GenerateAssemblyAttribute>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <OutputPath>$(SuiteBinPath)\dlr</OutputPath>
+    <Nonshipping>true</Nonshipping>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <!-- Begin Generated Project Items By GenerateSystemCoreCsproj.py -->
+    <ItemGroup>
+      <!--                    -->
+      <!--                    -->
+      <!--                    -->
+      <Compile Include="Attributes.cs" />
+      <Compile Include="BaseTest.cs" />
+      <Compile Include="MaxExecutionTimeAttribute.cs" />
+      <Compile Include="Runner.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <!--                              -->
+      <!--          Properties          -->
+      <!--                              -->
+      <Compile Include="Properties\AssemblyInfo.cs" />
+    </ItemGroup>
+  <!-- End Generated Project Items By GenerateSystemCoreCsproj.py -->
+  <Import Project="$(NdpFxRoot)\Microsoft.Fx.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

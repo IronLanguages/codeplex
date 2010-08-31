@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6762406D-86A3-4CBA-8F93-F27FDB7EE8D1}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Samples</RootNamespace>
+    <AssemblyName>Samples</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'v2Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>$(SolutionDir)bin\v2Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'v2Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>$(SolutionDir)bin\v2Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Scripting.Core, Version=0.9.5.1, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SolutionDir)bin\v2Debug\Microsoft.Scripting.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CAdd.cs" />
+    <Compile Include="CAnd.cs" />
+    <Compile Include="CCall.cs" />
+    <Compile Include="CArray.cs" />
+    <Compile Include="CAssign.cs" />
+    <Compile Include="CBind.cs" />
+    <Compile Include="CBlock.cs" />
+    <Compile Include="CBreak.cs" />
+    <Compile Include="CCatch.cs" />
+    <Compile Include="CClearDebugInfo.cs" />
+    <Compile Include="CCoalesce.cs" />
+    <Compile Include="CCondition.cs" />
+    <Compile Include="CDebugInfo.cs" />
+    <Compile Include="CConstant.cs" />
+    <Compile Include="CContinue.cs" />
+    <Compile Include="CConvert.cs" />
+    <Compile Include="CConvertChecked.cs" />
+    <Compile Include="CDecrement.cs" />
+    <Compile Include="CDefault.cs" />
+    <Compile Include="CElementInit.cs" />
+    <Compile Include="CIncrement.cs" />
+    <Compile Include="CDivide.cs" />
+    <Compile Include="CDynamic.cs" />
+    <Compile Include="CEmpty.cs" />
+    <Compile Include="CEqual.cs" />
+    <Compile Include="CMember.cs" />
+    <Compile Include="CModulo.cs" />
+    <Compile Include="CNegate.cs" />
+    <Compile Include="CNew.cs" />
+    <Compile Include="CNot.cs" />
+    <Compile Include="CNotEqual.cs" />
+    <Compile Include="CGreaterThan.cs" />
+    <Compile Include="CGreaterThanOrEqual.cs" />
+    <Compile Include="CLessThan.cs" />
+    <Compile Include="CLessThanOrEqual.cs" />
+    <Compile Include="CExclusiveOr.cs" />
+    <Compile Include="CField.cs" />
+    <Compile Include="CGetActionType.cs" />
+    <Compile Include="CGetFuncType.cs" />
+    <Compile Include="CGetDelegateType.cs" />
+    <Compile Include="CGoto.cs" />
+    <Compile Include="CIfThen.cs" />
+    <Compile Include="CIfThenElse.cs" />
+    <Compile Include="CInvoke.cs" />
+    <Compile Include="CIsFalse.cs" />
+    <Compile Include="CIsTrue.cs" />
+    <Compile Include="CMultiply.cs" />
+    <Compile Include="CLabel.cs" />
+    <Compile Include="CLambda.cs" />
+    <Compile Include="CLeftShift.cs" />
+    <Compile Include="CListBind.cs" />
+    <Compile Include="CListInit.cs" />
+    <Compile Include="CLoop.cs" />
+    <Compile Include="CMakeBinary.cs" />
+    <Compile Include="CMakeCatchBlock.cs" />
+    <Compile Include="CMakeDynamic.cs" />
+    <Compile Include="CMakeGoto.cs" />
+    <Compile Include="CMakeIndex.cs" />
+    <Compile Include="CMakeMemberAccess.cs" />
+    <Compile Include="CMakeTry.cs" />
+    <Compile Include="CMakeUnary.cs" />
+    <Compile Include="CQuote.cs" />
+    <Compile Include="CRuntimeVariables.cs" />
+    <Compile Include="CTryGetFuncType.cs" />
+    <Compile Include="CTryGetActionType.cs" />
+    <Compile Include="CSymbolDocument.cs" />
+    <Compile Include="COnesComplement.cs" />
+    <Compile Include="COr.cs" />
+    <Compile Include="CPower.cs" />
+    <Compile Include="CProperty.cs" />
+    <Compile Include="CReturn.cs" />
+    <Compile Include="CRightShift.cs" />
+    <Compile Include="CSubtract.cs" />
+    <Compile Include="CSwitch.cs" />
+    <Compile Include="CSwitchCase.cs" />
+    <Compile Include="CThrow.cs" />
+    <Compile Include="CTry.cs" />
+    <Compile Include="CTypeAs.cs" />
+    <Compile Include="CTypeEqual.cs" />
+    <Compile Include="CTypeIs.cs" />
+    <Compile Include="CUnaryPlus.cs" />
+    <Compile Include="CUnbox.cs" />
+    <Compile Include="CVariable.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Readme.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
