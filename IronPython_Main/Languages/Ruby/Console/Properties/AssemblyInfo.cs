@@ -46,4 +46,4 @@ using IronRuby.Runtime;
 //      Revision
 //
 [assembly: AssemblyVersion(RubyContext.IronRubyVersionString)]
-[assembly: AssemblyFileVersion("$ip.1008.0")]
+[assembly: AssemblyFileVersion("2.7.1008.0")]

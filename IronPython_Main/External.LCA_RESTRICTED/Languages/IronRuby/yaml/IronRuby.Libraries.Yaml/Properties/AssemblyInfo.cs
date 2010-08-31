@@ -27,7 +27,7 @@ using IronRuby.Runtime;
 
 #if !SILVERLIGHT
 [assembly: AssemblyVersion(RubyContext.IronRubyVersionString)]
-[assembly: AssemblyFileVersion("$ip.1008.0")]
+[assembly: AssemblyFileVersion("2.7.1008.0")]
 [assembly: AllowPartiallyTrustedCallers]
 #if !CLR2
 [assembly: SecurityRules(SecurityRuleSet.Level1)]

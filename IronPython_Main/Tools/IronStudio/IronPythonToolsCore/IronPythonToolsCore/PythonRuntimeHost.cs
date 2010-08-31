@@ -121,10 +121,7 @@ namespace Microsoft.IronPythonTools {
         }
 
         private static bool IronPythonExistsIn(string/*!*/ dir) {
-            return File.Exists(Path.Combine(dir, "ipy.exe"))
-                && File.Exists(Path.Combine(dir, "IronPython.dll"))
-                && File.Exists(Path.Combine(dir, "IronPython.Modules.dll"));
+            return File.Exists(Path.Combine(dir, "ipy.exe"));
         }
-
     }
 }
