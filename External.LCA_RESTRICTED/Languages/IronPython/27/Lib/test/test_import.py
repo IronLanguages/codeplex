@@ -9,7 +9,7 @@ import sys
 import unittest
 from test.test_support import (unlink, TESTFN, unload, run_unittest,
                                is_jython, check_warnings, EnvironmentVarGuard,
-                               due_to_ironpython_bug, due_to_ironpython_incompatibility)
+                               is_cli, due_to_ironpython_bug, due_to_ironpython_incompatibility)
 
 
 def remove_files(name):
@@ -42,6 +42,7 @@ class ImportTests(unittest.TestCase):
         # constants.
         from test import double_const  # don't blink -- that *was* the test
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28596")
     def test_import(self):
         def test_with_extension(ext):
             # The extension is normally ".py", perhaps ".pyw".
@@ -148,9 +149,10 @@ class ImportTests(unittest.TestCase):
             f.write(']')
 
         # Compile & remove .py file, we only need .pyc (or .pyo).
-        with open(filename, 'r') as f:
-            py_compile.compile(filename)
-        unlink(filename)
+        if not due_to_ironpython_incompatibility("IronPython cannot use pyc files"):
+            with open(filename, 'r') as f:
+                py_compile.compile(filename)
+            unlink(filename)
 
         # Need to be able to load from current dir.
         sys.path.append('')
@@ -244,13 +246,12 @@ class ImportTests(unittest.TestCase):
         import test.test_support as y
         self.assertIs(y, test.test_support, y.__name__)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_import_initless_directory_warning(self):
         with check_warnings(('', ImportWarning)):
             # Just a random non-package directory we always expect to be
             # somewhere in sys.path...
             self.assertRaises(ImportError, __import__, "site-packages")
-            if due_to_ironpython_bug("Merlin 365388"):
-                return
 
     def test_import_by_filename(self):
         path = os.path.abspath(TESTFN)
@@ -303,6 +304,7 @@ func_filename = func.func_code.co_filename
         __import__(self.module_name, ns, ns)
         return sys.modules[self.module_name]
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28596")
     def test_basics(self):
         mod = self.import_module()
         self.assertEqual(mod.module_filename, self.file_name)
@@ -314,6 +316,7 @@ func_filename = func.func_code.co_filename
         self.assertEqual(mod.code_filename, self.file_name)
         self.assertEqual(mod.func_filename, self.file_name)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28596")
     def test_incorrect_code_name(self):
         py_compile.compile(self.file_name, dfile="another_module.py")
         mod = self.import_module()
@@ -321,6 +324,7 @@ func_filename = func.func_code.co_filename
         self.assertEqual(mod.code_filename, self.file_name)
         self.assertEqual(mod.func_filename, self.file_name)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28596")
     def test_module_without_source(self):
         target = "another_module.py"
         py_compile.compile(self.file_name, dfile=target)
@@ -330,6 +334,7 @@ func_filename = func.func_code.co_filename
         self.assertEqual(mod.code_filename, target)
         self.assertEqual(mod.func_filename, target)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28596")
     def test_foreign_code(self):
         py_compile.compile(self.file_name)
         with open(self.compiled_name, "rb") as f:
@@ -436,6 +441,7 @@ class RelativeImportTests(unittest.TestCase):
         self.assertRaises(ValueError, check_absolute)
         self.assertRaises(ValueError, check_relative)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_absolute_import_without_future(self):
         # If absolute import syntax is used, then do not try to perform
         # a relative import in the face of failure.

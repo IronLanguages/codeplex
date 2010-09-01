@@ -1,7 +1,7 @@
 import unittest
 from test.test_support import check_syntax_error, check_py3k_warnings, \
                               check_warnings, run_unittest, \
-                              due_to_ironpython_incompatibility
+                              due_to_ironpython_bug, due_to_ironpython_incompatibility
 
 
 class ScopeTests(unittest.TestCase):
@@ -651,9 +651,12 @@ result2 = h()
 
 
 def test_main():
-    with check_warnings(("import \* only allowed at module level",
-                         SyntaxWarning)):
+    if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
         run_unittest(ScopeTests)
+    else:
+        with check_warnings(("import \* only allowed at module level",
+                             SyntaxWarning)):
+            run_unittest(ScopeTests)
 
 if __name__ == '__main__':
     test_main()

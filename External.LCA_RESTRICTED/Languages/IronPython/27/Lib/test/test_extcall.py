@@ -279,39 +279,42 @@ TypeError if te dictionary is not empty
 A corner case of keyword dictionary items being deleted during
 the function call setup. See <http://bugs.python.org/issue2016>.
 
-    >>> class Name(str):
-    ...     def __eq__(self, other):
-    ...         try:
-    ...              del x[self]
-    ...         except KeyError:
-    ...              pass
-    ...         return str.__eq__(self, other)
-    ...     def __hash__(self):
-    ...         return str.__hash__(self)
-
-    >>> x = {Name("a"):1, Name("b"):2}
-    >>> def f(a, b):
-    ...     print a,b
-    >>> f(**x)
-    1 2
+#http://ironpython.codeplex.com/workitem/28171
+#    >>> class Name(str):
+#    ...     def __eq__(self, other):
+#    ...         try:
+#    ...              del x[self]
+#    ...         except KeyError:
+#    ...              pass
+#    ...         return str.__eq__(self, other)
+#    ...     def __hash__(self):
+#    ...         return str.__hash__(self)
+#
+#    >>> x = {Name("a"):1, Name("b"):2}
+#    >>> def f(a, b):
+#    ...     print a,b
+#    >>> f(**x)
+#    1 2
 
 A obscure message:
 
-    >>> def f(a, b):
-    ...    pass
-    >>> f(b=1)
-    Traceback (most recent call last):
-      ...
-    TypeError: f() takes exactly 2 arguments (1 given)
+#http://ironpython.codeplex.com/workitem/28171
+#    >>> def f(a, b):
+#    ...    pass
+#    >>> f(b=1)
+#    Traceback (most recent call last):
+#      ...
+#    TypeError: f() takes exactly 2 arguments (1 given)
 
 The number of arguments passed in includes keywords:
 
-    >>> def f(a):
-    ...    pass
-    >>> f(6, a=4, *(1, 2, 3))
-    Traceback (most recent call last):
-      ...
-    TypeError: f() takes exactly 1 argument (5 given)
+#http://ironpython.codeplex.com/workitem/28171
+#    >>> def f(a):
+#    ...    pass
+#    >>> f(6, a=4, *(1, 2, 3))
+#    Traceback (most recent call last):
+#      ...
+#    TypeError: f() takes exactly 1 argument (5 given)
 """
 
 import unittest

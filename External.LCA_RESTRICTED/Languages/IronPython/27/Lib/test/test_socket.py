@@ -13,8 +13,7 @@ import sys
 import os
 import array
 from weakref import proxy
-if not test_support.due_to_ironpython_incompatibility("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=304399"): 
-    import signal
+import signal
 
 try:
     import thread
@@ -491,8 +490,6 @@ class GeneralModuleTests(unittest.TestCase):
 
         Returns: A most likely to be unused port.
         """
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=326739"):
-            return
         tempsock = socket.socket()
         tempsock.bind((bind_address, 0))
         host, port = tempsock.getsockname()
@@ -561,6 +558,8 @@ class GeneralModuleTests(unittest.TestCase):
         self.assertTrue(hasattr(socket, 'SIO_RCVALL'))
         self.assertTrue(hasattr(socket, 'RCVALL_ON'))
         self.assertTrue(hasattr(socket, 'RCVALL_OFF'))
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/17477"):
+            return
         self.assertTrue(hasattr(socket, 'SIO_KEEPALIVE_VALS'))
         s = socket.socket()
         self.assertRaises(ValueError, s.ioctl, -1, None)
@@ -928,12 +927,14 @@ class FileObjectInterruptedTestCase(unittest.TestCase):
         self.assertEquals(fo.read(size), "This is the first line\n"
                           "And the second line is here\n")
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16367")
     def test_default(self):
         self._test_readline()
         self._test_readline(size=100)
         self._test_read()
         self._test_read(size=100)
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16367")
     def test_with_1k_buffer(self):
         self._test_readline(bufsize=1024)
         self._test_readline(size=100, bufsize=1024)
@@ -953,6 +954,7 @@ class FileObjectInterruptedTestCase(unittest.TestCase):
         self.assertEquals(fo.readline(size), "aa\n")
         self.assertEquals(fo.readline(size), "BBbb")
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16367")
     def test_no_buffer(self):
         self._test_readline_no_buffer()
         self._test_readline_no_buffer(size=4)
@@ -1016,6 +1018,7 @@ class NetworkConnectionNoServer(unittest.TestCase):
         )
 
 @unittest.skipUnless(thread, 'Threading required for this test.')
+@unittest.skipIf(test_support.is_cli, "hangs in IronPython: http://ironpython.codeplex.com/workitem/16367")
 class NetworkConnectionAttributesTest(SocketTCPTest, ThreadableTest):
 
     def __init__(self, methodName='runTest'):
@@ -1161,10 +1164,6 @@ class TCPTimeoutTest(SocketTCPTest):
             self.fail("accept() returned success when we did not expect it")
 
     def testInterruptedTimeout(self):
-        if test_support.due_to_ironpython_incompatibility("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=304399"):
-            # signal module
-            return
-            
         # XXX I don't know how to do this test on MSWindows or any other
         # plaform that doesn't support signal.alarm() or os.kill(), though
         # the bug should have existed on all platforms.
@@ -1285,10 +1284,14 @@ class BufferIOTest(SocketConnectedTest):
         nbytes = self.cli_conn.recv_into(buf)
         self.assertEqual(nbytes, len(MSG))
         msg = buf[:len(MSG)]
-        self.assertEqual(msg, MSG)
+        if test_support.due_to_ironpython_incompatibility("unicode/str/bytes"):
+            self.assertEqual(msg, bytes(MSG))
+        else:
+            self.assertEqual(msg, MSG)
 
     _testRecvIntoBytearray = _testRecvIntoArray
 
+    @unittest.skipIf(test_support.is_cli, "memoryview not implemented: http://ironpython.codeplex.com/workitem/28311")
     def testRecvIntoMemoryview(self):
         buf = bytearray(1024)
         nbytes = self.cli_conn.recv_into(memoryview(buf))
@@ -1315,10 +1318,14 @@ class BufferIOTest(SocketConnectedTest):
         nbytes, addr = self.cli_conn.recvfrom_into(buf)
         self.assertEqual(nbytes, len(MSG))
         msg = buf[:len(MSG)]
-        self.assertEqual(msg, MSG)
+        if test_support.due_to_ironpython_incompatibility("unicode/str/bytes"):
+            self.assertEqual(msg, bytes(MSG))
+        else:
+            self.assertEqual(msg, MSG)
 
     _testRecvFromIntoBytearray = _testRecvFromIntoArray
 
+    @unittest.skipIf(test_support.is_cli, "memoryview not implemented: http://ironpython.codeplex.com/workitem/28311")
     def testRecvFromIntoMemoryview(self):
         buf = bytearray(1024)
         nbytes, addr = self.cli_conn.recvfrom_into(memoryview(buf))

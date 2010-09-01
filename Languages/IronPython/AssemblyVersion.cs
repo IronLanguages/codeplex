@@ -22,4 +22,4 @@ using System.Reflection;
 #endif
 
 [assembly: AssemblyInformationalVersion("2.7")]
-[assembly: AssemblyFileVersion("2.7.1008.0")]
+[assembly: AssemblyFileVersion("2.7.1009.0")]

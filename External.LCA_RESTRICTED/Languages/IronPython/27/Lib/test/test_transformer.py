@@ -3,12 +3,6 @@ from test import test_support
 
 # Silence Py3k warning
 test_support.import_module('compiler', deprecated=True)
-
-# can't import transformer because no module parser in IronPython
-if test_support.due_to_ironpython_incompatibility("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=318187"):
-    import sys
-    sys.exit(0)
-
 from compiler import transformer, ast
 from compiler import compile
 

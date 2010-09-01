@@ -3,6 +3,7 @@ import types
 
 
 import unittest
+from test.test_support import due_to_ironpython_bug
 
 
 class Test_TestLoader(unittest.TestCase):
@@ -206,9 +207,13 @@ class Test_TestLoader(unittest.TestCase):
         try:
             loader.loadTestsFromName('')
         except ValueError, e:
-            self.assertEqual(str(e), "Empty module name")
+            if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.assertEqual(str(e), "String cannot have zero length.")
+            else:
+                self.assertEqual(str(e), "Empty module name")
         else:
-            self.fail("TestLoader.loadTestsFromName failed to raise ValueError")
+            if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.fail("TestLoader.loadTestsFromName failed to raise ValueError")
 
     # "The specifier name is a ``dotted name'' that may resolve either to
     # a module, a test case class, a TestSuite instance, a test method
@@ -426,7 +431,10 @@ class Test_TestLoader(unittest.TestCase):
         try:
             loader.loadTestsFromName('testcase_1.testfoo', m)
         except AttributeError, e:
-            self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
+            if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.assertEqual(str(e), "'type' object has no attribute 'testfoo'")
+            else:
+                self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
         else:
             self.fail("Failed to raise AttributeError")
 
@@ -584,9 +592,14 @@ class Test_TestLoader(unittest.TestCase):
         try:
             loader.loadTestsFromNames([''])
         except ValueError, e:
-            self.assertEqual(str(e), "Empty module name")
+            if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.assertEqual(str(e), "String cannot have zero length.")
+            else:
+                self.assertEqual(str(e), "Empty module name")
         else:
-            self.fail("TestLoader.loadTestsFromNames failed to raise ValueError")
+            # only seems to be a problem on win7
+            if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.fail("TestLoader.loadTestsFromNames failed to raise ValueError")
 
     # "The specifier name is a ``dotted name'' that may resolve either to
     # a module, a test case class, a TestSuite instance, a test method
@@ -822,7 +835,10 @@ class Test_TestLoader(unittest.TestCase):
         try:
             loader.loadTestsFromNames(['testcase_1.testfoo'], m)
         except AttributeError, e:
-            self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
+            if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                self.assertEqual(str(e), "'type' object has no attribute 'testfoo'")
+            else:
+                self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
         else:
             self.fail("Failed to raise AttributeError")
 
@@ -918,7 +934,8 @@ class Test_TestLoader(unittest.TestCase):
             self.assertEqual(list(suite), [unittest.TestSuite()])
 
             # module should now be loaded, thanks to loadTestsFromName()
-            self.assertIn(module_name, sys.modules)
+            if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+                self.assertIn(module_name, sys.modules)
         finally:
             if module_name in sys.modules:
                 del sys.modules[module_name]

@@ -495,11 +495,17 @@ class Test_TestCase(unittest.TestCase, TestEquality, TestHashing):
         with self.assertRaises(self.failureException):
             self.assertDictContainsSubset({'a': 1, 'c': 1}, {'a': 1})
 
-        with test_support.check_warnings(("", UnicodeWarning)):
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
             one = ''.join(chr(i) for i in range(255))
             # this used to cause a UnicodeDecodeError constructing the failure msg
             with self.assertRaises(self.failureException):
                 self.assertDictContainsSubset({'foo': one}, {'foo': u'\uFFFD'})
+        else:
+            with test_support.check_warnings(("", UnicodeWarning)):
+                one = ''.join(chr(i) for i in range(255))
+                # this used to cause a UnicodeDecodeError constructing the failure msg
+                with self.assertRaises(self.failureException):
+                    self.assertDictContainsSubset({'foo': one}, {'foo': u'\uFFFD'})
 
     def testAssertEqual(self):
         equal_pairs = [
@@ -838,6 +844,7 @@ class Test_TestCase(unittest.TestCase, TestEquality, TestHashing):
         self.assertRaises(self.failureException, self.assertLessEqual, 'bug', u'ant')
         self.assertRaises(self.failureException, self.assertLessEqual, u'bug', 'ant')
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def testAssertMultiLineEqual(self):
         sample_text = b"""\
 http://www.python.org/doc/2.3/lib/module-unittest.html

@@ -5,44 +5,48 @@ import sys
 import os
 import os.path
 import tempfile
-import subprocess
+try:
+    import subprocess
+except ImportError:
+    subprocess = None
 import py_compile
 import contextlib
 import shutil
 import zipfile
 
-# Executing the interpreter in a subprocess
-def python_exit_code(*args):
-    cmd_line = [sys.executable, '-E']
-    cmd_line.extend(args)
-    with open(os.devnull, 'w') as devnull:
-        return subprocess.call(cmd_line, stdout=devnull,
-                                stderr=subprocess.STDOUT)
+if subprocess:
+    # Executing the interpreter in a subprocess
+    def python_exit_code(*args):
+        cmd_line = [sys.executable, '-E']
+        cmd_line.extend(args)
+        with open(os.devnull, 'w') as devnull:
+            return subprocess.call(cmd_line, stdout=devnull,
+                                    stderr=subprocess.STDOUT)
+    
+    def spawn_python(*args, **kwargs):
+        cmd_line = [sys.executable, '-E']
+        cmd_line.extend(args)
+        return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                **kwargs)
 
-def spawn_python(*args, **kwargs):
-    cmd_line = [sys.executable, '-E']
-    cmd_line.extend(args)
-    return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            **kwargs)
+    def kill_python(p):
+        p.stdin.close()
+        data = p.stdout.read()
+        p.stdout.close()
+        # try to cleanup the child so we don't appear to leak when running
+        # with regrtest -R.
+        p.wait()
+        subprocess._cleanup()
+        return data
 
-def kill_python(p):
-    p.stdin.close()
-    data = p.stdout.read()
-    p.stdout.close()
-    # try to cleanup the child so we don't appear to leak when running
-    # with regrtest -R.
-    p.wait()
-    subprocess._cleanup()
-    return data
-
-def run_python(*args, **kwargs):
-    if __debug__:
-        p = spawn_python(*args, **kwargs)
-    else:
-        p = spawn_python('-O', *args, **kwargs)
-    stdout_data = kill_python(p)
-    return p.wait(), stdout_data
+    def run_python(*args, **kwargs):
+        if __debug__:
+            p = spawn_python(*args, **kwargs)
+        else:
+            p = spawn_python('-O', *args, **kwargs)
+        stdout_data = kill_python(p)
+        return p.wait(), stdout_data
 
 # Script creation utilities
 @contextlib.contextmanager

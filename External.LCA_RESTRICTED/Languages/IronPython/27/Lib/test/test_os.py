@@ -8,9 +8,13 @@ import unittest
 import warnings
 import sys
 import signal
-import subprocess
 import time
 from test import test_support
+
+if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/15512"):
+    subprocess = None
+else:
+    import subprocess
 
 warnings.filterwarnings("ignore", "tempnam", RuntimeWarning, __name__)
 warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning, __name__)
@@ -25,12 +29,10 @@ class FileTests(unittest.TestCase):
     def test_access(self):
         f = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
         os.close(f)
-        if not test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=322192"):
-            self.assertTrue(os.access(test_support.TESTFN, os.W_OK))
-
+        self.assertTrue(os.access(test_support.TESTFN, os.W_OK))
+    
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/7267")
     def test_closerange(self):
-        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=7267"):
-            return
         first = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
         # We must allocate two consecutive file descriptors, otherwise
         # it will mess up other file descriptors (perhaps even the three
@@ -53,8 +55,6 @@ class FileTests(unittest.TestCase):
 
     @test_support.cpython_only
     def test_rename(self):
-        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=17460"):
-            return
         path = unicode(test_support.TESTFN)
         old = sys.getrefcount(path)
         self.assertRaises(TypeError, os.rename, path, 0)
@@ -68,7 +68,7 @@ class TemporaryFileTests(unittest.TestCase):
         os.mkdir(test_support.TESTFN)
 
     def tearDown(self):
-        test_support.force_gc_collect("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=321793")
+        test_support.gc_collect()
         for name in self.files:
             os.unlink(name)
         os.rmdir(test_support.TESTFN)
@@ -180,7 +180,7 @@ class StatAttributeTests(unittest.TestCase):
         f.close()
 
     def tearDown(self):
-        test_support.force_gc_collect("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=321793")
+        test_support.gc_collect()
         os.unlink(self.fname)
         os.rmdir(test_support.TESTFN)
 
@@ -215,12 +215,11 @@ class StatAttributeTests(unittest.TestCase):
             pass
 
         # Make sure that assignment fails
-        if not test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=324067"):
-            try:
-                result.st_mode = 1
-                self.fail("No exception thrown")
-            except (AttributeError, TypeError):
-                pass
+        try:
+            result.st_mode = 1
+            self.fail("No exception thrown")
+        except (AttributeError, TypeError):
+            pass
 
         try:
             result.st_rdev = 1
@@ -294,9 +293,8 @@ class StatAttributeTests(unittest.TestCase):
         except TypeError:
             pass
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/26154")
     def test_utime_dir(self):
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=321793"):
-            return
         delta = 1000000
         st = os.stat(test_support.TESTFN)
         # round to int, because some systems may support sub-second
@@ -519,6 +517,7 @@ class URandomTests (unittest.TestCase):
         except NotImplementedError:
             pass
 
+    @unittest.skipIf(test_support.is_cli, "execv not implemented: http://ironpython.codeplex.com/workitem/28171")
     def test_execvpe_with_bad_arglist(self):
         self.assertRaises(ValueError, os.execvpe, 'notepad', [], None)
 

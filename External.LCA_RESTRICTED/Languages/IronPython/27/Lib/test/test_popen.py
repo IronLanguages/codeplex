@@ -40,6 +40,8 @@ class PopenTest(unittest.TestCase):
 
     def test_return_code(self):
         self.assertEqual(os.popen("exit 0").close(), None)
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         if os.name == 'nt':
             self.assertEqual(os.popen("exit 42").close(), 42)
         else:

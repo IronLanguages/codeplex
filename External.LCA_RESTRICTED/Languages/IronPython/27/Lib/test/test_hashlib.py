@@ -38,10 +38,11 @@ class HashLibTestCase(unittest.TestCase):
                              'sha224', 'SHA224', 'sha256', 'SHA256',
                              'sha384', 'SHA384', 'sha512', 'SHA512' )
 
-    supported_hash_names = list(supported_hash_names)
-    supported_hash_names.remove("sha224")
-    supported_hash_names.remove("SHA224")
-    supported_hash_names = tuple(supported_hash_names)
+    if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/16870"):
+        supported_hash_names = list(supported_hash_names)
+        supported_hash_names.remove("sha224")
+        supported_hash_names.remove("SHA224")
+        supported_hash_names = tuple(supported_hash_names)
 
     _warn_on_extension_import = COMPILED_WITH_PYDEBUG
 
@@ -91,7 +92,7 @@ class HashLibTestCase(unittest.TestCase):
             self.constructors_to_test['sha1'].add(_sha.new)
         _sha256 = self._conditional_import_module('_sha256')
         if _sha256:
-            if not test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=315746"):
+            if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/16870"):
                 self.constructors_to_test['sha224'].add(_sha256.sha224)
             self.constructors_to_test['sha256'].add(_sha256.sha256)
         _sha512 = self._conditional_import_module('_sha512')
@@ -101,6 +102,7 @@ class HashLibTestCase(unittest.TestCase):
 
         super(HashLibTestCase, self).__init__(*args, **kwargs)
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_hash_array(self):
         a = array.array("b", range(10))
         constructors = self.constructors_to_test.itervalues()
@@ -109,9 +111,15 @@ class HashLibTestCase(unittest.TestCase):
             c.hexdigest()
 
     def test_algorithms_attribute(self):
-        self.assertEqual(hashlib.algorithms,
-            tuple([_algo for _algo in self.supported_hash_names if
-                                                _algo.islower()]))
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/16870"):
+            self.assertEqual(set(hashlib.algorithms),
+                set([_algo for _algo in self.supported_hash_names if
+                                                    _algo.islower()] +
+                    ['sha224']))
+        else:
+            self.assertEqual(hashlib.algorithms,
+                tuple([_algo for _algo in self.supported_hash_names if
+                                                    _algo.islower()]))
 
     def test_unknown_hash(self):
         try:
@@ -168,7 +176,8 @@ class HashLibTestCase(unittest.TestCase):
         # when passed to hashlib functions.
         self.check_unicode('md5')
         self.check_unicode('sha1')
-        self.check_unicode('sha224')
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/16870"):
+            self.check_unicode('sha224')
         self.check_unicode('sha256')
         self.check_unicode('sha384')
         self.check_unicode('sha512')
@@ -224,28 +233,24 @@ class HashLibTestCase(unittest.TestCase):
     # Publication 180-2, Secure Hash Standard,  2002 August 1
     # http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16870")
     def test_case_sha224_0(self):
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=315746"):
-            return
         self.check('sha224', "",
           "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f")
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16870")
     def test_case_sha224_1(self):
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=315746"):
-            return
         self.check('sha224', "abc",
           "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7")
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16870")
     def test_case_sha224_2(self):
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=315746"):
-            return
         self.check('sha224',
           "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
           "75388b16512776cc5dba5da1fd890150b0c6455cb4f58b1952522525")
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/16870")
     def test_case_sha224_3(self):
-        if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=315746"):
-            return
         self.check('sha224', "a" * 1000000,
           "20794655980c91d8bbb4c1ea97618a4bf03f42581948b2ee4ee7ad67")
 
@@ -314,6 +319,7 @@ class HashLibTestCase(unittest.TestCase):
           "de0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b")
 
     @unittest.skipUnless(threading, 'Threading required for this test.')
+    @unittest.skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     @test_support.reap_threads
     def test_threaded_hashing(self):
         # Updating the same hash object from several threads at once

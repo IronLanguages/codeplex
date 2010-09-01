@@ -439,8 +439,8 @@ class IOTest(unittest.TestCase):
         support.gc_collect()
         if support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
             self.assertTrue(1 in record)
-            self.assertTrue(1 in record)
-            self.assertTrue(1 in record)
+            self.assertTrue(2 in record)
+            self.assertTrue(3 in record)
         else:
             self.assertEqual(record, [1, 2, 3])
         with self.open(support.TESTFN, "rb") as f:
@@ -1257,7 +1257,7 @@ class BufferedRWPairTest(unittest.TestCase):
     def test_write(self):
         w = self.MockRawIO()
         pair = self.tp(self.MockRawIO(), w)
-        
+
         pair.write(b"abc")
         pair.flush()
         pair.write(b"def")
@@ -1724,15 +1724,16 @@ class TextIOWrapperTest(unittest.TestCase):
         b = self.BytesIO(b"abc\n\xff\n")
         t = self.TextIOWrapper(b, encoding="ascii", errors="strict")
         self.assertRaises(UnicodeError, t.read)
-        if not support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-            # (3) ignore
-            b = self.BytesIO(b"abc\n\xff\n")
-            t = self.TextIOWrapper(b, encoding="ascii", errors="ignore")
-            self.assertEquals(t.read(), "abc\n\n")
-            # (4) replace
-            b = self.BytesIO(b"abc\n\xff\n")
-            t = self.TextIOWrapper(b, encoding="ascii", errors="replace")
-            self.assertEquals(t.read(), "abc\n\ufffd\n")
+        if support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
+            return
+        # (3) ignore
+        b = self.BytesIO(b"abc\n\xff\n")
+        t = self.TextIOWrapper(b, encoding="ascii", errors="ignore")
+        self.assertEquals(t.read(), "abc\n\n")
+        # (4) replace
+        b = self.BytesIO(b"abc\n\xff\n")
+        t = self.TextIOWrapper(b, encoding="ascii", errors="replace")
+        self.assertEquals(t.read(), "abc\n\ufffd\n")
 
     def test_encoding_errors_writing(self):
         # (1) default
@@ -1774,7 +1775,7 @@ class TextIOWrapperTest(unittest.TestCase):
             'utf-32', 'utf-32-le', 'utf-32-be',
         )
         if support.due_to_ironpython_bug("no utf-32"):
-            encodings = encodings[:len(encodings) - 3]
+            encodings = encodings[:-3]
 
         # Try a range of buffer sizes to test the case where \r is the last
         # character in TextIOWrapper._pending_line.
@@ -1960,10 +1961,9 @@ class TextIOWrapperTest(unittest.TestCase):
         f.seek(0)
         self.assertEquals(f.tell(), p0)
         self.assertEquals(f.readline(), "\xff\n")
-        if not support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-            self.assertEquals(f.tell(), p1)
-            self.assertEquals(f.readline(), "\xff\n")
-            self.assertEquals(f.tell(), p2)
+        self.assertEquals(f.tell(), p1)
+        self.assertEquals(f.readline(), "\xff\n")
+        self.assertEquals(f.tell(), p2)
         f.seek(0)
         for line in f:
             self.assertEquals(line, "\xff\n")
@@ -1983,12 +1983,13 @@ class TextIOWrapperTest(unittest.TestCase):
         f = self.open(support.TESTFN, "wb")
         f.write(line*2)
         f.close()
-        if not support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-            f = self.open(support.TESTFN, "r", encoding="utf-8")
-            s = f.read(prefix_size)
-            self.assertEquals(s, prefix.decode("ascii"))
-            self.assertEquals(f.tell(), prefix_size)
-            self.assertEquals(f.readline(), u_suffix)
+        if support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
+            return
+        f = self.open(support.TESTFN, "r", encoding="utf-8")
+        s = f.read(prefix_size)
+        self.assertEquals(s, prefix.decode("ascii"))
+        self.assertEquals(f.tell(), prefix_size)
+        self.assertEquals(f.readline(), u_suffix)
 
     def test_seeking_too(self):
         # Regression test for a specific bug
@@ -2109,9 +2110,6 @@ class TextIOWrapperTest(unittest.TestCase):
             if not c:
                 break
             reads += c
-        if self.__class__.__name__ == "CTextIOWrapperTest" and support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-            # get rid of extraneous newline
-            reads = reads[:-1]
         self.assertEquals(reads, "A"*127+"\nB")
 
     def test_issue1395_1(self):
@@ -2311,9 +2309,8 @@ class IncrementalNewlineDecoderTest(unittest.TestCase):
         _check_decode(b'\x88', "\u8888")
 
         _check_decode(b'\xe8', "")
-        if support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-            return
-        self.assertRaises(UnicodeDecodeError, decoder.decode, b'', final=True)
+        if not support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
+            self.assertRaises(UnicodeDecodeError, decoder.decode, b'', final=True)
 
         decoder.reset()
         _check_decode(b'\n', "\n")
@@ -2381,8 +2378,9 @@ class IncrementalNewlineDecoderTest(unittest.TestCase):
         for enc in encodings:
             decoder = enc and codecs.getincrementaldecoder(enc)()
             decoder = self.IncrementalNewlineDecoder(decoder, translate=True)
-            if not support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
-                self.check_newline_decoding(decoder, enc)
+            if enc and enc.startswith('utf-16') and support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/22896"):
+                continue
+            self.check_newline_decoding(decoder, enc)
         decoder = codecs.getincrementaldecoder("utf-8")()
         decoder = self.IncrementalNewlineDecoder(decoder, translate=True)
         self.check_newline_decoding_utf8(decoder)

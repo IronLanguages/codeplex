@@ -497,10 +497,11 @@ class IEEEFormatTestCase(unittest.TestCase):
         # empty presentation type should format in the same way as str
         # (issue 5920)
         x = 100/7.
-        self.assertEqual(format(x, ''), str(x))
-        self.assertEqual(format(x, '-'), str(x))
-        self.assertEqual(format(x, '>'), str(x))
-        self.assertEqual(format(x, '2'), str(x))
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertEqual(format(x, ''), str(x))
+            self.assertEqual(format(x, '-'), str(x))
+            self.assertEqual(format(x, '>'), str(x))
+            self.assertEqual(format(x, '2'), str(x))
 
         self.assertEqual(format(1.0, 'f'), '1.000000')
 
@@ -550,14 +551,17 @@ class IEEEFormatTestCase(unittest.TestCase):
             lhs, rhs = map(str.strip, line.split('->'))
             fmt, arg = lhs.split()
             arg = float(arg)
+            if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+                continue
             self.assertEqual(fmt % arg, rhs)
             if not math.isnan(arg) and copysign(1.0, arg) > 0.0:
                 self.assertEqual(fmt % -arg, '-' + rhs)
 
     def test_issue5864(self):
         self.assertEquals(format(123.456, '.4'), '123.5')
-        self.assertEquals(format(1234.56, '.4'), '1.235e+03')
-        self.assertEquals(format(12345.6, '.4'), '1.235e+04')
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertEquals(format(1234.56, '.4'), '1.235e+03')
+            self.assertEquals(format(12345.6, '.4'), '1.235e+04')
 
 class ReprTestCase(unittest.TestCase):
     def test_repr(self):
@@ -630,7 +634,8 @@ class RoundTestCase(unittest.TestCase):
 
         class MyIndex(object):
             def __index__(self): return 4
-        self.assertAlmostEqual(round(-0.123456, MyIndex()), -0.1235)
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertAlmostEqual(round(-0.123456, MyIndex()), -0.1235)
         # but floats should be illegal
         self.assertRaises(TypeError, round, 3.14159, 2.0)
 
@@ -657,11 +662,13 @@ class RoundTestCase(unittest.TestCase):
             self.assertEqual(round(-123.456, n), -123.456)
             self.assertEqual(round(1e300, n), 1e300)
             self.assertEqual(round(1e-320, n), 1e-320)
-        self.assertEqual(round(1e150, 300), 1e150)
-        self.assertEqual(round(1e300, 307), 1e300)
-        self.assertEqual(round(-3.1415, 308), -3.1415)
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertEqual(round(1e150, 300), 1e150)
+            self.assertEqual(round(1e300, 307), 1e300)
+            self.assertEqual(round(-3.1415, 308), -3.1415)
         self.assertEqual(round(1e150, 309), 1e150)
-        self.assertEqual(round(1.4e-315, 315), 1e-315)
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertEqual(round(1.4e-315, 315), 1e-315)
 
     def test_small_n(self):
         for n in [-308, -309, -400, 1-2**31, -2**31, -2**31-1, -2**100]:
@@ -783,16 +790,18 @@ class RoundTestCase(unittest.TestCase):
             test(fmt, -NAN, 'nan')
             # When asking for a sign, it's always provided. nans are
             #  always positive.
-            test(pfmt, INF, '+inf')
-            test(pfmt, -INF, '-inf')
-            test(pfmt, NAN, '+nan')
-            test(pfmt, -NAN, '+nan')
+            if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+                test(pfmt, INF, '+inf')
+                test(pfmt, -INF, '-inf')
+                test(pfmt, NAN, '+nan')
+                test(pfmt, -NAN, '+nan')
             # When using ' ' for a sign code, only infs can be negative.
             #  Others have a space.
             test(sfmt, INF, ' inf')
             test(sfmt, -INF, '-inf')
-            test(sfmt, NAN, ' nan')
-            test(sfmt, -NAN, ' nan')
+            if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+                test(sfmt, NAN, ' nan')
+                test(sfmt, -NAN, ' nan')
 
 
 # Beginning with Python 2.6 float has cross platform compatible

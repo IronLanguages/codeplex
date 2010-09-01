@@ -278,6 +278,7 @@ class SourceAddressTest(TestCase):
         self.serv.close()
         self.serv = None
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28185")
     def testHTTPConnectionSourceAddress(self):
         self.conn = httplib.HTTPConnection(HOST, self.port,
                 source_address=('', self.source_port))
@@ -306,6 +307,7 @@ class TimeoutTest(TestCase):
         self.serv.close()
         self.serv = None
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28185")
     def testTimeoutAttribute(self):
         '''This will prove that the timeout gets through
         HTTPConnection and into the socket.
