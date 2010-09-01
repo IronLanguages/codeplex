@@ -313,11 +313,16 @@ OldResult = type('OldResult', (object,), classDict)
 class Test_OldTestResult(unittest.TestCase):
 
     def assertOldResultWarning(self, test, failures):
-        with test_support.check_warnings(("TestResult has no add.+ method,",
-                                          RuntimeWarning)):
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
             result = OldResult()
             test.run(result)
             self.assertEqual(len(result.failures), failures)
+        else:
+            with test_support.check_warnings(("TestResult has no add.+ method,",
+                                              RuntimeWarning)):
+                result = OldResult()
+                test.run(result)
+                self.assertEqual(len(result.failures), failures)
 
     def testOldTestResult(self):
         class Test(unittest.TestCase):

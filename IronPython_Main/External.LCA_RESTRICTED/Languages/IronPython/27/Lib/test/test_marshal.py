@@ -342,7 +342,7 @@ class BugsTestCase(unittest.TestCase):
         self.assertEqual(len(new_head[-1]), len(head[-1]))
 
         last.append([0])
-        if not test_support.due_to_ironpython_bug("https://tfs01.codeplex.com/WorkItemTracking/WorkItem.aspx?artifactMoniker=21116"):
+        if not test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
             self.assertRaises(ValueError, marshal.dumps, head)
 
     def test_exact_type_match(self):
@@ -363,6 +363,7 @@ class BugsTestCase(unittest.TestCase):
         testString = 'abc' * size
         marshal.dumps(testString)
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_invalid_longs(self):
         # Issue #7019: marshal.loads shouldn't produce unnormalized PyLongs
         invalid_string = 'l\x02\x00\x00\x00\x00\x00\x00\x00'

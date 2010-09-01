@@ -243,11 +243,16 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
             for n in sys.modules.keys():
                 if n.startswith(parent):
                     del sys.modules[n]
-        with test_support.check_warnings(("The compiler package is deprecated "
-                                          "and removed", DeprecationWarning)):
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
             for mname in mnames:
                 m = __import__(mname, globals(), locals(), ["__dummy__"])
                 m.__loader__  # to make sure we actually handled the import
+        else:
+            with test_support.check_warnings(("The compiler package is deprecated "
+                                              "and removed", DeprecationWarning)):
+                for mname in mnames:
+                    m = __import__(mname, globals(), locals(), ["__dummy__"])
+                    m.__loader__  # to make sure we actually handled the import
 
 
 def test_main():

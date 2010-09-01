@@ -774,6 +774,7 @@ class JumpTestCase(unittest.TestCase):
         f.output = [0]
         self.run_test(f)
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_jump_to_firstlineno(self):
         # This tests that PDB can jump back to the first line in a
         # file.  See issue #1689458.  It can only be triggered in a

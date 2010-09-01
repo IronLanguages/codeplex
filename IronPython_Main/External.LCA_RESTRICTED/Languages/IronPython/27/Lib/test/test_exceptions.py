@@ -413,6 +413,7 @@ class ExceptionTests(unittest.TestCase):
         self.assertTrue(unicode(Exception(u'a')))
         self.assertTrue(unicode(Exception(u'\xe1')))
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def testUnicodeChangeAttributes(self):
         # See issue 7309. This was a crasher.
 
@@ -504,6 +505,8 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
     def check_same_msg(self, exc, msg):
         """Helper function that checks if str(exc) == unicode(exc) == msg"""
         self.assertEqual(str(exc), msg)
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         self.assertEqual(str(exc), unicode(exc))
 
     def test_builtin_exceptions(self):
@@ -539,6 +542,8 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
         # if __str__ returns a non-ascii unicode string str() should fail
         # but unicode() should return the unicode string
         e = ExcWithOverriddenStr(msg=u'f\xf6\xf6') # no args
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         self.assertRaises(UnicodeEncodeError, str, e)
         self.assertEqual(unicode(e), u'f\xf6\xf6')
 
@@ -551,7 +556,8 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
         # string, str() should try to return str(self.args[0]) and fail.
         # unicode() should return unicode(self.args[0]) and succeed.
         e = Exception(u'f\xf6\xf6')
-        self.assertRaises(UnicodeEncodeError, str, e)
+        if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.assertRaises(UnicodeEncodeError, str, e)
         self.assertEqual(unicode(e), u'f\xf6\xf6')
 
     def test_1_arg_with_overridden___str__(self):
@@ -564,6 +570,8 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
         # if __str__ returns a non-ascii unicode string, str() should fail
         # but unicode() should succeed.
         e = ExcWithOverriddenStr('arg', msg=u'f\xf6\xf6') # 1 arg
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         self.assertRaises(UnicodeEncodeError, str, e)
         self.assertEqual(unicode(e), u'f\xf6\xf6')
 
@@ -590,6 +598,8 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
         # but unicode() should succeed
         e = ExcWithOverriddenStr('arg1', u'f\xf6\xf6', u'arg3', # 3 args
                                  msg=u'f\xf6\xf6')
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         self.assertRaises(UnicodeEncodeError, str, e)
         self.assertEqual(unicode(e), u'f\xf6\xf6')
 

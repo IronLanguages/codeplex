@@ -205,6 +205,7 @@ RobotTest(13, doc, good, bad, agent="googlebot")
 
 class NetworkTestCase(unittest.TestCase):
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28185")
     def testPasswordProtectedSite(self):
         test_support.requires('network')
         # XXX it depends on an external resource which could be unavailable
@@ -217,6 +218,7 @@ class NetworkTestCase(unittest.TestCase):
             self.skipTest('%s is unavailable' % url)
         self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
 
+    @unittest.skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28185")
     def testPythonOrg(self):
         test_support.requires('network')
         parser = robotparser.RobotFileParser(

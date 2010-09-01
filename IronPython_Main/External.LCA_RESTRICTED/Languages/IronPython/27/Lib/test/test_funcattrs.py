@@ -74,7 +74,10 @@ class FunctionPropertiesTest(FuncAttrsTest):
         self.assertEqual(len(c), 1)
         # don't have a type object handy
         self.assertEqual(c[0].__class__.__name__, "cell")
-        self.cannot_set_attr(f, "func_closure", c, TypeError)
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            self.cannot_set_attr(f, "func_closure", c, (TypeError, AttributeError))
+        else:
+            self.cannot_set_attr(f, "func_closure", c, TypeError)
 
     def test_empty_cell(self):
         def f(): print a

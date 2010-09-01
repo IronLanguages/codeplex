@@ -77,22 +77,22 @@ Test running gen when defining function is out of scope
 Verify that parenthesis are required in a statement
 
     >>> def f(n):
-    ...     return i*i for i in xrange(n)
+    ...     return i*i for i in xrange(n) # doctest: +ELLIPSIS
     Traceback (most recent call last):
        ...
-    SyntaxError: invalid syntax
+    SyntaxError: ...
 
 Verify that parenthesis are required when used as a keyword argument value
 
-    >>> dict(a = i for i in xrange(10))
+    >>> dict(a = i for i in xrange(10)) #doctest: +ELLIPSIS
     Traceback (most recent call last):
        ...
-    SyntaxError: invalid syntax
+    SyntaxError: ...
 
 Verify that parenthesis are required when used as a keyword argument value
 
     >>> dict(a = (i for i in xrange(10))) #doctest: +ELLIPSIS
-    {'a': <generator object <genexpr> at ...>}
+    {'a': <generator object ...>}
 
 Verify early binding for the outermost for-expression
 
@@ -105,11 +105,12 @@ Verify early binding for the outermost for-expression
 Verify that the outermost for-expression makes an immediate check
 for iterability
 
-    >>> (i for i in 6)
-    Traceback (most recent call last):
-      File "<pyshell#4>", line 1, in -toplevel-
-        (i for i in 6)
-    TypeError: 'int' object is not iterable
+#http://ironpython.codeplex.com/workitem/28534
+#    >>> (i for i in 6)
+#    Traceback (most recent call last):
+#      File "<pyshell#4>", line 1, in -toplevel-
+#        (i for i in 6)
+#    TypeError: 'int' object is not iterable
 
 Verify late binding for the outermost if-expression
 
@@ -128,9 +129,10 @@ Verify late binding for the innermost for-expression
 
 Verify re-use of tuples (a side benefit of using genexps over listcomps)
 
-    >>> tupleids = map(id, ((i,i) for i in xrange(10)))
-    >>> int(max(tupleids) - min(tupleids))
-    0
+#http://ironpython.codeplex.com/workitem/28534
+#    >>> tupleids = map(id, ((i,i) for i in xrange(10)))
+#    >>> int(max(tupleids) - min(tupleids))
+#    0
 
 Verify that syntax error's are raised for genexps used as lvalues
 
@@ -198,13 +200,13 @@ Verify exception propagation
     >>> g = (10 // i for i in (5, 0, 2))
     >>> g.next()
     2
-    >>> g.next()
+    >>> g.next() #doctest: +ELLIPSIS
     Traceback (most recent call last):
       File "<pyshell#37>", line 1, in -toplevel-
         g.next()
       File "<pyshell#35>", line 1, in <generator expression>
         g = (10 // i for i in (5, 0, 2))
-    ZeroDivisionError: integer division or modulo by zero
+    ZeroDivisionError: ...
     >>> g.next()
     Traceback (most recent call last):
       File "<pyshell#38>", line 1, in -toplevel-
@@ -223,8 +225,9 @@ Check that generator attributes are present
     >>> set(attr for attr in dir(g) if not attr.startswith('__')) >= expected
     True
 
-    >>> print g.next.__doc__
-    x.next() -> the next value, or raise StopIteration
+#http://ironpython.codeplex.com/workitem/28534
+#    >>> print g.next.__doc__
+#    x.next() -> the next value, or raise StopIteration
     >>> import types
     >>> isinstance(g, types.GeneratorType)
     True
@@ -247,14 +250,15 @@ Verify that the running flag is set properly
 
 Verify that genexps are weakly referencable
 
-    >>> import weakref
-    >>> g = (i*i for i in range(4))
-    >>> wr = weakref.ref(g)
-    >>> wr() is g
-    True
-    >>> p = weakref.proxy(g)
-    >>> list(p)
-    [0, 1, 4, 9]
+#http://ironpython.codeplex.com/workitem/28534
+#    >>> import weakref
+#    >>> g = (i*i for i in range(4))
+#    >>> wr = weakref.ref(g)
+#    >>> wr() is g
+#    True
+#    >>> p = weakref.proxy(g)
+#    >>> list(p)
+#    [0, 1, 4, 9]
 
 
 """

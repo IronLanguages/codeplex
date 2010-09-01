@@ -1,9 +1,8 @@
-from test.test_support import verbose, run_unittest, import_module
-from test import test_support
+from test.test_support import verbose, run_unittest, import_module, is_cli, due_to_ironpython_bug
 import re
-if not test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=148397"):
+if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/23666"):
     from re import Scanner
-import sys, traceback
+import sys, traceback, unittest
 from weakref import proxy
 
 # Misc tests from Tim Peters' re.doc
@@ -41,8 +40,6 @@ class ReTests(unittest.TestCase):
         return str(int_value + 1)
 
     def test_basic_re_sub(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=305766"):
-            return
         self.assertEqual(re.sub("(?i)b+", "x", "bbbb BBBB"), 'x x')
         self.assertEqual(re.sub(r'\d+', self.bump_num, '08.2 -2 23x99y'),
                          '9.3 -3 24x100y')
@@ -62,9 +59,9 @@ class ReTests(unittest.TestCase):
         self.assertEqual(re.sub('(?P<unk>x)', '\g<unk>\g<unk>', 'xx'), 'xxxx')
         self.assertEqual(re.sub('(?P<unk>x)', '\g<1>\g<1>', 'xx'), 'xxxx')
 
-        #Bug305766 different rusult
-        self.assertEqual(re.sub('a',r'\t\n\v\r\f\a\b\B\Z\a\A\w\W\s\S\d\D','a'),
-                         '\t\n\v\r\f\a\b\\B\\Z\a\\A\\w\\W\\s\\S\\d\\D')
+        if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/23751"):
+            self.assertEqual(re.sub('a',r'\t\n\v\r\f\a\b\B\Z\a\A\w\W\s\S\d\D','a'),
+                             '\t\n\v\r\f\a\b\\B\\Z\a\\A\\w\\W\\s\\S\\d\\D')
         self.assertEqual(re.sub('a', '\t\n\v\r\f\a', 'a'), '\t\n\v\r\f\a')
         self.assertEqual(re.sub('a', '\t\n\v\r\f\a', 'a'),
                          (chr(9)+chr(10)+chr(11)+chr(13)+chr(12)+chr(7)))
@@ -112,11 +109,10 @@ class ReTests(unittest.TestCase):
                 self.assertEqual(z, y)
                 self.assertEqual(type(z), type(y))
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/21116")
     def test_bug_1661(self):
         # Verify that flags do not get silently ignored with compiled patterns
         pattern = re.compile('.')
-        if test_support.due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21116"):
-            return
         self.assertRaises(ValueError, re.match, pattern, 'A', re.I)
         self.assertRaises(ValueError, re.search, pattern, 'A', re.I)
         self.assertRaises(ValueError, re.findall, pattern, 'A', re.I)
@@ -127,19 +123,18 @@ class ReTests(unittest.TestCase):
         re.compile("(?P<quote>)(?(quote))")
 
     def test_sub_template_numeric_escape(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=305766"):
-            return
         # bug 776311 and friends
         self.assertEqual(re.sub('x', r'\0', 'x'), '\0')
         self.assertEqual(re.sub('x', r'\000', 'x'), '\000')
         self.assertEqual(re.sub('x', r'\001', 'x'), '\001')
         self.assertEqual(re.sub('x', r'\008', 'x'), '\0' + '8')
         self.assertEqual(re.sub('x', r'\009', 'x'), '\0' + '9')
-        self.assertEqual(re.sub('x', r'\111', 'x'), '\111')
-        self.assertEqual(re.sub('x', r'\117', 'x'), '\117')
+        if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/23751"):
+            self.assertEqual(re.sub('x', r'\111', 'x'), '\111')
+            self.assertEqual(re.sub('x', r'\117', 'x'), '\117')
 
-        self.assertEqual(re.sub('x', r'\1111', 'x'), '\1111')
-        self.assertEqual(re.sub('x', r'\1111', 'x'), '\111' + '1')
+            self.assertEqual(re.sub('x', r'\1111', 'x'), '\1111')
+            self.assertEqual(re.sub('x', r'\1111', 'x'), '\111' + '1')
 
         self.assertEqual(re.sub('x', r'\00', 'x'), '\x00')
         self.assertEqual(re.sub('x', r'\07', 'x'), '\x07')
@@ -147,6 +142,8 @@ class ReTests(unittest.TestCase):
         self.assertEqual(re.sub('x', r'\09', 'x'), '\0' + '9')
         self.assertEqual(re.sub('x', r'\0a', 'x'), '\0' + 'a')
 
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/23751"):
+            return
         self.assertEqual(re.sub('x', r'\400', 'x'), '\0')
         self.assertEqual(re.sub('x', r'\777', 'x'), '\377')
 
@@ -183,9 +180,8 @@ class ReTests(unittest.TestCase):
         self.assertEqual(re.sub('x*', '-', 'abxd'), '-a-b-d-')
         self.assertEqual(re.sub('x+', '-', 'abxd'), 'ab-d')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/23751")
     def test_symbolic_refs(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=305766"):
-            return
         self.assertRaises(re.error, re.sub, '(?P<a>x)', '\g<a', 'xx')
         self.assertRaises(re.error, re.sub, '(?P<a>x)', '\g<', 'xx')
         self.assertRaises(re.error, re.sub, '(?P<a>x)', '\g', 'xx')
@@ -316,12 +312,9 @@ class ReTests(unittest.TestCase):
                          "second first second first")
 
     def test_repeat_minmax(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=305783"):
-            return
         self.assertEqual(re.match("^(\w){1}$", "abc"), None)
         self.assertEqual(re.match("^(\w){1}?$", "abc"), None)
         self.assertEqual(re.match("^(\w){1,2}$", "abc"), None)
-        #Bug 305783
         self.assertEqual(re.match("^(\w){1,2}?$", "abc"), None)
 
         self.assertEqual(re.match("^(\w){3}$", "abc").group(1), "c")
@@ -358,27 +351,29 @@ class ReTests(unittest.TestCase):
         self.assertNotEqual(re.match("(a)", "a").re, None)
 
     def test_special_escapes(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=306834"):
-            return
         self.assertEqual(re.search(r"\b(b.)\b",
                                    "abcd abc bcd bx").group(1), "bx")
-        self.assertEqual(re.search(r"\B(b.)\B",
-                                   "abc bcd bc abxd").group(1), "bx")
+        if not due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=306834"):
+            self.assertEqual(re.search(r"\B(b.)\B",
+                                       "abc bcd bc abxd").group(1), "bx")
         self.assertEqual(re.search(r"\b(b.)\b",
                                    "abcd abc bcd bx", re.LOCALE).group(1), "bx")
-        self.assertEqual(re.search(r"\B(b.)\B",
-                                   "abc bcd bc abxd", re.LOCALE).group(1), "bx")
+        if not due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=306834"):
+            self.assertEqual(re.search(r"\B(b.)\B",
+                                       "abc bcd bc abxd", re.LOCALE).group(1), "bx")
         self.assertEqual(re.search(r"\b(b.)\b",
                                    "abcd abc bcd bx", re.UNICODE).group(1), "bx")
-        self.assertEqual(re.search(r"\B(b.)\B",
-                                   "abc bcd bc abxd", re.UNICODE).group(1), "bx")
+        if not due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=306834"):
+            self.assertEqual(re.search(r"\B(b.)\B",
+                                       "abc bcd bc abxd", re.UNICODE).group(1), "bx")
         self.assertEqual(re.search(r"^abc$", "\nabc\n", re.M).group(0), "abc")
         self.assertEqual(re.search(r"^\Aabc\Z$", "abc", re.M).group(0), "abc")
         self.assertEqual(re.search(r"^\Aabc\Z$", "\nabc\n", re.M), None)
         self.assertEqual(re.search(r"\b(b.)\b",
                                    u"abcd abc bcd bx").group(1), "bx")
-        self.assertEqual(re.search(r"\B(b.)\B",
-                                   u"abc bcd bc abxd").group(1), "bx")
+        if not due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=306834"):
+            self.assertEqual(re.search(r"\B(b.)\B",
+                                       u"abc bcd bc abxd").group(1), "bx")
         self.assertEqual(re.search(r"^abc$", u"\nabc\n", re.M).group(0), "abc")
         self.assertEqual(re.search(r"^\Aabc\Z$", u"abc", re.M).group(0), "abc")
         self.assertEqual(re.search(r"^\Aabc\Z$", u"\nabc\n", re.M), None)
@@ -546,15 +541,13 @@ class ReTests(unittest.TestCase):
         self.assertEqual(re.match('(x)*y', 50000*'x'+'y').group(1), 'x')
         self.assertEqual(re.match('(x)*?y', 50000*'x'+'y').group(1), 'x')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/23666")
     def test_scanner(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=148397"):
-            return
         def s_ident(scanner, token): return token
         def s_operator(scanner, token): return "op%s" % token
         def s_float(scanner, token): return float(token)
         def s_int(scanner, token): return int(token)
 
-        #Bug 148397
         scanner = Scanner([
             (r"[a-zA-Z_]\w*", s_ident),
             (r"\d+\.\d*", s_float),
@@ -637,13 +630,12 @@ class ReTests(unittest.TestCase):
                          ['a','b','c'])
 
     def test_bug_581080(self):
-        if test_support.due_to_ironpython_bug("http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=148397"):
-            return
         iter = re.finditer(r"\s", "a b")
         self.assertEqual(iter.next().span(), (1,2))
         self.assertRaises(StopIteration, iter.next)
 
-        #Bug 148397
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/23666"):
+            return
         scanner = re.compile(r"\s").scanner("a b")
         self.assertEqual(scanner.search().span(), (1, 2))
         self.assertEqual(scanner.search(), None)
@@ -680,9 +672,10 @@ class ReTests(unittest.TestCase):
         import array
         for typecode in 'cbBuhHiIlLfd':
             a = array.array(typecode)
-            if not test_support.due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21116"):
-                self.assertEqual(re.compile("bla").match(a), None)
-                self.assertEqual(re.compile("").match(a).groups(), ())
+            if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+                continue
+            self.assertEqual(re.compile("bla").match(a), None)
+            self.assertEqual(re.compile("").match(a).groups(), ())
 
     def test_inline_flags(self):
         # Bug #1700
@@ -705,14 +698,15 @@ class ReTests(unittest.TestCase):
         q = p.match(upper_char)
         self.assertNotEqual(q, None)
 
-        if not test_support.due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21116"):
-            p = re.compile('(?iu)' + upper_char)
-            q = p.match(lower_char)
-            self.assertNotEqual(q, None)
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
+            return
+        p = re.compile('(?iu)' + upper_char)
+        q = p.match(lower_char)
+        self.assertNotEqual(q, None)
 
-            p = re.compile('(?iu)' + lower_char)
-            q = p.match(upper_char)
-            self.assertNotEqual(q, None)
+        p = re.compile('(?iu)' + lower_char)
+        q = p.match(upper_char)
+        self.assertNotEqual(q, None)
 
     def test_dollar_matches_twice(self):
         "$ matches the end of string, and just before the terminating \n"
@@ -727,8 +721,6 @@ class ReTests(unittest.TestCase):
         self.assertEqual(pattern.sub('#', '\n'), '#\n#')
 
     def test_dealloc(self):
-        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/17455"):
-            return
         # issue 3299: check for segfault in debug build
         import _sre
         # the overflow limit is different on wide and narrow builds and it
@@ -737,6 +729,8 @@ class ReTests(unittest.TestCase):
         # a RuntimeError is raised instead of OverflowError.
         long_overflow = 2**128
         self.assertRaises(TypeError, re.finditer, "a", {})
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/17455"):
+            return
         self.assertRaises(OverflowError, _sre.compile, "abc", 0, [long_overflow])
 
 def run_re_tests():

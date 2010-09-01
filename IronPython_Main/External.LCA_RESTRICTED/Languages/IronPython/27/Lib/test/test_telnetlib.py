@@ -3,7 +3,7 @@ import telnetlib
 import time
 import Queue
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from test import test_support
 threading = test_support.import_module('threading')
 
@@ -131,6 +131,7 @@ class ReadTests(TestCase):
         data = telnet.read_until('match')
         self.assertEqual(data, ''.join(want[:-2]))
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_until_B(self):
         # test the timeout - it does NOT raise socket.timeout
         want = ['hello', self.block_long, 'not seen', EOF_sigil]
@@ -141,6 +142,7 @@ class ReadTests(TestCase):
         self.assertEqual(data, want[0])
         self.assertEqual(telnet.read_all(), 'not seen')
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_all_A(self):
         """
         read_all()
@@ -161,9 +163,11 @@ class ReadTests(TestCase):
         data = func()
         self.assertTrue(self.block_short <= time.time() - start)
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_all_B(self):
         self._test_blocking(telnetlib.Telnet(HOST, self.port).read_all)
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_all_C(self):
         self.dataq.put([EOF_sigil])
         telnet = telnetlib.Telnet(HOST, self.port)
@@ -171,6 +175,7 @@ class ReadTests(TestCase):
         telnet.read_all()
         telnet.read_all() # shouldn't raise
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_some_A(self):
         """
         read_some()
@@ -184,6 +189,7 @@ class ReadTests(TestCase):
         data = telnet.read_all()
         self.assertTrue(len(data) >= 1)
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_some_B(self):
         # test EOF
         self.dataq.put([EOF_sigil])
@@ -191,9 +197,11 @@ class ReadTests(TestCase):
         self.dataq.join()
         self.assertEqual('', telnet.read_some())
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_some_C(self):
         self._test_blocking(telnetlib.Telnet(HOST, self.port).read_some)
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def _test_read_any_eager_A(self, func_name):
         """
         read_very_eager()
@@ -228,10 +236,12 @@ class ReadTests(TestCase):
     # (they behave differently but we only test the gaurantees)
     def test_read_very_eager_A(self):
         self._test_read_any_eager_A('read_very_eager')
+    @skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_read_very_eager_B(self):
         self._test_read_any_eager_B('read_very_eager')
     def test_read_eager_A(self):
         self._test_read_any_eager_A('read_eager')
+    @skipIf(test_support.is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_read_eager_B(self):
         self._test_read_any_eager_B('read_eager')
     # NB -- we need to test the IAC block which is mentioned in the docstring
@@ -245,6 +255,7 @@ class ReadTests(TestCase):
         telnet.fill_rawq()
         self.assertRaises(EOFError, func)
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_lazy_A(self):
         want = ['x' * 100, EOF_sigil]
         self.dataq.put(want)
@@ -264,9 +275,11 @@ class ReadTests(TestCase):
             self.assertTrue(want[0].startswith(data))
         self.assertEqual(data, want[0])
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_lazy_B(self):
         self._test_read_any_lazy_B('read_lazy')
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_very_lazy_A(self):
         want = ['x' * 100, EOF_sigil]
         self.dataq.put(want)
@@ -288,6 +301,7 @@ class ReadTests(TestCase):
             self.assertTrue(want[0].startswith(data))
         self.assertEqual(data, want[0])
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_read_very_lazy_B(self):
         self._test_read_any_lazy_B('read_very_lazy')
 
@@ -327,6 +341,7 @@ class OptionTests(TestCase):
         nego.sb_getter = None # break the nego => telnet cycle
         self.tearDown()
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_IAC_commands(self):
         # reset our setup
         self.dataq.put([EOF_sigil])
@@ -342,6 +357,7 @@ class OptionTests(TestCase):
         self._test_command([tl.IAC + cmd for (cmd) in self.cmds] + [EOF_sigil])
         self.assertEqual('', telnet.read_sb_data())
 
+    @skipIf(test_support.is_cli, "hangs on CLR: http://ironpython.codeplex.com/workitem/28171")
     def test_SB_commands(self):
         # RFC 855, subnegotiations portion
         send = [tl.IAC + tl.SB + tl.IAC + tl.SE,

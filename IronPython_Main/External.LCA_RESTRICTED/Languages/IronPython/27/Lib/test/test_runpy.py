@@ -5,7 +5,8 @@ import os.path
 import sys
 import re
 import tempfile
-from test.test_support import verbose, run_unittest, forget, due_to_ironpython_bug, due_to_ironpython_incompatibility
+from test.test_support import (verbose, run_unittest, forget, is_cli,
+                               due_to_ironpython_bug, due_to_ironpython_incompatibility)
 from test.script_helper import (temp_dir, make_script, compile_script,
                                 make_pkg, make_zip_script, make_zip_pkg)
 
@@ -71,7 +72,7 @@ class RunModuleCodeTest(unittest.TestCase):
         self.assertEqual(d2["nested"]["x"], 1)
         self.assertIs(d2["__name__"], name)
         self.assertTrue(d2["run_name_in_sys_modules"])
-        if not due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21116"):
+        if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21116"):
             self.assertTrue(d2["module_in_sys_modules"])
         self.assertIs(d2["__file__"], file)
         self.assertIs(d2["run_argv0"], file)
@@ -101,6 +102,8 @@ class RunModuleTest(unittest.TestCase):
         self.expect_import_error("a.bee")
         self.expect_import_error(".howard")
         self.expect_import_error("..eaten")
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
         # Package without __main__.py
         self.expect_import_error("multiprocessing")
 
@@ -265,6 +268,7 @@ from ..uncle.cousin import nephew
             if verbose: print "Testing package depth:", depth
             self._check_module(depth)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_run_package(self):
         for depth in range(1, 4):
             if verbose: print "Testing package depth:", depth
@@ -275,9 +279,8 @@ from ..uncle.cousin import nephew
             if verbose: print "Testing relative imports at depth:", depth
             self._check_relative_imports(depth)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/21116")
     def test_main_relative_import(self):
-        if due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=21116"):
-            return
         for depth in range(2, 5):
             if verbose: print "Testing main relative imports at depth:", depth
             self._check_relative_imports(depth, "__main__")
@@ -333,6 +336,7 @@ argv0 = sys.argv[0]
             self._check_script(script_name, "<run_path>", script_name,
                                script_name, None)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_script_compiled(self):
         with temp_dir() as script_dir:
             mod_name = 'script'
@@ -342,6 +346,7 @@ argv0 = sys.argv[0]
             self._check_script(compiled_name, "<run_path>", compiled_name,
                                compiled_name, None)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_directory(self):
         with temp_dir() as script_dir:
             mod_name = '__main__'
@@ -349,6 +354,7 @@ argv0 = sys.argv[0]
             self._check_script(script_dir, "<run_path>", script_name,
                                script_dir, '')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_directory_compiled(self):
         with temp_dir() as script_dir:
             mod_name = '__main__'
@@ -358,6 +364,7 @@ argv0 = sys.argv[0]
             self._check_script(script_dir, "<run_path>", compiled_name,
                                script_dir, '')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_directory_error(self):
         with temp_dir() as script_dir:
             mod_name = 'not_main'
@@ -365,6 +372,7 @@ argv0 = sys.argv[0]
             msg = "can't find '__main__' module in %r" % script_dir
             self._check_import_error(script_dir, msg)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_zipfile(self):
         with temp_dir() as script_dir:
             mod_name = '__main__'
@@ -372,6 +380,7 @@ argv0 = sys.argv[0]
             zip_name, fname = make_zip_script(script_dir, 'test_zip', script_name)
             self._check_script(zip_name, "<run_path>", fname, zip_name, '')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_zipfile_compiled(self):
         with temp_dir() as script_dir:
             mod_name = '__main__'
@@ -380,6 +389,7 @@ argv0 = sys.argv[0]
             zip_name, fname = make_zip_script(script_dir, 'test_zip', compiled_name)
             self._check_script(zip_name, "<run_path>", fname, zip_name, '')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_zipfile_error(self):
         with temp_dir() as script_dir:
             mod_name = 'not_main'
@@ -388,6 +398,7 @@ argv0 = sys.argv[0]
             msg = "can't find '__main__' module in %r" % zip_name
             self._check_import_error(zip_name, msg)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/28171")
     def test_main_recursion_error(self):
         with temp_dir() as script_dir, temp_dir() as dummy_dir:
             mod_name = '__main__'

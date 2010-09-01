@@ -8,7 +8,8 @@ import datetime
 from UserList import UserList
 from UserDict import UserDict
 
-from test.test_support import run_unittest, check_py3k_warnings, due_to_ironpython_bug
+from test.test_support import run_unittest, check_py3k_warnings, \
+    is_cli, due_to_ironpython_bug
 
 with check_py3k_warnings(
         ("tuple parameter unpacking has been removed", SyntaxWarning),
@@ -17,7 +18,10 @@ with check_py3k_warnings(
     from test import inspect_fodder2 as mod2
 
 # C module for test_findsource_binary
-import unicodedata
+if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/21404"):
+    unicodedata = None
+else:
+    import unicodedata
 
 # Functions tested in this suite:
 # ismodule, isclass, ismethod, isfunction, istraceback, isframe, iscode,
@@ -157,10 +161,8 @@ class TestInterpreterStack(IsTestBase):
         if not due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
             self.istest(inspect.isframe, 'mod.fr')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_stack(self):
-        if due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
-            #error in inspect_fodder.py line 17
-            return
         self.assertTrue(len(mod.st) >= 5)
         self.assertEqual(mod.st[0][1:],
              (modfile, 16, 'eggs', ['    st = inspect.stack()\n'], 0))
@@ -171,10 +173,8 @@ class TestInterpreterStack(IsTestBase):
         self.assertEqual(mod.st[3][1:],
              (modfile, 39, 'abuse', ['        self.argue(a, b, c)\n'], 0))
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_trace(self):
-        if due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
-            return
-        
         self.assertEqual(len(git.tr), 3)
         self.assertEqual(git.tr[0][1:], (modfile, 43, 'argue',
                                          ['            spam(a, b, c)\n'], 0))
@@ -183,9 +183,8 @@ class TestInterpreterStack(IsTestBase):
         self.assertEqual(git.tr[2][1:], (modfile, 18, 'eggs',
                                          ['    q = y // 0\n'], 0))
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_frame(self):
-        if due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
-            return
         args, varargs, varkw, locals = inspect.getargvalues(mod.fr)
         self.assertEqual(args, ['x', 'y'])
         self.assertEqual(varargs, None)
@@ -194,9 +193,8 @@ class TestInterpreterStack(IsTestBase):
         self.assertEqual(inspect.formatargvalues(args, varargs, varkw, locals),
                          '(x=11, y=14)')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_previous_frame(self):
-        if due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
-            return
         args, varargs, varkw, locals = inspect.getargvalues(mod.fr.f_back)
         self.assertEqual(args, ['a', 'b', 'c', 'd', ['e', ['f']]])
         self.assertEqual(varargs, 'g')
@@ -385,7 +383,7 @@ class TestBuggyCases(GetSourceBase):
         self.assertSourceEqual(mod2.method_in_dynamic_class, 95, 97)
 
     @unittest.skipIf(
-        not hasattr(unicodedata, '__file__') or
+        not unicodedata or not hasattr(unicodedata, '__file__') or
             unicodedata.__file__[-4:] in (".pyc", ".pyo"),
         "unicodedata is not an external binary module")
     def test_findsource_binary(self):
@@ -440,24 +438,24 @@ class TestClassesAndFunctions(unittest.TestCase):
             self.assertEqual(inspect.formatargspec(args, varargs, varkw, defaults),
                              formatted)
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_getargspec(self):
-        if not due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=12876"):
-            self.assertArgSpecEquals(mod.eggs, ['x', 'y'], formatted = '(x, y)')
+        self.assertArgSpecEquals(mod.eggs, ['x', 'y'], formatted = '(x, y)')
 
-            #error in inspect_fodder line 10
-            self.assertArgSpecEquals(mod.spam,
-                                     ['a', 'b', 'c', 'd', ['e', ['f']]],
-                                     'g', 'h', (3, (4, (5,))),
-                                     '(a, b, c, d=3, (e, (f,))=(4, (5,)), *g, **h)')
+        #error in inspect_fodder line 10
+        self.assertArgSpecEquals(mod.spam,
+                                 ['a', 'b', 'c', 'd', ['e', ['f']]],
+                                 'g', 'h', (3, (4, (5,))),
+                                 '(a, b, c, d=3, (e, (f,))=(4, (5,)), *g, **h)')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_getargspec_method(self):
         class A(object):
             def m(self):
                 pass
+        self.assertArgSpecEquals(A.m, ['self'])
 
-        if not due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=360510"):
-            self.assertArgSpecEquals(A.m, ['self'])
-
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_getargspec_sublistofone(self):
         with check_py3k_warnings(
                 ("tuple parameter unpacking has been removed", SyntaxWarning),
@@ -466,8 +464,7 @@ class TestClassesAndFunctions(unittest.TestCase):
             self.assertArgSpecEquals(sublistOfOne, [['foo']])
 
             exec 'def fakeSublistOfOne((foo)): return 1'
-            if not due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=360510"):
-                self.assertArgSpecEquals(fakeSublistOfOne, ['foo'])
+            self.assertArgSpecEquals(fakeSublistOfOne, ['foo'])
 
 
     def _classify_test(self, newstyle):
@@ -598,6 +595,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
                     "if not is_tuplename(i[0]))")
             return eval(code % signature, {'is_tuplename' : self.is_tuplename})
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_plain(self):
         f = self.makeCallable('a, b=1')
         self.assertEqualCallArgs(f, '2')
@@ -635,6 +633,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '2, *[3,4]')
         self.assertEqualCallArgs(f, '2, 3, *UserList([4])')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_varkw(self):
         f = self.makeCallable('a, b=1, **c')
         self.assertEqualCallArgs(f, 'a=2')
@@ -651,6 +650,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '2, c=4, **{u"b":3}')
         self.assertEqualCallArgs(f, 'b=2, **{u"a":3, u"c":4}')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_tupleargs(self):
         f = self.makeCallable('(b,c), (d,(e,f))=(0,[1,2])')
         self.assertEqualCallArgs(f, '(2,3)')
@@ -660,6 +660,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '(2,3), (4,[5,6])')
         self.assertEqualCallArgs(f, '(2,3), [4,UserList([5,6])]')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_multiple_features(self):
         f = self.makeCallable('a, b=2, (c,(d,e))=(3,[4,5]), *f, **g')
         self.assertEqualCallArgs(f, '2, 3, (4,[5,6]), 7')
@@ -672,6 +673,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '2, x=8, *UserList([3, (4,[5,6])]), '
                                  '**UserDict(y=9, z=10)')
 
+    @unittest.skipIf(is_cli, "http://ironpython.codeplex.com/workitem/12876")
     def test_errors(self):
         f0 = self.makeCallable('')
         f1 = self.makeCallable('a, b')

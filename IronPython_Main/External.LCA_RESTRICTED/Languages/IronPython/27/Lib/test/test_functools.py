@@ -45,9 +45,16 @@ class TestPartial(unittest.TestCase):
         # attributes should not be writable
         if not isinstance(self.thetype, type):
             return
-        self.assertRaises(TypeError, setattr, p, 'func', map)
-        self.assertRaises(TypeError, setattr, p, 'args', (1, 2))
-        self.assertRaises(TypeError, setattr, p, 'keywords', dict(a=1, b=2))
+        if test_support.due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            if self.thetype is not functools.partial:
+                return
+            self.assertRaises((TypeError, AttributeError), setattr, p, 'func', map)
+            self.assertRaises(AttributeError, setattr, p, 'args', (1, 2))
+            self.assertRaises(AttributeError, setattr, p, 'keywords', dict(a=1, b=2))
+        else:
+            self.assertRaises(TypeError, setattr, p, 'func', map)
+            self.assertRaises(TypeError, setattr, p, 'args', (1, 2))
+            self.assertRaises(TypeError, setattr, p, 'keywords', dict(a=1, b=2))
 
         p = self.thetype(hex)
         try:
@@ -149,6 +156,7 @@ class TestPartial(unittest.TestCase):
         join = self.thetype(''.join)
         self.assertEqual(join(data), '0123456789')
 
+    @unittest.skipIf(test_support.is_cli, "CLR stack overflow: http://ironpython.codeplex.com/workitem/28171")
     def test_pickle(self):
         f = self.thetype(signature, 'asdf', bar=True)
         f.add_something_to__dict__ = True
