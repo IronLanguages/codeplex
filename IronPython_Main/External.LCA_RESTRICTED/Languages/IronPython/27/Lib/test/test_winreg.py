@@ -214,7 +214,7 @@ class BaseWinregTests(unittest.TestCase):
         DeleteKey(root_key, test_key_name)
 
     def _test_all(self, root_key):
-        self._cleatn_test_data(root_key)
+        self._clean_test_data(root_key)
         self._write_test_data(root_key)
         self._read_test_data(root_key)
         self._delete_test_data(root_key)
@@ -305,6 +305,8 @@ class LocalWinregTests(BaseWinregTests):
             DeleteKey(HKEY_CURRENT_USER, test_key_name)
 
     def test_long_key(self):
+        if test_support.due_to_ironpython_bug("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=28743"):
+            return
         # Issue2810, in 2.6 and 3.1 when the key name was exactly 256
         # characters, EnumKey threw "WindowsError: More data is
         # available"
