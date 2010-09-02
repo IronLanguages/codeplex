@@ -282,6 +282,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="PythonProject.ico">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <VSCTCompile Include="IronPythonTools.vsct">
       <ResourceName>1000</ResourceName>
       <SubType>Designer</SubType>

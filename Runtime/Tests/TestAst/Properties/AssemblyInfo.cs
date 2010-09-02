@@ -45,6 +45,6 @@ using System.Security;
 //      Revision
 //
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("2.7.1009.0")]
+[assembly: AssemblyFileVersion("2.6.1009.0")]
 [assembly: SecurityTransparent]
 [assembly: AllowPartiallyTrustedCallers]
