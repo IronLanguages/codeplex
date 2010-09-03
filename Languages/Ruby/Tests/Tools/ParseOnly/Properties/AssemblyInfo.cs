@@ -46,4 +46,4 @@ using Ruby.Runtime;
 //      Revision
 //
 [assembly: AssemblyVersion(RubyContext.IronRubyVersionString)]
-[assembly: AssemblyFileVersion("2.6.1009.0")]
+[assembly: AssemblyFileVersion("2.7.1009.0")]

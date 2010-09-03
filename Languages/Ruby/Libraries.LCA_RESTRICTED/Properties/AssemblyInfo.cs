@@ -36,7 +36,7 @@ using System.Security;
 
 #if !SILVERLIGHT
 [assembly: AssemblyVersion(RubyContext.IronRubyVersionString)]
-[assembly: AssemblyFileVersion("2.6.1009.0")]
+[assembly: AssemblyFileVersion("2.7.1009.0")]
 [assembly: AllowPartiallyTrustedCallers]
 #if !CLR2
 [assembly: SecurityRules(SecurityRuleSet.Level1)]
