@@ -21,8 +21,8 @@ extern "C" __declspec(dllexport) char *GetString(void) {
     return "foo"; 
 }
 
-extern "C" __declspec(dllexport) bool PointInRect(Rectangle *x, Point pt) { 
-    return pt.y >= x->top && pt.y <= x->bottom && pt.x >= x->left && pt.x <= x->right;
+extern "C" __declspec(dllexport) int PointInRect(Rectangle *x, Point pt) { 
+    return pt.y >= x->top && pt.y <= x->bottom && pt.x >= x->left && pt.x <= x->right ? 1 : 0;
 }
 
 extern "C" __declspec(dllexport) double _testfunc_D_bhilfD(char b, short h, int i, long l, float f, double d) { 

@@ -139,9 +139,10 @@ class Callbacks(unittest.TestCase):
         for i in range(32):
             X()
         gc.collect()
-        live = [x for x in gc.get_objects()
-                if isinstance(x, X)]
-        self.assertEqual(len(live), 0)
+        if not test_support.due_to_ironpython_incompatibility("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=17458"):
+            live = [x for x in gc.get_objects()
+                    if isinstance(x, X)]
+            self.assertEqual(len(live), 0)
 
 try:
     WINFUNCTYPE

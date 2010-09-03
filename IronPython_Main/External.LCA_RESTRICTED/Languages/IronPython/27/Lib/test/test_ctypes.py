@@ -7,7 +7,7 @@ import_module('_ctypes')
 if due_to_ironpython_bug("http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=22393"):
     import System, nt
     try:
-        System.IO.File.Copy(nt.getcwd() + r"\..\Python26.dll", nt.getcwd() + r"\Python26.dll", True)
+        System.IO.File.Copy(nt.getcwd() + r"\..\Python27.dll", nt.getcwd() + r"\Python27.dll", True)
     except:
         pass
 

@@ -27,6 +27,9 @@ class TestBreak(unittest.TestCase):
 
 
     def testInstallHandler(self):
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
+        
         default_handler = signal.getsignal(signal.SIGINT)
         unittest.installHandler()
         self.assertNotEqual(signal.getsignal(signal.SIGINT), default_handler)
@@ -37,8 +40,7 @@ class TestBreak(unittest.TestCase):
         except KeyboardInterrupt:
             self.fail("KeyboardInterrupt not handled")
 
-        if not due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
-            self.assertTrue(unittest.signals._interrupt_handler.called)
+        self.assertTrue(unittest.signals._interrupt_handler.called)
 
     def testRegisterResult(self):
         result = unittest.TestResult()
@@ -54,6 +56,9 @@ class TestBreak(unittest.TestCase):
 
 
     def testInterruptCaught(self):
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
+        
         default_handler = signal.getsignal(signal.SIGINT)
 
         result = unittest.TestResult()
@@ -77,6 +82,9 @@ class TestBreak(unittest.TestCase):
 
 
     def testSecondInterrupt(self):
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
+        
         result = unittest.TestResult()
         unittest.installHandler()
         unittest.registerResult(result)
@@ -102,6 +110,9 @@ class TestBreak(unittest.TestCase):
 
 
     def testTwoResults(self):
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
+        
         unittest.installHandler()
 
         result = unittest.TestResult()
@@ -171,6 +182,9 @@ class TestBreak(unittest.TestCase):
 
 
     def testRemoveResult(self):
+        if due_to_ironpython_bug("http://ironpython.codeplex.com/workitem/28171"):
+            return
+        
         result = unittest.TestResult()
         unittest.registerResult(result)
 
