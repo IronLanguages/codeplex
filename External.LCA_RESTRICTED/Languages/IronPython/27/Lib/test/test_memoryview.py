@@ -25,7 +25,8 @@ class AbstractMemoryTests:
     def check_getitem_with_type(self, tp):
         item = self.getitem_type
         b = tp(self._source)
-        oldrefcount = sys.getrefcount(b)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            oldrefcount = sys.getrefcount(b)
         m = self._view(b)
         self.assertEquals(m[0], item(b"a"))
         self.assertIsInstance(m[0], bytes)
@@ -42,7 +43,8 @@ class AbstractMemoryTests:
         self.assertRaises(TypeError, lambda: m[0.0])
         self.assertRaises(TypeError, lambda: m["a"])
         m = None
-        self.assertEquals(sys.getrefcount(b), oldrefcount)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            self.assertEquals(sys.getrefcount(b), oldrefcount)
 
     def test_getitem(self):
         for tp in self._types:
@@ -64,7 +66,8 @@ class AbstractMemoryTests:
         if not self.ro_type:
             return
         b = self.ro_type(self._source)
-        oldrefcount = sys.getrefcount(b)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            oldrefcount = sys.getrefcount(b)
         m = self._view(b)
         def setitem(value):
             m[0] = value
@@ -72,14 +75,16 @@ class AbstractMemoryTests:
         self.assertRaises(TypeError, setitem, 65)
         self.assertRaises(TypeError, setitem, memoryview(b"a"))
         m = None
-        self.assertEquals(sys.getrefcount(b), oldrefcount)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            self.assertEquals(sys.getrefcount(b), oldrefcount)
 
     def test_setitem_writable(self):
         if not self.rw_type:
             return
         tp = self.rw_type
         b = self.rw_type(self._source)
-        oldrefcount = sys.getrefcount(b)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            oldrefcount = sys.getrefcount(b)
         m = self._view(b)
         m[0] = tp(b"0")
         self._check_contents(tp, b, b"0bcdef")
@@ -115,7 +120,8 @@ class AbstractMemoryTests:
         self.assertRaises(ValueError, setitem, slice(0,2), b"a")
 
         m = None
-        self.assertEquals(sys.getrefcount(b), oldrefcount)
+        if not test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            self.assertEquals(sys.getrefcount(b), oldrefcount)
 
     def test_tobytes(self):
         for tp in self._types:
@@ -273,6 +279,8 @@ class BaseMemorySliceTests:
         self.assertEquals(obj[1:7], tp(contents))
 
     def test_refs(self):
+        if test_support.due_to_ironpython_incompatibility('http://ironpython.codeplex.com/workitem/17460'):
+            return
         for tp in self._types:
             m = memoryview(tp(self._source))
             oldrefcount = sys.getrefcount(m)
