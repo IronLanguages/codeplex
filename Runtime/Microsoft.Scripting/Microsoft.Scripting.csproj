@@ -11,7 +11,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Scripting</RootNamespace>
     <AssemblyName>Microsoft.Scripting</AssemblyName>
-    <DocumentationFile>$(SolutionDir)..\bin\$(Configuration)\Microsoft.Dynamic.xml</DocumentationFile>
+    <DocumentationFile>$(SolutionDir)..\bin\$(Configuration)\Microsoft.Scripting.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>618</WarningsNotAsErrors>
     <NoWarn>1591</NoWarn>
