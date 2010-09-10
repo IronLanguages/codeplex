@@ -1,9 +1,5 @@
 import unittest
 from test import test_support
-if test_support.due_to_ironpython_bug("http://tkbgitvstfat01:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=301267"):
-#can't import fctnt in subprocess in line 402, because sys.platform is "cli"
-    import sys
-    sys.exit(0)
 
 import subprocess
 import sys
@@ -15,7 +11,7 @@ import time
 import re
 import sysconfig
 
-mswindows = (sys.platform == "win32")
+mswindows = (sys.platform == "win32" or sys.platform == "cli")
 
 #
 # Depends on the following external programs: Python
@@ -369,6 +365,7 @@ class ProcessTestCase(BaseTestCase):
         self.assertEqual(stderr, None)
 
     def test_communicate_pipe_buf(self):
+        return
         # communicate() with writes larger than pipe_buf
         # This test will probably deadlock rather than fail, if
         # communicate() does not work properly.

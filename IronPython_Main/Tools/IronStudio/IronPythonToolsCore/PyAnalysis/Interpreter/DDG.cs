@@ -473,6 +473,8 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 
                 if (strImpName == "clr") {
                     GlobalScope.ShowClr = true;
+                } else if (strImpName == "wpf") {
+                    AddWpfReferences();
                 }
 
                 var saveName = (String.IsNullOrEmpty(newName)) ? strImpName : newName;
@@ -513,6 +515,13 @@ namespace Microsoft.PyAnalysis.Interpreter {
                 }
             }
             return true;
+        }
+
+        private void AddWpfReferences() {
+            ProjectState.AddAssembly(typeof(System.Windows.Markup.XamlReader).Assembly);     // PresentationFramework
+            ProjectState.AddAssembly(typeof(System.Windows.Clipboard).Assembly);             // PresentationCore
+            ProjectState.AddAssembly(typeof(System.Windows.DependencyProperty).Assembly);    // WindowsBase
+            ProjectState.AddAssembly(typeof(System.Xaml.XamlReader).Assembly);               // System.Xaml
         }
 
         public override bool Walk(ReturnStatement node) {

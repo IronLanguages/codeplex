@@ -389,7 +389,7 @@ except that:
 """
 
 import sys
-mswindows = (sys.platform == "win32")
+mswindows = (sys.platform == "win32" or sys.platform == "cli")
 
 import os
 import types

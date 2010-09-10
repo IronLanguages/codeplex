@@ -474,16 +474,19 @@ namespace Microsoft.PyAnalysis {
                         }
                     } catch {
                     }
-
-                    if (asm != null && _references.FindIndex(reference => (reference.Key == asm)) == -1) {
-                        // TODO: When do assembly references get removed?
-                        var nsTracker = new TopNamespaceTracker(_codeContext.LanguageContext.DomainManager);
-                        nsTracker.LoadAssembly(asm);
-                        AddAssembly(new KeyValuePair<Assembly, TopNamespaceTracker>(asm, nsTracker));
-                    }                
+                    AddAssembly(asm);                
                 }
             }
             return null;
+        }
+
+        public void AddAssembly(Assembly asm) {
+            if (asm != null && _references.FindIndex(reference => (reference.Key == asm)) == -1) {
+                // TODO: When do assembly references get removed?
+                var nsTracker = new TopNamespaceTracker(_codeContext.LanguageContext.DomainManager);
+                nsTracker.LoadAssembly(asm);
+                AddAssembly(new KeyValuePair<Assembly, TopNamespaceTracker>(asm, nsTracker));
+            }
         }
 
         /// <summary>
