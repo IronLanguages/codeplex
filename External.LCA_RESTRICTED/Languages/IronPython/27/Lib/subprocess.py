@@ -389,7 +389,7 @@ except that:
 """
 
 import sys
-mswindows = (sys.platform == "win32")
+mswindows = (sys.platform == "win32" or sys.platform == "cli")
 
 import os
 import types
@@ -460,6 +460,8 @@ def _cleanup():
                 # This can happen if two threads create a new Popen instance.
                 # It's harmless that it was already removed, so ignore.
                 pass
+        else:
+            print inst.args
 
 PIPE = -1
 STDOUT = -2
@@ -616,7 +618,7 @@ class Popen(object):
                  startupinfo=None, creationflags=0):
         """Create new Popen instance."""
         _cleanup()
-
+        self.args = args
         self._child_created = False
         if not isinstance(bufsize, (int, long)):
             raise TypeError("bufsize must be an integer")
@@ -707,6 +709,7 @@ class Popen(object):
         self._internal_poll(_deadstate=_maxint)
         if self.returncode is None and _active is not None:
             # Child is still running, keep us alive until we can wait on it.
+            print 'resurrecting', self.args, self.returncode
             _active.append(self)
 
 
@@ -848,7 +851,7 @@ class Popen(object):
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
                 startupinfo.hStdError = errwrite
-
+            
             if shell:
                 startupinfo.dwFlags |= _subprocess.STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = _subprocess.SW_HIDE

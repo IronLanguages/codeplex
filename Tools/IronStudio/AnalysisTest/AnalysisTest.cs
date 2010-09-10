@@ -155,6 +155,19 @@ class D(object):
 
         }
 
+        /// <summary>
+        /// Verify importing wpf will add a reference to the WPF assemblies
+        /// </summary>
+        [TestMethod]
+        public void TestWpfReferences() {
+            var entry = ProcessText(@"
+import wpf
+from System.Windows.Media import Colors
+");
+
+            AssertContains(entry.GetMembersFromName("Colors", 1), "Blue");
+        }
+
         [TestMethod]
         public void TestGenerator() {
             var entry = ProcessText(@"
