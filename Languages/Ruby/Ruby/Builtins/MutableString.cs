@@ -83,6 +83,10 @@ namespace IronRuby.Builtins {
         }
 
         private void SetEncoding(RubyEncoding/*!*/ encoding) {
+            // String operations (GetHashCode, SetChar, etc.) assume that the encoding maps each and every 
+            // character \u0000..\u007f to a corresponding byte 0..0x7f and back.
+            encoding.RequireAsciiIdentity();
+
             _encoding = encoding;
             if (encoding == RubyEncoding.Binary) {
                 _flags |= IsBinaryEncodedFlag;

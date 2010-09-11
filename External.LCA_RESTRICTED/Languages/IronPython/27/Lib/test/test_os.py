@@ -71,7 +71,9 @@ class TemporaryFileTests(unittest.TestCase):
         test_support.gc_collect()
         for name in self.files:
             os.unlink(name)
-        os.rmdir(test_support.TESTFN)
+        for i in xrange(2):
+            if os.path.exists(test_support.TESTFN):
+                os.rmdir(test_support.TESTFN)
 
     def check_tempfile(self, name):
         # make sure it doesn't already exist:
@@ -456,7 +458,9 @@ class WalkTests(unittest.TestCase):
             for name in dirs:
                 dirname = os.path.join(root, name)
                 if not os.path.islink(dirname):
-                    os.rmdir(dirname)
+                    for i in xrange(2):
+                        if os.path.exists(dirname):
+                            os.rmdir(dirname)
                 else:
                     os.remove(dirname)
         os.rmdir(test_support.TESTFN)
@@ -484,15 +488,20 @@ class MakedirTests (unittest.TestCase):
 
 
     def tearDown(self):
-        path = os.path.join(test_support.TESTFN, 'dir1', 'dir2', 'dir3',
-                            'dir4', 'dir5', 'dir6')
-        # If the tests failed, the bottom-most directory ('../dir6')
-        # may not have been created, so we look for the outermost directory
-        # that exists.
-        while not os.path.exists(path) and path != test_support.TESTFN:
-            path = os.path.dirname(path)
-
-        os.removedirs(path)
+        # try this twice because things like anti-virus can interfere w/ the directories
+        # getting deleted.
+        for i in xrange(2):
+            path = os.path.join(test_support.TESTFN, 'dir1', 'dir2', 'dir3',
+                                'dir4', 'dir5', 'dir6')
+                                
+            # If the tests failed, the bottom-most directory ('../dir6')
+            # may not have been created, so we look for the outermost directory
+            # that exists.
+            while not os.path.exists(path) and path != test_support.TESTFN:
+                path = os.path.dirname(path)
+    
+            if os.path.exists(path):
+                os.removedirs(path)
 
 class DevNullTests (unittest.TestCase):
     def test_devnull(self):

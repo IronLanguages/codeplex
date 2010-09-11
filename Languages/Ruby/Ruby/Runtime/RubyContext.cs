@@ -2330,11 +2330,11 @@ namespace IronRuby.Runtime {
         }
 
         public RubyEncoding/*!*/ GetPathEncoding() {
-            return _options.LocaleEncoding;
+            return RubyEncoding.UTF8;
         }
 
         /// <summary>
-        /// Creates a mutable string encoded using the current KCODE or (K-)UTF8 if KCODE is not set.
+        /// Creates a mutable string encoded using the path (file system) encoding.
         /// </summary>
         /// <exception cref="EncoderFallbackException">Invalid characters present.</exception>
         public MutableString/*!*/ EncodePath(string/*!*/ path) {
@@ -2878,7 +2878,7 @@ namespace IronRuby.Runtime {
 
                 // Check if the preamble encoding is an identity on preamble bytes.
                 // If not we shouldn't allow such encoding since the encoding of the preamble would be different from the encoding of the file.
-                if (!RubyEncoding.IsAsciiIdentity(rubyPreambleEncoding)) {
+                if (!RubyEncoding.AsciiIdentity(rubyPreambleEncoding)) {
                     throw new IOException(String.Format("Encoding '{0}' is not allowed in preamble.", rubyPreambleEncoding.WebName));
                 }
             }
@@ -2904,6 +2904,7 @@ namespace IronRuby.Runtime {
             switch (upperName) {
                 case "BINARY":
                 case "ASCII-8BIT": return BinaryEncoding.Instance;
+                case "FILESYSTEM": return GetPathEncoding().StrictEncoding;
                 case "LOCALE": return _options.LocaleEncoding.StrictEncoding;
 #if SILVERLIGHT
                 case "UTF-8": return Encoding.UTF8;
