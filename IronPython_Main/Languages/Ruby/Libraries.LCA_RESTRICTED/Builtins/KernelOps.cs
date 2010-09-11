@@ -366,7 +366,7 @@ namespace IronRuby.Builtins {
         #endregion
 
 
-        #region ===, =~, !~, eql?, hash, to_s, inspect, to_a
+        #region =~, !~, ===, <=>, eql?, hash, to_s, inspect, to_a
 
         [RubyMethod("=~")]
         public static object Match(object self, object other) {
@@ -375,7 +375,7 @@ namespace IronRuby.Builtins {
         }
 
         [RubyMethod("!~")]
-        public static bool NotMatch(CallSiteStorage<Func<CallSite, object, object, object>>/*!*/ match, object self, object other) {
+        public static bool NotMatch(BinaryOpStorage/*!*/ match, object self, object other) {
             var site = match.GetCallSite("=~", 1);
             return RubyOps.IsFalse(site.Target(site, self, other));
         }
@@ -384,6 +384,12 @@ namespace IronRuby.Builtins {
         [RubyMethod("===")]
         public static bool CaseEquals(BinaryOpStorage/*!*/ equals, object self, object other) {
             return Protocols.IsEqual(equals, self, other);
+        }
+
+        // calls == by default
+        [RubyMethod("<=>")]
+        public static object Compare(BinaryOpStorage/*!*/ equals, object self, object other) {
+            return Protocols.IsEqual(equals, self, other) ? ScriptingRuntimeHelpers.Int32ToObject(0) : null;
         }
 
         // This method is a binder intrinsic and the behavior of the binder needs to be adjusted appropriately if changed.

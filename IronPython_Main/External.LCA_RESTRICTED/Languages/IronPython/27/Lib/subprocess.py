@@ -709,7 +709,6 @@ class Popen(object):
         self._internal_poll(_deadstate=_maxint)
         if self.returncode is None and _active is not None:
             # Child is still running, keep us alive until we can wait on it.
-            print 'resurrecting', self.args, self.returncode
             _active.append(self)
 
 
