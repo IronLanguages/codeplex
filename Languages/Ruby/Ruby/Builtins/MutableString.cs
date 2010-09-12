@@ -279,9 +279,8 @@ namespace IronRuby.Builtins {
         #region Versioning, Encoding, HashCode, and Flags
 
         /// <summary>
-        /// Returns true if its character and byte representation is guaranteed to be the same per character or byte, i.e.
-        /// if the string is known to contain ASCII characters only or if the string is binary-encoded.
-        /// 
+        /// Returns true f the string is known to contain ASCII characters only or if the string is binary-encoded.
+        /// Characters are then same as bytes.
         /// Doesn't inspect the content of the string if the ASCII flag is not valid.
         /// </summary>
         public bool HasByteCharacters {
