@@ -17,6 +17,7 @@ if EXIST "%HTMLHELP%" (
     mkdir Output\CHtml
     "%CPY%" IronPythonDocs\tools\sphinx-build.py -bhtmlhelp IronPythonDocs\ Output\CHtml
     "%HTMLHELP%" Output\CHtml\IronPython.hhp
+    if not EXIST "%1" mkdir %1
     copy Output\CHtml\IronPython.chm %1
     exit /b 0
 ) else (
