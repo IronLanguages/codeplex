@@ -50,9 +50,12 @@ namespace Microsoft.IronPythonTools.Intellisense {
             foreach (var sig in sigs.Signatures) {
                 signatures.Add(sig);
             }
-            // save the current sig so we don't need to recalculate it (we can't set it until
-            // the signatures are added by our caller).
-            session.Properties.AddProperty(typeof(PythonSignature), curSig);
+
+            if (curSig != null) {
+                // save the current sig so we don't need to recalculate it (we can't set it until
+                // the signatures are added by our caller).
+                session.Properties.AddProperty(typeof(PythonSignature), curSig);
+            }
         }
 
         public void Dispose() {

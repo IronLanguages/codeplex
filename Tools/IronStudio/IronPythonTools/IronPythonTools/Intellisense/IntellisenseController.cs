@@ -145,8 +145,14 @@ namespace Microsoft.IronPythonTools.Intellisense {
             }
         }
 
-        private void Backspace() {
-            if (_sigHelpSession != null) {                
+        private bool Backspace() {
+            if (_sigHelpSession != null) {
+                if (_textView.Selection.IsActive && !_textView.Selection.IsEmpty) {
+                    // when deleting a selection don't do anything to pop up signature help again
+                    _sigHelpSession.Dismiss();
+                    return false;
+                }
+
                 SnapshotPoint? caretPoint = GetCaretPoint();
                 if (caretPoint != null && caretPoint.Value.Position != 0) {
                     string deleting = _textView.TextSnapshot.GetText(caretPoint.Value.Position - 1, 1);
@@ -161,14 +167,21 @@ namespace Microsoft.IronPythonTools.Intellisense {
                         }
                     } else if (deleting == "(") {
                         _sigHelpSession.Dismiss();
+                        // delete the ( before triggering help again
+                        _textView.TextSnapshot.TextBuffer.Delete(new Span(caretPoint.Value.Position - 1, 1));
 
+                        // 
                         // Pop to an outer nesting of signature help
                         if (IronPythonToolsPackage.Instance.LangPrefs.AutoListParams) {
                             TriggerSignatureHelp();
                         }
+
+                        return true;
+
                     }
                 }
             }
+            return false;
         }
 
         private void OpenParenStartSignatureSession() {
@@ -400,7 +413,10 @@ namespace Microsoft.IronPythonTools.Intellisense {
                 if (pguidCmdGroup == VSConstants.VSStd2K) {
                     switch ((VSConstants.VSStd2KCmdID)nCmdID) {
                         case VSConstants.VSStd2KCmdID.BACKSPACE:
-                            Backspace();
+                            bool fDeleted = Backspace();
+                            if (fDeleted) {
+                                return VSConstants.S_OK;
+                            }
                             break;
                         case VSConstants.VSStd2KCmdID.LEFT:
                             UpdateCurrentParameter(_textView.Caret.Position.BufferPosition.Position - 1);
