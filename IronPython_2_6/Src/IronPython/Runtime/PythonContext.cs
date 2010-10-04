@@ -981,13 +981,9 @@ namespace IronPython.Runtime {
                 throw new IOException("unknown encoding type");
             }
 
-            if (!gotEncoding) {
-                // if we didn't get an encoding seek back to the beginning...
+            // if we didn't get an encoding seek back to the beginning...
+            if (!gotEncoding || stream.Position != stream.Length) {
                 stream.Seek(startPosition, SeekOrigin.Begin);
-            } else {
-                // if we got an encoding seek to the # of bytes we read (so the StreamReader's
-                // buffering doesn't throw us off)
-                stream.Seek(bytesRead, SeekOrigin.Begin);
             }
 
             // re-read w/ the correct encoding type...

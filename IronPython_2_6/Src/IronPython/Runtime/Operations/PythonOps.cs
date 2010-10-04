@@ -1031,8 +1031,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void ObjectDeleteAttribute(CodeContext/*!*/ context, object o, string name) {
-            object dummy;
-            if (!PythonTypeOps.TryInvokeBinaryOperator(context, o, name, "__delete__", out dummy)) {
+            if (!DynamicHelpers.GetPythonType(o).TryDeleteNonCustomMember(context, o, name)) {
                 throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
             }
         }
@@ -4307,6 +4306,10 @@ namespace IronPython.Runtime.Operations {
 
         public static bool IsUnicode(object unicodeObj) {
             return unicodeObj == TypeCache.String;
+        }
+
+        public static BuiltinFunction GetUnicodeFuntion() {
+            return UnicodeHelper.Function;
         }
     }
 

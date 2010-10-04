@@ -1380,7 +1380,7 @@ namespace IronPython.Compiler {
             parameters = ParseVarArgsList(TokenKind.Colon);
             SourceLocation mid = GetEnd();
 
-            FunctionDefinition func = new FunctionDefinition(name, parameters);
+            FunctionDefinition func = new FunctionDefinition(name, parameters ?? new Parameter[0]);
             func.Header = mid;
             func.Start = start;
 

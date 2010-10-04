@@ -16,7 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+#if !CLR4
 using System.Dynamic.Utils;
+#endif
 using Microsoft.Scripting;
 using System.Collections.ObjectModel;
 

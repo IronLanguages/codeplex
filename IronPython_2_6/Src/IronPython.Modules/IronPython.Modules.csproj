@@ -18,7 +18,7 @@
     <DelaySign>true</DelaySign>
     <BaseAddress>885063680</BaseAddress>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
-    <Silverlight3Path>$(ProgramFiles)\Microsoft Silverlight\3.0.40818.0</Silverlight3Path>
+    <Silverlight3Path>$(ProgramFiles)\Microsoft Silverlight\4.0.50524.0</Silverlight3Path>
     <Silverlight4Path>..\..\..\Utilities\Silverlight\v4-x86fre</Silverlight4Path>
 
     <!-- The following two lines prevent csc.rsp and Microsoft.NETFramework.props from adding additional assembly references -->

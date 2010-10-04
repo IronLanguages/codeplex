@@ -978,6 +978,18 @@ def test_file_coding():
     finally:
         nt.unlink('test_coding_2.py')
 
+    try:
+        f = file('test_coding_3.py', 'wb+')
+        f.write("# -*- coding: utf-8 -*-\n")
+        f.write("raise Exception()")
+        f.close()
+        try:
+            import test_coding_3
+        except Exception, e:
+            AreEqual(sys.exc_info()[2].tb_next.tb_lineno, 2)
+    finally:
+        nt.unlink('test_coding_3.py')
+
 def test_module_subtype():
     if is_lightweightscopes: #http://ironpython.codeplex.com/WorkItem/View.aspx?WorkItemId=24586
         return

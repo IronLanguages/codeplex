@@ -98,6 +98,8 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
+        private static MSAst.MethodCallExpression _GetUnicode = Expression.Call(AstMethods.GetUnicodeFunction);
+
         private MSAst.Expression UnicodeCall() {
             if (_target is NameExpression && ((NameExpression)_target).Name == "unicode") {
                 // NameExpressions are always typed to object
@@ -112,7 +114,7 @@ namespace IronPython.Compiler.Ast {
                             AstMethods.IsUnicode,
                             tmpVar
                         ),
-                        NormalCall(Expression.Constant(UnicodeHelper.Function)),
+                        NormalCall(_GetUnicode),
                         NormalCall(tmpVar)
                     )
                 );            
